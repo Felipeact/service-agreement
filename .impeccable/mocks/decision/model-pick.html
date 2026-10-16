@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pipeline · Equipment Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@500;600&family=Red+Hat+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--rail:#14233a;--rail-2:#1f3352;--paper:#f6f7f4;--sheet:#fff;--ink:#1c2633;--ink-2:#5b6573;--rule:#cfd4da;--rule-2:#e4e7eb;
+--blue:#2a6fb0;--red:#c8372d;--green:#2e7d4f;--amber:#b7791f}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font:400 13px/1.45 "Red Hat Text",sans-serif;color:var(--ink);background:var(--paper);display:grid;grid-template-columns:232px 1fr}
+.mono{font-family:"Red Hat Mono",monospace;font-variant-numeric:tabular-nums}
+nav{background:var(--rail);color:#c9d4e3;display:flex;flex-direction:column;padding:20px 12px 0}
+.brand{font:700 17px "Red Hat Display";color:#fff;padding:0 10px 24px}
+nav a{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:4px;font-weight:500}
+nav a svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
+nav a.on{background:var(--rail-2);color:#fff}
+nav .sp{flex:1}
+.tb{margin:0 -12px;border-top:1px solid #2c4366;display:grid;grid-template-columns:1fr 1fr;font-size:11px}
+.tb div{padding:8px 12px;border-bottom:1px solid #2c4366}
+.tb div:nth-child(odd){border-right:1px solid #2c4366}
+.tb span{display:block;color:#7f93b0;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.tb b{color:#fff;font-weight:600}
+main{display:flex;flex-direction:column;min-width:0;padding:0 28px}
+header{display:flex;align-items:center;gap:12px;padding:20px 0 16px}
+h1{font:700 26px "Red Hat Display";margin-right:auto}
+.sel,.search{height:36px;border:1px solid var(--rule);background:#fff;border-radius:4px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.sel b{color:var(--ink)} .search{width:250px}
+.btn{height:36px;padding:0 16px;border:0;border-radius:4px;background:var(--blue);color:#fff;font:600 13px "Red Hat Text"}
+.sheet{flex:1;background:var(--sheet);border:1.5px solid var(--ink);border-bottom:0;position:relative;display:grid;grid-template-columns:repeat(4,1fr) 180px;min-height:0}
+.zone{border-right:1px solid var(--rule-2);display:flex;flex-direction:column;min-width:0}
+.zone:last-child{border-right:0;background:#fafafa}
+.zh{position:relative;padding:22px 14px 10px;border-bottom:1.5px solid var(--ink);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.zh .gl{position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:16px;border:1px solid var(--ink);border-top:0;font:600 10px "Red Hat Mono";text-align:center;line-height:15px}
+.zh h2{font:700 15px "Red Hat Display";white-space:nowrap}
+.zh .ct{flex-basis:100%;padding-left:17px;font:500 12px "Red Hat Mono";color:var(--ink-2)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;align-self:center}
+.list{padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.card{border:1px solid var(--rule);border-radius:4px;background:#fff;padding:11px 12px;position:relative}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h3{font-size:14px;font-weight:700;line-height:1.25}
+.no{font:500 11.5px "Red Hat Mono";color:var(--ink-2);white-space:nowrap}
+.loc{color:var(--ink-2);font-size:12px}
+.sched{margin-top:9px;width:100%;border-collapse:collapse;font-size:12px}
+.sched td{border-top:1px solid var(--rule-2);padding:4px 0}
+.sched td:last-child{text-align:right;font-family:"Red Hat Mono";font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.hx{font:600 10.5px "Red Hat Mono";padding:2px 9px;background:#eef3f9;color:#1d4f80;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 50%,calc(100% - 6px) 100%,6px 100%,0 50%)}
+.flag{margin-top:9px;font-size:12px;display:flex;gap:6px;align-items:flex-start}
+.flag svg{width:14px;height:14px;flex:none;margin-top:2px}
+.rl{outline:1.5px dashed var(--red);outline-offset:3px}
+.rev{position:absolute;top:-9px;right:-9px;width:22px;height:20px;background:var(--red);color:#fff;font:600 10px "Red Hat Mono";clip-path:polygon(50% 0,100% 100%,0 100%);text-align:center;line-height:24px}
+.red{color:var(--red)} .amb{color:var(--amber)} .grn{color:var(--green)}
+.act{display:flex;gap:6px;margin-top:10px}
+.act button{white-space:nowrap;height:28px;padding:0 10px;border-radius:4px;border:1px solid var(--rule);background:#fff;font:600 12px "Red Hat Text"}
+.act .p{background:var(--green);border-color:var(--green);color:#fff}
+.ghost{color:var(--ink-2);font-size:12px;padding:0 2px}
+.refd{border-style:dashed;background:transparent}
+.refd p{font-size:12px;color:var(--ink-2);margin-top:3px}
+</style></head><body>
+<nav>
+  <div class="brand">Service Agreement</div>
+  <a class="on"><svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="3.5" height="11"/><rect x="6.25" y="2.5" width="3.5" height="7"/><rect x="11" y="2.5" width="3.5" height="9"/></svg>Pipeline</a>
+  <a><svg viewBox="0 0 16 16"><path d="M3 1.5h7l3 3v10H3z"/></svg>Agreements</a>
+  <a><svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 15c1-3.5 3.5-5 6-5s5 1.5 6 5"/></svg>Customers</a>
+  <a><svg viewBox="0 0 16 16"><path d="M4 2h8l3 6-3 6H4L1 8z"/></svg>Sites &amp; equipment</a>
+  <a><svg viewBox="0 0 16 16"><path d="M8 10V1.5M4.5 5 8 1.5 11.5 5M2 10.5v4h12v-4"/></svg>Imports</a>
+  <a><svg viewBox="0 0 16 16"><path d="M3 3.5h10M3 8h10M3 12.5h6"/></svg>Task library</a>
+  <div class="sp"></div>
+  <a><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5"/><circle cx="8" cy="8" r="6"/></svg>Company settings</a>
+  <div class="tb"><div><span>Company</span><b>Northline Mech.</b></div><div><span>Signed in</span><b>J. Okafor</b></div><div><span>Role</span><b>Estimator</b></div><div><span>Updated</span><b class="mono">16 Oct 09:42</b></div></div>
+</nav>
+<main>
+  <header>
+    <h1>Pipeline</h1>
+    <div class="sel">Estimator <b>All</b> ▾</div>
+    <div class="sel">Province <b>All</b> ▾</div>
+    <div class="search">Search customers, sites, AG-…</div>
+    <button class="btn">New agreement</button>
+  </header>
+  <section class="sheet">
+    <div class="zone"><div class="zh"><span class="gl">A</span><i class="dot" style="background:var(--blue)"></i><h2>In progress</h2><span class="ct">4 · $43,820</span></div>
+      <div class="list">
+        <article class="card rl"><span class="rev">3</span><div class="top"><h3>Harbourview Towers Strata</h3><span class="no">AG-1048</span></div><div class="loc">Vancouver, BC</div>
+          <div class="flag red"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 9.5 4.5l1.5-1.5 1 1-1.5 1.5L3 13H2z"/></svg><span><b>Changes requested:</b> drop the July boiler visit.</span></div>
+          <div class="tags"><span class="hx">RTU ×2</span><span class="hx">BLR ×2</span><span class="hx">MUA ×1</span><span class="hx">EF ×6</span></div>
+          <table class="sched"><tr><td>Visits / yr</td><td>4</td></tr><tr><td>Annual</td><td>$14,280</td></tr></table></article>
+        <article class="card"><div class="top"><h3>Lakeshore Brewing Co.</h3><span class="no">AG-1051</span></div><div class="loc">Kelowna, BC</div>
+          <div class="flag amb"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1.5 13 12.5H1z M7 6v3"/></svg><span>Import: 38 rows, <b>3 types to map</b></span></div></article>
+        <article class="card"><div class="top"><h3>Pemberton Arena</h3><span class="no">AG-1046</span></div><div class="loc">Calgary, AB</div>
+          <div class="tags"><span class="hx">CH ×1</span><span class="hx">AHU ×2</span><span class="hx">DH ×1</span><span class="hx">EF ×3</span></div>
+          <table class="sched"><tr><td>Visits / yr</td><td>4</td></tr><tr><td>Annual</td><td>$21,600</td></tr></table></article>
+      </div></div>
+    <div class="zone"><div class="zh"><span class="gl">B</span><i class="dot" style="background:var(--amber)"></i><h2>Sent to customer</h2><span class="ct">4 · $41,230</span></div>
+      <div class="list">
+        <article class="card"><div class="top"><h3>Kingsway Self Storage</h3><span class="no">AG-1039</span></div><div class="loc">Burnaby, BC · sent 9 d ago</div>
+          <div class="flag amb"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5l2 1.5"/></svg><span><b>Not viewed.</b> Day-7 reminder sent Oct 14.</span></div>
+          <table class="sched"><tr><td>Visits / yr</td><td>2</td></tr><tr><td>Annual</td><td>$4,120</td></tr></table></article>
+        <article class="card"><div class="top"><h3>Maple Ridge Medical Clinic</h3><span class="no">AG-1041</span></div><div class="loc">Maple Ridge, BC · viewed Oct 9</div>
+          <div class="tags"><span class="hx">RTU ×3</span><span class="hx">HRV ×2</span><span class="hx">EF ×2</span></div>
+          <table class="sched"><tr><td>Visits / yr</td><td>4</td></tr><tr><td>Annual</td><td>$9,880</td></tr></table></article>
+        <article class="card"><div class="top"><h3>Cedar Point Seniors Res.</h3><span class="no">AG-1050</span></div><div class="loc">Kamloops, BC · viewed today</div>
+          <table class="sched"><tr><td>Visits / yr</td><td>6</td></tr><tr><td>Annual</td><td>$19,450</td></tr></table></article>
+      </div></div>
+    <div class="zone"><div class="zh"><span class="gl">C</span><i class="dot" style="background:#7a52b3"></i><h2>Accepted · to sign</h2><span class="ct">2 · $27,700</span></div>
+      <div class="list">
+        <article class="card"><div class="top"><h3>Bayside Hotel</h3><span class="no">CT-0212</span></div><div class="loc">From AG-1032 rev 2</div>
+          <div class="flag grn"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7.5 5.5 11 12 3.5"/></svg><span><b>Client signed Oct 15.</b> Your countersignature is next.</span></div>
+          <div class="act"><button class="p">Countersign</button><button>Open contract</button></div></article>
+        <article class="card"><div class="top"><h3>Fraser Valley Cold Storage</h3><span class="no">CT-0214</span></div><div class="loc">Sent for signature yesterday</div>
+          <table class="sched"><tr><td>Visits / yr</td><td>12</td></tr><tr><td>Annual</td><td>$8,800</td></tr></table></article>
+      </div></div>
+    <div class="zone"><div class="zh"><span class="gl">D</span><i class="dot" style="background:var(--green)"></i><h2>Completed</h2><span class="ct">Q4 · 6 · $88,140</span></div>
+      <div class="list">
+        <article class="card"><div class="top"><h3>North Shore Curling Club</h3><span class="no">CT-0209</span></div><div class="loc">Signed Oct 3 · $16,400/yr</div></article>
+        <article class="card"><div class="top"><h3>Westbrook Mall</h3><span class="no">CT-0207</span></div><div class="loc">Signed Sep 28 · $31,760/yr</div></article>
+        <article class="card"><div class="top"><h3>Ridgeview Elementary</h3><span class="no">CT-0205</span></div><div class="loc">Signed Sep 22 · $7,240/yr</div></article>
+        <div class="ghost">+ 3 more this quarter</div>
+      </div></div>
+    <div class="zone"><div class="zh"><span class="gl">E</span><h2>Refused</h2><span class="ct">2</span></div>
+      <div class="list">
+        <article class="card refd"><h3>Kitsilano Bakery</h3><p>“Going with in-house maintenance.”</p></article>
+        <article class="card refd"><h3>Granville Dental</h3><p>“Price over budget for 2027.”</p></article>
+      </div></div>
+  </section>
+</main>
+</body></html>

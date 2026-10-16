@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pipeline · Departures Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;600;700;800&family=Overpass+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--board:#111417;--board-2:#1c2126;--board-ink:#e9ece8;--ground:#eef0ed;--card:#fff;--ink:#16191c;--ink-2:#5c646b;--rule:#d3d7d3;
+--amber:#f2a900;--green:#1f7a45;--red:#b3261e;--blue:#2d5f9a}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font:400 13px/1.4 "Overpass",sans-serif;color:var(--ink);background:var(--ground);display:flex;flex-direction:column}
+.m{font-family:"Overpass Mono",monospace;font-variant-numeric:tabular-nums}
+.top{background:var(--board);color:var(--board-ink);height:56px;display:flex;align-items:center;gap:28px;padding:0 28px}
+.brand{font:800 16px "Overpass";letter-spacing:.01em;color:#fff}
+.tabs{display:flex;gap:4px;height:100%}
+.tabs a{display:flex;align-items:center;padding:0 12px;font-weight:600;color:#aab2b8;border-bottom:3px solid transparent}
+.tabs a.on{color:#fff;border-color:var(--amber)}
+.sp{flex:1}
+.search{height:34px;width:260px;background:var(--board-2);border:1px solid #2c333a;border-radius:4px;padding:0 12px;display:flex;align-items:center;color:#8b949b}
+.btn{height:34px;padding:0 16px;background:var(--amber);color:#1a1300;border:0;border-radius:4px;font:700 13px "Overpass"}
+.av{width:32px;height:32px;border-radius:50%;background:#2c333a;color:#fff;display:grid;place-items:center;font:700 12px "Overpass"}
+/* next-up board */
+.next{background:var(--board);color:var(--board-ink);margin:16px 28px 0;border-radius:6px;padding:12px 16px 8px}
+.nh{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.nh h2{font:800 15px "Overpass";letter-spacing:.04em;text-transform:uppercase;color:#fff}
+.nh span{color:#8b949b;font-size:12px}
+.row{display:grid;grid-template-columns:92px 260px 1fr 180px 120px;align-items:center;height:34px;border-top:1px solid #262c32;font-size:13px}
+.row .t{font:600 14px "Overpass Mono";color:#fff}
+.row .c{font-weight:700;color:#fff}
+.row .s{font:600 12px "Overpass Mono";letter-spacing:.06em;text-transform:uppercase}
+.row.hot{background:linear-gradient(90deg,rgba(242,169,0,.16),rgba(242,169,0,0) 70%)}
+.row.hot .s{color:var(--amber)}
+.ok{color:#5fc48c} .due{color:#ff8a7a} .wait{color:#aab2b8}
+.row .go{justify-self:end;height:26px;padding:0 10px;border:1px solid #3a424a;border-radius:4px;background:transparent;color:#fff;font:600 12px "Overpass"}
+/* toolbar + board */
+.bar{display:flex;align-items:center;gap:10px;padding:16px 28px 10px}
+.bar h1{font:800 22px "Overpass";margin-right:auto}
+.sel{height:34px;border:1px solid var(--rule);background:#fff;border-radius:4px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.sel b{color:var(--ink)}
+.board{flex:1;display:grid;grid-template-columns:repeat(4,1fr) 170px;gap:14px;padding:0 28px;min-height:0}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ch{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:2px solid var(--ink)}
+.ch h3{font:800 13px "Overpass";letter-spacing:.05em;text-transform:uppercase}
+.ch .n{margin-left:auto;font:600 12px "Overpass Mono";color:var(--ink-2)}
+.sq{width:10px;height:10px;border-radius:2px}
+.pass{background:var(--card);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.pass .hd{padding:10px 12px 8px;display:flex;justify-content:space-between;gap:8px}
+.pass h4{font-size:14px;font-weight:700;line-height:1.25}
+.pass .id{font:600 11.5px "Overpass Mono";color:var(--ink-2)}
+.pass .sub{padding:0 12px 8px;color:var(--ink-2);font-size:12px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border-top:1.5px dashed var(--rule)}
+.seg div{padding:7px 12px 8px;border-left:1px solid #edf0ed}
+.seg div:first-child{border-left:0}
+.seg span{display:block;font:700 10px "Overpass";letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.seg b{font:600 14px "Overpass Mono"}
+.pass.lit{border:2px solid var(--amber);box-shadow:0 4px 14px rgba(242,169,0,.22)}
+.lit .alert{background:#fff4d6;color:#5a3d00;padding:7px 12px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lit .alert button{height:26px;padding:0 10px;border-radius:4px;border:1px solid #d79600;background:#fff;font:700 12px "Overpass";color:#5a3d00}
+.late b{color:var(--red)}
+.more{color:var(--ink-2);font-size:12px}
+.refd{border-style:dashed;background:transparent}
+</style></head><body>
+<div class="top">
+  <div class="brand">Service Agreement</div>
+  <div class="tabs"><a class="on">Pipeline</a><a>Agreements</a><a>Customers</a><a>Sites &amp; equipment</a><a>Imports</a><a>Task library</a></div>
+  <div class="sp"></div>
+  <div class="search">Search customers, sites, AG-…</div>
+  <button class="btn">New agreement</button>
+  <div class="av">JO</div>
+</div>
+<section class="next">
+  <div class="nh"><h2>Next up</h2><span>Ranked by what's due · Thu 16 Oct</span></div>
+  <div class="row hot"><span class="t">09:42</span><span class="c">Cedar Point Seniors Residence</span><span>Customer opened AG-1050 for the first time</span><span class="s">Viewed · new</span><button class="go">Open</button></div>
+  <div class="row"><span class="t">Today</span><span class="c">Bayside Hotel</span><span>Client signed CT-0212. Your countersignature is next</span><span class="s ok">Sign now</span><button class="go">Countersign</button></div>
+  <div class="row"><span class="t">Today</span><span class="c">Harbourview Towers Strata</span><span>Changes requested: drop the July boiler visit</span><span class="s due">Revise · v3</span><button class="go">Revise</button></div>
+  <div class="row"><span class="t">Sat 18</span><span class="c">Kingsway Self Storage</span><span>Unviewed for 9 days. Daily check will flag it as stale</span><span class="s wait">Auto-remind</span><button class="go">Call</button></div>
+</section>
+<div class="bar">
+  <h1>Pipeline</h1>
+  <div class="sel">Estimator <b>All</b> ▾</div>
+  <div class="sel">Province <b>All</b> ▾</div>
+  <div class="sel">Sort <b>Next deadline</b> ▾</div>
+</div>
+<section class="board">
+  <div class="col"><div class="ch"><i class="sq" style="background:var(--blue)"></i><h3>In progress</h3><span class="n">4 · $43,820</span></div>
+    <article class="pass"><div class="hd"><h4>Harbourview Towers Strata</h4><span class="id">AG-1048 v3</span></div><div class="sub">Changes requested · Vancouver, BC</div>
+      <div class="seg"><div><span>Visits</span><b>4/yr</b></div><div><span>Annual</span><b>$14,280</b></div><div><span>Days</span><b>2</b></div></div></article>
+    <article class="pass"><div class="hd"><h4>Pemberton Arena</h4><span class="id">AG-1046 v1</span></div><div class="sub">Calgary, AB</div>
+      <div class="seg"><div><span>Visits</span><b>4/yr</b></div><div><span>Annual</span><b>$21,600</b></div><div><span>Days</span><b>6</b></div></div></article>
+    <article class="pass"><div class="hd"><h4>Lakeshore Brewing Co.</h4><span class="id">AG-1051 v1</span></div><div class="sub">Import: 3 types to map</div></article>
+  </div>
+  <div class="col"><div class="ch"><i class="sq" style="background:var(--amber)"></i><h3>Sent to customer</h3><span class="n">4 · $41,230</span></div>
+    <article class="pass lit"><div class="alert"><span><b>Viewed 09:42</b> for the first time</span><button>Got it</button></div><div class="hd"><h4>Cedar Point Seniors Res.</h4><span class="id">AG-1050 v1</span></div>
+      <div class="seg"><div><span>Visits</span><b>6/yr</b></div><div><span>Annual</span><b>$19,450</b></div><div><span>Days</span><b>2</b></div></div></article>
+    <article class="pass late"><div class="hd"><h4>Kingsway Self Storage</h4><span class="id">AG-1039 v1</span></div><div class="sub">Not viewed · reminder sent Oct 14</div>
+      <div class="seg"><div><span>Visits</span><b>2/yr</b></div><div><span>Annual</span><b>$4,120</b></div><div><span>Days</span><b>9</b></div></div></article>
+    <article class="pass"><div class="hd"><h4>Maple Ridge Medical Clinic</h4><span class="id">AG-1041 v2</span></div><div class="sub">Viewed Oct 9</div>
+      <div class="seg"><div><span>Visits</span><b>4/yr</b></div><div><span>Annual</span><b>$9,880</b></div><div><span>Days</span><b>8</b></div></div></article>
+  </div>
+  <div class="col"><div class="ch"><i class="sq" style="background:#7a52b3"></i><h3>Accepted · to sign</h3><span class="n">2 · $27,700</span></div>
+    <article class="pass"><div class="hd"><h4>Bayside Hotel</h4><span class="id">CT-0212</span></div><div class="sub">Client signed · awaiting your countersignature</div>
+      <div class="seg"><div><span>Visits</span><b>4/yr</b></div><div><span>Annual</span><b>$18,900</b></div><div><span>Days</span><b>4</b></div></div></article>
+    <article class="pass"><div class="hd"><h4>Fraser Valley Cold Storage</h4><span class="id">CT-0214</span></div><div class="sub">Sent for signature</div>
+      <div class="seg"><div><span>Visits</span><b>12/yr</b></div><div><span>Annual</span><b>$8,800</b></div><div><span>Days</span><b>1</b></div></div></article>
+  </div>
+  <div class="col"><div class="ch"><i class="sq" style="background:var(--green)"></i><h3>Completed</h3><span class="n">Q4 · 6 · $88,140</span></div>
+    <article class="pass"><div class="hd"><h4>North Shore Curling Club</h4><span class="id">CT-0209</span></div><div class="sub">Signed Oct 3 · $16,400/yr</div></article>
+    <article class="pass"><div class="hd"><h4>Westbrook Mall</h4><span class="id">CT-0207</span></div><div class="sub">Signed Sep 28 · $31,760/yr</div></article>
+    <div class="more">+ 4 more this quarter</div>
+  </div>
+  <div class="col"><div class="ch"><i class="sq" style="background:var(--red)"></i><h3>Refused</h3><span class="n">2</span></div>
+    <article class="pass refd"><div class="hd"><h4>Kitsilano Bakery</h4></div><div class="sub">“Going with in-house maintenance.”</div></article>
+    <article class="pass refd"><div class="hd"><h4>Granville Dental</h4></div><div class="sub">“Price over budget for 2027.”</div></article>
+  </div>
+</section>
+</body></html>

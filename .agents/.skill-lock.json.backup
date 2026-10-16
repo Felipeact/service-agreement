@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "skills": {
+    "tlc-spec-lean": {
+      "name": "tlc-spec-lean",
+      "source": "local",
+      "contentHash": "28368cb86a9d441fce24426eb502a39a5e7f9ffe0ad5d682fead2ce76c5b085b",
+      "installedAt": "2026-10-16T16:43:16.307Z",
+      "updatedAt": "2026-10-16T16:43:16.339Z",
+      "agents": [
+        "cursor",
+        "claude-code",
+        "windsurf"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "ai-pricing": {
+      "name": "ai-pricing",
+      "source": "local",
+      "contentHash": "642a42cf94b8061aad642d84363bb4f60712af858c093bed6f2ec6135a3e7937",
+      "installedAt": "2026-10-16T16:44:32.374Z",
+      "updatedAt": "2026-10-16T16:44:32.393Z",
+      "agents": [
+        "cursor",
+        "claude-code",
+        "windsurf"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "the-judge": {
+      "name": "the-judge",
+      "source": "local",
+      "contentHash": "05526209052f6592ad98476e8f59e9ffa2a24e803e10a90ceac659476b509403",
+      "installedAt": "2026-10-16T16:45:06.860Z",
+      "updatedAt": "2026-10-16T16:45:06.878Z",
+      "agents": [
+        "cursor",
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    }
+  }
+}

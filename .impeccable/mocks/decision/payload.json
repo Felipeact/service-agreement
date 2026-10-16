@@ -1,0 +1,112 @@
+{
+  "title": "Choose the visual world",
+  "question": "Three directions for the app, each shown on the Pipeline kanban. Pick one, steer it, or re-roll. (Two more competitive alternates, a warm consumer-app surface and yellow airport wayfinding, wait in the re-roll pool to keep this to your three.)",
+  "options": [
+    {
+      "id": "assigned",
+      "kind": "assigned",
+      "label": "Pipe Marker",
+      "kicker": "THE ROLL",
+      "lineage": "Mechanical-room pipe identification bands",
+      "thesis": "The pipeline drawn as an actual pipe: each stage is a colour-banded marker with a flow arrow, and deals move downstream.",
+      "palette": ["#2c3833", "#e3e6e2", "#2f5d9e", "#f2c500", "#e07a1f", "#1f7a45", "#b3261e"],
+      "materials": ["enamel machinery paint", "vinyl pipe-marker bands", "stencilled unit codes"],
+      "viewport": "Enamel-green side rail; across the board, one continuous pipe whose marker bands are the column headers (count and annual CAD on each, arrow tips into the next stage); dense deal cards below with unit-code tags and an age bar.",
+      "risk": "Band colours could read as safety signage if they spread past the headers and status chips.",
+      "raised": [
+        { "from": "challenger-emission-rail", "raise": "Status is never colour alone: each band also carries a pattern (solid, hatched, striped), so colour-blind estimators read stages as fast as anyone." },
+        { "from": "challenger-labanotation", "raise": "Time is length: each card's age bar is exact days in stage on one fixed 30-day scale, so stale deals stand out without a number." },
+        { "from": "challenger-doujin-catalog", "raise": "Density courage: cards pack unit-code tags (RTU ×6 · MUA ×1) edge to edge, so an estimator scans a whole site's equipment at a glance." }
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html"
+    },
+    {
+      "id": "model-pick",
+      "kind": "pick",
+      "label": "Equipment Schedule",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Mechanical drawing sheets (M-series) and their equipment schedules",
+      "thesis": "The app reads like the M-sheet estimators take off from: tag bubbles, schedule tables, grid references and redline revisions.",
+      "palette": ["#14233a", "#f6f7f4", "#1c2633", "#2a6fb0", "#c8372d", "#2e7d4f"],
+      "materials": ["drafting film", "drawing ink", "redline pencil"],
+      "viewport": "Drawing-blue rail with a title-block footer; the kanban is framed by sheet grid letters A–E; cards carry hexagon equipment tags, and a changes-requested deal wears a redline revision cloud with its version delta.",
+      "risk": "The most familiar of the three: blueprint styling is where most runs for trade software land, and it can tip into costume if the grid ticks multiply.",
+      "html": ".impeccable/mocks/decision/model-pick.html"
+    },
+    {
+      "id": "challenger-gate-board",
+      "kind": "challenger",
+      "catalogId": "vernacular-ephemera-boarding-pass-and-gate-board",
+      "label": "Departures Board",
+      "verdict": "competitive",
+      "lineage": "Airport gate boards and segmented boarding passes",
+      "thesis": "Every deal is a departure: ranked by its next deadline, and a change lights amber and stays lit until someone notices it.",
+      "palette": ["#111417", "#f2f3f1", "#ffffff", "#f2a900", "#1f7a45", "#b3261e"],
+      "materials": ["split-flap board", "boarding-pass card stock", "tabular figures"],
+      "viewport": "A black Next-up board strip ranks the next actions by time; below it, the kanban cards are segmented passes (customer, visits/yr, annual value, days), and changed cards hold an amber edge until acknowledged.",
+      "case": "Fuses cleanly: deals rank by next deadline, and the hold-until-noticed state is exactly 'status is never in doubt'. Wins on product clarity, loses on audience identification because it isn't the trade's world.",
+      "risk": "The black board can dominate if it grows past one strip; it must stay a summary, not the page.",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-boarding-pass-and-gate-board-hero.webp",
+      "html": ".impeccable/mocks/decision/challenger-gate-board.html"
+    },
+    {
+      "id": "challenger-emission-rail",
+      "kind": "challenger",
+      "catalogId": "operate-c-emission-line-rail",
+      "label": "Emission-Line Rail",
+      "verdict": "declined",
+      "lineage": "Glass spectrogram plates",
+      "thesis": "State carried by line height, dash and doubling on a charcoal continuum.",
+      "palette": ["#26282b", "#e8e4da", "#f5c518"],
+      "materials": ["charcoal continuum", "hairline emission lines"],
+      "viewport": "One off-centre rail with every stage a tick.",
+      "case": "Loses both axes: contractors don't recognise it, and hairline state is too faint for daily pipeline triage.",
+      "risk": "Unreadable for a busy estimator.",
+      "kept": "State by form, not hue: the Pipe Marker bands gained patterns."
+    },
+    {
+      "id": "challenger-labanotation",
+      "kind": "challenger",
+      "catalogId": "notation-diagram-systems-labanotation",
+      "label": "Labanotation Score",
+      "verdict": "declined",
+      "lineage": "Dance notation scores",
+      "thesis": "Shape is direction, shading is level, length is exact duration.",
+      "palette": ["#ffffff", "#111111", "#d9d9d9"],
+      "materials": ["score paper", "hatched symbol blocks"],
+      "viewport": "A vertical centre staff read upward.",
+      "case": "Loses both axes: a foreign notation for a trade audience, and a vertical time axis fights the left-to-right pipeline.",
+      "risk": "Opaque without training.",
+      "kept": "Length is exact duration: age bars on a fixed 30-day scale."
+    },
+    {
+      "id": "challenger-doujin-catalog",
+      "kind": "challenger",
+      "catalogId": "pop-culture-shelf-doujin-event-catalog",
+      "label": "Convention Catalog",
+      "verdict": "declined",
+      "lineage": "Newsprint circle catalogs",
+      "thesis": "Thousands of coded cells packed into a numbered grid.",
+      "palette": ["#e9e6df", "#1a1a1a", "#d6336c"],
+      "materials": ["newsprint", "single black ink"],
+      "viewport": "Packed thumbnail grid keyed to a hall map.",
+      "case": "Loses both axes: no thumbnails exist to pack, and the grid hides status.",
+      "risk": "Visual noise at agreement scale.",
+      "kept": "Density courage: unit-code tags packed edge to edge."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code", "toggle": false },
+  "canon": true,
+  "canonCard": {
+    "kind": "canon",
+    "label": "The category standard",
+    "thesis": "A clean, familiar SaaS kanban like Linear or Trello, executed impeccably.",
+    "palette": ["#ffffff", "#f6f7f9", "#111827", "#2563eb"],
+    "materials": ["neutral cards", "soft borders", "one blue accent"],
+    "viewport": "White sidebar, grey board, white cards with coloured status dots.",
+    "risk": "Indistinguishable from every other tool by design.",
+    "html": ".impeccable/mocks/decision/canon.html"
+  },
+  "steer": true
+}

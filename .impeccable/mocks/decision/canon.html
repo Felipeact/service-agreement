@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pipeline · Category standard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7f9;--side:#fff;--ink:#111827;--ink-2:#6b7280;--rule:#e5e7eb;--blue:#2563eb}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font:400 13px/1.45 Inter,sans-serif;color:var(--ink);background:var(--bg);display:grid;grid-template-columns:232px 1fr}
+nav{background:var(--side);border-right:1px solid var(--rule);padding:18px 12px;display:flex;flex-direction:column;gap:2px}
+.brand{font-weight:700;font-size:15px;padding:0 10px 20px}
+nav a{padding:8px 10px;border-radius:6px;color:#374151;font-weight:500}
+nav a.on{background:#eef2ff;color:var(--blue)}
+main{padding:20px 28px;display:flex;flex-direction:column;gap:16px;min-width:0}
+header{display:flex;align-items:center;gap:10px}
+h1{font-size:22px;font-weight:700;margin-right:auto}
+.sel,.search{height:34px;border:1px solid var(--rule);background:#fff;border-radius:6px;padding:0 12px;display:flex;align-items:center;color:var(--ink-2)}
+.search{width:240px}
+.btn{height:34px;padding:0 14px;border:0;border-radius:6px;background:var(--blue);color:#fff;font:600 13px Inter}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;flex:1;min-height:0}
+.col{background:#eef0f3;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.ch{display:flex;align-items:center;gap:8px;font-weight:600;padding:2px 4px 6px}
+.ch i{width:8px;height:8px;border-radius:50%}
+.ch span{margin-left:auto;color:var(--ink-2);font-weight:500}
+.card{background:#fff;border-radius:6px;padding:10px 12px;box-shadow:0 1px 2px rgba(17,24,39,.08)}
+.card h3{font-size:13.5px;font-weight:600}
+.card p{color:var(--ink-2);font-size:12px;margin-top:2px}
+.card .v{margin-top:8px;display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2)}
+.card .v b{color:var(--ink)}
+.pill{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e}
+</style></head><body>
+<nav><div class="brand">Service Agreement</div><a class="on">Pipeline</a><a>Agreements</a><a>Customers</a><a>Sites &amp; equipment</a><a>Imports</a><a>Task library</a><a>Settings</a></nav>
+<main>
+<header><h1>Pipeline</h1><div class="sel">Estimator: All</div><div class="sel">Province: All</div><div class="search">Search…</div><button class="btn">New agreement</button></header>
+<section class="board">
+<div class="col"><div class="ch"><i style="background:#2563eb"></i>In progress<span>4</span></div>
+<div class="card"><h3>Harbourview Towers Strata</h3><p>AG-1048 · v3</p><span class="pill">Changes requested</span><div class="v"><span>4 visits/yr</span><b>$14,280</b></div></div>
+<div class="card"><h3>Pemberton Arena</h3><p>AG-1046 · v1</p><div class="v"><span>4 visits/yr</span><b>$21,600</b></div></div>
+<div class="card"><h3>Lakeshore Brewing Co.</h3><p>AG-1051 · import pending</p></div></div>
+<div class="col"><div class="ch"><i style="background:#f59e0b"></i>Sent to customer<span>4</span></div>
+<div class="card"><h3>Kingsway Self Storage</h3><p>Not viewed · 9 days</p><div class="v"><span>2 visits/yr</span><b>$4,120</b></div></div>
+<div class="card"><h3>Maple Ridge Medical Clinic</h3><p>Viewed Oct 9</p><div class="v"><span>4 visits/yr</span><b>$9,880</b></div></div>
+<div class="card"><h3>Cedar Point Seniors Residence</h3><p>Viewed today</p><div class="v"><span>6 visits/yr</span><b>$19,450</b></div></div></div>
+<div class="col"><div class="ch"><i style="background:#8b5cf6"></i>Accepted<span>2</span></div>
+<div class="card"><h3>Bayside Hotel</h3><p>Awaiting countersignature</p><div class="v"><span>4 visits/yr</span><b>$18,900</b></div></div>
+<div class="card"><h3>Fraser Valley Cold Storage</h3><p>Sent for signature</p><div class="v"><span>12 visits/yr</span><b>$8,800</b></div></div></div>
+<div class="col"><div class="ch"><i style="background:#10b981"></i>Completed<span>6</span></div>
+<div class="card"><h3>North Shore Curling Club</h3><p>Signed Oct 3</p></div><div class="card"><h3>Westbrook Mall</h3><p>Signed Sep 28</p></div></div>
+<div class="col"><div class="ch"><i style="background:#ef4444"></i>Refused<span>2</span></div>
+<div class="card"><h3>Kitsilano Bakery</h3><p>In-house maintenance</p></div><div class="card"><h3>Granville Dental</h3><p>Over budget</p></div></div>
+</section></main></body></html>

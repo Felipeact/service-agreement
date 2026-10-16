@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pipeline · Pipe Marker</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--rail:#2c3833;--rail-2:#3a4842;--rail-ink:#dfe5e1;--ground:#e3e6e2;--card:#fbfcfb;--line:#c5cbc6;--ink:#1d2421;--ink-2:#55605a;
+--prog:#2f5d9e;--sent:#f2c500;--acc:#e07a1f;--done:#1f7a45;--ref:#b3261e}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font:400 13px/1.4 "Public Sans",sans-serif;color:var(--ink);background:var(--ground);display:grid;grid-template-columns:224px 1fr}
+.cond{font-family:"Barlow Semi Condensed",sans-serif}
+nav{background:var(--rail);color:var(--rail-ink);padding:20px 14px;display:flex;flex-direction:column;gap:2px}
+.brand{font:700 17px "Barlow Semi Condensed";letter-spacing:.02em;padding:0 10px 22px;display:flex;gap:10px;align-items:center}
+.brand i{width:26px;height:26px;border-radius:3px;background:repeating-linear-gradient(135deg,var(--sent) 0 5px,#2c3833 5px 10px)}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:3px;color:var(--rail-ink);text-decoration:none;font-weight:500}
+nav a svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;opacity:.8}
+nav a.on{background:var(--rail-2);color:#fff;box-shadow:inset 0 -2px 0 var(--sent)}
+nav .sp{flex:1}
+nav .who{border-top:1px solid #45534d;padding:14px 10px 0;font-size:12px;color:#aeb8b2}
+nav .who b{display:block;color:#fff;font-weight:600;font-size:13px}
+main{display:flex;flex-direction:column;min-width:0}
+header{display:flex;align-items:center;gap:12px;padding:18px 28px 14px}
+h1{font:700 26px "Barlow Semi Condensed";letter-spacing:.01em;margin-right:auto}
+.sel,.search{height:36px;border:1px solid var(--line);background:#fff;border-radius:3px;padding:0 12px;display:flex;align-items:center;gap:8px;color:var(--ink-2);font-size:13px}
+.sel b{color:var(--ink);font-weight:600}
+.search{width:240px}
+.btn{height:36px;padding:0 16px;border-radius:3px;border:0;background:var(--ink);color:#fff;font:600 13px "Public Sans";display:flex;align-items:center;gap:8px}
+/* the pipe */
+.pipe{position:relative;margin:4px 28px 0;display:grid;grid-template-columns:repeat(4,1fr) 168px;gap:16px;height:46px}
+.pipe:before{content:"";position:absolute;left:0;right:0;top:9px;height:28px;border-radius:2px;background:linear-gradient(#b9c0bb,#d4d9d5 35%,#a7afaa 70%,#949d97)}
+.band{position:relative;margin:4px 0;height:38px;display:flex;align-items:center;gap:10px;padding:0 30px 0 14px;white-space:nowrap;font:700 14px "Barlow Semi Condensed";letter-spacing:.06em;text-transform:uppercase;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,0 100%)}
+.band small{font:600 13px "Barlow Semi Condensed";letter-spacing:.02em;opacity:.92;margin-left:auto;font-variant-numeric:tabular-nums}
+.b-prog{background:var(--prog);color:#fff}
+.b-sent{background:repeating-linear-gradient(135deg,#f2c500 0 10px,#e2b700 10px 13px);color:#1d1a00}
+.b-acc{background:repeating-linear-gradient(90deg,#e07a1f 0 14px,#d06c12 14px 16px);color:#1f0e00}
+.b-done{background:var(--done);color:#fff}
+.b-ref{background:repeating-linear-gradient(45deg,#b3261e 0 6px,#9c1f18 6px 8px);color:#fff;margin-right:0;clip-path:none}
+.board{flex:1;display:grid;grid-template-columns:repeat(4,1fr) 168px;gap:16px;padding:14px 28px 0;min-height:0}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:3px;padding:12px 12px 0;box-shadow:0 1px 2px rgba(29,36,33,.06)}
+.card h3{font-size:14px;font-weight:700;line-height:1.25}
+.meta{color:var(--ink-2);font-size:12px;margin-top:2px;display:flex;gap:8px}
+.money{margin-top:8px;font-size:13px;font-variant-numeric:tabular-nums;display:flex;justify-content:space-between}
+.money b{font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.tags span{font:600 11.5px "Barlow Semi Condensed";letter-spacing:.06em;text-transform:uppercase;border:1px solid #9aa39e;border-radius:2px;padding:1px 6px;color:#38423d}
+.note{margin-top:8px;font-size:12px;padding:6px 8px;border-radius:2px}
+.n-chg{background:#fdeee0;color:#6e3606}
+.n-warn{background:#fff6cc;color:#5a4700}
+.n-ok{background:#e4f1e9;color:#174d2f}
+.age{margin:10px -12px 0;height:22px;border-top:1px solid #e3e6e2;display:flex;align-items:center;gap:8px;padding:0 12px;font:600 11.5px "Barlow Semi Condensed";color:var(--ink-2);letter-spacing:.04em}
+.age i{flex:1;height:4px;background:#e3e6e2;border-radius:2px;position:relative;overflow:hidden}
+.age i:after{content:"";position:absolute;inset:0 auto 0 0;width:var(--d);background:#6d7872}
+.age.stale i:after{background:var(--acc)} .age.late i:after{background:var(--ref)}
+.mini{display:flex;gap:6px;margin-top:10px}
+.mini button{height:28px;padding:0 10px;border:1px solid var(--line);background:#fff;border-radius:3px;font:600 12px "Public Sans";color:var(--ink)}
+.mini button.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ref{background:transparent;border:1px dashed #b9a3a0;box-shadow:none}
+.ref p{font-size:12px;color:var(--ink-2);margin-top:4px}
+.more{font-size:12px;color:var(--ink-2);padding:2px 2px}
+</style></head><body>
+<nav>
+  <div class="brand"><i></i>Service Agreement</div>
+  <a class="on"><svg viewBox="0 0 16 16"><path d="M1 8h14M11 4l4 4-4 4"/></svg>Pipeline</a>
+  <a><svg viewBox="0 0 16 16"><path d="M3 1.5h7l3 3v10H3z M10 1.5v3h3"/></svg>Agreements</a>
+  <a><svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 15c1-3.5 3.5-5 6-5s5 1.5 6 5"/></svg>Customers</a>
+  <a><svg viewBox="0 0 16 16"><path d="M2 14.5V6l6-4 6 4v8.5zM6 14.5v-4h4v4"/></svg>Sites &amp; equipment</a>
+  <a><svg viewBox="0 0 16 16"><path d="M8 10V1.5M4.5 5 8 1.5 11.5 5M2 10.5v4h12v-4"/></svg>Imports</a>
+  <a><svg viewBox="0 0 16 16"><path d="M3 3.5h10M3 8h10M3 12.5h6"/></svg>Task library</a>
+  <div class="sp"></div>
+  <a><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M3 13l1.5-1.5M11.5 4.5 13 3"/></svg>Company settings</a>
+  <div class="who"><b>Jordan Okafor</b>Estimator · Northline Mechanical</div>
+</nav>
+<main>
+  <header>
+    <h1>Pipeline</h1>
+    <div class="sel">Estimator <b>All</b> ▾</div>
+    <div class="sel">Province <b>All</b> ▾</div>
+    <div class="search">Search customers, sites, AG-…</div>
+    <button class="btn">+ New agreement</button>
+  </header>
+  <div class="pipe">
+    <div class="band b-prog">In progress <small>4 · $43,820</small></div>
+    <div class="band b-sent">Sent to customer <small>4 · $41,230</small></div>
+    <div class="band b-acc">Accepted · to sign <small>2 · $27,700</small></div>
+    <div class="band b-done">Completed <small>6 · $88,140</small></div>
+    <div class="band b-ref">Refused <small>2</small></div>
+  </div>
+  <section class="board">
+    <div class="col">
+      <article class="card"><h3>Harbourview Towers Strata</h3><div class="meta"><span>AG-1048 · v3</span><span>Vancouver, BC</span></div>
+        <div class="note n-chg"><b>Changes requested:</b> drop the July boiler visit.</div>
+        <div class="money"><span>4 visits/yr</span><b>$14,280/yr</b></div>
+        <div class="tags"><span>RTU ×2</span><span>Boiler ×2</span><span>MUA ×1</span><span>EF ×6</span></div>
+        <div class="age" style="--d:7%"><span>2 D IN STAGE</span><i></i></div></article>
+      <article class="card"><h3>Lakeshore Brewing Co.</h3><div class="meta"><span>AG-1051 · v1</span><span>Kelowna, BC</span></div>
+        <div class="note n-warn">Import: 38 rows, <b>3 types to map</b></div>
+        <div class="age" style="--d:3%"><span>1 D IN STAGE</span><i></i></div></article>
+      <article class="card"><h3>Pemberton Arena</h3><div class="meta"><span>AG-1046 · v1</span><span>Calgary, AB</span></div>
+        <div class="money"><span>4 visits/yr</span><b>$21,600/yr</b></div>
+        <div class="tags"><span>Chiller ×1</span><span>AHU ×2</span><span>Dehum ×1</span><span>EF ×3</span></div>
+        <div class="age" style="--d:20%"><span>6 D IN STAGE</span><i></i></div></article>
+    </div>
+    <div class="col">
+      <article class="card"><h3>Kingsway Self Storage</h3><div class="meta"><span>AG-1039 · v1</span><span>Burnaby, BC</span></div>
+        <div class="note n-warn"><b>Not viewed</b> · day-7 reminder sent Oct 14</div>
+        <div class="money"><span>2 visits/yr</span><b>$4,120/yr</b></div>
+        <div class="tags"><span>RTU ×4</span><span>Split ×2</span></div>
+        <div class="age stale" style="--d:30%"><span>9 D IN STAGE</span><i></i></div></article>
+      <article class="card"><h3>Maple Ridge Medical Clinic</h3><div class="meta"><span>AG-1041 · v2</span><span>Maple Ridge, BC</span></div>
+        <div class="money"><span>4 visits/yr</span><b>$9,880/yr</b></div>
+        <div class="tags"><span>RTU ×3</span><span>HRV ×2</span><span>EF ×2</span></div>
+        <div class="age" style="--d:27%"><span>8 D · VIEWED OCT 9</span><i></i></div></article>
+      <article class="card"><h3>Cedar Point Seniors Residence</h3><div class="meta"><span>AG-1050 · v1</span><span>Kamloops, BC</span></div>
+        <div class="money"><span>6 visits/yr</span><b>$19,450/yr</b></div>
+        <div class="tags"><span>Boiler ×3</span><span>MUA ×2</span><span>AHU ×1</span><span>Pump ×4</span></div>
+        <div class="age" style="--d:7%"><span>2 D · VIEWED TODAY</span><i></i></div></article>
+    </div>
+    <div class="col">
+      <article class="card"><h3>Bayside Hotel</h3><div class="meta"><span>CT-0212 · from AG-1032 v2</span></div>
+        <div class="note n-ok"><b>Client signed Oct 15.</b> Your countersignature is next.</div>
+        <div class="money"><span>4 visits/yr</span><b>$18,900/yr</b></div>
+        <div class="mini"><button class="p">Countersign</button><button>Open contract</button></div>
+        <div class="age" style="--d:13%"><span>4 D IN STAGE</span><i></i></div></article>
+      <article class="card"><h3>Fraser Valley Cold Storage</h3><div class="meta"><span>CT-0214 · from AG-1044 v1</span></div>
+        <div class="money"><span>12 visits/yr</span><b>$8,800/yr</b></div>
+        <div class="tags"><span>Condensing ×4</span><span>Evap ×8</span></div>
+        <div class="age" style="--d:3%"><span>1 D · SENT FOR SIGNATURE</span><i></i></div></article>
+    </div>
+    <div class="col">
+      <article class="card"><h3>North Shore Curling Club</h3><div class="meta"><span>CT-0209 · signed Oct 3</span></div>
+        <div class="money"><span>4 visits/yr</span><b>$16,400/yr</b></div></article>
+      <article class="card"><h3>Westbrook Mall</h3><div class="meta"><span>CT-0207 · signed Sep 28</span></div>
+        <div class="money"><span>4 visits/yr</span><b>$31,760/yr</b></div></article>
+      <article class="card"><h3>Ridgeview Elementary</h3><div class="meta"><span>CT-0205 · signed Sep 22</span></div>
+        <div class="money"><span>2 visits/yr</span><b>$7,240/yr</b></div></article>
+      <div class="more">+ 3 more this quarter</div>
+    </div>
+    <div class="col">
+      <article class="card ref"><h3>Kitsilano Bakery</h3><p>“Going with in-house maintenance.”</p></article>
+      <article class="card ref"><h3>Granville Dental</h3><p>“Price over budget for 2027.”</p></article>
+    </div>
+  </section>
+</main>
+</body></html>
