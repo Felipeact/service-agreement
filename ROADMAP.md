@@ -83,6 +83,8 @@ The app is the source of truth for status. DocuSeal webhooks go to the app, not 
 
 ## Phases
 
+When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` with what was built (see `AGENTS..md`).
+
 ### Phase 0.5: Design system & UX (M17)
 - [x] PRODUCT.md: users, positioning, constraints and principles (`/impeccable init`)
 - [x] Visual direction variants with a kanban pipeline: Pipe Marker, Equipment Schedule, Departures Board and the category standard (`.impeccable/mocks/decision/`)
