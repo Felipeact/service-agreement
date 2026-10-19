@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "spec_precision_gap::when a criterion says two artifacts must agree the proof must compare both directions not only that each source value appears in the target",
+      "text": "When a criterion says two artifacts must agree, the proof must compare both directions, not only that each source value appears in the target.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "design-system-base"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C33 / AC 33 (docs)"
+      ],
+      "created": "2026-10-19T16:42:50Z",
+      "last_seen": "2026-10-19T16:42:50Z"
+    },
+    {
+      "id": "L-002",
+      "key": "spec_precision_gap::a handler is not invoked claim needs a proof subject that actually has a handler on an element without onclick the claim cannot fail",
+      "text": "A 'handler is not invoked' claim needs a proof subject that actually has a handler; on an element without onClick the claim cannot fail.",
+      "signal": "spec_precision_gap",
+      "scope": "web/ui",
+      "status": "candidate",
+      "features": [
+        "design-system-base"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C17 / web/components/kanban/pipeline-view.tsx:53 (web/ui)"
+      ],
+      "created": "2026-10-19T16:42:51Z",
+      "last_seen": "2026-10-19T16:42:51Z"
+    }
+  ]
+}

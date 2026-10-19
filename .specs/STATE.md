@@ -10,9 +10,9 @@
 ## Handoff
 
 **Feature**: design-system-base
-**Where**: C1-C35 built and proven by the author at `web@4d293fa`; independent Verifier pending
+**Where**: verified - PASS (light), report in `.specs/features/design-system-base/verification.md`
 **In progress**: none
-**Next step**: Verifier report in `.specs/features/design-system-base/verification.md`, then `validate_verification.py`
+**Next step**: next ROADMAP item (Phase 1: Supabase `0001_init` migration)
 **Blockers**: none
 **Uncommitted**: none after the docs commit; `.playwright-mcp/` captures are local only
 **Branch**: development (outer), master (`web/`)
