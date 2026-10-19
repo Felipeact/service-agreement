@@ -25,10 +25,11 @@ Other sources:
 ### Company profile and default terms (M2)
 **What it is:** each tenant's branding and contract defaults. Branding is legal name, address, phone, logo and accent colour. Default terms are repair discount %, CPI cap %, cancellation notice days, payment days, governing province and tax note (GST/PST/HST). Branding is data, not code: no company name is hard-coded, and seed or demo data uses a fictitious company.
 **What we built:** table `org_settings`, one row per org (primary key `org_id`). Percent terms are `numeric(5,2)` between 0 and 100. `accent_color` is `#rrggbb`. `logo_path` will point into Storage once buckets exist. No screen yet.
+- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Kettle Ridge Mechanical Ltd.`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has no members, agreements or events yet. The seed has run once on the live project; re-running it changes nothing.
 
 ### Customer (M3)
 **What it is:** the client company that owns the equipment and receives the service agreement, for example a property-management firm.
-**What we built:** table `customers` (per org). No screen yet.
+**What we built:** table `customers` (per org). No screen yet. The demo org has 12 customers whose names match [web/lib/sample-pipeline.ts](web/lib/sample-pipeline.ts), each with one contact (`@example.com` email) and one site.
 
 ### Contact / site contact (M3)
 **What it is:** the person at the customer, usually a facility or property manager, who reviews the agreement through the portal and signs the contract. Their email approval counts as written approval. They are non-technical and use the portal rarely.
@@ -40,7 +41,9 @@ Other sources:
 
 ### Asset and asset type (M4)
 **What it is:** one piece of equipment at a site. Fields: asset type, unit #, type/model, location/access, and source (manual or import). The asset type comes from a catalog of about 40 equipment types, for example RTU (rooftop unit) and MUA (make-up air unit).
-**What we built:** tables `asset_types` (catalog per org, `unique (org_id, code)`) and `assets` (per site, `source` is `manual` or `import`). The catalog is empty until the seed item.
+**What we built:** tables `asset_types` (catalog per org, `unique (org_id, code)`) and `assets` (per site, `source` is `manual` or `import`).
+- **Codes:** an asset type code must match `^[A-Z][A-Z0-9_]*$`, for example `RTU`, `MUA` or `HWT_HIGH_EFFICIENCY` (check `asset_types_code_format`). Phase 2 synonyms map onto these codes.
+- **Demo assets:** 57 assets across the 12 demo sites, using 27 of the 40 types, all `source = 'manual'`.
 
 ### Asset import (M5)
 **What it is:** turning a customer's messy equipment list (xlsx, csv, docx or pdf) into assets. The steps are upload, parse by format, extract with Claude structured output, normalize types with a synonym table (for example "Rooftop unit" → RTU), review in a grid, then commit. Uncertain rows are flagged, never hidden. Extraction sits behind the `AssetExtractor` port.
@@ -48,7 +51,11 @@ Other sources:
 
 ### Maintenance task library (M6)
 **What it is:** a preventive-maintenance checklist for each equipment type. Each tenant can edit it, and it is snapshotted into each agreement version so later edits don't change sent agreements.
-**What we built:** table `asset_type_tasks`, a checklist per asset type and per org. Seed still to come (next ROADMAP item). Versions snapshot it in `agreement_versions.snapshot` (jsonb placeholder until Phase 3).
+**What we built:** table `asset_type_tasks`, a checklist per asset type and per org, ordered by `position`. Versions snapshot it in `agreement_versions.snapshot` (jsonb placeholder until Phase 3).
+- **Catalog template:** the product's standard catalog is `private.catalog_asset_types` (40 types) and `private.catalog_asset_type_tasks` (174 tasks), filled from the "Service included" section of the maintenance proposal template, without the source company. It is in [supabase/migrations/20261019191509_catalog_template.sql](supabase/migrations/20261019191509_catalog_template.sql) (AD-007). The "AHU (Metro Tower)" variant is excluded, and two typos are corrected ("preventer", "hot spots").
+- **Copying it into an org:** `private.seed_org_catalog(org)` copies the template into one org and returns the number of types inserted (40 on an empty org, 0 on a re-run). It skips codes the org already has, and keeps their own checklists. From then on the org owns its copy: template changes never reach it and its edits never reach the template (AD-008). Only the service role can call it; Phase 5 onboarding will call it for new orgs.
+- **Not yet:** a catalog editing screen, per-task frequency (for example the ERV's quarterly vs annual tasks), and service-line templates.
+- **Tests and spec:** [supabase/tests/catalog_seed.sql](supabase/tests/catalog_seed.sql) and [supabase/tests/demo_seed.sql](supabase/tests/demo_seed.sql); [.specs/features/catalog-seed/](.specs/features/catalog-seed/).
 
 ### Service agreement (PM agreement) (M7, M8)
 **What it is:** the preventive-maintenance proposal the contractor sends to the customer for review. It is not yet a signed contract. It contains:
@@ -124,6 +131,11 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-19:** Phase 1 item 2, the equipment catalog, task library and fictitious demo org ([.specs/features/catalog-seed/](.specs/features/catalog-seed/)).
+  - Migration `catalog_template` adds the 40-type, 174-task template in `private`, `private.seed_org_catalog(org)`, and the upper-case code check on `asset_types` ([supabase/migrations/20261019191509_catalog_template.sql](supabase/migrations/20261019191509_catalog_template.sql)).
+  - [supabase/seed.sql](supabase/seed.sql) creates the demo org `Kettle Ridge Mechanical Ltd.` with settings, the catalog and 12 customers with contacts, sites and assets. It has run on the live project.
+  - Known gap: the seed proof ran after the real seed, so seeding an empty database is not yet proven. It gets proven the next time `seed.sql` runs on a fresh database.
 
 - **2026-10-19:** Phase 1 item 1, the Supabase project and the init migration ([.specs/features/supabase-init/](.specs/features/supabase-init/)).
   - New project `service-agreement` (`gnxebrtcpbujhvcamtoe`, `ca-central-1`).

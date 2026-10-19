@@ -3,7 +3,7 @@
 Profile: light
 Plan: `.specs/features/catalog-seed/plan.md`
 
-29 checks in 4 slices · 6 one-way doors · 0 open, of which 0 block
+28 checks in 4 slices · 6 one-way doors · 0 open, of which 0 block
 
 ## How proofs run
 
@@ -158,3 +158,15 @@ Proof: `sql supabase/tests/rls_isolation.sql#C35`
 
 - S1-S4 touch one new migration (~22 KB: 40 types and 174 tasks), `seed.sql` (~15 KB), three test files (~40 KB, the 174-row literal included), `fixture.sql` (~8 KB, one line changes), and CONTEXT.md, ROADMAP.md and STATE.md (~28 KB read, ~3 KB written). With plan and checks (~30 KB), that is about 145 KB, roughly 36k tokens, under the 150k budget - one builder
 - Remote writes: `apply_migration` and the real `seed.sql` run wait for the user's go-ahead (plan Assumptions). C1-C27 are proven first with the migration text inlined and rolled back
+
+- **Boundary:** C1-C28 closed by one builder at the `feat(db)` commit that adds the catalog migration, `seed.sql` and the three test files
+- **Settled mid-build:** the migration and the real seed were already on the remote when the build resumed. `catalog_template` (version `20261019191509`) matches the local file byte for byte (md5 `f742d8053df4faafb52dff05ea93477b`, 14,742 bytes, read from `supabase_migrations.schema_migrations`). The live demo org already existed, so the proofs ran against the applied migration with no inlined text
+- **Seed proof limitation:** org `D` already exists on the live project, so in the **seed** proof the first run of the seed body inserts nothing. C12-C18 therefore check the demo-org rows already on the remote (written by the earlier real run), and C19 checks that running the seed again leaves every count unchanged. This run does **not** prove that `seed.sql` seeds an empty database. A rolled-back variant that first deletes org `D` was proposed and declined, because it would issue a `DELETE` on the only project. Seeding from empty gets proven the next time `seed.sql` runs on a fresh database (`supabase db reset`, or a branch)
+- **Build results (2026-10-19, project `gnxebrtcpbujhvcamtoe`):**
+  - `sql catalog_seed.sql` (C1-C11, C25, C26): `catalog_seed: pass`, run by the builder through MCP `execute_sql`. The builder's copy of the fixture left out comments, `tests.insert_sql` and the fixture sanity block; `catalog_seed.sql` was verbatim
+  - `seed demo_seed.sql` (C12-C19): `demo_seed: pass`, run by the user in the Supabase SQL Editor from the assembled file (verbatim fixture + seed body + `demo_seed.sql` + seed body + `demo_seed_rerun.sql`). MCP `execute_sql` was declined four times for this call
+  - `sql rls_isolation.sql`, `rls_roles.sql`, `domain_constraints.sql`, `events_outbox.sql` (C22, C24): each `<suite>: pass`, run by the user in the SQL Editor as the verbatim updated fixture followed by the suite
+  - shell C15, C20, C21, C27: exit 0
+  - mcp C21 `list_migrations`: `init` `20261019174738`, `catalog_template` `20261019191509`. C23 `get_advisors(security)`: one `INFO` lint (`rls_enabled_no_policy` on `public.outbox`, there since supabase-init), 0 `ERROR` or `WARN`. C28: orgs 1, name `Kettle Ridge Mechanical Ltd.`, types 40, tasks 174, customers 12, contacts 12, sites 12, assets 57, memberships 0, agreements 0, events 0
+- **Evidence accepted by the user (2026-10-19):** verification round 1 failed only because the Verifier's own `execute_sql` for the seed proof came back `{"status":"declined"}`, leaving C13, C14, C15, C16, C18 and C19 resting on the user's SQL Editor run. The user accepted that run (`demo_seed: pass`, same text as the current tree) as the evidence for those checks. Proving the seed on an empty database (round 1 gap 2) stays open, as in the limitation above
+- **Abandoned:** none

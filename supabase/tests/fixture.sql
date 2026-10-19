@@ -88,7 +88,7 @@ begin
     when 'customers' then format('insert into public.customers (org_id, name) values (%L, %L)', o, 'Customer ' || r)
     when 'contacts' then format('insert into public.contacts (org_id, customer_id, name) values (%L, %L, %L)', o, tests.id('cust' || p_org), 'Contact ' || r)
     when 'sites' then format('insert into public.sites (org_id, customer_id, name) values (%L, %L, %L)', o, tests.id('cust' || p_org), 'Site ' || r)
-    when 'asset_types' then format('insert into public.asset_types (org_id, code, name) values (%L, %L, %L)', o, 'T' || r, 'Type ' || r)
+    when 'asset_types' then format('insert into public.asset_types (org_id, code, name) values (%L, %L, %L)', o, 'T' || upper(r), 'Type ' || r)
     when 'asset_type_tasks' then format('insert into public.asset_type_tasks (org_id, asset_type_id, position, description) values (%L, %L, 99, %L)', o, tests.id('type' || p_org), 'Task ' || r)
     when 'assets' then format('insert into public.assets (org_id, site_id, asset_type_id, unit_no) values (%L, %L, %L, %L)', o, tests.id('site' || p_org), tests.id('type' || p_org), 'U-' || r)
     when 'agreements' then format('insert into public.agreements (org_id, site_id) values (%L, %L)', o, tests.id('site' || p_org))
