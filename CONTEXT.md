@@ -117,8 +117,8 @@ Newest first. Use one line per completed change: date, what was done, and the ke
   - Added `@theme` role tokens, Inter, the app shell with a mobile drawer, `Button`, `SearchInput`, `StatusPill`, and the pipeline kanban on sample data at `/pipeline`. `/` now redirects to `/pipeline`.
   - Regenerated [DESIGN.md](DESIGN.md) from the code and added [.impeccable/design.json](.impeccable/design.json).
   - Removed the `create-next-app` page and its SVGs.
-  - The code is committed in the nested `web/` repo.
+  - Merged the nested `web/` repo into this repo with its history, and stopped tracking `.playwright-mcp/` captures (now in `.gitignore`).
 
 - **2026-10-16:** Added this file and the rule in `AGENTS..md` and `ROADMAP.md` that every change keeps it up to date.
 - **2026-10-16:** Phase 0.5 design work. Wrote [PRODUCT.md](PRODUCT.md). Created the visual direction variants in [.impeccable/mocks/decision/](.impeccable/mocks/decision/); the chosen one is `canon.html`. Wrote the seed [DESIGN.md](DESIGN.md).
-- **Project start:** scaffolded Next.js 16 / React 19 / Tailwind 4 in [web/](web/). `web/` is its own git repo (branch `master`), recorded in this repo as a gitlink with no `.gitmodules`.
+- **Project start:** scaffolded Next.js 16 / React 19 / Tailwind 4 in [web/](web/). `web/` started as its own nested git repo; on 2026-10-19 it was merged into this repo with its history, so it is ordinary files here.

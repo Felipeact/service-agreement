@@ -15,4 +15,4 @@
 **Next step**: next ROADMAP item (Phase 1: Supabase `0001_init` migration)
 **Blockers**: none
 **Uncommitted**: none after the docs commit; `.playwright-mcp/` captures are local only
-**Branch**: development (outer), master (`web/`)
+**Branch**: development (`web/` merged into this repo at `c41da9a`)

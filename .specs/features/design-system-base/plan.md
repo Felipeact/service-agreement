@@ -50,7 +50,7 @@ second token object in TypeScript - and Next's `next/font/google` for Inter.
 | domain | new term: `PipelineStage` - the one board stage a deal shows at (`in_progress`, `sent`, `accepted`, `completed`, `refused`), lives in `web/lib/pipeline-stage.ts` until the Phase 1 domain layer takes ownership of the same keys (AD-001) |
 | domain | existing term: "Slate Secondary" meant `#6b7280`, now means `#646b78` (4.70:1 on Board Grey, 5.36:1 on white) - only DESIGN.md and the mocks reference it today; no code branches on it |
 | web scaffold | the default page, Geist fonts, the `prefers-color-scheme: dark` block and the Next/Vercel SVGs in `web/public/` are removed; nothing references them besides the default page |
-| repo | `web/` is its own git repo (branch `master`), recorded in the outer repo as a gitlink with no `.gitmodules`. Code commits land in `web/`; the outer repo on `development` gets the gitlink bump plus `.specs/`, `DESIGN.md`, `CONTEXT.md`, `ROADMAP.md` and `.impeccable/design.json` |
+| repo | `web/` was its own git repo with no remote, recorded as a gitlink. The feature's code landed there (`web@4d293fa`), then `web/` was merged into this repo with its history at `c41da9a` so it can be pushed; `.playwright-mcp/` captures are now ignored |
 | docs | DESIGN.md loses its SEED marker and is regenerated from code; CONTEXT.md M17 entry and Build log updated; ROADMAP Phase 0.5 items 4 and 5 ticked |
 | stored data | nothing to migrate - no database exists yet |
 
