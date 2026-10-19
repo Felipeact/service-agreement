@@ -68,7 +68,14 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ### Pipeline / status engine (M11)
 **What it is:** a pure state machine for agreements and contracts. Every transition writes an event and an outbox row. Each deal is shown at one stage: **In progress → Sent to customer → Accepted (awaiting signature) → Completed**, with **Refused** as the exit. The dashboard shows deals by stage and age.
-**What we built:** nothing yet. Planned for Phase 1. The kanban pipeline UI is designed in the decision mocks.
+**What we built:**
+- **Stage keys:** `in_progress`, `sent`, `accepted`, `completed` and `refused` live in [web/lib/pipeline-stage.ts](web/lib/pipeline-stage.ts) (AD-001). The Phase 1 domain layer takes ownership of them.
+- **Board UI:** `/pipeline` ([web/app/(app)/pipeline/page.tsx](web/app/(app)/pipeline/page.tsx)) shows the five-column board on fictitious sample data from [web/lib/sample-pipeline.ts](web/lib/sample-pipeline.ts).
+  - Each column shows its card count and its CAD total per year, formatted by `formatCad` from [web/lib/money.ts](web/lib/money.ts).
+  - Search by customer name runs client-side.
+  - On mobile the board becomes stage tabs; on tablet it scrolls inside its own container.
+- **Redirect:** `/` redirects to `/pipeline` with a 307 ([web/next.config.ts](web/next.config.ts)).
+- **Not built yet:** the state machine, real data, filters and drag-and-drop.
 
 ### Events, outbox and n8n automation (M11, M12, M13)
 **What it is:** the app owns all status, and n8n only automates emails, reminders and timing. Outbox events go to n8n signed with HMAC, and n8n calls back app endpoints with idempotency keys. n8n execution IDs are written back to the event log as audit evidence. Workflows W1–W6 are defined in [ROADMAP.md](ROADMAP.md#n8n-workflows). Customers never see or build workflows.
@@ -90,7 +97,15 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ### Design system (M17)
 **What it is:** the visual direction. The user chose the familiar SaaS category standard, benchmarked against Linear, Stripe Dashboard, Attio/HubSpot and Jobber/Housecall Pro.
-**What we built:** see the Build log. Tokens and components in `web/` are still pending.
+**What we built:**
+- **Tokens:** Tailwind 4 `@theme` role tokens in [web/app/globals.css](web/app/globals.css) are the only colour, radius and shadow values. The default palette is cleared (`--color-*: initial`), so components use `bg-ground`, `text-ink-2`, `bg-stage-sent`, `rounded-control` and so on (AD-002 in [.specs/STATE.md](.specs/STATE.md)). Slate Secondary was darkened from `#6b7280` to `#646b78` to hold 4.5:1 on Board Grey. Inter loads through `next/font` in [web/app/layout.tsx](web/app/layout.tsx).
+- **Base components:**
+  - [web/components/ui/](web/components/ui/): `Button` (primary and secondary), `SearchInput` and `StatusPill` (stage dot plus label, or the attention and neutral tones). Controls are 44px tall below 1024px and 34px on desktop.
+  - [web/components/shell/](web/components/shell/): `AppShell` (232px sidebar on desktop, top bar and drawer below 1024px), `SidebarNav` (nav items without a page are `aria-disabled`) and `PageHeader`.
+  - [web/components/kanban/](web/components/kanban/): `KanbanColumn`, `KanbanCard` and `PipelineView`.
+- **Deferred:** `TextInput`, `Select` and the field error state come with the Phase 1 Company settings form.
+- **Design record:** [DESIGN.md](DESIGN.md) and [.impeccable/design.json](.impeccable/design.json) are regenerated from the code.
+- **Spec:** [.specs/features/design-system-base/](.specs/features/design-system-base/).
 
 ---
 
@@ -98,6 +113,12 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
 
+- **2026-10-19:** Phase 0.5 tokens and base components ([.specs/features/design-system-base/](.specs/features/design-system-base/)).
+  - Added `@theme` role tokens, Inter, the app shell with a mobile drawer, `Button`, `SearchInput`, `StatusPill`, and the pipeline kanban on sample data at `/pipeline`. `/` now redirects to `/pipeline`.
+  - Regenerated [DESIGN.md](DESIGN.md) from the code and added [.impeccable/design.json](.impeccable/design.json).
+  - Removed the `create-next-app` page and its SVGs.
+  - The code is committed in the nested `web/` repo.
+
 - **2026-10-16:** Added this file and the rule in `AGENTS..md` and `ROADMAP.md` that every change keeps it up to date.
 - **2026-10-16:** Phase 0.5 design work. Wrote [PRODUCT.md](PRODUCT.md). Created the visual direction variants in [.impeccable/mocks/decision/](.impeccable/mocks/decision/); the chosen one is `canon.html`. Wrote the seed [DESIGN.md](DESIGN.md).
-- **Project start:** scaffolded Next.js 16 / React 19 / Tailwind 4 in [web/](web/). It is still the default `create-next-app` page ([web/app/page.tsx](web/app/page.tsx)).
+- **Project start:** scaffolded Next.js 16 / React 19 / Tailwind 4 in [web/](web/). `web/` is its own git repo (branch `master`), recorded in this repo as a gitlink with no `.gitmodules`.

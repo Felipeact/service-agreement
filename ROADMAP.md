@@ -89,8 +89,8 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] PRODUCT.md: users, positioning, constraints and principles (`/impeccable init`)
 - [x] Visual direction variants with a kanban pipeline: Pipe Marker, Equipment Schedule, Departures Board and the category standard (`.impeccable/mocks/decision/`)
 - [x] Chosen direction (category standard, benchmarked against Linear, Stripe Dashboard, Attio/HubSpot and Jobber/Housecall Pro) recorded as a seed DESIGN.md, plus the Pipeline surface brief
-- [ ] Tokens and base components (sidebar, page header, buttons, inputs, status pill, kanban column and card) implemented in `web/`
-- [ ] DESIGN.md regenerated from code with real tokens, and `.impeccable/design.json` written (`/impeccable document`)
+- [x] Tokens and base components (sidebar, page header, buttons, search input, status pill, kanban column and card) implemented in `web/`. Text input, select and the field error state moved to Phase 1
+- [x] DESIGN.md regenerated from code with real tokens, and `.impeccable/design.json` written (`/impeccable document`)
 
 ### Phase 1: Foundation
 - [ ] Supabase project and `0001_init` migration (orgs, memberships, settings, customers, contacts, sites, asset types/tasks, assets, agreements, service lines, contracts, events, outbox) with RLS on every table
@@ -99,6 +99,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [ ] Ports (repositories, `EventPublisher`, `Clock`) and Supabase adapters, plus a composition root
 - [ ] Auth (magic link) and the `proxy.ts` session refresh
 - [ ] Screens built to DESIGN.md: dashboard, customers, customer detail, site asset register, company settings
+- [ ] Form controls `TextInput` and `Select` with the field error state, built with the company settings form
 - [ ] Vitest unit tests, RLS isolation check, Playwright validation
 
 ### Phase 2: Asset import

@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T16:36:08.915Z",
+  "title": "Design System: Service Agreement",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Cool Ground",
+        "canonical": "#f6f7f9",
+        "cssVar": "--color-ground",
+        "tonalRamp": [
+          "oklch(15% 0.003 264.5)",
+          "oklch(26.4% 0.003 264.5)",
+          "oklch(37.9% 0.003 264.5)",
+          "oklch(49.3% 0.003 264.5)",
+          "oklch(60.7% 0.003 264.5)",
+          "oklch(72.1% 0.003 264.5)",
+          "oklch(83.6% 0.003 264.5)",
+          "oklch(95% 0.003 264.5)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#ffffff",
+        "cssVar": "--color-surface",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26.4% 0 89.9)",
+          "oklch(37.9% 0 89.9)",
+          "oklch(49.3% 0 89.9)",
+          "oklch(60.7% 0 89.9)",
+          "oklch(72.1% 0 89.9)",
+          "oklch(83.6% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "board": {
+        "role": "neutral",
+        "displayName": "Board Grey",
+        "canonical": "#eef0f3",
+        "cssVar": "--color-board",
+        "tonalRamp": [
+          "oklch(15% 0.005 258.3)",
+          "oklch(26.4% 0.005 258.3)",
+          "oklch(37.9% 0.005 258.3)",
+          "oklch(49.3% 0.005 258.3)",
+          "oklch(60.7% 0.005 258.3)",
+          "oklch(72.1% 0.005 258.3)",
+          "oklch(83.6% 0.005 258.3)",
+          "oklch(95% 0.005 258.3)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e5e7eb",
+        "cssVar": "--color-hairline",
+        "tonalRamp": [
+          "oklch(15% 0.006 264.5)",
+          "oklch(26.4% 0.006 264.5)",
+          "oklch(37.9% 0.006 264.5)",
+          "oklch(49.3% 0.006 264.5)",
+          "oklch(60.7% 0.006 264.5)",
+          "oklch(72.1% 0.006 264.5)",
+          "oklch(83.6% 0.006 264.5)",
+          "oklch(95% 0.006 264.5)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#111827",
+        "cssVar": "--color-ink",
+        "tonalRamp": [
+          "oklch(15% 0.032 264.7)",
+          "oklch(26.4% 0.032 264.7)",
+          "oklch(37.9% 0.032 264.7)",
+          "oklch(49.3% 0.032 264.7)",
+          "oklch(60.7% 0.032 264.7)",
+          "oklch(72.1% 0.032 264.7)",
+          "oklch(83.6% 0.032 264.7)",
+          "oklch(95% 0.032 264.7)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Slate Secondary",
+        "canonical": "#646b78",
+        "cssVar": "--color-ink-2",
+        "tonalRamp": [
+          "oklch(15% 0.022 262.9)",
+          "oklch(26.4% 0.022 262.9)",
+          "oklch(37.9% 0.022 262.9)",
+          "oklch(49.3% 0.022 262.9)",
+          "oklch(60.7% 0.022 262.9)",
+          "oklch(72.1% 0.022 262.9)",
+          "oklch(83.6% 0.022 262.9)",
+          "oklch(95% 0.022 262.9)"
+        ]
+      },
+      "ink-nav": {
+        "role": "neutral",
+        "displayName": "Nav Ink",
+        "canonical": "#374151",
+        "cssVar": "--color-ink-nav",
+        "tonalRamp": [
+          "oklch(15% 0.031 259.7)",
+          "oklch(26.4% 0.031 259.7)",
+          "oklch(37.9% 0.031 259.7)",
+          "oklch(49.3% 0.031 259.7)",
+          "oklch(60.7% 0.031 259.7)",
+          "oklch(72.1% 0.031 259.7)",
+          "oklch(83.6% 0.031 259.7)",
+          "oklch(95% 0.031 259.7)"
+        ]
+      },
+      "action": {
+        "role": "primary",
+        "displayName": "Action Blue",
+        "canonical": "#2563eb",
+        "cssVar": "--color-action",
+        "tonalRamp": [
+          "oklch(15% 0.215 262.9)",
+          "oklch(26.4% 0.215 262.9)",
+          "oklch(37.9% 0.215 262.9)",
+          "oklch(49.3% 0.215 262.9)",
+          "oklch(60.7% 0.215 262.9)",
+          "oklch(72.1% 0.215 262.9)",
+          "oklch(83.6% 0.215 262.9)",
+          "oklch(95% 0.215 262.9)"
+        ]
+      },
+      "action-tint": {
+        "role": "primary",
+        "displayName": "Action Tint",
+        "canonical": "#eef2ff",
+        "cssVar": "--color-action-tint",
+        "tonalRamp": [
+          "oklch(15% 0.018 272.3)",
+          "oklch(26.4% 0.018 272.3)",
+          "oklch(37.9% 0.018 272.3)",
+          "oklch(49.3% 0.018 272.3)",
+          "oklch(60.7% 0.018 272.3)",
+          "oklch(72.1% 0.018 272.3)",
+          "oklch(83.6% 0.018 272.3)",
+          "oklch(95% 0.018 272.3)"
+        ]
+      },
+      "stage-in-progress": {
+        "role": "status",
+        "displayName": "Stage: In progress",
+        "canonical": "#2563eb",
+        "cssVar": "--color-stage-in-progress",
+        "tonalRamp": [
+          "oklch(15% 0.215 262.9)",
+          "oklch(26.4% 0.215 262.9)",
+          "oklch(37.9% 0.215 262.9)",
+          "oklch(49.3% 0.215 262.9)",
+          "oklch(60.7% 0.215 262.9)",
+          "oklch(72.1% 0.215 262.9)",
+          "oklch(83.6% 0.215 262.9)",
+          "oklch(95% 0.215 262.9)"
+        ]
+      },
+      "stage-sent": {
+        "role": "status",
+        "displayName": "Stage: Sent to customer",
+        "canonical": "#f59e0b",
+        "cssVar": "--color-stage-sent",
+        "tonalRamp": [
+          "oklch(15% 0.165 70.1)",
+          "oklch(26.4% 0.165 70.1)",
+          "oklch(37.9% 0.165 70.1)",
+          "oklch(49.3% 0.165 70.1)",
+          "oklch(60.7% 0.165 70.1)",
+          "oklch(72.1% 0.165 70.1)",
+          "oklch(83.6% 0.165 70.1)",
+          "oklch(95% 0.165 70.1)"
+        ]
+      },
+      "stage-accepted": {
+        "role": "status",
+        "displayName": "Stage: Accepted, awaiting signature",
+        "canonical": "#8b5cf6",
+        "cssVar": "--color-stage-accepted",
+        "tonalRamp": [
+          "oklch(15% 0.219 292.7)",
+          "oklch(26.4% 0.219 292.7)",
+          "oklch(37.9% 0.219 292.7)",
+          "oklch(49.3% 0.219 292.7)",
+          "oklch(60.7% 0.219 292.7)",
+          "oklch(72.1% 0.219 292.7)",
+          "oklch(83.6% 0.219 292.7)",
+          "oklch(95% 0.219 292.7)"
+        ]
+      },
+      "stage-completed": {
+        "role": "status",
+        "displayName": "Stage: Completed",
+        "canonical": "#10b981",
+        "cssVar": "--color-stage-completed",
+        "tonalRamp": [
+          "oklch(15% 0.149 162.5)",
+          "oklch(26.4% 0.149 162.5)",
+          "oklch(37.9% 0.149 162.5)",
+          "oklch(49.3% 0.149 162.5)",
+          "oklch(60.7% 0.149 162.5)",
+          "oklch(72.1% 0.149 162.5)",
+          "oklch(83.6% 0.149 162.5)",
+          "oklch(95% 0.149 162.5)"
+        ]
+      },
+      "stage-refused": {
+        "role": "status",
+        "displayName": "Stage: Refused",
+        "canonical": "#ef4444",
+        "cssVar": "--color-stage-refused",
+        "tonalRamp": [
+          "oklch(15% 0.208 25.3)",
+          "oklch(26.4% 0.208 25.3)",
+          "oklch(37.9% 0.208 25.3)",
+          "oklch(49.3% 0.208 25.3)",
+          "oklch(60.7% 0.208 25.3)",
+          "oklch(72.1% 0.208 25.3)",
+          "oklch(83.6% 0.208 25.3)",
+          "oklch(95% 0.208 25.3)"
+        ]
+      },
+      "attention-bg": {
+        "role": "status",
+        "displayName": "Attention Ground",
+        "canonical": "#fef3c7",
+        "cssVar": "--color-attention-bg",
+        "tonalRamp": [
+          "oklch(15% 0.058 95.6)",
+          "oklch(26.4% 0.058 95.6)",
+          "oklch(37.9% 0.058 95.6)",
+          "oklch(49.3% 0.058 95.6)",
+          "oklch(60.7% 0.058 95.6)",
+          "oklch(72.1% 0.058 95.6)",
+          "oklch(83.6% 0.058 95.6)",
+          "oklch(95% 0.058 95.6)"
+        ]
+      },
+      "attention-fg": {
+        "role": "status",
+        "displayName": "Attention Text",
+        "canonical": "#92400e",
+        "cssVar": "--color-attention-fg",
+        "tonalRamp": [
+          "oklch(15% 0.125 46.2)",
+          "oklch(26.4% 0.125 46.2)",
+          "oklch(37.9% 0.125 46.2)",
+          "oklch(49.3% 0.125 46.2)",
+          "oklch(60.7% 0.125 46.2)",
+          "oklch(72.1% 0.125 46.2)",
+          "oklch(83.6% 0.125 46.2)",
+          "oklch(95% 0.125 46.2)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page title",
+        "purpose": "One per page, e.g. \"Pipeline\"."
+      },
+      "title": {
+        "displayName": "Card title",
+        "purpose": "Customer or site name on a kanban card."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base 13px size for the app, tabular figures set on body; buttons, nav and column headers sit at this size."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Card metadata, visits per year, column totals, empty-column text."
+      },
+      "label": {
+        "displayName": "Pill label",
+        "purpose": "Attention and neutral status pills."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-card",
+        "value": "0 1px 2px rgba(17,24,39,.08)",
+        "purpose": "Kanban cards and currently the navigation drawer; the only shadow token."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-colors",
+        "value": "150ms",
+        "purpose": "Colour-only hover transition on buttons."
+      }
+    ],
+    "focus": {
+      "selector": ":focus-visible",
+      "value": "outline: 2px solid var(--color-action); outline-offset: 2px",
+      "purpose": "Global focus ring for every focusable element."
+    },
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "0px",
+        "purpose": "Below 768px: stage tabs, one column, top bar and drawer, 44px controls."
+      },
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Page header control row goes horizontal."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Tablet (768-1023px): 20px page padding, board scrolls horizontally inside its container with columns at least 240px."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Desktop: 232px sidebar, 34px controls, five-column grid board."
+      }
+    ],
+    "controlHeights": {
+      "belowLg": "44px",
+      "desktopButtonsAndSearch": "34px",
+      "desktopNavItems": "36px"
+    },
+    "layout": {
+      "sidebarWidth": "232px",
+      "drawerWidth": "264px",
+      "topBarHeight": "56px",
+      "pagePaddingX": {
+        "mobile": "16px",
+        "tablet": "20px",
+        "desktop": "28px"
+      },
+      "pagePaddingY": "20px",
+      "tabletColumnMinWidth": "240px"
+    },
+    "pipelineStages": [
+      {
+        "key": "in_progress",
+        "label": "In progress",
+        "shortLabel": "In progress",
+        "token": "--color-stage-in-progress"
+      },
+      {
+        "key": "sent",
+        "label": "Sent to customer",
+        "shortLabel": "Sent to customer",
+        "token": "--color-stage-sent"
+      },
+      {
+        "key": "accepted",
+        "label": "Accepted, awaiting signature",
+        "shortLabel": "Accepted",
+        "token": "--color-stage-accepted"
+      },
+      {
+        "key": "completed",
+        "label": "Completed",
+        "shortLabel": "Completed",
+        "token": "--color-stage-completed"
+      },
+      {
+        "key": "refused",
+        "label": "Refused",
+        "shortLabel": "Refused",
+        "token": "--color-stage-refused"
+      }
+    ],
+    "money": {
+      "formatter": "formatCad (web/lib/money.ts)",
+      "locale": "en-CA",
+      "currency": "CAD",
+      "input": "integer cents",
+      "decimals": "0 for whole dollars, 2 otherwise",
+      "perYearSuffix": "/yr"
+    },
+    "deferred": {
+      "components": [
+        "TextInput",
+        "Select",
+        "Field error state"
+      ],
+      "when": "Phase 1 Company settings form"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single primary action in a page header.",
+      "html": "<button class=\"ds-btn-primary\">New agreement</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; padding: 0 14px; border: none; border-radius: var(--radius-control, 6px); background: var(--color-action, #2563eb); color: var(--color-surface, #ffffff); font: 600 13px/1 var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); white-space: nowrap; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: color-mix(in srgb, var(--color-action, #2563eb) 90%, transparent); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-action, #2563eb); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: .5; cursor: not-allowed; } @media (max-width: 1023px) { .ds-btn-primary { height: 44px; } }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button variant; recovery and secondary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Clear search</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border: 1px solid var(--color-hairline, #e5e7eb); border-radius: var(--radius-control, 6px); background: var(--color-surface, #ffffff); color: var(--color-ink, #111827); font: 600 13px/1 var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); cursor: pointer; transition: background-color 150ms; } .ds-btn-secondary:hover { background: var(--color-ground, #f6f7f9); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-action, #2563eb); outline-offset: 2px; } @media (max-width: 1023px) { .ds-btn-secondary { height: 44px; } }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Search field with an inset magnifier and an accessible name instead of a visible label.",
+      "html": "<div class=\"ds-search\"><svg aria-hidden=\"true\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><circle cx=\"7\" cy=\"7\" r=\"4.75\"/><path d=\"m10.5 10.5 3.5 3.5\" stroke-linecap=\"round\"/></svg><input type=\"search\" aria-label=\"Search agreements\" placeholder=\"Search customers…\"></div>",
+      "css": ".ds-search { position: relative; width: 240px; } .ds-search svg { position: absolute; left: 12px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); color: var(--color-ink-2, #646b78); pointer-events: none; } .ds-search input { width: 100%; height: 34px; padding: 0 12px 0 32px; border: 1px solid var(--color-hairline, #e5e7eb); border-radius: var(--radius-control, 6px); background: var(--color-surface, #ffffff); color: var(--color-ink, #111827); font: 400 13px var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); } .ds-search input::placeholder { color: var(--color-ink-2, #646b78); } .ds-search input:focus-visible { outline: 2px solid var(--color-action, #2563eb); outline-offset: 2px; } @media (max-width: 1023px) { .ds-search input { height: 44px; } }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "232px white sidebar with resting, active and disabled items.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main\"><a class=\"ds-nav-item is-active\" aria-current=\"page\" href=\"#\">Pipeline</a><a class=\"ds-nav-item\" href=\"#\">Customers</a><span class=\"ds-nav-item is-disabled\" role=\"link\" aria-disabled=\"true\">Imports</span></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 232px; padding: 18px 12px 16px; background: var(--color-surface, #ffffff); border-right: 1px solid var(--color-hairline, #e5e7eb); font: 500 13px var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); } .ds-nav-item { display: flex; align-items: center; height: 36px; padding: 0 10px; border-radius: var(--radius-control, 6px); color: var(--color-ink-nav, #374151); text-decoration: none; } .ds-nav-item:hover { background: var(--color-ground, #f6f7f9); } .ds-nav-item.is-active { background: var(--color-action-tint, #eef2ff); color: var(--color-action, #2563eb); } .ds-nav-item.is-disabled { color: var(--color-ink-2, #646b78); cursor: not-allowed; } .ds-nav-item.is-disabled:hover { background: none; } .ds-nav-item:focus-visible { outline: 2px solid var(--color-action, #2563eb); outline-offset: 2px; } @media (max-width: 1023px) { .ds-nav-item { height: 44px; } }"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "pill-attention",
+      "description": "Stage dot with label, and the attention and neutral tone pills.",
+      "html": "<div class=\"ds-pills\"><span class=\"ds-stage\"><span class=\"ds-dot\" style=\"background: var(--color-stage-sent, #f59e0b)\"></span>Sent to customer</span><span class=\"ds-pill ds-pill-attention\">Changes requested</span><span class=\"ds-pill ds-pill-neutral\">Sample data</span></div>",
+      "css": ".ds-pills { display: flex; gap: 12px; align-items: center; font: 13px var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); } .ds-stage { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--color-ink, #111827); } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; } .ds-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font: 600 11px/16px var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); } .ds-pill-attention { background: var(--color-attention-bg, #fef3c7); color: var(--color-attention-fg, #92400e); } .ds-pill-neutral { background: var(--color-board, #eef0f3); color: var(--color-ink-2, #646b78); }"
+    },
+    {
+      "name": "Kanban Column",
+      "kind": "custom",
+      "refersTo": "kanban-column",
+      "description": "Board Grey stage well with count, annual total and kanban cards.",
+      "html": "<section class=\"ds-col\"><div class=\"ds-col-head\"><span class=\"ds-col-title\"><span class=\"ds-dot\" style=\"background: var(--color-stage-in-progress, #2563eb)\"></span>In progress</span><span class=\"ds-col-count\">2</span><span class=\"ds-col-total\">$14,280/yr</span></div><article class=\"ds-card\"><h3>Northgate Plaza</h3><p>Rooftop units · Calgary, AB</p><span class=\"ds-pill\">Not viewed</span><div class=\"ds-card-foot\"><span>4 visits/yr</span><strong>$9,600/yr</strong></div></article><article class=\"ds-card\"><h3>Maple Ridge School</h3><p>Boilers · Edmonton, AB</p><div class=\"ds-card-foot\"><span>2 visits/yr</span><strong>$4,680/yr</strong></div></article></section>",
+      "css": ".ds-col { display: flex; flex-direction: column; gap: 8px; width: 260px; padding: 10px; border-radius: var(--radius-panel, 8px); background: var(--color-board, #eef0f3); font: 400 13px/1.45 var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); font-variant-numeric: tabular-nums; color: var(--color-ink, #111827); } .ds-col-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 6px; } .ds-col-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; } .ds-col-count { font-weight: 500; color: var(--color-ink-2, #646b78); } .ds-col-total { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--color-ink-2, #646b78); } .ds-card { padding: 10px 12px; border-radius: var(--radius-control, 6px); background: var(--color-surface, #ffffff); box-shadow: var(--shadow-card, 0 1px 2px rgba(17,24,39,.08)); } .ds-card h3 { margin: 0; font-size: 13.5px; line-height: 1.375; font-weight: 600; } .ds-card p { margin: 2px 0 0; font-size: 12px; color: var(--color-ink-2, #646b78); } .ds-card .ds-pill { display: inline-flex; margin-top: 8px; padding: 2px 8px; border-radius: 9999px; font: 600 11px/16px var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); background: var(--color-attention-bg, #fef3c7); color: var(--color-attention-fg, #92400e); } .ds-card-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--color-ink-2, #646b78); } .ds-card-foot strong { font-weight: 600; color: var(--color-ink, #111827); }"
+    },
+    {
+      "name": "Stage Tabs",
+      "kind": "custom",
+      "refersTo": "nav-item-active",
+      "description": "Mobile pipeline stage selector: 44px tabs with dot, label and count.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\"><span class=\"ds-dot\" style=\"background: var(--color-stage-in-progress, #2563eb)\"></span>In progress<span class=\"ds-tab-count\">2</span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><span class=\"ds-dot\" style=\"background: var(--color-stage-sent, #f59e0b)\"></span>Sent to customer<span class=\"ds-tab-count\">3</span></button></div>",
+      "css": ".ds-tabs { display: flex; gap: 6px; } .ds-tab { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border: 1px solid var(--color-hairline, #e5e7eb); border-radius: var(--radius-control, 6px); background: var(--color-surface, #ffffff); color: var(--color-ink, #111827); font: 600 13px var(--font-sans, Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif); white-space: nowrap; cursor: pointer; } .ds-tab .ds-tab-count { color: var(--color-ink-2, #646b78); } .ds-tab[aria-selected=\"true\"] { border-color: var(--color-action, #2563eb); background: var(--color-action-tint, #eef2ff); color: var(--color-action, #2563eb); } .ds-tab[aria-selected=\"true\"] .ds-tab-count { color: var(--color-action, #2563eb); } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; } .ds-tab:focus-visible { outline: 2px solid var(--color-action, #2563eb); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Well-Run Office",
+    "overview": "The user chose the category standard on purpose. The app should feel instantly familiar to anyone who has used a modern SaaS tool: a white sidebar, a cool grey work area, white cards on grey column wells, one blue accent. Nothing should need explaining. Its quality is in how it's executed, not in novelty. The benchmark is four products the user named: **Linear** (density, speed, keyboard reach), **Stripe Dashboard** (money in tables, statuses, forms and detail pages), **Attio / HubSpot CRM** (deal pipelines, record pages with properties and activity) and **Jobber / Housecall Pro** (plain, friendly language for the trades and a clear quote-to-job flow). A screen is done when it could sit next to any of these and not look like the cheaper one.\n\nDensity is moderate to high: the base text size is 13px and desktop controls are 34px tall, so lists and boards show a lot without crowding; below 1024px everything a finger touches grows to 44px. Expression lives in precise details: tabular figures everywhere, honest status labels, exact counts and annual totals in column headers, and short colour-only transitions (150ms). There is no texture, illustration or decorative colour inside the app. Customer-facing surfaces (review portal, PDFs, emails) are not built yet; when they are, they use the same quiet structure but wear the **tenant's** logo and accent colour, never the product's.\n\nThe palette is closed in code: `web/app/globals.css` clears Tailwind's default colours (`--color-*: initial`) and declares only the role tokens below, so a component can only reach for a role, never a raw hue.",
+    "keyCharacteristics": [
+      "Familiar SaaS layout: a 232px left sidebar, a page header with search and one primary action, and the work area below.",
+      "Neutral cool-grey ground, white surfaces and one blue accent for action and selection.",
+      "Five stage colours that carry pipeline meaning, always paired with a text label.",
+      "Tabular money in CAD, whole dollars without decimals, per-year amounts ending in `/yr`, and a count plus total on every pipeline column.",
+      "Plain trade language (\"Sent to customer\", \"Accepted, awaiting signature\"), not jargon."
+    ],
+    "rules": [
+      {
+        "name": "The Status Is Never Colour Alone Rule",
+        "body": "Every stage dot sits next to its text label; `StatusPill` makes `label` a required prop. Colour speeds up scanning but never carries meaning by itself.",
+        "section": "colors"
+      },
+      {
+        "name": "The Closed Palette Rule",
+        "body": "The 16 tokens in `globals.css` are the only colours in the app. A new colour is a new role token added there and recorded here, never an arbitrary value in a component.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tenant Wears the Accent Rule",
+        "body": "Action Blue belongs to the product's own screens. On the customer portal, PDFs and emails, the tenant's accent colour takes the action and brand roles, falling back to Ink when the tenant's colour fails 4.5:1 against white. (Not yet built; it binds the first customer-facing surface.)",
+        "section": "colors"
+      },
+      {
+        "name": "The Money Lines Up Rule",
+        "body": "Money is always tabular and in CAD, formatted by `formatCad` (`web/lib/money.ts`) from integer cents with `en-CA` currency formatting: whole-dollar amounts drop the decimals ($14,280), any amount with cents keeps two ($14,280.50). Per-year amounts end in `/yr`. Never format money inline.",
+        "section": "typography"
+      },
+      {
+        "name": "The Board Never Scrolls the Page Rule",
+        "body": "Horizontal overflow on the pipeline is contained in the board; the page itself never scrolls sideways.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces separate by tone and hairlines first. A shadow means \"this sits above its ground\", never decoration.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do benchmark every screen against Linear, Stripe Dashboard, Attio/HubSpot and Jobber/Housecall Pro. It should look at home next to them.",
+      "Do show the count and the annual CAD total on every pipeline column and grouped list.",
+      "Do pair every stage colour with its text label (The Status Is Never Colour Alone Rule).",
+      "Do use the product's plain status language: \"In progress\", \"Sent to customer\", \"Accepted, awaiting signature\", \"Completed\", \"Refused\".",
+      "Do format every amount with `formatCad` and end per-year amounts in `/yr`.",
+      "Do keep every control at 44px tall below 1024px, and never hide an action behind hover alone.",
+      "Do add a new colour, radius or shadow as a token in `globals.css` first, then record it here.",
+      "Do let the tenant's logo and accent colour lead on everything the customer sees."
+    ],
+    "donts": [
+      "Don't add texture, illustration, gradients, glass or decorative colour inside the app. The user chose the standard look, played straight.",
+      "Don't use stage colours for anything other than status.",
+      "Don't use arbitrary hex values or Tailwind's default palette in components; the palette is closed.",
+      "Don't hard-code any company name or brand into customer-facing output.",
+      "Don't use a coloured `border-left` stripe above 1px on cards or alerts. Use a pill or a tinted note instead.",
+      "Don't let the board scroll the whole page sideways."
+    ]
+  }
+}
