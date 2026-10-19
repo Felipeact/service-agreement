@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 4,
   "lessons": [
     {
       "id": "L-001",
@@ -40,6 +40,24 @@
       ],
       "created": "2026-10-19T16:42:51Z",
       "last_seen": "2026-10-19T16:42:51Z"
+    },
+    {
+      "id": "L-003",
+      "key": "spec_precision_gap::state the starting database state in a seed check and prove an idempotent seed on a database without its rows before the real run since on conflict do nothing makes a later proof pass on old rows",
+      "text": "State the starting database state in a seed check, and prove an idempotent seed on a database without its rows before the real run, since on conflict do nothing makes a later proof pass on old rows",
+      "signal": "spec_precision_gap",
+      "scope": "seed",
+      "status": "candidate",
+      "features": [
+        "catalog-seed"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gap: C12-C16 vs supabase/seed.sql:7-117 (seed)"
+      ],
+      "created": "2026-10-19T21:57:07Z",
+      "last_seen": "2026-10-19T21:57:07Z"
     }
   ]
 }

@@ -26,6 +26,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: checks.md C17 / web/components/kanban/pipeline-view.tsx:53 (web/ui)
 - last seen: 2026-10-19T16:42:51Z
 
+### L-003 - State the starting database state in a seed check, and prove an idempotent seed on a database without its rows before the real run, since on conflict do nothing makes a later proof pass on old rows
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `seed` · harmful: 0
+- features: catalog-seed
+- evidence: verification.md gap: C12-C16 vs supabase/seed.sql:7-117 (seed)
+- last seen: 2026-10-19T21:57:07Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
