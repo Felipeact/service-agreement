@@ -14,7 +14,7 @@
 ## Handoff
 
 **Feature**: supabase-init
-**Where**: built and committed; Verifier pending
+**Where**: verified - PASS (light), report in `.specs/features/supabase-init/verification.md`
 **In progress**: none
 **Next step**: next ROADMAP item (Phase 1: seed the equipment-type catalog and task library, with a fictitious demo org)
 **Blockers**: none
