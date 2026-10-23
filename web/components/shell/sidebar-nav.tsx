@@ -1,10 +1,11 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FOOTER_NAV, MAIN_NAV, type NavItem } from "./nav-items";
 
-const ITEM_CLASSES = "flex h-11 items-center rounded-control px-2.5 font-medium lg:h-9";
+export const ITEM_CLASSES = "flex h-11 items-center rounded-control px-2.5 font-medium lg:h-9";
 
 function NavEntry({ item, pathname, onNavigate }: { item: NavItem; pathname: string; onNavigate?: () => void }) {
   if (!item.href) {
@@ -27,8 +28,8 @@ function NavEntry({ item, pathname, onNavigate }: { item: NavItem; pathname: str
   );
 }
 
-/** Product name, the main nav, and Settings pinned to the bottom. */
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+/** The main nav, and Settings pinned to the bottom above an optional footer. */
+export function SidebarNav({ onNavigate, footer }: { onNavigate?: () => void; footer?: ReactNode }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-0.5">
@@ -39,6 +40,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         {FOOTER_NAV.map((item) => (
           <NavEntry key={item.label} item={item} pathname={pathname} onNavigate={onNavigate} />
         ))}
+        {footer}
       </div>
     </nav>
   );

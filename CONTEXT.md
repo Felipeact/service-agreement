@@ -19,13 +19,21 @@ Other sources:
 - **Isolation:** every tenant table has `org_id not null`, and child rows reference parents through `(id, org_id)` composite foreign keys, so a reference cannot cross orgs (AD-003).
 - **RLS:** enabled on all 15 `public` tables. Policies call `private.is_org_member(org)` and `private.has_org_role(org, roles[])`, which are security definer with an empty `search_path`, in a `private` schema the Data API does not expose (AD-004).
 - **Who writes what:** members read everything in their org except `outbox`. Owner and admin write settings, memberships and the equipment catalog. Owner, admin and estimator write customers, contacts, sites, assets, agreements, versions, service lines, contracts and events. Viewers only read. `anon` can read no rows and write nothing.
-- **Not yet:** org creation is done by the service role only (onboarding is Phase 5). Login comes with Phase 1 auth.
+- **Sign-in (staff):** a **sign-in link** by email, not a password. Customers get a different **portal link** (M9), with no account.
+  - `/login` ([web/app/login/](web/app/login/)) asks Supabase for a link with `shouldCreateUser: false`, so only existing users get one. An unknown address sees the same "Check your email" answer and gets no account (Supabase answers 422 `otp_disabled`).
+  - The email links to `GET /auth/confirm?token_hash=…&type=email` ([web/app/auth/confirm/route.ts](web/app/auth/confirm/route.ts)), which calls `verifyOtp`, sets the session cookies and redirects to `/pipeline`. A missing, wrong, used or expired link redirects to `/login?error=link_invalid` (Supabase answers 403 `otp_expired`).
+  - **Supabase config outside the repo:** the Magic link email template's link must be `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`, and the Site URL `http://localhost:3000` in dev. Supabase's built-in sender only delivers to the project team's addresses; real users need custom SMTP (M13).
+  - **Session refresh:** [web/proxy.ts](web/proxy.ts) runs `updateSession` ([web/infrastructure/supabase/session.ts](web/infrastructure/supabase/session.ts)) on every request except build assets and images. `getClaims()` refreshes an expired token and the new cookies go on the response. Signed out, any path except `/login` and `/auth/confirm` redirects to `/login`; signed in, `/login` redirects to `/pipeline`.
+  - **Who is signed in:** `currentMember()` from `getContainer()` returns `signed_out`, `no_membership` or `member` (user, email, org, org name, role). Identity comes from `getClaims` (`sub`), never `getSession`. A user with several memberships acts for the earliest one. Adapters: [web/infrastructure/supabase/auth.ts](web/infrastructure/supabase/auth.ts).
+  - **The `(app)` gate:** [web/app/(app)/layout.tsx](web/app/(app)/layout.tsx) renders `MemberGate` inside `<Suspense>` (Cache Components cannot prerender a session read). Signed out redirects to `/login`; no membership shows "No workspace yet" with Sign out; a member gets the shell with the org name, their email and Sign out (scope `local`, this browser only).
+  - **Members before onboarding:** invite the user in the Supabase dashboard, then run [supabase/seed.sql](supabase/seed.sql) after `select set_config('app.demo_owner_email', '<email>', false);` to make them owner of the demo org. The address is never committed.
+- **Not yet:** org creation is done by the service role only (onboarding is Phase 5). No invite or members screen, and no org switcher.
 - **Tests:** [supabase/tests/](supabase/tests/). Run them with MCP `execute_sql` on the text of `fixture.sql` followed by one test file; each run rolls back. Spec: [.specs/features/supabase-init/](.specs/features/supabase-init/).
 
 ### Company profile and default terms (M2)
 **What it is:** each tenant's branding and contract defaults. Branding is legal name, address, phone, logo and accent colour. Default terms are repair discount %, CPI cap %, cancellation notice days, payment days, governing province and tax note (GST/PST/HST). Branding is data, not code: no company name is hard-coded, and seed or demo data uses a fictitious company.
 **What we built:** table `org_settings`, one row per org (primary key `org_id`). Percent terms are `numeric(5,2)` between 0 and 100. `accent_color` is `#rrggbb`. `logo_path` will point into Storage once buckets exist. No screen yet.
-- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Kettle Ridge Mechanical Ltd.`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has no members, agreements or events yet. The seed has run once on the live project; re-running it changes nothing.
+- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Kettle Ridge Mechanical Ltd.`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has no agreements or events yet; its owner is attached with `app.demo_owner_email` (see Tenant). The seed has run once on the live project; re-running it changes nothing.
 
 ### Customer (M3)
 **What it is:** the client company that owns the equipment and receives the service agreement, for example a property-management firm.
@@ -100,7 +108,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
   - **Adapters:** [web/infrastructure/supabase/index.ts](web/infrastructure/supabase/index.ts) calls the RPCs below and maps SQLSTATE `40001`, `P0002` and `42501` to those codes. [web/infrastructure/supabase/database.types.ts](web/infrastructure/supabase/database.types.ts) is generated with MCP `generate_typescript_types`; regenerate it after each migration.
   - **Clock:** the `Clock` port has `systemClock` and `fixedClock(d)` in [web/infrastructure/clock/index.ts](web/infrastructure/clock/index.ts). Nothing reads it yet; deal age will be its first reader.
   - **Layer rules:** ESLint keeps `application/` free of framework and database imports, keeps `infrastructure/` away from UI, and stops `app/`, `components/` and `lib/` importing adapters or `@supabase/*` (AD-014).
-  - **Config:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `web/.env.local` (untracked); [web/.env.example](web/.env.example) lists them. Until the auth item lands nobody can sign in, so a transition from the app returns `forbidden`.
+  - **Config:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `web/.env.local` (untracked); [web/.env.example](web/.env.example) lists them. A transition runs as the signed-in member.
   - Spec: [.specs/features/ports-adapters/](.specs/features/ports-adapters/).
 - **Not built yet:** real data on the board, deal age, filters and drag-and-drop.
 
@@ -145,6 +153,11 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-23:** Phase 1 item 5, staff sign-in with a magic link and the `proxy.ts` session refresh ([.specs/features/auth-magic-link/](.specs/features/auth-magic-link/)).
+  - `/login`, `GET /auth/confirm`, [web/proxy.ts](web/proxy.ts), the `AuthGateway` and `MemberDirectory` ports with Supabase adapters, and the `(app)` member gate with "No workspace yet" and Sign out.
+  - `TextInput` with its field-error state ([web/components/ui/text-input.tsx](web/components/ui/text-input.tsx)) and the `--color-danger` token. `Select` stays with the settings form.
+  - `supabase/seed.sql` attaches the demo owner from `app.demo_owner_email`; rolled-back test in [supabase/tests/demo_owner.sql](supabase/tests/demo_owner.sql).
 
 - **2026-10-23:** Phase 1 item 4, ports, Supabase adapters and the composition root ([.specs/features/ports-adapters/](.specs/features/ports-adapters/)).
   - Migration `transition_rpcs`: one-transaction transition RPCs and the private outbox writer ([supabase/migrations/20261023222239_transition_rpcs.sql](supabase/migrations/20261023222239_transition_rpcs.sql)), applied to the live project. Rolled-back tests in [supabase/tests/transitions.sql](supabase/tests/transitions.sql).

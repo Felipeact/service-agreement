@@ -272,3 +272,7 @@ Proof: `mcp get_advisors(type: "security")` - same lint names as before the buil
   `(app)` layout (~10 KB), `supabase/seed.sql` (9 KB) plus `fixture.sql` (~11 KB) and a new
   `demo_owner.sql` (~3 KB), and edit `CONTEXT.md`, `ROADMAP.md` and `STATE.md` (~42 KB read):
   about 120 KB, roughly 30k tokens, under the 150k budget - one builder
+
+- **Boundary:** C1-C7, C9-C17, C19, C20, C24-C31 closed in the feature commit (one builder). Still open: the live proofs of C8 (real emailed link), C18 (demo owner sees the org) and C21 (sign out over HTTP), which need the user's dashboard steps (plan open questions 1-2), and `seed supabase/tests/demo_owner.sql#C22`/`#C23`, whose `execute_sql` call the user declined in this session
+- **Settled mid-build:** door 6 added to the plan (session read behind `<Suspense>`), because `next build` with Cache Components rejects a request read at the top of a route; AC 23 narrowed to "outside `example.com`", because the demo contacts already use it; `demo_owner.sql` runs the seed body through a `tests.run_seed()` function instead of pasting it three times; `boundaries.test.ts` already had `C24:` tests from ports-adapters, so `-t "C24:"` also runs those, which stay green
+- **Abandoned:** substituting the seed body at comment markers in `demo_owner.sql` - the marker text inside the header comment was replaced too, which broke the comment

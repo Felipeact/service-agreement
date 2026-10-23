@@ -38,6 +38,16 @@ describe("composition root", () => {
     expect(container.clock.now()).toBeInstanceOf(Date);
   });
 
+  test("C27: getContainer() wires the sign-in link, link verification, sign out and the current member", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.requestSignInLink).toBe("function");
+    expect(typeof container.verifyEmailLink).toBe("function");
+    expect(typeof container.signOut).toBe("function");
+    expect(typeof container.currentMember).toBe("function");
+  });
+
   test.each([
     [URL_KEY, undefined, "sb_publishable_test"],
     [PUBLISHABLE_KEY, "https://example.supabase.co", undefined],

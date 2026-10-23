@@ -30,3 +30,28 @@ export interface ContractRepository {
 export interface Clock {
   now(): Date;
 }
+
+/** An unknown email is `ok: true` too, so a caller cannot tell whether an account exists (door 2). */
+export type MagicLinkResult = { ok: true } | { ok: false; code: "rate_limited" | "unavailable" };
+
+export type EmailLinkResult = { ok: true } | { ok: false; code: "invalid_link" };
+
+export interface AuthGateway {
+  requestMagicLink(email: string): Promise<MagicLinkResult>;
+  /** Exchanges the `token_hash` from the sign-in email for a session. */
+  verifyEmailLink(tokenHash: string): Promise<EmailLinkResult>;
+  /** Ends this browser's session only. */
+  signOut(): Promise<void>;
+}
+
+export type MemberRole = "owner" | "admin" | "estimator" | "viewer";
+
+/** Who is signed in, and the org they act for (door 2). */
+export type CurrentMember =
+  | { status: "signed_out" }
+  | { status: "no_membership"; email: string }
+  | { status: "member"; userId: string; email: string; orgId: string; orgName: string; role: MemberRole };
+
+export interface MemberDirectory {
+  currentMember(): Promise<CurrentMember>;
+}

@@ -35,7 +35,7 @@ flowchart TD
     MAIL --> CONF["GET /auth/confirm (new route, Surface row 1, door 2) -> AuthGateway.verifyEmailLink -> verifyOtp, sets session cookies"]
     CONF -->|ok| P307
     CONF -->|fail| LERR["307 /login?error=link_invalid"]
-    PAGE --> LAYOUT["app/(app)/layout.tsx (exists) -> currentMember (door 2): getClaims sub (door 5), then memberships join orgs through RLS"]
+    PAGE --> LAYOUT["app/(app)/layout.tsx (exists) -> Suspense -> MemberGate (door 6) -> currentMember (door 2): getClaims sub (door 5), then memberships join orgs through RLS"]
     LAYOUT -->|signed_out| L307
     LAYOUT -->|no_membership| NOWS[No workspace screen]
     LAYOUT -->|member| SHELL["AppShell (exists) shows org name, email, Sign out"]
@@ -81,6 +81,7 @@ so the public one is listed here.
 | 3. the link shape in the Magic link email (lives in Supabase config, not the repo) | Magic link template href: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`. Site URL `http://localhost:3000` for dev. The confirm route calls `verifyOtp({ token_hash, type: "email" })` | the PKCE `code` + `exchangeCodeForSession` flow - fails when the link opens in a different browser or device than the one that asked for it (a phone mail app), which is how contractors read email (decided by the user) |
 | 4. how a staff member exists before Phase 5 onboarding | a `seed.sql` block: `insert into public.memberships (org_id, user_id, role) select '00000000-0000-4000-8000-00000000de30', id, 'owner' from auth.users where email = lower(nullif(current_setting('app.demo_owner_email', true), '')) on conflict (org_id, user_id) do nothing`. The user is created first with the dashboard's "Invite user" | the email as a literal in the committed seed - puts a real person's address in git history; inserting into `auth.users` with SQL - skips GoTrue's identities and instance rows, so the magic link may not resolve the user |
 | 5. how server code reads identity (the pattern every page copies) | identity is `(await supabase.auth.getClaims()).data?.claims.sub`, in the proxy and in `currentMember`. `getSession()` is never used for identity | `getSession().user` - read from a cookie anyone can forge, and the Supabase docs say not to trust it on the server; `getUser()` - an extra round trip to the Auth server on every request, for a freshness the role check in RLS already provides |
+| 6. reading the session under Cache Components (added mid-build; every later `(app)` screen inherits it) | `app/(app)/layout.tsx` has no top-level `await`: it returns `<Suspense fallback={<ShellFallback />}><MemberGate>{children}</MemberGate></Suspense>`. `MemberGate` (async Server Component in `app/(app)/member-gate.tsx`) awaits `currentMember()`, then calls `redirect("/login")`, renders `NoWorkspace`, or renders `AppShell` around `children`. `/login` reads `searchParams` the same way, inside `<Suspense>` with the plain form as the fallback | `export const instant = false` on the `(app)` layout - `next build` accepts it, but it opts every app page out of static-shell validation, and every later screen would inherit the opt-out; `'use cache: private'` on `currentMember` - caches the member in the browser, so a role change or removal would not show until the entry expires |
 
 - Nothing else in this change is hard to reverse
 

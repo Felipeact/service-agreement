@@ -1,9 +1,21 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { ESLint } from "eslint";
 import { describe, expect, test } from "vitest";
 
 const webRoot = __dirname;
+
+/** Built so this file does not match its own search. */
+const SESSION_CALL = ["getSession", "("].join("");
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name === "node_modules" || entry.name.startsWith(".")) return [];
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(full);
+    return /\.(ts|tsx|mjs|js)$/.test(entry.name) ? [full] : [];
+  });
+}
 
 async function restrictedImports(relativePath: string, specifier: string) {
   const eslint = new ESLint({ cwd: webRoot });
@@ -65,5 +77,17 @@ describe("layer boundaries", () => {
     const example = readFileSync(path.join(webRoot, ".env.example"), "utf8");
     expect(example).toMatch(/^NEXT_PUBLIC_SUPABASE_URL=/m);
     expect(example).toMatch(/^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/m);
+  });
+
+  test("C17: no source file reads identity from getSession", () => {
+    const offenders = sourceFiles(webRoot).filter((file) => readFileSync(file, "utf8").includes(SESSION_CALL));
+    expect(offenders).toEqual([]);
+  });
+
+  test("C24: every email address in supabase/seed.sql is on example.com", () => {
+    const seed = readFileSync(path.join(webRoot, "..", "supabase", "seed.sql"), "utf8");
+    const emails = seed.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) ?? [];
+    expect(emails.length).toBeGreaterThan(0);
+    expect(emails.filter((email) => !email.endsWith("@example.com"))).toEqual([]);
   });
 });

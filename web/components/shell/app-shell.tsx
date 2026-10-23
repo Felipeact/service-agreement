@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { SidebarAccount } from "./sidebar-account";
 import { SidebarNav } from "./sidebar-nav";
 
 const PRODUCT_NAME = "Service Agreement";
 
+type AppShellProps = {
+  children: ReactNode;
+  /** The signed-in member's company, read through RLS. */
+  orgName: string;
+  email: string;
+  signOut: () => Promise<void>;
+};
+
 /** Fixed sidebar on desktop; a top bar with a navigation drawer below 1024px. */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, orgName, email, signOut }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -32,8 +41,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-dvh flex-col border-r border-hairline bg-surface px-3 pt-[18px] pb-4 lg:flex">
-        <div className="px-2.5 pb-5 text-[15px] font-bold">{PRODUCT_NAME}</div>
-        <SidebarNav />
+        <div className="px-2.5 pb-5">
+          <div className="text-[15px] font-bold">{PRODUCT_NAME}</div>
+          <div className="truncate pt-0.5 text-[12px] text-ink-2">{orgName}</div>
+        </div>
+        <SidebarNav footer={<SidebarAccount email={email} signOut={signOut} />} />
       </aside>
 
       <div className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-hairline bg-surface px-2 lg:hidden">
@@ -62,7 +74,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="absolute inset-y-0 left-0 flex w-[264px] flex-col bg-surface px-3 pt-2 pb-4 shadow-card"
           >
             <div className="flex items-center justify-between pb-3 pl-2.5">
-              <span className="text-[15px] font-bold">{PRODUCT_NAME}</span>
+              <div className="min-w-0">
+                <div className="text-[15px] font-bold">{PRODUCT_NAME}</div>
+                <div className="truncate text-[12px] text-ink-2">{orgName}</div>
+              </div>
               <button
                 ref={closeButtonRef}
                 type="button"
@@ -75,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </svg>
               </button>
             </div>
-            <SidebarNav onNavigate={closeDrawer} />
+            <SidebarNav onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
           </div>
         </div>
       )}

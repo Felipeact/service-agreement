@@ -99,7 +99,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Ports (repositories, `Clock`) and Supabase adapters, plus a composition root. Each transition writes its status, event and outbox row in one transaction; the outbound `EventPublisher` (outbox to n8n) moved to Phase 3 with W1
 - [ ] Auth (magic link) and the `proxy.ts` session refresh
 - [ ] Screens built to DESIGN.md: dashboard, customers, customer detail, site asset register, company settings
-- [ ] Form controls `TextInput` and `Select` with the field error state, built with the company settings form
+- [ ] Form control `Select`, built with the company settings form (`TextInput` and the field error state shipped with auth)
 - [ ] Vitest unit tests, RLS isolation check, Playwright validation
 
 ### Phase 2: Asset import

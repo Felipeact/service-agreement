@@ -21,13 +21,18 @@
 | AD-015 | Every state change goes through one `security invoker` RPC per entity, `public.apply_<entity>_transition(id, expected_status, to_status, event_type, payload) returns uuid`, `search_path = ''`: role check via `private.has_org_role`, compare-and-set on the expected status, event insert with `actor_id = auth.uid()`, outbox enqueue, all in one transaction. SQLSTATE `40001` stale, `P0002` not found, `42501` not allowed; adapters map them to `conflict`, `not_found`, `forbidden` | PostgREST has no transaction across requests; invoker keeps RLS deciding isolation (AD-004); the portal, DocuSeal webhook and expiry copy this | active | 2026-10-23 |
 | AD-016 | `private.enqueue_outbox(event_id)` (security definer, `search_path = ''`, member check) is the only writer of `outbox`; `outbox` privileges stay revoked from `anon` and `authenticated`, and no trigger on `events` enqueues | non-transition events (`agreement.viewed`) must not reach n8n, and no user token can enqueue an arbitrary email | active | 2026-10-23 |
 | AD-017 | `events.payload` is `{ "from", "to" }` plus the domain `data` keys (`reason`, `versionNo`), camelCase | n8n W1-W4 read these keys; `type` and `entity_type` already have columns | active | 2026-10-23 |
+| AD-018 | Session refresh lives in `web/proxy.ts` -> `updateSession` (`web/infrastructure/supabase/session.ts`), which calls `getClaims()` and copies refreshed cookies onto the response, redirects included. Public paths are exactly `/login` and `/auth/confirm`; the matcher skips `_next/static`, `_next/image`, `favicon.ico` and image files | Server Components cannot write cookies, so only the proxy can replace an expired token; every later route relies on it | active | 2026-10-23 |
+| AD-019 | Auth reaches the app only through the `AuthGateway` port (`requestMagicLink`, `verifyEmailLink`, `signOut`) and `MemberDirectory.currentMember()`, which returns `signed_out`, `no_membership` or `member` (userId, email, orgId, orgName, role). An unknown email is `ok: true` | pages cannot import `@supabase/*` (AD-014), and no caller can tell whether an account exists | active | 2026-10-23 |
+| AD-020 | Server-side identity is `getClaims()` `sub`, never `getSession()` (a test fails on any `getSession(` under `web/`) | `getClaims` verifies the token; a session read from cookies can be forged | active | 2026-10-23 |
+| AD-021 | Before Phase 5 onboarding, a staff member exists by dashboard invite plus `supabase/seed.sql` run with `app.demo_owner_email`; no email literal is committed outside `example.com` | a real address in git history cannot be removed; inserting into `auth.users` with SQL skips GoTrue's identities | active | 2026-10-23 |
+| AD-022 | Under Cache Components, the `(app)` layout has no top-level `await`: it renders `<Suspense>` around `MemberGate`, which reads `currentMember()` and redirects, shows No workspace, or renders the shell. Pages that read `searchParams` or cookies do it in a child inside `<Suspense>` | a request read outside Suspense fails `next build`; `instant = false` would opt every app page out of static-shell validation | active | 2026-10-23 |
 
 ## Handoff
 
 **Feature**: auth-magic-link
-**Where**: plan approved; checks written, `.specs/features/auth-magic-link/checks.md` (C1-C31, `validate_checks.py` exit 0); building, one builder
+**Where**: built and committed; C1-C7, C9-C17, C19, C20, C24-C31 proven; live parts of C8, C18, C21 and the SQL proof of C22-C23 wait on the user (see checks Handoff); Verifier not yet run
 **In progress**: none
-**Next step**: build C1-C31; doors 1, 2, 4 and 5 become AD-018..AD-021 in the feature commit
+**Next step**: user invites the demo owner, edits the Magic link template and allows the rolled-back seed proof; then run the live proofs and dispatch the Verifier
 **Blockers**: before live proof, the user invites the demo-owner email in the Supabase dashboard and changes the Magic link template href and Site URL (plan open questions 1-2)
 **Uncommitted**: none
 **Branch**: development (not pushed)

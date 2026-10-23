@@ -53,3 +53,5 @@ export function makeTransitionContract(contracts: ContractRepository) {
     return committed(result, decision.status, record.status, command.type);
   };
 }
+
+export { makeRequestSignInLink, type SignInLinkResult } from "./sign-in";

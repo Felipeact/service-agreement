@@ -1,7 +1,7 @@
 -- Demo data: a fictitious contractor, Kettle Ridge Mechanical Ltd. (.specs/features/catalog-seed/plan.md, door 5).
 -- One transaction, safe to run again: every row has a fixed id (door 4) and inserts skip rows that exist.
 -- Customer names match web/lib/sample-pipeline.ts. Emails use example.com and phones the 555-01xx fiction range.
--- The org has no members and no agreements: the auth item attaches a member, the domain layer writes agreements.
+-- The org has no agreements. Its owner is attached only when the session sets app.demo_owner_email (see the end).
 begin;
 
 insert into public.orgs (id, name)
@@ -115,5 +115,14 @@ from (values
 ) as a(site, unit_no, code, type_model, location)
 join public.asset_types t on t.org_id = '00000000-0000-4000-8000-00000000de30' and t.code = a.code
 on conflict (id) do nothing;
+
+-- Demo owner (.specs/features/auth-magic-link/plan.md, door 4): invite the user in the Supabase dashboard first,
+-- then run this file after `select set_config('app.demo_owner_email', '<email>', false);`. Unset, nothing is inserted.
+-- The address is passed in, never written here.
+insert into public.memberships (org_id, user_id, role)
+select '00000000-0000-4000-8000-00000000de30', id, 'owner'
+from auth.users
+where email = lower(nullif(current_setting('app.demo_owner_email', true), ''))
+on conflict (org_id, user_id) do nothing;
 
 commit;

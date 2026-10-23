@@ -139,7 +139,7 @@ The palette is closed in code: `web/app/globals.css` clears Tailwind's default c
 
 ## Colors
 
-A restrained, closed palette of 16 role tokens: cool neutrals, one blue for action, a fixed set of stage colours that only ever mean status, and one attention pair. Each token is exposed by Tailwind 4 as utilities (`bg-*`, `text-*`, `border-*`), e.g. `--color-ink-2` is `text-ink-2`.
+A restrained, closed palette of 17 role tokens: cool neutrals, one blue for action, a fixed set of stage colours that only ever mean status, one attention pair, and one danger red for field errors. Each token is exposed by Tailwind 4 as utilities (`bg-*`, `text-*`, `border-*`), e.g. `--color-ink-2` is `text-ink-2`.
 
 ### Primary
 - **Action Blue** (`--color-action`, #2563eb): the primary button ("New agreement"), the active nav item text, the selected stage tab's text and border, and the 2px focus ring. Used for actions and selection, never for decoration. Primary hover is the same blue at 90% opacity.
@@ -164,12 +164,13 @@ Each stage has its own token even where the hue repeats, so stage meaning and ac
 
 Stage colours appear only as an 8px dot beside the stage label (column headers, stage tabs). They are never used as text or fills behind text.
 
-- **Attention pill** (`--color-attention-bg` #fef3c7 ground, `--color-attention-fg` #92400e text): "Changes requested", "Not viewed" and similar states on a card that need the estimator's action.
+- **Attention pill** (`--color-attention-bg` #fef3c7 ground, `--color-attention-fg` #92400e text): "Changes requested", "Not viewed" and similar states on a card that need the estimator's action. The same pair is the tinted notice on the sign-in screen (expired link, rate limit).
+- **Danger** (`--color-danger`, #b91c1c): a field's error message and its border. 6.47:1 on white.
 
 ### Named Rules
 **The Status Is Never Colour Alone Rule.** Every stage dot sits next to its text label; `StatusPill` makes `label` a required prop. Colour speeds up scanning but never carries meaning by itself.
 
-**The Closed Palette Rule.** The 16 tokens in `globals.css` are the only colours in the app. A new colour is a new role token added there and recorded here, never an arbitrary value in a component.
+**The Closed Palette Rule.** The 17 tokens in `globals.css` are the only colours in the app. A new colour is a new role token added there and recorded here, never an arbitrary value in a component.
 
 **The Tenant Wears the Accent Rule.** Action Blue belongs to the product's own screens. On the customer portal, PDFs and emails, the tenant's accent colour takes the action and brand roles, falling back to Ink when the tenant's colour fails 4.5:1 against white. (Not yet built; it binds the first customer-facing surface.)
 
@@ -258,7 +259,8 @@ Quiet, familiar, and exact. Every control is a native element styled with role t
 ### Inputs / Fields
 - **Search:** white, 1px Hairline border, 6px radius, a 14px magnifier icon in Slate Secondary inset on the left, placeholder in Slate Secondary; 44px tall below 1024px, 34px on desktop. It has no visible label, so an accessible name is required.
 - **Focus:** the global ring (below).
-- **Deferred:** TextInput, Select and the field error state are not built yet. No screen renders them, so they will be built and proven with the Phase 1 Company settings form, and recorded here then.
+- **TextInput** ([web/components/ui/text-input.tsx](web/components/ui/text-input.tsx)): a visible 13px label (500) above the field; the field matches Search without the icon. With an error, the border turns Danger, a 12px Danger message sits under the field, and the input gets `aria-invalid` and `aria-describedby` pointing at it. First used on `/login`.
+- **Deferred:** Select is built with the Phase 1 Company settings form.
 
 ### Focus
 Every focusable element gets the global `:focus-visible` treatment: a 2px solid Action Blue outline with a 2px offset. Components do not override it.
