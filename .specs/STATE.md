@@ -21,9 +21,9 @@
 ## Handoff
 
 **Feature**: domain-layer
-**Where**: C1-C36 built and proven locally; independent verification pending
+**Where**: verified - PASS (light, round 1 full), report in `.specs/features/domain-layer/verification.md`
 **In progress**: none
-**Next step**: Verifier report, then the next ROADMAP item (Phase 1: ports, Supabase adapters and composition root)
+**Next step**: next ROADMAP item (Phase 1: ports, Supabase adapters and composition root)
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)

@@ -32,6 +32,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md gap: C12-C16 vs supabase/seed.sql:7-117 (seed)
 - last seen: 2026-10-19T21:57:07Z
 
+### L-004 - When a decision states a naming rule, list every name that breaks it in the same sentence, or the exception reads as a violation.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `domain` · harmful: 0
+- features: domain-layer
+- evidence: verification.md precision gap: AD-011 / plan door 4 vs agreement.revised (domain)
+- last seen: 2026-10-23T22:03:05Z
+
+### L-005 - A no-regression check must name the baseline commit it compares against, or it is only proven against the values written in the claim.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `web/ui` · harmful: 0
+- features: domain-layer
+- evidence: verification.md precision gap: C34 'same counts and totals as before' (web/ui)
+- last seen: 2026-10-23T22:03:05Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

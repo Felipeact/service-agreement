@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 4,
+  "next_id": 6,
   "lessons": [
     {
       "id": "L-001",
@@ -58,6 +58,42 @@
       ],
       "created": "2026-10-19T21:57:07Z",
       "last_seen": "2026-10-19T21:57:07Z"
+    },
+    {
+      "id": "L-004",
+      "key": "spec_precision_gap::when a decision states a naming rule list every name that breaks it in the same sentence or the exception reads as a violation",
+      "text": "When a decision states a naming rule, list every name that breaks it in the same sentence, or the exception reads as a violation.",
+      "signal": "spec_precision_gap",
+      "scope": "domain",
+      "status": "candidate",
+      "features": [
+        "domain-layer"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md precision gap: AD-011 / plan door 4 vs agreement.revised (domain)"
+      ],
+      "created": "2026-10-23T22:03:05Z",
+      "last_seen": "2026-10-23T22:03:05Z"
+    },
+    {
+      "id": "L-005",
+      "key": "spec_precision_gap::a no regression check must name the baseline commit it compares against or it is only proven against the values written in the claim",
+      "text": "A no-regression check must name the baseline commit it compares against, or it is only proven against the values written in the claim.",
+      "signal": "spec_precision_gap",
+      "scope": "web/ui",
+      "status": "candidate",
+      "features": [
+        "domain-layer"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md precision gap: C34 'same counts and totals as before' (web/ui)"
+      ],
+      "created": "2026-10-23T22:03:05Z",
+      "last_seen": "2026-10-23T22:03:05Z"
     }
   ]
 }
