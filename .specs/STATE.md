@@ -25,7 +25,7 @@
 ## Handoff
 
 **Feature**: ports-adapters
-**Where**: built at `development`, verification pending
+**Where**: verified - PASS (light, round 1 full), report in `.specs/features/ports-adapters/verification.md`
 **In progress**: none
 **Next step**: next ROADMAP item (Phase 1: auth with magic link and the `proxy.ts` session refresh), which also proves the adapter-to-PostgREST path with a real session
 **Blockers**: none

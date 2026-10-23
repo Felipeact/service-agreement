@@ -244,3 +244,7 @@ Proof: `mcp list_migrations()` - an entry named `transition_rpcs` whose version 
   tests (~35 KB), `eslint.config.mjs`, `package.json`, `vitest.config.mts`, the domain files read
   for types (~7 KB), and the `CONTEXT.md`, `ROADMAP.md` and `STATE.md` edits (~30 KB read): about
   100 KB, roughly 25k tokens, under the 150k budget - one builder
+
+- **Boundary:** C1-C29 closed at `8fb5bcd` (one builder)
+- **Settled mid-build:** domain-layer C32's control file moved from `lib/x.ts` to `composition/x.ts`, because `lib/` now forbids `@supabase/*` (user's choice; recorded in the domain-layer checks)
+- **Abandoned:** none
