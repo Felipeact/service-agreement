@@ -25,11 +25,11 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe("the domain layer stays pure", () => {
-  test.each(FORBIDDEN)("C32: importing %s from domain/ is a lint error, and allowed from lib/", async (specifier) => {
+  test.each(FORBIDDEN)("C32: importing %s from domain/ is a lint error, and allowed from composition/", async (specifier) => {
     const inDomain = await restrictedImports("domain/x.ts", specifier);
     expect(inDomain).toHaveLength(1);
     expect(inDomain[0].message).toContain(specifier);
-    expect(await restrictedImports("lib/x.ts", specifier)).toHaveLength(0);
+    expect(await restrictedImports("composition/x.ts", specifier)).toHaveLength(0);
   });
 
   test("C33: no domain source reads the clock or randomness", () => {

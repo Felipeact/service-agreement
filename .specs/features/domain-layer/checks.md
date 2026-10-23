@@ -114,7 +114,7 @@ Proof: `npx vitest run domain/money -t "C31:"`
 
 ### S5 - The layer stays pure · 5 files · ~6 KB · ~2k
 
-**C32** - ESLint run with the repo config over `domain/x.ts` reports `no-restricted-imports` for each of `next/link`, `react`, `@supabase/supabase-js`, `@/lib/money`, `@/components/ui/button`, `@/app/layout`, and reports none of them for the same imports in `lib/x.ts` (AC 32, door 1)
+**C32** - ESLint run with the repo config over `domain/x.ts` reports `no-restricted-imports` for each of `next/link`, `react`, `@supabase/supabase-js`, `@/lib/money`, `@/components/ui/button`, `@/app/layout`, and reports none of them for the same imports in `composition/x.ts` (AC 32, door 1). Amended 2026-10-23 by ports-adapters, with the user's approval: the control was `lib/x.ts`, which now forbids `@supabase/*`; the claim (forbidden in `domain/`, allowed outside it) is unchanged
 Proof: `npx vitest run domain/purity -t "C32:"`
 
 **C33** - no non-test `.ts` file under `web/domain/` contains `Date.now`, `new Date(`, `Math.random` or `crypto` (AC 33)

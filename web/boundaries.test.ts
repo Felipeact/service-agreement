@@ -1,0 +1,69 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { ESLint } from "eslint";
+import { describe, expect, test } from "vitest";
+
+const webRoot = __dirname;
+
+async function restrictedImports(relativePath: string, specifier: string) {
+  const eslint = new ESLint({ cwd: webRoot });
+  const [result] = await eslint.lintText(`import "${specifier}";\n`, {
+    filePath: path.join(webRoot, relativePath),
+  });
+  return result.messages.filter((message) => message.ruleId === "no-restricted-imports");
+}
+
+const APPLICATION_FORBIDDEN = [
+  "next/headers",
+  "react",
+  "@supabase/supabase-js",
+  "@/lib/money",
+  "@/components/ui/button",
+  "@/app/layout",
+  "@/infrastructure/clock",
+  "@/composition",
+];
+
+const UI_FORBIDDEN = ["@/infrastructure/clock", "@supabase/ssr"];
+const INFRASTRUCTURE_FORBIDDEN = ["react", "@/app/layout", "@/components/ui/button", "@/composition"];
+
+describe("layer boundaries", () => {
+  test.each(APPLICATION_FORBIDDEN)("C24: importing %s from application/ is a lint error", async (specifier) => {
+    const messages = await restrictedImports("application/x.ts", specifier);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].message).toContain(specifier);
+  });
+
+  test("C24: application/ may import the domain", async () => {
+    expect(await restrictedImports("application/x.ts", "@/domain/agreement")).toHaveLength(0);
+  });
+
+  test.each(
+    ["app/x.tsx", "components/x.tsx", "lib/x.ts"].flatMap((file) => UI_FORBIDDEN.map((specifier) => [file, specifier])),
+  )("C25: %s importing %s is a lint error", async (file, specifier) => {
+    const messages = await restrictedImports(file, specifier);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].message).toContain(specifier);
+  });
+
+  test.each(INFRASTRUCTURE_FORBIDDEN)("C25: importing %s from infrastructure/ is a lint error", async (specifier) => {
+    const messages = await restrictedImports("infrastructure/x.ts", specifier);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].message).toContain(specifier);
+  });
+
+  test.each(UI_FORBIDDEN)("C25: composition/ may import %s", async (specifier) => {
+    expect(await restrictedImports("composition/x.ts", specifier)).toHaveLength(0);
+  });
+
+  test("C28: the Supabase dependencies are pinned exact and .env.example names both variables", () => {
+    const pkg = JSON.parse(readFileSync(path.join(webRoot, "package.json"), "utf8"));
+    expect(pkg.dependencies["@supabase/supabase-js"]).toBe("2.118.0");
+    expect(pkg.dependencies["@supabase/ssr"]).toBe("0.12.7");
+    expect(pkg.dependencies["server-only"]).toBe("0.0.1");
+
+    const example = readFileSync(path.join(webRoot, ".env.example"), "utf8");
+    expect(example).toMatch(/^NEXT_PUBLIC_SUPABASE_URL=/m);
+    expect(example).toMatch(/^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/m);
+  });
+});

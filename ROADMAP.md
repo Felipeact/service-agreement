@@ -96,7 +96,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Supabase project and `0001_init` migration (orgs, memberships, settings, customers, contacts, sites, asset types/tasks, assets, agreements, service lines, contracts, events, outbox) with RLS on every table
 - [x] Seed the equipment-type catalog and task library from the proposal template, with a fictitious demo org
 - [x] Pure domain layer: agreement and contract state machines, pipeline stage, money in integer cents
-- [ ] Ports (repositories, `EventPublisher`, `Clock`) and Supabase adapters, plus a composition root
+- [x] Ports (repositories, `Clock`) and Supabase adapters, plus a composition root. Each transition writes its status, event and outbox row in one transaction; the outbound `EventPublisher` (outbox to n8n) moved to Phase 3 with W1
 - [ ] Auth (magic link) and the `proxy.ts` session refresh
 - [ ] Screens built to DESIGN.md: dashboard, customers, customer detail, site asset register, company settings
 - [ ] Form controls `TextInput` and `Select` with the field error state, built with the company settings form
@@ -113,7 +113,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [ ] "Service included" generated from the asset types on site
 - [ ] Agreement PDF
 - [ ] Customer review portal (Accept, Refuse, Request changes)
-- [ ] n8n W1, W3 and W5, plus transactional email
+- [ ] Outbox dispatcher (`EventPublisher` port: outbox rows to n8n, HMAC-signed), n8n W1, W3 and W5, plus transactional email
 
 ### Phase 4: Contract & e-signature
 - [ ] Contract generated from the accepted agreement version

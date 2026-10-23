@@ -17,13 +17,17 @@
 | AD-011 | A transition returns `{ ok: true, status, event }` or `{ ok: false, error: { code, from, command } }`, never throws for a domain refusal; event `type` is `<entity>.<to-status>` (`agreement.sent`, `contract.completed`), `entityType` is `agreement` or `contract` | n8n W1-W4 bind to these names and `events.type` stores them; the portal shows a refusal to the customer, so it is a value the type checker sees | active | 2026-10-23 |
 | AD-012 | Money in TypeScript is `Cents = number & { __brand: "Cents" }`, made only by `cents(n)` (non-negative safe integer, else `RangeError`) | a dollar amount cannot pass as cents unnoticed; PostgREST returns `bigint` as a JSON number, so `bigint` would mean converting at every boundary | active | 2026-10-23 |
 | AD-013 | Unit tests use Vitest (`npm test` in `web/`), as `*.test.ts` beside the code | one runner for every later unit test; it resolves the `@/` alias | active | 2026-10-23 |
+| AD-014 | Layers are `web/domain`, `web/application/{ports,use-cases}`, `web/infrastructure/<adapter>` and `web/composition` (`server-only`). ESLint forbids framework and database imports in `application/**`, UI and composition imports in `infrastructure/**`, and `@/infrastructure` / `@supabase/*` in `app/`, `components/` and `lib/` | use cases stay testable with fakes; UI reaches the database only through the per-request container, so no Supabase client reaches a client bundle | active | 2026-10-23 |
+| AD-015 | Every state change goes through one `security invoker` RPC per entity, `public.apply_<entity>_transition(id, expected_status, to_status, event_type, payload) returns uuid`, `search_path = ''`: role check via `private.has_org_role`, compare-and-set on the expected status, event insert with `actor_id = auth.uid()`, outbox enqueue, all in one transaction. SQLSTATE `40001` stale, `P0002` not found, `42501` not allowed; adapters map them to `conflict`, `not_found`, `forbidden` | PostgREST has no transaction across requests; invoker keeps RLS deciding isolation (AD-004); the portal, DocuSeal webhook and expiry copy this | active | 2026-10-23 |
+| AD-016 | `private.enqueue_outbox(event_id)` (security definer, `search_path = ''`, member check) is the only writer of `outbox`; `outbox` privileges stay revoked from `anon` and `authenticated`, and no trigger on `events` enqueues | non-transition events (`agreement.viewed`) must not reach n8n, and no user token can enqueue an arbitrary email | active | 2026-10-23 |
+| AD-017 | `events.payload` is `{ "from", "to" }` plus the domain `data` keys (`reason`, `versionNo`), camelCase | n8n W1-W4 read these keys; `type` and `entity_type` already have columns | active | 2026-10-23 |
 
 ## Handoff
 
-**Feature**: domain-layer
-**Where**: verified - PASS (light, round 1 full), report in `.specs/features/domain-layer/verification.md`
+**Feature**: ports-adapters
+**Where**: built at `development`, verification pending
 **In progress**: none
-**Next step**: next ROADMAP item (Phase 1: ports, Supabase adapters and composition root)
+**Next step**: next ROADMAP item (Phase 1: auth with magic link and the `proxy.ts` session refresh), which also proves the adapter-to-PostgREST path with a real session
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)

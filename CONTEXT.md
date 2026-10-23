@@ -88,7 +88,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 - **Domain layer:** pure TypeScript in [web/domain/](web/domain/), with no framework, database or UI imports. An ESLint `no-restricted-imports` rule on `domain/**` enforces this (AD-010). Spec: [.specs/features/domain-layer/](.specs/features/domain-layer/).
   - **Agreement machine:** `applyAgreementCommand(status, command)` in [web/domain/agreement/index.ts](web/domain/agreement/index.ts). It allows 8 moves: `send` (draft→sent), `accept`, `refuse`, `request_changes` and `expire` (all from sent), `revise` (changes_requested→draft, new version `n + 1`), and `withdraw` (from draft or sent). `refuse` and `request_changes` need a reason of 1–2000 characters after trimming.
   - **Contract machine:** `applyContractCommand(status, command)` in [web/domain/contract/index.ts](web/domain/contract/index.ts). `client_sign` (pending_signature→client_signed) and then `countersign` (→completed); `decline` and `void` work from either open status.
-  - **Result:** a refused move returns `{ ok: false, error: { code, from, command } }` with code `invalid_transition`, `reason_required` or `reason_too_long`; it never throws. A successful move returns `{ ok: true, status, event }`. The event's type is `<entity>.<to-status>` (`agreement.sent`, `agreement.revised`, `contract.completed`...). It carries `from`, `to` and `data` (`reason` or `versionNo`). Nothing writes events yet; that is the ports item (AD-011).
+  - **Result:** a refused move returns `{ ok: false, error: { code, from, command } }` with code `invalid_transition`, `reason_required` or `reason_too_long`; it never throws. A successful move returns `{ ok: true, status, event }`. The event's type is `<entity>.<to-status>` (`agreement.sent`, `agreement.revised`, `contract.completed`...). It carries `from`, `to` and `data` (`reason` or `versionNo`) (AD-011). The transition use cases below record it.
   - **Stage:** `pipelineStage(agreement, contract?)` in [web/domain/pipeline/index.ts](web/domain/pipeline/index.ts). draft and changes_requested → In progress; sent → Sent; accepted → Accepted until the contract completes (→ Completed). Customer-side endings (refused, expired, contract declined) → Refused. Contractor-side endings (withdrawn, contract voided) → `null`, off the board.
 - **Stage keys:** `in_progress`, `sent`, `accepted`, `completed` and `refused` are owned by [web/domain/pipeline/index.ts](web/domain/pipeline/index.ts) (AD-001). [web/lib/pipeline-stage.ts](web/lib/pipeline-stage.ts) re-exports them and keeps only the UI labels and dot classes.
 - **Board UI:** `/pipeline` ([web/app/(app)/pipeline/page.tsx](web/app/(app)/pipeline/page.tsx)) shows the five-column board on fictitious sample data from [web/lib/sample-pipeline.ts](web/lib/sample-pipeline.ts).
@@ -96,14 +96,23 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
   - Search by customer name runs client-side.
   - On mobile the board becomes stage tabs; on tablet it scrolls inside its own container.
 - **Redirect:** `/` redirects to `/pipeline` with a 307 ([web/next.config.ts](web/next.config.ts)).
-- **Not built yet:** writing events and outbox rows, real data, deal age, filters and drag-and-drop.
+- **Recording a transition:** server code calls `getContainer()` from [web/composition/index.ts](web/composition/index.ts) (`server-only`, one per request, built from the request cookies) and then `transitionAgreement({ agreementId, command })` or `transitionContract({ contractId, command })`. The use case ([web/application/use-cases/index.ts](web/application/use-cases/index.ts)) loads the record through a repository port ([web/application/ports/index.ts](web/application/ports/index.ts)), lets the domain machine decide, and commits. It returns `{ ok: true, status, eventId }`, a domain refusal, or `not_found`, `conflict` (someone changed it first) or `forbidden` (viewer). Unexpected database or network errors are thrown. `revise` reads the current version itself, so callers pass no version number.
+  - **Adapters:** [web/infrastructure/supabase/index.ts](web/infrastructure/supabase/index.ts) calls the RPCs below and maps SQLSTATE `40001`, `P0002` and `42501` to those codes. [web/infrastructure/supabase/database.types.ts](web/infrastructure/supabase/database.types.ts) is generated with MCP `generate_typescript_types`; regenerate it after each migration.
+  - **Clock:** the `Clock` port has `systemClock` and `fixedClock(d)` in [web/infrastructure/clock/index.ts](web/infrastructure/clock/index.ts). Nothing reads it yet; deal age will be its first reader.
+  - **Layer rules:** ESLint keeps `application/` free of framework and database imports, keeps `infrastructure/` away from UI, and stops `app/`, `components/` and `lib/` importing adapters or `@supabase/*` (AD-014).
+  - **Config:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `web/.env.local` (untracked); [web/.env.example](web/.env.example) lists them. Until the auth item lands nobody can sign in, so a transition from the app returns `forbidden`.
+  - Spec: [.specs/features/ports-adapters/](.specs/features/ports-adapters/).
+- **Not built yet:** real data on the board, deal age, filters and drag-and-drop.
 
 ### Events, outbox and n8n automation (M11, M12, M13)
 **What it is:** the app owns all status, and n8n only automates emails, reminders and timing. Outbox events go to n8n signed with HMAC, and n8n calls back app endpoints with idempotency keys. n8n execution IDs are written back to the event log as audit evidence. Workflows W1–W6 are defined in [ROADMAP.md](ROADMAP.md#n8n-workflows). Customers never see or build workflows.
 **What we built:** schema only.
 - **`events`:** append-only for app users. Members read and writers insert. `update` and `delete` are revoked from `anon` and `authenticated`. The `n8n_execution_id` column is for the service role.
 - **`outbox`:** `event_id unique`, so a retried dispatch cannot double-send. Status is `pending`, `sent` or `failed`, with `attempts` and `available_at`. All privileges are revoked from `anon` and `authenticated`, so only the service role (the dispatcher) can use it.
-- **Not yet:** no code writes events or outbox rows. The atomic transition write path is the Phase 1 ports item. Workflows are Phases 3–4.
+- **Write path:** `public.apply_agreement_transition` and `public.apply_contract_transition` in [supabase/migrations/20261023222239_transition_rpcs.sql](supabase/migrations/20261023222239_transition_rpcs.sql) update the status only if it still equals the expected one, insert the event (`actor_id = auth.uid()`, payload `{from, to, reason?, versionNo?}`), insert the next `agreement_versions` row on `agreement.revised` (copying the previous snapshot, not its service lines), and enqueue the outbox row, in one transaction. They run as the caller, so RLS applies, and only owner, admin and estimator may call them; `anon` cannot (AD-015, AD-017).
+- **Outbox writer:** `private.enqueue_outbox(event_id)` is the only thing that inserts outbox rows. No trigger enqueues, so events such as `agreement.viewed` never reach n8n (AD-016).
+- **Not yet:** the dispatcher that sends pending outbox rows to n8n (the `EventPublisher` port, HMAC) is Phase 3 with W1. Service-role callers (DocuSeal webhook, n8n expiry) get their own path in Phases 3-4. Workflows are Phases 3–4.
+- **Tests:** [supabase/tests/transitions.sql](supabase/tests/transitions.sql).
 
 ### SaaS billing (M14)
 **What it is:** Stripe subscription plans per tenant, with Checkout, Customer Portal, plan limits and idempotent webhooks. Plans and pricing are undecided.
@@ -136,6 +145,11 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-23:** Phase 1 item 4, ports, Supabase adapters and the composition root ([.specs/features/ports-adapters/](.specs/features/ports-adapters/)).
+  - Migration `transition_rpcs`: one-transaction transition RPCs and the private outbox writer ([supabase/migrations/20261023222239_transition_rpcs.sql](supabase/migrations/20261023222239_transition_rpcs.sql)), applied to the live project. Rolled-back tests in [supabase/tests/transitions.sql](supabase/tests/transitions.sql).
+  - `web/application` (ports, use cases), `web/infrastructure` (Supabase and clock adapters, generated DB types) and `web/composition` (`getContainer()`), with ESLint layer rules. Added `@supabase/supabase-js` 2.118.0, `@supabase/ssr` 0.12.7 and `server-only` 0.0.1, pinned exact.
+  - `EventPublisher` now means the Phase 3 outbound dispatcher; the ROADMAP lines say so. The domain-layer purity test's control file moved from `lib/` to `composition/`, because `lib/` now forbids `@supabase/*`.
 
 - **2026-10-23:** Phase 1 item 3, the pure domain layer ([.specs/features/domain-layer/](.specs/features/domain-layer/)).
   - Agreement and contract state machines, `pipelineStage`, and `Cents` money in [web/domain/](web/domain/). The stage keys moved there from `web/lib/pipeline-stage.ts`, which re-exports them.

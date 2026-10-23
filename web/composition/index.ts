@@ -1,0 +1,46 @@
+import "server-only";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
+import { systemClock } from "@/infrastructure/clock";
+import type { Database } from "@/infrastructure/supabase/database.types";
+import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
+
+function required(name: string, value: string | undefined): string {
+  if (!value) throw new Error(`Missing environment variable ${name}`);
+  return value;
+}
+
+/**
+ * Wires the use cases for one request. Build it per request: the Supabase client carries the
+ * signed-in user's cookies, so RLS sees that user.
+ */
+export async function getContainer() {
+  // Literal process.env reads, so Next inlines the NEXT_PUBLIC_ values.
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient<Database>(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // Called from a Server Component, which cannot set cookies; the proxy refreshes the session.
+        }
+      },
+    },
+  });
+
+  return {
+    transitionAgreement: makeTransitionAgreement(supabaseAgreementRepository(supabase)),
+    transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
+    clock: systemClock,
+  };
+}
+
+export type Container = Awaited<ReturnType<typeof getContainer>>;
