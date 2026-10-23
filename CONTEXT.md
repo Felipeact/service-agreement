@@ -70,7 +70,7 @@ Statuses: `draft` (shown as "In progress") → `sent` → `accepted` | `refused`
 **What we built:** schema only.
 - **Tables:** `agreements` (exactly one site, no `customer_id`; the customer comes through the site), `agreement_versions` (`unique (agreement_id, version_no)`, `version_no >= 1`) and `service_lines`, which hang off a version, not the agreement.
 - **Status:** `text` with a check constraint over the seven values above, default `draft`. There are no Postgres enums (AD-005).
-- **Money:** `cost_per_visit_cents bigint >= 0`, and `visits_per_year >= 1`.
+- **Money:** `cost_per_visit_cents bigint >= 0`, and `visits_per_year >= 1`. In code, money is the branded type `Cents` from [web/domain/money/index.ts](web/domain/money/index.ts). `cents(n)` throws `RangeError` unless `n` is a non-negative safe integer, and `lineAnnualCents(visits, cost)` and `sumCents(list)` do the arithmetic (AD-012). `formatCad` in [web/lib/money.ts](web/lib/money.ts) stays the display formatter.
 - The builder and screens are Phase 3.
 
 ### Customer review portal (M9)
@@ -85,13 +85,18 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ### Pipeline / status engine (M11)
 **What it is:** a pure state machine for agreements and contracts. Every transition writes an event and an outbox row. Each deal is shown at one stage: **In progress → Sent to customer → Accepted (awaiting signature) → Completed**, with **Refused** as the exit. The dashboard shows deals by stage and age.
 **What we built:**
-- **Stage keys:** `in_progress`, `sent`, `accepted`, `completed` and `refused` live in [web/lib/pipeline-stage.ts](web/lib/pipeline-stage.ts) (AD-001). The Phase 1 domain layer takes ownership of them.
+- **Domain layer:** pure TypeScript in [web/domain/](web/domain/), with no framework, database or UI imports. An ESLint `no-restricted-imports` rule on `domain/**` enforces this (AD-010). Spec: [.specs/features/domain-layer/](.specs/features/domain-layer/).
+  - **Agreement machine:** `applyAgreementCommand(status, command)` in [web/domain/agreement/index.ts](web/domain/agreement/index.ts). It allows 8 moves: `send` (draft→sent), `accept`, `refuse`, `request_changes` and `expire` (all from sent), `revise` (changes_requested→draft, new version `n + 1`), and `withdraw` (from draft or sent). `refuse` and `request_changes` need a reason of 1–2000 characters after trimming.
+  - **Contract machine:** `applyContractCommand(status, command)` in [web/domain/contract/index.ts](web/domain/contract/index.ts). `client_sign` (pending_signature→client_signed) and then `countersign` (→completed); `decline` and `void` work from either open status.
+  - **Result:** a refused move returns `{ ok: false, error: { code, from, command } }` with code `invalid_transition`, `reason_required` or `reason_too_long`; it never throws. A successful move returns `{ ok: true, status, event }`. The event's type is `<entity>.<to-status>` (`agreement.sent`, `agreement.revised`, `contract.completed`...). It carries `from`, `to` and `data` (`reason` or `versionNo`). Nothing writes events yet; that is the ports item (AD-011).
+  - **Stage:** `pipelineStage(agreement, contract?)` in [web/domain/pipeline/index.ts](web/domain/pipeline/index.ts). draft and changes_requested → In progress; sent → Sent; accepted → Accepted until the contract completes (→ Completed). Customer-side endings (refused, expired, contract declined) → Refused. Contractor-side endings (withdrawn, contract voided) → `null`, off the board.
+- **Stage keys:** `in_progress`, `sent`, `accepted`, `completed` and `refused` are owned by [web/domain/pipeline/index.ts](web/domain/pipeline/index.ts) (AD-001). [web/lib/pipeline-stage.ts](web/lib/pipeline-stage.ts) re-exports them and keeps only the UI labels and dot classes.
 - **Board UI:** `/pipeline` ([web/app/(app)/pipeline/page.tsx](web/app/(app)/pipeline/page.tsx)) shows the five-column board on fictitious sample data from [web/lib/sample-pipeline.ts](web/lib/sample-pipeline.ts).
   - Each column shows its card count and its CAD total per year, formatted by `formatCad` from [web/lib/money.ts](web/lib/money.ts).
   - Search by customer name runs client-side.
   - On mobile the board becomes stage tabs; on tablet it scrolls inside its own container.
 - **Redirect:** `/` redirects to `/pipeline` with a 307 ([web/next.config.ts](web/next.config.ts)).
-- **Not built yet:** the state machine, real data, filters and drag-and-drop.
+- **Not built yet:** writing events and outbox rows, real data, deal age, filters and drag-and-drop.
 
 ### Events, outbox and n8n automation (M11, M12, M13)
 **What it is:** the app owns all status, and n8n only automates emails, reminders and timing. Outbox events go to n8n signed with HMAC, and n8n calls back app endpoints with idempotency keys. n8n execution IDs are written back to the event log as audit evidence. Workflows W1–W6 are defined in [ROADMAP.md](ROADMAP.md#n8n-workflows). Customers never see or build workflows.
@@ -131,6 +136,11 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-23:** Phase 1 item 3, the pure domain layer ([.specs/features/domain-layer/](.specs/features/domain-layer/)).
+  - Agreement and contract state machines, `pipelineStage`, and `Cents` money in [web/domain/](web/domain/). The stage keys moved there from `web/lib/pipeline-stage.ts`, which re-exports them.
+  - Added Vitest (`vitest@5.0.3`, `npm test` in `web/`, config [web/vitest.config.mts](web/vitest.config.mts)), with tests beside the code. `@types/node` moved to `^24.19.1`, which Vitest 5 requires.
+  - ESLint keeps `web/domain/**` free of Next, React, Supabase and UI imports ([web/eslint.config.mjs](web/eslint.config.mjs)).
 
 - **2026-10-19:** Phase 1 item 2, the equipment catalog, task library and fictitious demo org ([.specs/features/catalog-seed/](.specs/features/catalog-seed/)).
   - Migration `catalog_template` adds the 40-type, 174-task template in `private`, `private.seed_org_catalog(org)`, and the upper-case code check on `asset_types` ([supabase/migrations/20261019191509_catalog_template.sql](supabase/migrations/20261019191509_catalog_template.sql)).

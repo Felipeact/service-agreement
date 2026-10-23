@@ -95,7 +95,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 1: Foundation
 - [x] Supabase project and `0001_init` migration (orgs, memberships, settings, customers, contacts, sites, asset types/tasks, assets, agreements, service lines, contracts, events, outbox) with RLS on every table
 - [x] Seed the equipment-type catalog and task library from the proposal template, with a fictitious demo org
-- [ ] Pure domain layer: agreement and contract state machines, pipeline stage, money in integer cents
+- [x] Pure domain layer: agreement and contract state machines, pipeline stage, money in integer cents
 - [ ] Ports (repositories, `EventPublisher`, `Clock`) and Supabase adapters, plus a composition root
 - [ ] Auth (magic link) and the `proxy.ts` session refresh
 - [ ] Screens built to DESIGN.md: dashboard, customers, customer detail, site asset register, company settings

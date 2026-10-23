@@ -13,13 +13,17 @@
 | AD-007 | The standard equipment catalog lives in `private.catalog_asset_types` / `private.catalog_asset_type_tasks`, filled by migration, unreadable by `anon` and `authenticated`; orgs read only their own copy in `public.asset_types` / `asset_type_tasks` | SQL onboarding (Phase 5) can read it with no app runtime, and it never shows up as a second catalog queries could hit | active | 2026-10-19 |
 | AD-008 | An org gets the catalog only through `private.seed_org_catalog(org)` (security invoker, `search_path = ''`, `on conflict (org_id, code) do nothing`, tasks copied only for types that call inserted); no trigger on `orgs`. The copy is the org's own, with no FK back to the template | re-runs are no-ops and existing types keep their checklists; a trigger would break fixtures that pre-insert `RTU` and would stop onboarding from creating an empty catalog | active | 2026-10-19 |
 | AD-009 | Demo data lives only in `supabase/seed.sql` (one `begin`/`commit`, fixed ids `md5('demo:<kind>:<n>')::uuid`, demo org id `00000000-0000-4000-8000-00000000de30`, every insert `on conflict do nothing`), never in a migration | a migration would plant a fictitious tenant in every future environment, production included; fixed ids make re-runs idempotent and let the auth item attach a member to a known org | active | 2026-10-19 |
+| AD-010 | Pure domain code lives in `web/domain/<area>/index.ts`; `web/eslint.config.mjs` forbids `next*`, `react*`, `@supabase/*`, `@/lib`, `@/components` and `@/app` imports there, and domain sources read no clock and no randomness | ports, adapters and use cases depend on the domain, never the reverse; a lint rule makes "pure" checkable instead of a convention | active | 2026-10-23 |
+| AD-011 | A transition returns `{ ok: true, status, event }` or `{ ok: false, error: { code, from, command } }`, never throws for a domain refusal; event `type` is `<entity>.<to-status>` (`agreement.sent`, `contract.completed`), `entityType` is `agreement` or `contract` | n8n W1-W4 bind to these names and `events.type` stores them; the portal shows a refusal to the customer, so it is a value the type checker sees | active | 2026-10-23 |
+| AD-012 | Money in TypeScript is `Cents = number & { __brand: "Cents" }`, made only by `cents(n)` (non-negative safe integer, else `RangeError`) | a dollar amount cannot pass as cents unnoticed; PostgREST returns `bigint` as a JSON number, so `bigint` would mean converting at every boundary | active | 2026-10-23 |
+| AD-013 | Unit tests use Vitest (`npm test` in `web/`), as `*.test.ts` beside the code | one runner for every later unit test; it resolves the `@/` alias | active | 2026-10-23 |
 
 ## Handoff
 
-**Feature**: catalog-seed
-**Where**: verified - PASS (light, round 2 scoped), report in `.specs/features/catalog-seed/verification.md`. C13-C16, C18 and C19 rest on the user's SQL Editor run, which the user accepted; seeding an empty database is still unproven
+**Feature**: domain-layer
+**Where**: C1-C36 built and proven locally; independent verification pending
 **In progress**: none
-**Next step**: next ROADMAP item (Phase 1: pure domain layer - agreement and contract state machines, pipeline stage, money in integer cents)
+**Next step**: Verifier report, then the next ROADMAP item (Phase 1: ports, Supabase adapters and composition root)
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)

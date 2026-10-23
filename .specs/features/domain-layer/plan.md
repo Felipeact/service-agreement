@@ -50,6 +50,7 @@ existing `formatCad` in `web/lib/money.ts`, which stays the presentation formatt
 | domain | new term: `Cents` - a branded non-negative safe integer; lives in `web/domain/money` |
 | domain | existing term: `PipelineStage` / `PIPELINE_STAGES` moves from `web/lib/pipeline-stage.ts` to `web/domain/pipeline`. Who imports it today: `web/lib/sample-pipeline.ts`, `web/components/kanban/kanban-column.tsx`, `web/components/kanban/pipeline-view.tsx`, `web/components/ui/status-pill.tsx`. `web/lib/pipeline-stage.ts` re-exports both names, so those imports keep working unchanged |
 | tooling | `vitest` added as a dev dependency with a `test` script in `web/package.json` (door 2); the roadmap's later "Vitest unit tests" item then extends it rather than introducing it |
+| tooling | `@types/node` moves from `^20` to `^24.19.1` (the Node runtime here is v24): `vitest@5.0.3` declares `@types/node` `^22 \|\| >=24` as a peer and `npm install` refuses `^20`. Config is `web/vitest.config.mts` (the `@/` alias), ESM so Vite loads it natively |
 | tooling | `web/eslint.config.mjs` gains an import restriction scoped to `web/domain/**` (door 1) |
 | stored data | nothing to migrate - no table, column or row changes; the DB `check` lists already match the statuses here |
 

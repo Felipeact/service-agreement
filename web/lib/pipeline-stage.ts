@@ -1,7 +1,7 @@
-/** The board stage a deal shows at. Ordered; the Phase 1 domain layer owns these keys (AD-001). */
-export const PIPELINE_STAGES = ["in_progress", "sent", "accepted", "completed", "refused"] as const;
+import type { PipelineStage } from "@/domain/pipeline";
 
-export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+/** The stage keys are owned by the domain layer (AD-001); re-exported for the UI. */
+export { PIPELINE_STAGES, type PipelineStage } from "@/domain/pipeline";
 
 type StageMeta = {
   /** Full label for pills and tooltips. */
