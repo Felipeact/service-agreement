@@ -24,11 +24,11 @@
 
 ## Handoff
 
-**Feature**: ports-adapters
-**Where**: verified - PASS (light, round 1 full), report in `.specs/features/ports-adapters/verification.md`
+**Feature**: auth-magic-link
+**Where**: plan approved; checks written, `.specs/features/auth-magic-link/checks.md` (C1-C31, `validate_checks.py` exit 0); building, one builder
 **In progress**: none
-**Next step**: next ROADMAP item (Phase 1: auth with magic link and the `proxy.ts` session refresh), which also proves the adapter-to-PostgREST path with a real session
-**Blockers**: none
+**Next step**: build C1-C31; doors 1, 2, 4 and 5 become AD-018..AD-021 in the feature commit
+**Blockers**: before live proof, the user invites the demo-owner email in the Supabase dashboard and changes the Magic link template href and Site URL (plan open questions 1-2)
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
