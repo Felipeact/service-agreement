@@ -32,7 +32,7 @@
 **Feature**: auth-magic-link
 **Where**: built and committed; C1-C7, C9-C17, C19, C20, C24-C31 proven; live parts of C8, C18, C21 and the SQL proof of C22-C23 wait on the user (see checks Handoff); Verifier not yet run
 **In progress**: none
-**Next step**: user invites the demo owner, edits the Magic link template and allows the rolled-back seed proof; then run the live proofs and dispatch the Verifier
+**Next step**: (1) run the rolled-back seed proof `seed supabase/tests/demo_owner.sql` (MCP `execute_sql` was refused by the tool permission on 2026-10-23, twice); (2) user sets the Magic link template href and Site URL in the dashboard; (3) user names and invites the demo-owner email, then run `seed.sql` with `app.demo_owner_email`; (4) one real sign-in link proves C8, C18, C21 live; then commit, tick the ROADMAP item and dispatch the Verifier
 **Blockers**: before live proof, the user invites the demo-owner email in the Supabase dashboard and changes the Magic link template href and Site URL (plan open questions 1-2)
 **Uncommitted**: none
 **Branch**: development (not pushed)
