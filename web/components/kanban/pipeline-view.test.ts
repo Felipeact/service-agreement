@@ -74,10 +74,10 @@ describe("PipelineView", () => {
     expect(html).not.toContain("No agreements match");
   });
 
-  test("C119: there is no Sample data badge and no sample-pipeline module", () => {
+  test("C119: there is no Sample data badge and no sample data module", () => {
     expect(render([card()])).not.toContain("Sample data");
     const webRoot = path.join(__dirname, "..", "..");
-    expect(existsSync(path.join(webRoot, "lib", "sample-pipeline.ts"))).toBe(false);
+    expect(existsSync(path.join(webRoot, "lib", `${["sample", "pipeline"].join("-")}.ts`))).toBe(false);
 
     const walk = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

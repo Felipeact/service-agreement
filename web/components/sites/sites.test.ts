@@ -41,6 +41,13 @@ describe("SiteRegisterView", () => {
     expect(view([asset()])).toContain(">1 asset<");
   });
 
+  test("C136: the rendered view shows each group heading with its count", () => {
+    const out = view([asset(), asset(), asset({ typeCode: "RTU", typeName: "Rooftop unit" })]);
+    expect(out).toMatch(/BOILER - Boiler<span[^>]*>2</);
+    expect(out).toMatch(/RTU - Rooftop unit<span[^>]*>1</);
+    expect(out.indexOf("BOILER - Boiler")).toBeLessThan(out.indexOf("RTU - Rooftop unit"));
+  });
+
   test("C138: a row shows unit, model, location and source; gaps are dashes", () => {
     const out = view([asset()]);
     for (const text of ["B-1", "Condensing boiler, 1,000 MBH", "Mechanical room P1", "Manual"]) expect(out).toContain(text);

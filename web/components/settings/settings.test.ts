@@ -66,8 +66,9 @@ describe("settings form", () => {
 
   test.each(["estimator", "viewer"] as const)("C145: a %s sees read-only controls and no Save", (role) => {
     const out = view(role);
-    expect(hasAttr(control(out, "legalName"), "readOnly")).toBe(true);
-    expect(hasAttr(control(out, "repairDiscountPct"), "readOnly")).toBe(true);
+    for (const id of ["legalName", "address", "phone", "accentColor", "repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "taxNote"]) {
+      expect(hasAttr(control(out, id), "readOnly"), id).toBe(true);
+    }
     expect(hasAttr(control(out, "governingProvince"), "disabled")).toBe(true);
     expect(out).toContain("Only owners and admins can edit company settings.");
     expect(out).not.toContain("Save changes");
@@ -92,6 +93,9 @@ describe("settings form", () => {
     expect(control(out, "cpiCapPct")).toContain('value="abc"');
     expect(out.match(/aria-invalid/g)).toHaveLength(2);
     expect(out).toMatch(/id="legalName-error"[^>]*>Legal name must be 1 to 120 characters</);
+    expect(out).toMatch(/id="cpiCapPct-error"[^>]*>CPI cap must be a number</);
+    expect(out.indexOf('id="cpiCapPct-error"')).toBeGreaterThan(out.indexOf('id="cpiCapPct"'));
+    expect(out.indexOf('id="cpiCapPct-error"')).toBeLessThan(out.indexOf('for="cancellationNoticeDays"'));
     expect(control(out, "phone")).toContain('value="604-555-0100"');
   });
 
