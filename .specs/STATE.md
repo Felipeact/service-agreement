@@ -26,14 +26,17 @@
 | AD-020 | Server-side identity is `getClaims()` `sub`, never `getSession()` (a test fails on any `getSession(` under `web/`) | `getClaims` verifies the token; a session read from cookies can be forged | active | 2026-10-23 |
 | AD-021 | Before Phase 5 onboarding, a staff member exists by dashboard invite plus `supabase/seed.sql` run with `app.demo_owner_email`; no email literal is committed outside `example.com` | a real address in git history cannot be removed; inserting into `auth.users` with SQL skips GoTrue's identities | active | 2026-10-23 |
 | AD-022 | Under Cache Components, the `(app)` layout has no top-level `await`: it renders `<Suspense>` around `MemberGate`, which reads `currentMember()` and redirects, shows No workspace, or renders the shell. Pages that read `searchParams` or cookies do it in a child inside `<Suspense>` | a request read outside Suspense fails `next build`; `instant = false` would opt every app page out of static-shell validation | active | 2026-10-23 |
+| AD-023 | Each screen reads through one narrow port in `web/application/ports` (`PipelineReader`, `CustomerDirectory`, `SiteRegister`, `OrgSettingsStore`) returning plain view types, `null` for a missing record, throwing on unexpected errors; adapters in `web/infrastructure/supabase` use embedded selects, cap lists at 500 rows (`.limit(500)`), and pages get them only from `getContainer()` | pages cannot import `@supabase/*` (AD-014), and one wide repository would grow for callers that use none of it | active | 2026-10-24 |
+| AD-024 | Staff URLs are flat with uuid ids: `/customers`, `/customers/[customerId]`, `/sites/[siteId]`, `/settings`; a site page is not nested under its customer | agreements, import jobs and a future sites list link to a site without knowing its customer | active | 2026-10-24 |
+| AD-025 | `org_settings.governing_province` holds a two-letter code from `PROVINCES` in `web/domain/org-settings`; single-row writes are a Server Action, the pure `validate...` function and a store port, not an RPC | the seed already stores `BC`, the contract will print the code; one update is already atomic, and later forms copy this shape | active | 2026-10-24 |
 
 ## Handoff
 
-**Feature**: auth-magic-link
-**Where**: built and committed; C1-C7, C9-C17, C19, C20, C24-C31 proven; live parts of C8, C18, C21 and the SQL proof of C22-C23 wait on the user (see checks Handoff); Verifier not yet run
+**Feature**: staff-screens
+**Where**: built and committed (`1c35d9d` code, docs commit after it); 390 vitest tests, lint, tsc and `next build` green; live and SQL proofs not run (see checks Handoff); Verifier dispatched after the docs commit
 **In progress**: none
-**Next step**: (1) run the rolled-back seed proof `seed supabase/tests/demo_owner.sql` (MCP `execute_sql` was refused by the tool permission on 2026-10-23, twice); (2) user sets the Magic link template href and Site URL in the dashboard; (3) user names and invites the demo-owner email, then run `seed.sql` with `app.demo_owner_email`; (4) one real sign-in link proves C8, C18, C21 live; then commit, tick the ROADMAP item and dispatch the Verifier
-**Blockers**: before live proof, the user invites the demo-owner email in the Supabase dashboard and changes the Magic link template href and Site URL (plan open questions 1-2)
+**Next step**: (1) user signs in as the demo owner (auth-magic-link steps are still open) and says go on running `supabase/seed.sql` on the live project and the rolled-back `staff_screens.sql` proofs; (2) run the live proofs C103, C105, C107, C109, C126, C127, C139, C160, C161 with Playwright; (3) then the Verifier's findings; (4) plan the next roadmap item (Phase 1: Vitest unit tests, RLS isolation check, Playwright validation), and add the "customer, site and asset forms" item the plan asked about
+**Blockers**: live proofs need the demo owner provisioned; the seed run needs the user's go-ahead
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`

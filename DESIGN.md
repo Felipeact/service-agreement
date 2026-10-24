@@ -260,7 +260,8 @@ Quiet, familiar, and exact. Every control is a native element styled with role t
 - **Search:** white, 1px Hairline border, 6px radius, a 14px magnifier icon in Slate Secondary inset on the left, placeholder in Slate Secondary; 44px tall below 1024px, 34px on desktop. It has no visible label, so an accessible name is required.
 - **Focus:** the global ring (below).
 - **TextInput** ([web/components/ui/text-input.tsx](web/components/ui/text-input.tsx)): a visible 13px label (500) above the field; the field matches Search without the icon. With an error, the border turns Danger, a 12px Danger message sits under the field, and the input gets `aria-invalid` and `aria-describedby` pointing at it. First used on `/login`.
-- **Deferred:** Select is built with the Phase 1 Company settings form.
+- **Select** ([web/components/ui/select.tsx](web/components/ui/select.tsx)): a native `<select>` with the same visible label, 44px/34px height, Danger border and linked message as TextInput. First used for the governing province on `/settings`.
+- **Empty-state panel** is the shared `EmptyPanel`; list screens (Customers, site register) use it with a title, one line of text and, for a search with no match, a Clear search button.
 
 ### Focus
 Every focusable element gets the global `:focus-visible` treatment: a 2px solid Action Blue outline with a 2px offset. Components do not override it.

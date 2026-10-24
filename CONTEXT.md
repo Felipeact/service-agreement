@@ -32,12 +32,14 @@ Other sources:
 
 ### Company profile and default terms (M2)
 **What it is:** each tenant's branding and contract defaults. Branding is legal name, address, phone, logo and accent colour. Default terms are repair discount %, CPI cap %, cancellation notice days, payment days, governing province and tax note (GST/PST/HST). Branding is data, not code: no company name is hard-coded, and seed or demo data uses a fictitious company.
-**What we built:** table `org_settings`, one row per org (primary key `org_id`). Percent terms are `numeric(5,2)` between 0 and 100. `accent_color` is `#rrggbb`. `logo_path` will point into Storage once buckets exist. No screen yet.
-- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Kettle Ridge Mechanical Ltd.`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has no agreements or events yet; its owner is attached with `app.demo_owner_email` (see Tenant). The seed has run once on the live project; re-running it changes nothing.
+**What we built:** table `org_settings`, one row per org (primary key `org_id`). Percent terms are `numeric(5,2)` between 0 and 100. `accent_color` is `#rrggbb`. `logo_path` will point into Storage once buckets exist; the logo is not shown or edited yet.
+- **Settings screen:** `/settings` ([web/app/(app)/settings/](web/app/(app)/settings/)) shows the legal name, address, phone, accent colour and the default terms. Owners and admins edit and save; estimators and viewers see it read-only. `saveSettingsAction` validates with `validateOrgSettings` ([web/domain/org-settings/index.ts](web/domain/org-settings/index.ts)), then `OrgSettingsStore.save` updates the row under RLS (an empty result means `forbidden`). The province is stored as a two-letter code (AD-025). Last write wins. The form uses the new `Select` ([web/components/ui/select.tsx](web/components/ui/select.tsx)).
+- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Kettle Ridge Mechanical Ltd.`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has 12 agreements (one per site, version 1, mirroring the twelve mock cards; 3 contracts) and no events yet; its owner is attached with `app.demo_owner_email` (see Tenant). The seed has run once on the live project; re-running it changes nothing.
 
 ### Customer (M3)
 **What it is:** the client company that owns the equipment and receives the service agreement, for example a property-management firm.
-**What we built:** table `customers` (per org). No screen yet. The demo org has 12 customers whose names match [web/lib/sample-pipeline.ts](web/lib/sample-pipeline.ts), each with one contact (`@example.com` email) and one site.
+**What we built:** table `customers` (per org). The demo org has 12 customers, each with one contact (`@example.com` email) and one site.
+- **Screens:** `/customers` lists customers by name with the primary contact (the earliest-created contact), site count and asset count, and a search. `/customers/[customerId]` shows contacts, sites and the customer's agreements. Both are read-only (no screen creates customers yet). Code: [web/components/customers/](web/components/customers/).
 
 ### Contact / site contact (M3)
 **What it is:** the person at the customer, usually a facility or property manager, who reviews the agreement through the portal and signs the contract. Their email approval counts as written approval. They are non-technical and use the portal rarely.
@@ -46,6 +48,7 @@ Other sources:
 ### Site (M3)
 **What it is:** a physical address belonging to a customer, where the equipment is installed. A customer can have several sites.
 **What we built:** table `sites`, belonging to a customer, with an optional site contact. A site that has an agreement cannot be deleted.
+- **Screen:** `/sites/[siteId]` ([web/app/(app)/sites/[siteId]/](web/app/(app)/sites/[siteId]/)) is the equipment register: assets grouped by asset type (ordered by type name, rows by unit with numbers compared as numbers), a search, and a link back to the customer. Read-only.
 
 ### Asset and asset type (M4)
 **What it is:** one piece of equipment at a site. Fields: asset type, unit #, type/model, location/access, and source (manual or import). The asset type comes from a catalog of about 40 equipment types, for example RTU (rooftop unit) and MUA (make-up air unit).
@@ -99,7 +102,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
   - **Result:** a refused move returns `{ ok: false, error: { code, from, command } }` with code `invalid_transition`, `reason_required` or `reason_too_long`; it never throws. A successful move returns `{ ok: true, status, event }`. The event's type is `<entity>.<to-status>` (`agreement.sent`, `agreement.revised`, `contract.completed`...). It carries `from`, `to` and `data` (`reason` or `versionNo`) (AD-011). The transition use cases below record it.
   - **Stage:** `pipelineStage(agreement, contract?)` in [web/domain/pipeline/index.ts](web/domain/pipeline/index.ts). draft and changes_requested → In progress; sent → Sent; accepted → Accepted until the contract completes (→ Completed). Customer-side endings (refused, expired, contract declined) → Refused. Contractor-side endings (withdrawn, contract voided) → `null`, off the board.
 - **Stage keys:** `in_progress`, `sent`, `accepted`, `completed` and `refused` are owned by [web/domain/pipeline/index.ts](web/domain/pipeline/index.ts) (AD-001). [web/lib/pipeline-stage.ts](web/lib/pipeline-stage.ts) re-exports them and keeps only the UI labels and dot classes.
-- **Board UI:** `/pipeline` ([web/app/(app)/pipeline/page.tsx](web/app/(app)/pipeline/page.tsx)) shows the five-column board on fictitious sample data from [web/lib/sample-pipeline.ts](web/lib/sample-pipeline.ts).
+- **Board UI:** `/pipeline` ([web/app/(app)/pipeline/page.tsx](web/app/(app)/pipeline/page.tsx)) shows the five-column board on the member's agreements.
   - Each column shows its card count and its CAD total per year, formatted by `formatCad` from [web/lib/money.ts](web/lib/money.ts).
   - Search by customer name runs client-side.
   - On mobile the board becomes stage tabs; on tablet it scrolls inside its own container.
@@ -110,7 +113,8 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
   - **Layer rules:** ESLint keeps `application/` free of framework and database imports, keeps `infrastructure/` away from UI, and stops `app/`, `components/` and `lib/` importing adapters or `@supabase/*` (AD-014).
   - **Config:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `web/.env.local` (untracked); [web/.env.example](web/.env.example) lists them. A transition runs as the signed-in member.
   - Spec: [.specs/features/ports-adapters/](.specs/features/ports-adapters/).
-- **Not built yet:** real data on the board, deal age, filters and drag-and-drop.
+- **Real data:** `/pipeline` reads the member's agreements through `PipelineReader` ([web/infrastructure/supabase/readers.ts](web/infrastructure/supabase/readers.ts)). A card shows the customer, `<number> · v<n>`, the age (whole days since `agreements.updated_at`, via `Clock`) and the annual amount of the latest version's service lines. Withdrawn agreements and voided contracts are off the board. The sample data is gone.
+- **Not built yet:** filters, drag-and-drop and the "Not viewed" pill (needs the portal).
 
 ### Events, outbox and n8n automation (M11, M12, M13)
 **What it is:** the app owns all status, and n8n only automates emails, reminders and timing. Outbox events go to n8n signed with HMAC, and n8n calls back app endpoints with idempotency keys. n8n execution IDs are written back to the event log as audit evidence. Workflows W1–W6 are defined in [ROADMAP.md](ROADMAP.md#n8n-workflows). Customers never see or build workflows.
@@ -144,7 +148,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
   - [web/components/ui/](web/components/ui/): `Button` (primary and secondary), `SearchInput` and `StatusPill` (stage dot plus label, or the attention and neutral tones). Controls are 44px tall below 1024px and 34px on desktop.
   - [web/components/shell/](web/components/shell/): `AppShell` (232px sidebar on desktop, top bar and drawer below 1024px), `SidebarNav` (nav items without a page are `aria-disabled`) and `PageHeader`.
   - [web/components/kanban/](web/components/kanban/): `KanbanColumn`, `KanbanCard` and `PipelineView`.
-- **Deferred:** `TextInput`, `Select` and the field error state come with the Phase 1 Company settings form.
+- **Form controls:** `TextInput` and `Select` ([web/components/ui/select.tsx](web/components/ui/select.tsx)) share the label, 44/34px height and field-error contract; `EmptyPanel` is the shared empty state.
 - **Design record:** [DESIGN.md](DESIGN.md) and [.impeccable/design.json](.impeccable/design.json) are regenerated from the code.
 - **Spec:** [.specs/features/design-system-base/](.specs/features/design-system-base/).
 
@@ -153,6 +157,11 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-24:** Phase 1 item 6, the staff screens on real data ([.specs/features/staff-screens/](.specs/features/staff-screens/)).
+  - `/pipeline` on real agreements; `/customers`, `/customers/[customerId]`, `/sites/[siteId]` (equipment register grouped by type) and `/settings`, each with loading, error and not-found states. Read ports `PipelineReader`, `CustomerDirectory`, `SiteRegister` and `OrgSettingsStore` (AD-023), flat URLs (AD-024), province codes (AD-025).
+  - `Select`, `EmptyPanel`; `lib/sample-pipeline.ts` removed; `seed.sql` adds 12 demo agreements (earlier `demo_seed.sql` C17 now expects 12).
+  - Known limits: lists are read-only; a user in several orgs sees all of them until an org switcher exists.
 
 - **2026-10-23:** Phase 1 item 5, staff sign-in with a magic link and the `proxy.ts` session refresh ([.specs/features/auth-magic-link/](.specs/features/auth-magic-link/)).
   - `/login`, `GET /auth/confirm`, [web/proxy.ts](web/proxy.ts), the `AuthGateway` and `MemberDirectory` ports with Supabase adapters, and the `(app)` member gate with "No workspace yet" and Sign out.
