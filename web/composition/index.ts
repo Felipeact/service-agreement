@@ -1,11 +1,14 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { OrgSettingsValue } from "@/domain/org-settings";
 import { makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
+import { supabaseCustomerDirectory, supabasePipelineReader, supabaseSiteRegister } from "@/infrastructure/supabase/readers";
+import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}`);
@@ -39,6 +42,10 @@ export async function getContainer() {
 
   const auth = supabaseAuthGateway(supabase);
   const members = supabaseMemberDirectory(supabase);
+  const pipeline = supabasePipelineReader(supabase, systemClock);
+  const customers = supabaseCustomerDirectory(supabase);
+  const sites = supabaseSiteRegister(supabase);
+  const settings = supabaseOrgSettingsStore(supabase);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -47,6 +54,12 @@ export async function getContainer() {
     currentMember: members.currentMember,
     transitionAgreement: makeTransitionAgreement(supabaseAgreementRepository(supabase)),
     transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
+    pipelineBoard: pipeline.board,
+    listCustomers: customers.list,
+    customerDetail: customers.detail,
+    siteRegister: sites.get,
+    getOrgSettings: settings.get,
+    saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
     clock: systemClock,
   };
 }

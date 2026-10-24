@@ -90,4 +90,12 @@ describe("layer boundaries", () => {
     expect(emails.length).toBeGreaterThan(0);
     expect(emails.filter((email) => !email.endsWith("@example.com"))).toEqual([]);
   });
+  test("C101: no screen or component imports Supabase or an adapter", () => {
+    const files = [...sourceFiles(path.join(webRoot, "app", "(app)")), ...sourceFiles(path.join(webRoot, "components"))].filter(
+      (file) => !file.endsWith(".test.ts"),
+    );
+    expect(files.length).toBeGreaterThan(10);
+    const offenders = files.filter((file) => /from "(@supabase\/|@\/infrastructure)/.test(readFileSync(file, "utf8")));
+    expect(offenders).toEqual([]);
+  });
 });

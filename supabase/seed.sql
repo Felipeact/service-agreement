@@ -1,7 +1,7 @@
 -- Demo data: a fictitious contractor, Kettle Ridge Mechanical Ltd. (.specs/features/catalog-seed/plan.md, door 5).
 -- One transaction, safe to run again: every row has a fixed id (door 4) and inserts skip rows that exist.
 -- Customer names match web/lib/sample-pipeline.ts. Emails use example.com and phones the 555-01xx fiction range.
--- The org has no agreements. Its owner is attached only when the session sets app.demo_owner_email (see the end).
+-- The 12 agreements mirror the pipeline cards of the Phase 0.5 mockups. Its owner is attached only when the session sets app.demo_owner_email (see the end).
 begin;
 
 insert into public.orgs (id, name)
@@ -114,6 +114,49 @@ from (values
   (12, 'DS-1', 'DUCTLESS_SPLIT', 'Ductless split, 12,000 BTU', 'Sterilization room')
 ) as a(site, unit_no, code, type_model, location)
 join public.asset_types t on t.org_id = '00000000-0000-4000-8000-00000000de30' and t.code = a.code
+on conflict (id) do nothing;
+
+-- Demo agreements (.specs/features/staff-screens/plan.md, Impact): one per site, version 1, so the board shows every stage.
+-- updated_at is set back by age_days so the cards show different ages.
+drop table if exists pg_temp.demo_agreements;
+create temporary table demo_agreements (n integer, number text, status text, contract text, age_days integer,
+                                        visits integer, cost_cents bigint) on commit drop;
+insert into demo_agreements values
+  (1, 'AG-1048', 'changes_requested', null, 6, 4, 357000),
+  (2, 'AG-1046', 'draft', null, 2, 4, 540000),
+  (3, 'AG-1051', 'draft', null, 1, null, null),
+  (4, 'AG-1039', 'sent', null, 9, 2, 206000),
+  (5, 'AG-1042', 'sent', null, 15, 4, 247000),
+  (6, 'AG-1044', 'sent', null, 0, 6, 324175),
+  (7, 'AG-1031', 'accepted', 'client_signed', 3, 4, 472500),
+  (8, 'AG-1035', 'accepted', null, 4, 8, 110000),
+  (9, 'AG-1022', 'accepted', 'completed', 21, 4, 280000),
+  (10, 'AG-1019', 'accepted', 'completed', 26, 2, 380000),
+  (11, 'AG-1027', 'refused', null, 12, null, null),
+  (12, 'AG-1029', 'refused', null, 8, null, null);
+
+insert into public.agreements (id, org_id, site_id, number, status, created_at, updated_at)
+select md5('demo:agreement:' || n)::uuid, '00000000-0000-4000-8000-00000000de30', md5('demo:site:' || n)::uuid,
+       number, status, now() - (age_days + 30) * interval '1 day', now() - age_days * interval '1 day'
+from demo_agreements
+on conflict (id) do nothing;
+
+insert into public.agreement_versions (id, org_id, agreement_id, version_no)
+select md5('demo:version:' || n)::uuid, '00000000-0000-4000-8000-00000000de30', md5('demo:agreement:' || n)::uuid, 1
+from demo_agreements
+on conflict (id) do nothing;
+
+insert into public.service_lines (id, org_id, agreement_version_id, position, description, visits_per_year, cost_per_visit_cents)
+select md5('demo:line:' || n)::uuid, '00000000-0000-4000-8000-00000000de30', md5('demo:version:' || n)::uuid, 0,
+       'Preventive maintenance visit', visits, cost_cents
+from demo_agreements
+where visits is not null
+on conflict (id) do nothing;
+
+insert into public.contracts (id, org_id, agreement_version_id, status)
+select md5('demo:contract:' || n)::uuid, '00000000-0000-4000-8000-00000000de30', md5('demo:version:' || n)::uuid, contract
+from demo_agreements
+where contract is not null
 on conflict (id) do nothing;
 
 -- Demo owner (.specs/features/auth-magic-link/plan.md, door 4): invite the user in the Supabase dashboard first,

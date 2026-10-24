@@ -96,3 +96,19 @@ describe("updateSession", () => {
     },
   );
 });
+
+describe("updateSession on the staff screens", () => {
+  test.each([
+    "/pipeline",
+    "/customers",
+    "/customers/00000000-0000-4000-8000-000000000001",
+    "/sites/00000000-0000-4000-8000-000000000002",
+    "/settings",
+  ])("C108: signed out, %s redirects to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+});

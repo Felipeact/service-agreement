@@ -112,7 +112,7 @@ end $$;
 -- C17
 do $$ begin
   perform tests.ok('C17 memberships', (select count(*) from public.memberships where org_id = tests.demo()) = 0, 'demo has members');
-  perform tests.ok('C17 agreements', (select count(*) from public.agreements where org_id = tests.demo()) = 0, 'demo has agreements');
+  perform tests.ok('C17 agreements', (select count(*) from public.agreements where org_id = tests.demo()) = 12, 'demo does not have its 12 agreements (staff-screens C120 supersedes the earlier 0)');
   perform tests.ok('C17 events', (select count(*) from public.events where org_id = tests.demo()) = 0, 'demo has events');
 end $$;
 

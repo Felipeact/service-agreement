@@ -1,12 +1,11 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import type { PipelineCard } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
-import { StatusPill } from "@/components/ui/status-pill";
 import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
-import type { PipelineCard } from "@/lib/sample-pipeline";
 import { KanbanColumn } from "./kanban-column";
 
 /** The Pipeline page body: header with search, then the board (tabs on mobile, scroll on tablet, grid on desktop). */
@@ -38,7 +37,6 @@ export function PipelineView({ cards }: { cards: PipelineCard[] }) {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Pipeline"
-        badge={<StatusPill tone="neutral" label="Sample data" />}
         controls={
           <SearchInput
             ref={searchRef}
@@ -56,7 +54,12 @@ export function PipelineView({ cards }: { cards: PipelineCard[] }) {
         }
       />
 
-      {shown.length === 0 ? (
+      {cards.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-panel border border-hairline bg-surface px-4 py-12 text-center">
+          <p className="text-[14px] font-semibold">No agreements yet</p>
+          <p className="text-[13px] text-ink-2">Agreements you create appear here by stage.</p>
+        </div>
+      ) : shown.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-panel border border-hairline bg-surface px-4 py-12 text-center">
           <p className="text-[14px] font-semibold">No agreements match &quot;{query}&quot;</p>
           <Button onClick={clearSearch}>Clear search</Button>

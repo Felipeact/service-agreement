@@ -48,6 +48,15 @@ describe("composition root", () => {
     expect(typeof container.currentMember).toBe("function");
   });
 
+  test("C101: getContainer() exposes the readers and the settings store", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    for (const name of ["pipelineBoard", "listCustomers", "customerDetail", "siteRegister", "getOrgSettings", "saveOrgSettings"] as const) {
+      expect(typeof container[name], name).toBe("function");
+    }
+  });
+
   test.each([
     [URL_KEY, undefined, "sb_publishable_test"],
     [PUBLISHABLE_KEY, "https://example.supabase.co", undefined],

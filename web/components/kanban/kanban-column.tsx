@@ -1,7 +1,7 @@
+import type { PipelineCard } from "@/application/ports";
 import { StatusPill } from "@/components/ui/status-pill";
 import { formatCad } from "@/lib/money";
 import { STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
-import type { PipelineCard } from "@/lib/sample-pipeline";
 import { KanbanCard } from "./kanban-card";
 
 type KanbanColumnProps = {
