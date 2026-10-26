@@ -151,3 +151,21 @@ describe("record write controls on the site register", () => {
     expect(out).toContain("Manual");
   });
 });
+
+describe("import entry point on the site register", () => {
+  test("C401: a writer sees Import equipment list in the header", () => {
+    expect(siteAs("estimator", [asset()])).toMatch(/<a[^>]*href="\/sites\/s1\/import"[^>]*>Import equipment list<\/a>/);
+  });
+
+  test("C424: a viewer has no link to the import page", () => {
+    const out = siteAs("viewer", [asset()]);
+    expect(out).not.toContain('href="/sites/s1/import"');
+    expect(out).not.toContain("Import equipment list");
+  });
+
+  test("C444: a writer still sees every asset row and Add asset", () => {
+    const out = siteAs("estimator", [asset({ unitNo: "B-7", typeModel: "Condensing boiler", location: "Roof" })]);
+    for (const text of ["B-7", "Condensing boiler", "Roof", "Manual"]) expect(out, text).toContain(text);
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/);
+  });
+});

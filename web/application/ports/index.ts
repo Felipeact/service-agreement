@@ -1,6 +1,7 @@
 import type { AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { ImportContentType, ImportFile } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
@@ -206,4 +207,34 @@ export interface AssetStore {
   /** Leaves `source` as it is. */
   update(id: string, value: AssetValue): Promise<WriteResult>;
   delete(id: string): Promise<DeleteResult>;
+}
+
+export type ImportJobStatus = "uploading" | "uploaded";
+
+export type ImportJobView = {
+  id: string;
+  originalName: string;
+  sizeBytes: number;
+  status: ImportJobStatus;
+  /** `null` when no email was recorded: shown as "Former member". */
+  uploadedBy: string | null;
+  createdAt: Date;
+};
+
+export interface ImportJobReader {
+  /** The site's jobs, newest first, at most 500. */
+  forSite(siteId: string): Promise<ImportJobView[]>;
+}
+
+export type StartImportResult = { ok: true; jobId: string; signedUrl: string; contentType: ImportContentType } | { ok: false; code: WriteFailure };
+export type ConfirmImportResult = { ok: true } | { ok: false; code: WriteFailure | "upload_missing" };
+
+/** Import jobs and their files in the `imports` bucket, keyed `<orgId>/<jobId>` (doors 3 and 4). */
+export interface ImportJobStore {
+  /** Inserts the job as `uploading`, then signs an upload URL for its key. */
+  start(orgId: string, siteId: string, file: ImportFile): Promise<StartImportResult>;
+  /** `uploading` -> `uploaded` once the stored object exists with the declared size; an already uploaded job is ok. */
+  confirmUploaded(jobId: string): Promise<ConfirmImportResult>;
+  /** Deletes the row, then the object; a failed object delete is logged and still ok. */
+  discard(jobId: string): Promise<WriteResult>;
 }

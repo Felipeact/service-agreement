@@ -131,4 +131,12 @@ describe("updateSession on the record forms", () => {
     expect(response.status).toBe(307);
     expect(locationPath(response)).toBe("/login");
   });
+
+  test("C436: signed out, /sites/<uuid>/import redirects to /login", async () => {
+    scenario = { claims: null };
+    const response = await updateSession(request("/sites/33333333-3333-4333-8333-333333333333/import"));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
 });

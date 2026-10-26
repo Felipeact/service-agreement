@@ -80,6 +80,23 @@ describe("composition root", () => {
     for (const name of names) expect(typeof container[name], name).toBe("function");
   });
 
+  test("C433: getContainer() exposes the import job store and read", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    for (const name of ["startImport", "confirmImportUpload", "discardImport", "listImportJobs"] as const) {
+      expect(typeof container[name], name).toBe("function");
+    }
+  });
+
+  test("C433: the ports export ImportJobStore with start, confirmUploaded and discard", () => {
+    const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
+    const body = ports.match(/export interface ImportJobStore \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(body).toContain("start(orgId: string, siteId: string, file: ImportFile)");
+    expect(body).toContain("confirmUploaded(jobId: string)");
+    expect(body).toContain("discard(jobId: string)");
+  });
+
   test("C340: the ports declare one store per entity, and delete only on contacts and assets", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";

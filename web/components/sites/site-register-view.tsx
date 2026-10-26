@@ -64,6 +64,7 @@ export function SiteRegisterView({ site, initialQuery = "", role }: SiteRegister
             canWrite ? (
               <div className="flex flex-wrap gap-2.5">
                 <LinkButton href={`/sites/${site.id}/edit`}>Edit site</LinkButton>
+                <LinkButton href={`/sites/${site.id}/import`}>Import equipment list</LinkButton>
                 {addAsset}
               </div>
             ) : undefined

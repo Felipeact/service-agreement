@@ -8,6 +8,7 @@ import { systemClock } from "@/infrastructure/clock";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
+import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
 import {
   supabaseAssetTypeCatalog,
   supabaseCustomerDirectory,
@@ -60,6 +61,7 @@ export async function getContainer() {
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
   const assetStore = supabaseAssetStore(supabase);
+  const importJobs = supabaseImportJobStore(supabase, systemClock);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -87,6 +89,10 @@ export async function getContainer() {
     createAsset: assetStore.create,
     updateAsset: assetStore.update,
     deleteAsset: assetStore.delete,
+    listImportJobs: supabaseImportJobReader(supabase).forSite,
+    startImport: importJobs.start,
+    confirmImportUpload: importJobs.confirmUploaded,
+    discardImport: importJobs.discard,
     clock: systemClock,
   };
 }
