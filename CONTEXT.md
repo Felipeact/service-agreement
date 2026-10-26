@@ -28,7 +28,7 @@ Other sources:
   - **The `(app)` gate:** [web/app/(app)/layout.tsx](web/app/(app)/layout.tsx) renders `MemberGate` inside `<Suspense>` (Cache Components cannot prerender a session read). Signed out redirects to `/login`; no membership shows "No workspace yet" with Sign out; a member gets the shell with the org name, their email and Sign out (scope `local`, this browser only).
   - **Members before onboarding:** invite the user in the Supabase dashboard, then run [supabase/seed.sql](supabase/seed.sql) after `select set_config('app.demo_owner_email', '<email>', false);` to make them owner of the demo org. The address is never committed.
 - **Not yet:** org creation is done by the service role only (onboarding is Phase 5). No invite or members screen, and no org switcher.
-- **Tests:** [supabase/tests/](supabase/tests/). Run them with MCP `execute_sql` on the text of `fixture.sql` followed by one test file; each run rolls back. Spec: [.specs/features/supabase-init/](.specs/features/supabase-init/).
+- **Tests:** [supabase/tests/](supabase/tests/), run with `npm run test:db` (see "How to run the tests"); each run rolls back. Spec: [.specs/features/supabase-init/](.specs/features/supabase-init/).
 
 ### Company profile and default terms (M2)
 **What it is:** each tenant's branding and contract defaults. Branding is legal name, address, phone, logo and accent colour. Default terms are repair discount %, CPI cap %, cancellation notice days, payment days, governing province and tax note (GST/PST/HST). Branding is data, not code: no company name is hard-coded, and seed or demo data uses a fictitious company.
@@ -154,9 +154,22 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ---
 
+## How to run the tests
+
+- **Unit tests:** `npm test` in `web/` (Vitest, `*.test.ts` beside the code, AD-013). No network.
+- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 9 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
+- **Web validation:** live, in a real browser through the Playwright MCP, as AGENTS..md describes (375, 768 and 1440 px, touch, console and network). Not committed.
+- **Security advisors** (Supabase MCP `get_advisors`, type `security`) report two accepted findings, and any other finding is a bug:
+  - `rls_enabled_no_policy` on `public.outbox`: on purpose. No user role may read or write the outbox; only `private.enqueue_outbox` writes it (AD-016).
+  - `auth_leaked_password_protection`: staff sign in by magic link only, so no password is ever set or checked.
+
+---
+
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-26:** Phase 1 validation: `npm run test:db` runs every SQL test file from a terminal, rolled back ([web/scripts/test-db/](web/scripts/test-db/), dev dependency `pg`); the two accepted security advisor findings are recorded ([.specs/features/phase1-validation/](.specs/features/phase1-validation/)).
 
 - **2026-10-24:** Phase 1 item 6, the staff screens on real data ([.specs/features/staff-screens/](.specs/features/staff-screens/)).
   - `/pipeline` on real agreements; `/customers`, `/customers/[customerId]`, `/sites/[siteId]` (equipment register grouped by type) and `/settings`, each with loading, error and not-found states. Read ports `PipelineReader`, `CustomerDirectory`, `SiteRegister` and `OrgSettingsStore` (AD-023), flat URLs (AD-024), province codes (AD-025).
