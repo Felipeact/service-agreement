@@ -154,3 +154,7 @@ begin
     end loop;
   end loop;
 end $$;
+
+-- The tests are written for a database without the demo org. On a project where supabase/seed.sql already ran,
+-- remove it inside this transaction (every tenant table cascades from orgs, AD-003); the rollback restores it.
+delete from public.orgs where id = '00000000-0000-4000-8000-00000000de30';
