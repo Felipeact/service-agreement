@@ -392,6 +392,7 @@ Proof: `npx vitest run components/sites -t "C444:"`
   - The migration was applied to the live project with the user's go-ahead (2026-10-26).
   - Earlier exact-inventory pins changed because this feature adds a table and a recipe: `rls_isolation` C35 now lists 16 public tables, `demo_seed_rerun` C19 expects 16 snapshot rows, and the runner tests C203-C212 and C210 count 11 recipes and 13 SQL files. Each still asserts an exact value.
   - The discard failure copy ("This import no longer exists.", "We couldn't discard the file. Try again.") is additive; the plan named only the upload failures.
+- **C440 (mcp, 2026-10-26):** `get_advisors` type `security` returned exactly `rls_enabled_no_policy` on `public.outbox` and `auth_leaked_password_protection`, nothing on `import_jobs` or `storage.objects`; the Verifier re-ran it with the same result.
 - **Abandoned:** calling the start and confirm Server Actions from the submit handler outside a transition; the Next guide requires `startTransition` for event-handler calls, and outside it the refresh request was aborted.
 - **Boundary (live):** C414, C442 and C443 closed in the commit after `555f05c`, signed in as the demo owner on "Brookhaven Community Centre", after the user approved stopping the other session's Chrome.
   - 1440x900: `.txt` -> extension message, 21 MB `.pdf` -> "Files can be up to 20 MB", 0 jobs added; `units.csv` and `units.pdf` uploaded (PUT 200 with `text/csv` / `application/pdf`), listed newest first as "Uploaded"; no horizontal scroll.
