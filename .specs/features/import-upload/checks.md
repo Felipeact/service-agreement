@@ -383,3 +383,13 @@ Proof: `npx vitest run components/sites -t "C444:"`
 - Production-data note: the migration (new table, bucket and storage policies) is applied to the
   live project through MCP `apply_migration`, as every earlier migration was. The live journey's
   uploads are discarded through the UI, so it leaves nothing behind.
+
+- Mechanism: one builder (estimate under budget, no ask).
+- **Boundary:** C401-C413, C415-C441, C444 closed at `9a56de5` plus the docs commit after it (one builder). Not run yet: C414, C442 and C443 (live), because the Playwright MCP Chrome profile is held by another Playwright MCP server; ROADMAP Phase 2 item 1 is ticked only after them (C441 ROADMAP proof open).
+- **Settled mid-build:**
+  - Door 5 appended to the plan: `storage.foldername('<org>/<job>')` returns only the org, so the job id is read with `storage.filename(name)` through `private.uuid_or_null`.
+  - The uploader's email comes from `created_by_email` (JWT default at insert), because no public table holds member emails; the plan's Assumptions row is corrected.
+  - The migration was applied to the live project with the user's go-ahead (2026-10-26).
+  - Earlier exact-inventory pins changed because this feature adds a table and a recipe: `rls_isolation` C35 now lists 16 public tables, `demo_seed_rerun` C19 expects 16 snapshot rows, and the runner tests C203-C212 and C210 count 11 recipes and 13 SQL files. Each still asserts an exact value.
+  - The discard failure copy ("This import no longer exists.", "We couldn't discard the file. Try again.") is additive; the plan named only the upload failures.
+- **Abandoned:** none.

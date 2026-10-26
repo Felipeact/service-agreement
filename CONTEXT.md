@@ -17,7 +17,7 @@ Other sources:
 **What it is:** a contractor company (HVAC or mechanical) that subscribes to the app. The schema is shared, every row carries an `org_id`, and Postgres RLS enforces isolation. Members have one role: owner, admin, estimator or viewer. Login is by magic link.
 **What we built:** tables `orgs` and `memberships` (one role per user per org, `unique (org_id, user_id)`) in [supabase/migrations/20261019174738_init.sql](supabase/migrations/20261019174738_init.sql), on the Supabase project `service-agreement` (ref `gnxebrtcpbujhvcamtoe`, region `ca-central-1`).
 - **Isolation:** every tenant table has `org_id not null`, and child rows reference parents through `(id, org_id)` composite foreign keys, so a reference cannot cross orgs (AD-003).
-- **RLS:** enabled on all 15 `public` tables. Policies call `private.is_org_member(org)` and `private.has_org_role(org, roles[])`, which are security definer with an empty `search_path`, in a `private` schema the Data API does not expose (AD-004).
+- **RLS:** enabled on all 16 `public` tables. Policies call `private.is_org_member(org)` and `private.has_org_role(org, roles[])`, which are security definer with an empty `search_path`, in a `private` schema the Data API does not expose (AD-004).
 - **Who writes what:** members read everything in their org except `outbox`. Owner and admin write settings, memberships and the equipment catalog. Owner, admin and estimator write customers, contacts, sites, assets, agreements, versions, service lines, contracts and events. Viewers only read. `anon` can read no rows and write nothing.
 - **Sign-in (staff):** a **sign-in link** by email, not a password. Customers get a different **portal link** (M9), with no account.
   - `/login` ([web/app/login/](web/app/login/)) asks Supabase for a link with `shouldCreateUser: false`, so only existing users get one. An unknown address sees the same "Check your email" answer and gets no account (Supabase answers 422 `otp_disabled`).
@@ -62,7 +62,12 @@ Other sources:
 
 ### Asset import (M5)
 **What it is:** turning a customer's messy equipment list (xlsx, csv, docx or pdf) into assets. The steps are upload, parse by format, extract with Claude structured output, normalize types with a synonym table (for example "Rooftop unit" → RTU), review in a grid, then commit. Uncertain rows are flagged, never hidden. Extraction sits behind the `AssetExtractor` port.
-**What we built:** nothing yet. Planned for Phase 2.
+**What we built (step 1, upload):** spec [.specs/features/import-upload/](.specs/features/import-upload/).
+- **Import job:** table `import_jobs`, one uploaded file for one site (`site_id` composite FK), status `uploading` -> `uploaded`, with original name, size, canonical content type, `created_by` and `created_by_email` from the JWT. RLS as `assets`: members read, owner/admin/estimator write (AD-031). Migration [supabase/migrations/20261026200326_import_upload.sql](supabase/migrations/20261026200326_import_upload.sql).
+- **Storage:** private bucket `imports`, 20 MB, pdf/csv/xlsx/docx only (AD-032). Key `<org_id>/<job_id>`; a file can only be inserted for a job of that org still `uploading`; no overwrite; the first `storage.objects` policies in the project (AD-033). Direct SQL deletes on `storage.objects` need `set_config('storage.allow_delete_query','true', true)` (Supabase's `protect_delete` trigger).
+- **Screen:** `/sites/[siteId]/import` ([web/app/(app)/sites/[siteId]/import/](web/app/(app)/sites/[siteId]/import/)), linked from the site register as "Import equipment list" for writers. Writers pick one file and press Upload; everyone sees the site's jobs newest first (name, size, uploader, date, "Uploaded" / "Upload not finished"); writers can Discard after a confirm prompt.
+- **Upload path (AD-034):** `startImportAction` validates with `validateImportFile` ([web/domain/imports](web/domain/imports/index.ts)) and calls `ImportJobStore.start`, which inserts the job and signs an upload URL; the browser `PUT`s the bytes straight to Storage ([web/components/imports/state.ts](web/components/imports/state.ts) `uploadFile`); `confirmImportAction` checks the stored size and marks the job uploaded. Adapter: [web/infrastructure/supabase/imports.ts](web/infrastructure/supabase/imports.ts).
+- **Not yet:** parsing, Claude extraction, normalization, the review grid and commit (next Phase 2 items); download or preview of the file; cleanup of jobs left "Upload not finished".
 
 ### Maintenance task library (M6)
 **What it is:** a preventive-maintenance checklist for each equipment type. Each tenant can edit it, and it is snapshotted into each agreement version so later edits don't change sent agreements.
@@ -161,7 +166,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## How to run the tests
 
 - **Unit tests:** `npm test` in `web/` (Vitest, `*.test.ts` beside the code, AD-013). No network.
-- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 10 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
+- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 11 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
 - **Web validation:** live, in a real browser through the Playwright MCP, as AGENTS..md describes (375, 768 and 1440 px, touch, console and network). Not committed.
 - **Security advisors** (Supabase MCP `get_advisors`, type `security`) report two accepted findings, and any other finding is a bug:
   - `rls_enabled_no_policy` on `public.outbox`: on purpose. No user role may read or write the outbox; only `private.enqueue_outbox` writes it (AD-016).
@@ -172,6 +177,8 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-26:** Phase 2 item 1, upload to Storage and import jobs ([.specs/features/import-upload/](.specs/features/import-upload/)): migration `import_upload` (table `import_jobs`, private bucket `imports`, storage policies, AD-031 to AD-033), signed-URL upload (AD-034), `/sites/[siteId]/import`, `import_upload` SQL recipe (`npm run test:db` now runs 11; the earlier table-inventory pins C35 and C19 now count 16).
 
 - **2026-10-26:** Phase 1 customer, site and asset forms built ([.specs/features/record-forms/](.specs/features/record-forms/)): eight form pages, ten Server Actions, per-entity store ports (AD-028 to AD-030), `record_forms` SQL recipe (`npm run test:db` now runs 10). Validated live as the demo owner at 375, 768 and 1440 px with touch.
 
