@@ -4,7 +4,7 @@
 do $$
 declare r record;
 begin
-  perform tests.ok('C19 rows', (select count(*) from tests.demo_counts) = 15, 'count snapshot is not 15 tables');
+  perform tests.ok('C19 rows', (select count(*) from tests.demo_counts) = 16, 'count snapshot is not 16 tables');
   for r in select t, n from tests.demo_counts loop
     perform tests.ok('C19 ' || r.t,
       r.n = case r.t

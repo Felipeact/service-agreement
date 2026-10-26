@@ -390,6 +390,63 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          content_type: string
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          id: string
+          org_id: string
+          original_name: string
+          site_id: string
+          size_bytes: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          org_id: string
+          original_name: string
+          site_id: string
+          size_bytes: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          org_id?: string
+          original_name?: string
+          site_id?: string
+          size_bytes?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_jobs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_jobs_site_id_org_id_fkey"
+            columns: ["site_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           created_at: string

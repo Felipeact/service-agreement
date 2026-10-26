@@ -13,8 +13,8 @@ do $$ begin
     (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public')
     = (select array_agg(t order by t) from unnest(array['orgs','memberships','org_settings','customers','contacts',
         'sites','asset_types','asset_type_tasks','assets','agreements','agreement_versions','service_lines',
-        'contracts','events','outbox']) as t),
-    'public tables differ from the 15 in the plan');
+        'contracts','events','outbox','import_jobs']) as t),
+    'public tables differ from the 16 in the plans (supabase-init, import-upload)');
 end $$;
 
 -- C36

@@ -9,11 +9,11 @@ grant usage on schema tests to anon, authenticated;
 create function tests.id(p_name text) returns uuid
 language sql immutable as $$ select md5(p_name)::uuid $$;
 
--- The 14 public tables that carry org_id (checks.md "tenant tables").
+-- The 15 public tables that carry org_id (checks.md "tenant tables").
 create function tests.tenant_tables() returns text[]
 language sql immutable as $$
   select array['memberships','org_settings','customers','contacts','sites','asset_types','asset_type_tasks',
-               'assets','agreements','agreement_versions','service_lines','contracts','events','outbox']
+               'assets','agreements','agreement_versions','service_lines','contracts','events','outbox','import_jobs']
 $$;
 
 create function tests.act_as(p_user text) returns void
@@ -97,6 +97,7 @@ begin
     when 'contracts' then format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', o, tests.id('ver2' || p_org))
     when 'events' then format('insert into public.events (org_id, entity_type, entity_id, type) values (%L, ''agreement'', %L, ''agreement.sent'')', o, tests.id('agr' || p_org))
     when 'outbox' then format('insert into public.outbox (org_id, event_id) values (%L, %L)', o, tests.id('evt2' || p_org))
+    when 'import_jobs' then format('insert into public.import_jobs (org_id, site_id, original_name, content_type, size_bytes) values (%L, %L, %L, ''text/csv'', 100)', o, tests.id('site' || p_org), r || '.csv')
   end;
 end $$;
 
@@ -139,6 +140,8 @@ begin
     insert into public.events (id, org_id, entity_type, entity_id, type) values (tests.id('evt' || o), tests.id('org' || o), 'agreement', tests.id('agr' || o), 'agreement.sent');
     insert into public.events (id, org_id, entity_type, entity_id, type) values (tests.id('evt2' || o), tests.id('org' || o), 'agreement', tests.id('agr' || o), 'agreement.accepted');
     insert into public.outbox (id, org_id, event_id) values (tests.id('out' || o), tests.id('org' || o), tests.id('evt' || o));
+    insert into public.import_jobs (id, org_id, site_id, original_name, content_type, size_bytes, status)
+      values (tests.id('job' || o), tests.id('org' || o), tests.id('site' || o), 'units-' || o || '.csv', 'text/csv', 100, 'uploading');
   end loop;
 end $$;
 
