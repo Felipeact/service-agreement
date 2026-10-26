@@ -110,7 +110,7 @@ The owner runs every SQL test from a terminal and reads the result by name.
 **Acceptance Criteria**
 
 14. WHEN the demo owner signs in with an emailed link and opens, in one session, `/pipeline`, `/customers`, a demo customer, one of its sites and `/settings` THEN the system SHALL answer each with `200` and show the demo org's name in the shell.
-15. WHILE the demo owner walks the journey of AC 14 the system SHALL log no console error or warning and SHALL have no failed network request.
+15. WHILE the demo owner walks the journey of AC 14 the system SHALL log no console error or warning and SHALL have no failed network request other than one the Next.js router cancels after its response arrived with `200` (narrowed with the user's approval on 2026-10-26).
 16. WHEN the demo owner saves `/settings` with an unchanged form during the journey THEN the system SHALL show "Settings saved".
 17. WHEN the demo owner signs out at the end of the journey THEN the system SHALL land on `/login`, and a following `GET /pipeline` SHALL redirect `307` to `/login`.
 

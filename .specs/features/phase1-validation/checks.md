@@ -124,7 +124,8 @@ Proof: live - `browser_navigate` through the journey, read `browser_network_requ
 
 **C220** - live, over the whole journey of C219 at both sizes, `browser_console_messages` holds no
 error and no warning, and `browser_network_requests` holds no request with status >= 400 or a
-failed status (AC 15)
+failed status, except a request the Next.js router cancels (`ERR_ABORTED`) after its response arrived
+with `200` (AC 15; narrowed with the user's approval on 2026-10-26, after Verifier round 2)
 Proof: live - `browser_console_messages` and `browser_network_requests` after each size
 
 **C221** - live, saving `/settings` with no field changed shows "Settings saved" (AC 16)
@@ -188,3 +189,4 @@ Proof: live - `browser_click` "Sign out", then `browser_navigate` to `/pipeline`
   - 375x812, `hasTouch` + `isMobile`, every hop by `tap()`: same five pages, no overflow, no control under 44x44, 0 console errors or warnings, 0 responses >= 400; the org name sits in the navigation drawer (in the DOM, visible after tapping "Open navigation"). Each client navigation's `?_rsc=` stream got `200` and was then closed by Next's router (`ERR_ABORTED` while the page stayed) - a client-side cancel, not a failed response (C219, C220). Save shows "Settings saved" (C221). "Sign out" lands on `/login`; then `GET /pipeline` answers `307`, `location: /login` (C222)
   - The same session settles auth-magic-link C8 (a real emailed link signs in), C18 (the demo owner sees the org) and C21 (sign out over HTTP)
 - **Boundary:** Verifier round 2 (FAIL) found C215 stale: after the demo owner was seeded, `demo_owner` C23 and `demo_seed` C17 failed (they assume a demo org with no members). `supabase/tests/fixture.sql` now deletes the demo org inside its transaction, so every recipe starts without it; no assertion changed. `npm run test:db`: 9 passed twice; the four C216 recipes: 4 passed; the live demo org still has 12 agreements and 1 member afterwards. C220 (`ERR_ABORTED` on `?_rsc=` streams at 375 px) waits on the user's decision
+- **Boundary:** C220 narrowed with the user's approval (plan AC 15 too). Live re-run 2026-10-26 after commit `3589944`, one script, desktop then mobile from the same session: 1440x900 by click and 375x812 `hasTouch`/`isMobile` by `tap()`, `/pipeline` -> nav "Customers" -> first customer -> its first site -> nav "Settings" -> "Save changes". Both sizes: all five pages show "Kettle Ridge Mechanical Ltd." (at 375 the drawer was opened on every page to read it), no horizontal overflow, 0 console errors or warnings, 0 responses >= 400, 0 failed requests other than router cancels, every one of which had received `200` first (desktop 4: three `?_rsc=` GETs and the settings POST; mobile 5: four `?_rsc=` GETs and the settings POST); no control under 44x44 at 375; "Settings saved" at both sizes. Mobile "Sign out" -> `/login`; `GET /pipeline` -> `307`, `location: /login` (C219-C222)
