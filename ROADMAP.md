@@ -97,10 +97,11 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Seed the equipment-type catalog and task library from the proposal template, with a fictitious demo org
 - [x] Pure domain layer: agreement and contract state machines, pipeline stage, money in integer cents
 - [x] Ports (repositories, `Clock`) and Supabase adapters, plus a composition root. Each transition writes its status, event and outbox row in one transaction; the outbound `EventPublisher` (outbox to n8n) moved to Phase 3 with W1
-- [ ] Auth (magic link) and the `proxy.ts` session refresh
+- [x] Auth (magic link) and the `proxy.ts` session refresh (proven live 2026-10-26: emailed link, demo owner, sign out; custom SMTP via Resend)
 - [x] Screens built to DESIGN.md: dashboard, customers, customer detail, site asset register, company settings
 - [x] Form control `Select`, built with the company settings form (`TextInput` and the field error state shipped with auth)
-- [ ] Vitest unit tests, RLS isolation check, Playwright validation
+- [x] Vitest unit tests, RLS isolation check, Playwright validation: `npm test`, `npm run test:db` (every SQL test, rolled back), security advisors clean apart from two accepted findings, and the signed-in journey validated live at 1440 and 375 px
+- [ ] Customer, site and asset forms: staff add and edit customers, contacts, sites and assets by hand (M3, M4 `source: manual`)
 
 ### Phase 2: Asset import
 - [ ] Upload to Storage and import jobs
