@@ -26,7 +26,7 @@ Plan: `.specs/features/phase1-validation/plan.md`
 **C201** - the recipe list is exactly, in this order: `catalog_seed`, `domain_constraints`,
 `events_outbox`, `rls_isolation`, `rls_roles`, `transitions` (each `fixture.sql` then
 `<name>.sql`), `demo_owner`, `staff_screens` (each `fixture.sql` then `<name>.sql` with its
-`SEED_BODY` line replaced), and `demo_seed` = `fixture.sql`, seed body, `demo_seed.sql`, seed body,
+`SEED_BODY` line replaced), `record_forms` (`fixture.sql` then `record_forms.sql`; added by record-forms on 2026-10-26, user approved), and `demo_seed` = `fixture.sql`, seed body, `demo_seed.sql`, seed body,
 `demo_seed_rerun.sql` (AC 1, door 2)
 Proof: `npx vitest run scripts -t "C201:"`
 
@@ -35,12 +35,12 @@ every other line kept; a test file's line that is exactly `SEED_BODY` is replace
 no other line changes; parts are joined in recipe order (door 2)
 Proof: `npx vitest run scripts -t "C202:"`
 
-**C203** - with no recipe argument, the runner opens 9 connections, one per recipe, in the C201
+**C203** - with no recipe argument, the runner opens 10 connections (9 before record-forms added `record_forms`), one per recipe, in the C201
 order, sends each recipe as one query, closes each connection, and prints `PASS <recipe>` for each
 (AC 1)
 Proof: `npx vitest run scripts -t "C203:"`
 
-**C204** - when all recipes pass, the last line is `9 passed, 0 failed` and the exit code is 0 (AC 2)
+**C204** - when all recipes pass, the last line is `10 passed, 0 failed` (9 before record-forms) and the exit code is 0 (AC 2)
 Proof: `npx vitest run scripts -t "C204:"`
 
 **C205** - when the third recipe's query rejects with `C3: anon can read`, the runner prints
@@ -67,7 +67,7 @@ Proof: `npx vitest run scripts -t "C208:"`
 Proof: `npx vitest run scripts -t "C209:"`
 
 **C210** - with an extra `supabase/tests/orphan.sql`, the runner prints `Not in any recipe:
-orphan.sql`, exits 2 and opens 0 connections; and every one of the 11 `.sql` files in the real
+orphan.sql`, exits 2 and opens 0 connections; and every one of the 12 `.sql` files (11 before record-forms added `record_forms.sql`) in the real
 `supabase/tests/` belongs to a recipe (AC 8, door 2)
 Proof: `npx vitest run scripts -t "C210:"`
 
@@ -139,9 +139,9 @@ Proof: live - `browser_click` "Sign out", then `browser_navigate` to `/pipeline`
 
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
-| recipes (9) | C201, table-driven over all 9 · each run against Postgres C215 | - |
+| recipes (10) | C201, table-driven over all 10 · each run against Postgres C215 | - |
 | recipe part kinds (3) | `fixture.sql` C202 · test file C202 · `SEED_BODY` C202 | - |
-| `supabase/tests/*.sql` files -> a recipe (11) | C210, table-driven over all 11 in the real directory | - |
+| `supabase/tests/*.sql` files -> a recipe (12) | C210, table-driven over all 12 in the real directory | - |
 | exit codes (3) | 0 C204 · 1 C205, C212 · 2 C208, C209, C210, C211 | - |
 | reasons to exit 2 without connecting (4) | unknown recipe C208 · missing URL C209 · orphan file C210 · commit C211 | - |
 | outcomes of one recipe (4) | pass C203 · query error C205 · wrong last row C206 · connection error C212 | - |
