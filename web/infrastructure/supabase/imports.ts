@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { Clock, ImportJobReader, ImportJobStatus, ImportJobStore, WriteFailure } from "@/application/ports";
+import type { ImportContentType, ReadError, ReadOutcome } from "@/domain/imports";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -33,6 +34,20 @@ type StorageFailure = { message: string; status?: number; statusCode?: string };
 /** Storage answers a missing object with 404 (as `status`, or `statusCode` in the body). */
 const isMissing = (error: StorageFailure) => error.status === 404 || error.statusCode === "404" || /not.?found/i.test(error.message);
 
+type ReadColumns = { status: string; read_error: string | null; table_count: number | null; row_count: number | null };
+
+const READ_COLUMNS = "id, org_id, status, content_type, read_error, table_count, row_count";
+
+/** The outcome stored on a job, or `null` while it has not been read (import-parse door 1). */
+function outcomeFrom(row: ReadColumns): ReadOutcome | null {
+  if (row.status === "parsed") return { status: "parsed", tables: row.table_count, rows: row.row_count };
+  if (row.status === "unreadable") return { status: "unreadable", reason: row.read_error as ReadError };
+  return null;
+}
+
+/** A job counts as uploaded once its file is stored, whether or not it has been read since. */
+const isStored = (status: string) => status === "uploaded" || status === "parsed" || status === "unreadable";
+
 export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobStore {
   async function job(jobId: string) {
     const { data, error } = await client.from("import_jobs").select("id, org_id, size_bytes, status").eq("id", jobId).maybeSingle();
@@ -63,7 +78,7 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
       try {
         const found = await job(jobId);
         if (!found) return { ok: false, code: "not_found" };
-        if (found.status === "uploaded") return { ok: true };
+        if (isStored(found.status)) return { ok: true };
 
         const info = await client.storage.from(BUCKET).info(importKey(found.org_id, found.id));
         if (info.error) return isMissing(info.error) ? { ok: false, code: "upload_missing" } : unavailable("Checking an import upload", info.error.message);
@@ -80,7 +95,7 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
         if ((data ?? []).length > 0) return { ok: true };
 
         const now = await job(jobId);
-        return now?.status === "uploaded" ? { ok: true } : { ok: false, code: "not_found" };
+        return now && isStored(now.status) ? { ok: true } : { ok: false, code: "not_found" };
       } catch (cause) {
         return unavailable("Confirming an import", describe(cause));
       }
@@ -102,6 +117,48 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
         return unavailable("Discarding an import", describe(cause));
       }
     },
+
+    async fileOf(jobId) {
+      try {
+        // As the member: RLS on import_jobs and the `imports` select policy decide what this caller may read.
+        const { data, error } = await client.from("import_jobs").select(READ_COLUMNS).eq("id", jobId).maybeSingle();
+        if (error) return failure("Reading an import", error);
+        if (!data) return { ok: false, code: "not_found" };
+        const status = data.status as ImportJobStatus;
+        const contentType = data.content_type as ImportContentType;
+        if (status !== "uploaded") return { ok: true, status, contentType, outcome: outcomeFrom(data), bytes: null };
+
+        const file = await client.storage.from(BUCKET).download(importKey(data.org_id, data.id));
+        if (file.error) return unavailable("Downloading an import", file.error.message);
+        return { ok: true, status, contentType, outcome: null, bytes: new Uint8Array(await file.data.arrayBuffer()) };
+      } catch (cause) {
+        return unavailable("Reading an import", describe(cause));
+      }
+    },
+
+    async recordRead(jobId, outcome) {
+      try {
+        const at = clock.now().toISOString();
+        const values =
+          outcome.status === "parsed"
+            ? { status: "parsed", table_count: outcome.tables, row_count: outcome.rows, read_error: null, read_at: at, updated_at: at }
+            : { status: "unreadable", read_error: outcome.reason, table_count: null, row_count: null, read_at: at, updated_at: at };
+        // Compare-and-set: only a job still waiting to be read takes an outcome, so two reads write once.
+        const { data, error } = await client.from("import_jobs").update(values).eq("id", jobId).eq("status", "uploaded").select("id");
+        if (error) return failure("Recording an import read", error);
+        if ((data ?? []).length > 0) return { ok: true, outcome };
+
+        const { data: row, error: readError } = await client.from("import_jobs").select(READ_COLUMNS).eq("id", jobId).maybeSingle();
+        if (readError) return failure("Reading an import", readError);
+        if (!row) return { ok: false, code: "not_found" };
+        const stored = outcomeFrom(row);
+        if (stored) return { ok: true, outcome: stored };
+        // Still uploading: nothing to read yet. Still uploaded: RLS refused the update.
+        return { ok: false, code: row.status === "uploading" ? "not_ready" : "forbidden" };
+      } catch (cause) {
+        return unavailable("Recording an import read", describe(cause));
+      }
+    },
   };
 }
 
@@ -111,7 +168,7 @@ export function supabaseImportJobReader(client: Client): ImportJobReader {
       if (!UUID.test(siteId)) return [];
       const { data, error } = await client
         .from("import_jobs")
-        .select("id, original_name, size_bytes, status, created_by_email, created_at")
+        .select("id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count")
         .eq("site_id", siteId)
         .order("created_at", { ascending: false })
         .limit(ROW_CAP);
@@ -123,6 +180,7 @@ export function supabaseImportJobReader(client: Client): ImportJobReader {
         status: row.status as ImportJobStatus,
         uploadedBy: row.created_by_email,
         createdAt: new Date(row.created_at),
+        outcome: outcomeFrom(row),
       }));
     },
   };

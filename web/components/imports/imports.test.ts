@@ -9,7 +9,8 @@ const { ImportPageView } = await import("./import-page-view");
 const { ImportUploadFields } = await import("./import-upload");
 const { ImportJobList } = await import("./job-list");
 const { DiscardPrompt } = await import("./discard-control");
-const { uploadFile } = await import("./state");
+const { uploadFile, uploadMessage } = await import("./state");
+const { ReadFilePrompt } = await import("./read-file-control");
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 
@@ -23,6 +24,7 @@ const job = (patch: Partial<ImportJobView> = {}): ImportJobView => ({
   status: "uploaded",
   uploadedBy: "dana@example.com",
   createdAt: new Date("2026-10-26T18:00:00Z"),
+  outcome: null,
   ...patch,
 });
 
@@ -30,6 +32,7 @@ const actions = {
   start: vi.fn(),
   confirm: vi.fn(),
   discard: () => vi.fn(),
+  read: vi.fn(),
 };
 
 const writerView = (jobs: ImportJobView[] = []) => html(createElement(ImportPageView, { site: SITE, jobs, actions }));
@@ -92,8 +95,10 @@ describe("uploadFile", () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(null, { status: 200 }));
     const start = vi.fn<(form: FormData) => Promise<typeof started>>(async () => started);
     const confirm = vi.fn(async () => ({ status: "uploaded" as const }));
+    const read = vi.fn(async () => ({ status: "parsed" as const, tables: 1, rows: 1 }));
 
-    expect(await uploadFile(file, { start, confirm, fetch })).toEqual({ status: "uploaded" });
+    // Since import-parse AC 1 the sequence ends with the read, so the result is the read's state.
+    expect(await uploadFile(file, { start, confirm, read, fetch })).toEqual({ status: "parsed", tables: 1, rows: 1 });
 
     const sent = start.mock.calls[0][0];
     expect(sent.get("fileName")).toBe("units.csv");
@@ -111,15 +116,18 @@ describe("uploadFile", () => {
     ["the PUT rejects", () => Promise.reject(new TypeError("network"))],
   ])("C416: %s -> upload_failed, never confirmed", async (_name, put) => {
     const confirm = vi.fn();
-    const result = await uploadFile(new File(["x"], "a.pdf"), { start: async () => started, confirm, fetch: vi.fn(put) });
+    const read = vi.fn();
+    const result = await uploadFile(new File(["x"], "a.pdf"), { start: async () => started, confirm, read, fetch: vi.fn(put) });
     expect(result).toEqual({ status: "upload_failed" });
     expect(confirm).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
   });
 
   test("C416: confirm answering upload_missing -> upload_failed", async () => {
     const result = await uploadFile(new File(["x"], "a.pdf"), {
       start: async () => started,
       confirm: async () => ({ status: "upload_missing" }),
+      read: vi.fn(),
       fetch: async () => new Response(null, { status: 200 }),
     });
     expect(result).toEqual({ status: "upload_failed" });
@@ -130,6 +138,7 @@ describe("uploadFile", () => {
     const result = await uploadFile(new File(["x"], "a.txt"), {
       start: async () => ({ status: "invalid", message: "Choose an Excel (.xlsx), CSV, Word (.docx) or PDF file" }),
       confirm: vi.fn(),
+      read: vi.fn(),
       fetch,
     });
     expect(result).toEqual({ status: "invalid", message: "Choose an Excel (.xlsx), CSV, Word (.docx) or PDF file" });
@@ -141,9 +150,34 @@ describe("uploadFile", () => {
     await uploadFile(new File(["x"], "u.xlsx", { type: "" }), {
       start: async () => ({ ...started, contentType: XLSX }),
       confirm: async () => ({ status: "uploaded" }),
+      read: async () => ({ status: "parsed", tables: 1, rows: 1 }),
       fetch,
     });
     expect(fetch.mock.calls[0][1]).toMatchObject({ headers: { "content-type": XLSX } });
+  });
+
+  test("C451: a confirmed upload is read once, after confirm, and the read's state is returned", async () => {
+    const order: string[] = [];
+    const confirm = vi.fn(async () => (order.push("confirm"), { status: "uploaded" as const }));
+    const read = vi.fn(async () => (order.push("read"), { status: "unreadable" as const, reason: "no_table" as const }));
+
+    const result = await uploadFile(new File(["x"], "u.csv"), { start: async () => started, confirm, read, fetch: async () => new Response(null, { status: 200 }) });
+
+    expect(result).toEqual({ status: "unreadable", reason: "no_table" });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledWith("job-1");
+    expect(order).toEqual(["confirm", "read"]);
+  });
+
+  test("C451: confirm answering upload_missing never reads", async () => {
+    const read = vi.fn();
+    await uploadFile(new File(["x"], "u.csv"), {
+      start: async () => started,
+      confirm: async () => ({ status: "upload_missing" }),
+      read,
+      fetch: async () => new Response(null, { status: 200 }),
+    });
+    expect(read).not.toHaveBeenCalled();
   });
 });
 
@@ -198,5 +232,73 @@ describe("DiscardPrompt", () => {
     expect(out).toMatch(/<button[^>]*type="submit"[^>]*>Discard<\/button>/);
     expect(out).toMatch(/<button[^>]*type="button"[^>]*>Cancel<\/button>/);
     expect(out.match(/type="submit"/g)).toHaveLength(1);
+  });
+});
+
+describe("reading a file", () => {
+  const list = (jobs: ImportJobView[], writer = true) =>
+    html(createElement(ImportJobList, writer ? { jobs, discard: () => vi.fn(), read: () => vi.fn() } : { jobs }));
+  const pill = (out: string) => out.match(/<span[^>]*data-tone="([a-z]+)"[^>]*>[\s\S]*?<\/span>/);
+
+  test("C452: while reading, Upload is disabled and labelled Reading…, the picker is disabled and the file name stays", () => {
+    const out = fields({ status: "reading" }, "units.xlsx");
+    expect(out).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Reading…<\/button>/);
+    expect(out).toMatch(/<input[^>]*type="file"[^>]*disabled=""/);
+    expect(out).toContain("units.xlsx");
+  });
+
+  test.each([
+    ["corrupt", "This file is damaged or isn't the format its name says."],
+    ["password_protected", "This file is password-protected or saved in an older Office format. Save it as .xlsx or .docx without a password and upload it again."],
+    ["no_table", "No table with column headings was found."],
+    ["no_text", "This document has no text."],
+    ["too_many_rows", "This list has more than 2,000 rows. Split it and upload each part."],
+  ] as const)("C472: unreadable %s shows Can't read in attention and its message", (reason, message) => {
+    const out = list([job({ status: "unreadable", outcome: { status: "unreadable", reason } })]);
+    expect(out).toContain("Can't read");
+    expect(out).toMatch(/data-tone="attention"/);
+    expect(out).toContain(message);
+  });
+
+  test("C477: a read that failed unexpectedly shows We couldn't read the file. Try again.", () => {
+    expect(uploadMessage({ status: "read_failed" })).toBe("We couldn't read the file. Try again.");
+    expect(html(createElement(ReadFilePrompt, { pending: false, state: { status: "unavailable" } }))).toContain("We couldn't read the file. Try again.");
+  });
+
+  test("C478: an uploaded job shows Uploaded and, for a writer, Read file; pending shows a disabled Reading…", () => {
+    const out = list([job({ status: "uploaded" })]);
+    expect(out).toContain("Uploaded");
+    expect(out).toMatch(/<button[^>]*>Read file<\/button>/);
+
+    const pending = html(createElement(ReadFilePrompt, { pending: true, state: { status: "idle" } }));
+    expect(pending).toMatch(/<button[^>]*disabled=""[^>]*>Reading…<\/button>/);
+  });
+
+  test("C484: a viewer sees parsed and unreadable outcomes, and no Read file", () => {
+    const out = list(
+      [
+        job({ id: "a", status: "parsed", outcome: { status: "parsed", tables: 1, rows: 48 } }),
+        job({ id: "b", status: "unreadable", outcome: { status: "unreadable", reason: "no_text" } }),
+        job({ id: "c", status: "uploaded" }),
+      ],
+      false,
+    );
+    expect(out).toContain("48 rows in 1 table");
+    expect(out).toContain("This document has no text.");
+    expect(out).not.toContain("Read file");
+  });
+
+  test.each<[number | null, number | null, string]>([
+    [1, 48, "48 rows in 1 table"],
+    [1, 1, "1 row in 1 table"],
+    [2, 15, "15 rows in 2 tables"],
+    [0, 0, "Text only, no table"],
+    [null, null, "PDF, read at extraction"],
+  ])("C485: parsed (%s tables, %s rows) shows Read in neutral and %s", (tables, rows, line) => {
+    const out = list([job({ status: "parsed", outcome: { status: "parsed", tables, rows } })]);
+    expect(out).toContain(">Read<");
+    expect(pill(out)?.[1]).toBe("neutral");
+    expect(out).toContain(line);
+    expect(out).not.toContain("Read file");
   });
 });

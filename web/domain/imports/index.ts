@@ -52,6 +52,35 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** The most data rows one file may hold across its tables (plan Assumptions). */
+export const MAX_IMPORT_ROWS = 2000;
+
+/** Why a file cannot be read; stored in `import_jobs.read_error` (door 1). */
+export type ReadError = "corrupt" | "password_protected" | "no_table" | "no_text" | "too_many_rows";
+
+export const READ_ERROR_MESSAGES: Record<ReadError, string> = {
+  corrupt: "This file is damaged or isn't the format its name says.",
+  password_protected:
+    "This file is password-protected or saved in an older Office format. Save it as .xlsx or .docx without a password and upload it again.",
+  no_table: "No table with column headings was found.",
+  no_text: "This document has no text.",
+  too_many_rows: "This list has more than 2,000 rows. Split it and upload each part.",
+};
+
+/** What a read recorded on the job. A PDF has no counts: Claude reads it at extraction. */
+export type ReadOutcome =
+  | { status: "parsed"; tables: number | null; rows: number | null }
+  | { status: "unreadable"; reason: ReadError };
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** The line under a read job: rows and tables found, text only, or a PDF left to extraction. */
+export function readSummary(tables: number | null, rows: number | null): string {
+  if (tables === null || rows === null) return "PDF, read at extraction";
+  if (tables === 0) return "Text only, no table";
+  return `${plural(rows, "row")} in ${plural(tables, "table")}`;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(id: string): boolean {

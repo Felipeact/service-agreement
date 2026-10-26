@@ -1,4 +1,4 @@
-import type { ImportContentType } from "@/domain/imports";
+import type { ImportContentType, ReadError } from "@/domain/imports";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
@@ -11,13 +11,24 @@ export type ConfirmState = { status: "uploaded" | "upload_missing" | Failure };
 
 export type DiscardState = { status: "idle" | "discarded" | Failure };
 
-/** What the upload form shows. `upload_failed`: the file never reached Storage, or never matched its job. */
+/** What `readImportAction` answers: the recorded outcome, or why nothing was read. */
+export type ReadState =
+  | { status: "parsed"; tables: number | null; rows: number | null }
+  | { status: "unreadable"; reason: ReadError }
+  | { status: "not_ready" | Failure };
+
+/**
+ * What the upload form shows. `upload_failed`: the file never reached Storage, or never matched its job. `reading`: the
+ * file is stored and being read; `read_failed`: the read hit an unexpected error and the job stays "Uploaded".
+ */
 export type UploadState =
-  | { status: "idle" | "uploading" | "uploaded" | "upload_failed" | Failure }
-  | { status: "invalid"; message: string };
+  | { status: "idle" | "uploading" | "uploaded" | "upload_failed" | "reading" | "read_failed" | Failure }
+  | { status: "invalid"; message: string }
+  | ReadState;
 
 export const IMPORT_FORM_MESSAGES = {
   upload_failed: "The upload didn't finish. Try again.",
+  read_failed: "We couldn't read the file. Try again.",
   forbidden: "You don't have permission to import equipment lists.",
   not_found: "This site no longer exists.",
   unavailable: "We couldn't upload the file. Try again.",
@@ -33,12 +44,16 @@ export function uploadMessage(state: UploadState): string | null {
 type UploadDeps = {
   start: (formData: FormData) => Promise<StartState>;
   confirm: (jobId: string) => Promise<ConfirmState>;
+  read: (jobId: string) => Promise<ReadState>;
   fetch: typeof globalThis.fetch;
+  /** Called once the file is stored, just before it is read. */
+  onReading?: () => void;
 };
 
 /**
  * The browser half of the upload (door 4): start the job, PUT the bytes straight to the signed Storage URL with the
- * server's content type (never `File.type`), then confirm. A failed PUT is never confirmed.
+ * server's content type (never `File.type`), confirm, then read the stored file. A failed PUT is never confirmed, and
+ * a file never confirmed is never read.
  */
 export async function uploadFile(file: File, deps: UploadDeps): Promise<UploadState> {
   const form = new FormData();
@@ -59,5 +74,7 @@ export async function uploadFile(file: File, deps: UploadDeps): Promise<UploadSt
   }
 
   const { status } = await deps.confirm(started.jobId);
-  return { status: status === "upload_missing" ? "upload_failed" : status };
+  if (status !== "uploaded") return { status: status === "upload_missing" ? "upload_failed" : status };
+  deps.onReading?.();
+  return deps.read(started.jobId);
 }

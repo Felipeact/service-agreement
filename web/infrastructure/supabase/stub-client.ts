@@ -53,7 +53,7 @@ export function stubClient(tables: Record<string, Reply | Sequence>, storage: Re
     storage: {
       from(bucket: string) {
         const api: Record<string, unknown> = {};
-        for (const method of ["createSignedUploadUrl", "info", "remove"]) {
+        for (const method of ["createSignedUploadUrl", "info", "remove", "download"]) {
           api[method] = async (...args: unknown[]) => {
             calls.push({ table: `storage:${bucket}`, method, args });
             const reply = storage[method];

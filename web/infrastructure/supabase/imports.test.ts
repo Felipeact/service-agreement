@@ -165,10 +165,139 @@ describe("ImportJobReader.forSite", () => {
     const jobs = await supabaseImportJobReader(stub.typed).forSite(SITE);
 
     expect(jobs.map((job) => job.id)).toEqual(["j2", "j1"]);
-    expect(jobs[1]).toEqual({ id: "j1", originalName: "a.csv", sizeBytes: 5, status: "uploading", uploadedBy: null, createdAt: new Date("2026-10-25T10:00:00Z") });
+    expect(jobs[1]).toEqual({ id: "j1", originalName: "a.csv", sizeBytes: 5, status: "uploading", uploadedBy: null, createdAt: new Date("2026-10-25T10:00:00Z"), outcome: null });
     const methods = stub.calls.map((call) => [call.method, call.args]);
     expect(methods).toContainEqual(["eq", ["site_id", SITE]]);
     expect(methods).toContainEqual(["order", ["created_at", { ascending: false }]]);
     expect(methods).toContainEqual(["limit", [500]]);
+  });
+});
+
+const CSV = "text/csv";
+const readRow = (status: string, patch: Record<string, unknown> = {}) => ({
+  id: JOB,
+  org_id: ORG,
+  status,
+  content_type: CSV,
+  read_error: null,
+  table_count: null,
+  row_count: null,
+  ...patch,
+});
+const blob = (bytes: number[]) => ({ arrayBuffer: async () => new Uint8Array(bytes).buffer });
+
+describe("ImportJobStore.fileOf", () => {
+  test("C465: an uploaded job downloads <orgId>/<jobId> once and returns its bytes", async () => {
+    const { store: s, calls } = store(ok(readRow("uploaded")), { download: { data: blob([7, 8, 9]), error: null } });
+
+    const result = await s.fileOf(JOB);
+
+    expect(result).toEqual({ ok: true, status: "uploaded", contentType: CSV, outcome: null, bytes: new Uint8Array([7, 8, 9]) });
+    expect(storageCalls(calls)).toEqual([{ table: "storage:imports", method: "download", args: [KEY] }]);
+  });
+
+  test("C465: a parsed job returns its stored outcome and never downloads", async () => {
+    const { store: s, calls } = store(ok(readRow("parsed", { table_count: 1, row_count: 48 })));
+
+    expect(await s.fileOf(JOB)).toEqual({ ok: true, status: "parsed", contentType: CSV, outcome: { status: "parsed", tables: 1, rows: 48 }, bytes: null });
+    expect(storageCalls(calls)).toEqual([]);
+  });
+
+  test("C481: a job the select returns no row for is not_found, with no download", async () => {
+    const { store: s, calls } = store(ok(null));
+
+    expect(await s.fileOf(JOB)).toEqual({ ok: false, code: "not_found" });
+    expect(storageCalls(calls)).toEqual([]);
+  });
+
+  test("C477: a failed download is unavailable and logged", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { store: s } = store(ok(readRow("uploaded")), { download: { data: null, error: { message: "storage down" } } });
+
+    expect(await s.fileOf(JOB)).toEqual({ ok: false, code: "unavailable" });
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ImportJobStore.recordRead", () => {
+  test("C464: parsed writes the counts, clears the reason and stamps read_at, only while uploaded", async () => {
+    const { store: s, calls } = store(ok([{ id: JOB }]));
+
+    const outcome = { status: "parsed", tables: 1, rows: 48 } as const;
+    expect(await s.recordRead(JOB, outcome)).toEqual({ ok: true, outcome });
+
+    const [update] = jobCalls(calls, "update");
+    expect(update.args).toEqual([
+      { status: "parsed", table_count: 1, row_count: 48, read_error: null, read_at: AT.toISOString(), updated_at: AT.toISOString() },
+    ]);
+    const filters = jobCalls(calls, "eq").map((call) => call.args);
+    expect(filters).toEqual([
+      ["id", JOB],
+      ["status", "uploaded"],
+    ]);
+    expect(jobCalls(calls, "select")).toHaveLength(1);
+  });
+
+  test("C464: unreadable writes the reason and no counts", async () => {
+    const { store: s, calls } = store(ok([{ id: JOB }]));
+
+    const outcome = { status: "unreadable", reason: "no_table" } as const;
+    expect(await s.recordRead(JOB, outcome)).toEqual({ ok: true, outcome });
+    expect(jobCalls(calls, "update")[0].args).toEqual([
+      { status: "unreadable", read_error: "no_table", table_count: null, row_count: null, read_at: AT.toISOString(), updated_at: AT.toISOString() },
+    ]);
+  });
+
+  test("C474: losing the compare-and-set returns the outcome already stored, not the one it tried", async () => {
+    const { store: s } = store({ sequence: [ok([]), ok(readRow("unreadable", { read_error: "corrupt" }))] });
+
+    expect(await s.recordRead(JOB, { status: "parsed", tables: 1, rows: 3 })).toEqual({ ok: true, outcome: { status: "unreadable", reason: "corrupt" } });
+  });
+
+  test("C474: a job still uploading is not_ready", async () => {
+    const { store: s } = store({ sequence: [ok([]), ok(readRow("uploading"))] });
+
+    expect(await s.recordRead(JOB, { status: "parsed", tables: 1, rows: 3 })).toEqual({ ok: false, code: "not_ready" });
+  });
+
+  test("C477: an update error XX000 is unavailable, logged once", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { store: s } = store(fail("XX000"));
+
+    expect(await s.recordRead(JOB, { status: "parsed", tables: 1, rows: 3 })).toEqual({ ok: false, code: "unavailable" });
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ImportJobStore.confirmUploaded after a read", () => {
+  test.each(["parsed", "unreadable"])("C479: a %s job is ok, with no storage call and no update", async (status) => {
+    const { store: s, calls } = store(ok(jobRow(status)));
+
+    expect(await s.confirmUploaded(JOB)).toEqual({ ok: true });
+    expect(storageCalls(calls)).toEqual([]);
+    expect(jobCalls(calls, "update")).toEqual([]);
+  });
+});
+
+describe("ImportJobReader.forSite read columns", () => {
+  test("C486: selects the read columns and maps each status to its outcome", async () => {
+    const base = { original_name: "a.csv", size_bytes: 5, created_by_email: null, created_at: "2026-10-25T10:00:00Z" };
+    const stub = stubClient({
+      import_jobs: ok([
+        { ...base, id: "j3", status: "parsed", read_error: null, table_count: 2, row_count: 15 },
+        { ...base, id: "j2", status: "unreadable", read_error: "too_many_rows", table_count: null, row_count: null },
+        { ...base, id: "j1", status: "uploaded", read_error: null, table_count: null, row_count: null },
+      ]),
+    });
+
+    const jobs = await supabaseImportJobReader(stub.typed).forSite(SITE);
+
+    const select = String(stub.calls.find((call) => call.method === "select")?.args[0]);
+    for (const column of ["read_error", "table_count", "row_count"]) expect(select).toContain(column);
+    expect(jobs.map((job) => [job.status, job.outcome])).toEqual([
+      ["parsed", { status: "parsed", tables: 2, rows: 15 }],
+      ["unreadable", { status: "unreadable", reason: "too_many_rows" }],
+      ["uploaded", null],
+    ]);
   });
 });

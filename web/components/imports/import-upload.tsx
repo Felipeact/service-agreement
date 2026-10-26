@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { IMPORT_ACCEPT, IMPORT_MESSAGES, validateImportFile } from "@/domain/imports";
 import { Button } from "@/components/ui/button";
-import { uploadFile, uploadMessage, type ConfirmState, type StartState, type UploadState } from "./state";
+import { uploadFile, uploadMessage, type ConfirmState, type ReadState, type StartState, type UploadState } from "./state";
 
 type FieldsProps = {
   state: UploadState;
@@ -17,7 +17,8 @@ type FieldsProps = {
 
 /** The picker, the hint, the failure message and Upload. Presentational: the caller owns the state. */
 export function ImportUploadFields({ state, fileName, onChoose, onSubmit, formRef }: FieldsProps) {
-  const uploading = state.status === "uploading";
+  const reading = state.status === "reading";
+  const uploading = state.status === "uploading" || reading;
   const message = uploadMessage(state);
   return (
     <form ref={formRef} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
@@ -47,7 +48,7 @@ export function ImportUploadFields({ state, fileName, onChoose, onSubmit, formRe
       )}
       <div>
         <Button type="submit" variant="primary" disabled={uploading}>
-          {uploading ? "Uploading…" : "Upload"}
+          {reading ? "Reading…" : uploading ? "Uploading…" : "Upload"}
         </Button>
       </div>
     </form>
@@ -57,14 +58,19 @@ export function ImportUploadFields({ state, fileName, onChoose, onSubmit, formRe
 type UploaderProps = {
   start: (formData: FormData) => Promise<StartState>;
   confirm: (jobId: string) => Promise<ConfirmState>;
+  read: (jobId: string) => Promise<ReadState>;
 };
 
-export function ImportUploader({ start, confirm }: UploaderProps) {
+/** A file once stored is done with the form: what the read found shows on its job. */
+const STORED = new Set<UploadState["status"]>(["parsed", "unreadable", "read_failed"]);
+
+export function ImportUploader({ start, confirm, read }: UploaderProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [state, setState] = useState<UploadState>({ status: "idle" });
   const [uploading, startTransition] = useTransition();
+  const [reading, setReading] = useState(false);
 
   function choose(next: File | null) {
     setFile(next);
@@ -80,11 +86,24 @@ export function ImportUploader({ start, confirm }: UploaderProps) {
     if (!checked.ok) return setState({ status: "invalid", message: checked.message });
 
     // Server Actions called from an event handler run inside a transition (Next server-actions guide).
+    let stored = false;
     startTransition(async () => {
-      const result = await uploadFile(file, { start, confirm, fetch: globalThis.fetch.bind(globalThis) });
+      const outcome = await uploadFile(file, {
+        start,
+        confirm,
+        read,
+        fetch: globalThis.fetch.bind(globalThis),
+        onReading: () => {
+          stored = true;
+          setReading(true);
+        },
+      });
+      // After the file is stored, an unexpected error can only be the read's: the job stays "Uploaded" with Read file.
+      const result: UploadState = stored && outcome.status === "unavailable" ? { status: "read_failed" } : outcome;
       startTransition(() => {
+        setReading(false);
         setState(result);
-        if (result.status === "uploaded") {
+        if (STORED.has(result.status)) {
           formRef.current?.reset();
           setFile(null);
         }
@@ -96,7 +115,7 @@ export function ImportUploader({ start, confirm }: UploaderProps) {
 
   return (
     <ImportUploadFields
-      state={uploading ? { status: "uploading" } : state}
+      state={uploading ? { status: reading ? "reading" : "uploading" } : state}
       fileName={file?.name ?? null}
       onChoose={choose}
       onSubmit={submit}

@@ -399,9 +399,13 @@ export type Database = {
           id: string
           org_id: string
           original_name: string
+          read_at: string | null
+          read_error: string | null
+          row_count: number | null
           site_id: string
           size_bytes: number
           status: string
+          table_count: number | null
           updated_at: string
         }
         Insert: {
@@ -412,9 +416,13 @@ export type Database = {
           id?: string
           org_id: string
           original_name: string
+          read_at?: string | null
+          read_error?: string | null
+          row_count?: number | null
           site_id: string
           size_bytes: number
           status?: string
+          table_count?: number | null
           updated_at?: string
         }
         Update: {
@@ -425,9 +433,13 @@ export type Database = {
           id?: string
           org_id?: string
           original_name?: string
+          read_at?: string | null
+          read_error?: string | null
+          row_count?: number | null
           site_id?: string
           size_bytes?: number
           status?: string
+          table_count?: number | null
           updated_at?: string
         }
         Relationships: [

@@ -2,6 +2,22 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+// File-parsing libraries stay behind the ImportParser adapter (import-parse door 2).
+const PARSER_LIBRARIES = {
+  group: ["xlsx", "xlsx/*", "mammoth", "mammoth/*"],
+  message: "Parse files only in infrastructure/import-parsers, behind the ImportParser port.",
+};
+
+const ADAPTER_PATTERNS = [
+  {
+    group: [
+      "react", "react/*", "react-dom", "react-dom/*", "@/app", "@/app/*",
+      "@/components", "@/components/*", "@/composition", "@/composition/*",
+    ],
+    message: "Adapters must not import UI or the composition root.",
+  },
+];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -21,6 +37,7 @@ const eslintConfig = defineConfig([
               group: ["@/lib", "@/lib/*", "@/components", "@/components/*", "@/app", "@/app/*"],
               message: "The domain layer must not import UI or app code.",
             },
+            PARSER_LIBRARIES,
           ],
         },
       ],
@@ -45,30 +62,21 @@ const eslintConfig = defineConfig([
               ],
               message: "The application layer must not import UI, adapters or the composition root.",
             },
+            PARSER_LIBRARIES,
           ],
         },
       ],
     },
   },
-  // Adapters implement ports; they never reach UI or the composition root.
+  // Adapters implement ports; they never reach UI or the composition root. Only the parser adapter parses files.
   {
     files: ["infrastructure/**/*.ts"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: [
-                "react", "react/*", "react-dom", "react-dom/*", "@/app", "@/app/*",
-                "@/components", "@/components/*", "@/composition", "@/composition/*",
-              ],
-              message: "Adapters must not import UI or the composition root.",
-            },
-          ],
-        },
-      ],
-    },
+    ignores: ["infrastructure/import-parsers/**"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES] }] },
+  },
+  {
+    files: ["infrastructure/import-parsers/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", { patterns: ADAPTER_PATTERNS }] },
   },
   // UI reaches adapters only through @/composition, which is server-only.
   {
@@ -82,6 +90,7 @@ const eslintConfig = defineConfig([
               group: ["@/infrastructure", "@/infrastructure/*", "@supabase/*"],
               message: "UI code must not use adapters or the database client directly; use @/composition.",
             },
+            PARSER_LIBRARIES,
           ],
         },
       ],

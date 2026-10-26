@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { isUuid, validateImportFile } from "@/domain/imports";
 import { canWriteRecords } from "@/components/records/state";
-import type { ConfirmState, DiscardState, StartState } from "@/components/imports/state";
+import type { ConfirmState, DiscardState, ReadState, StartState } from "@/components/imports/state";
 
 const FORBIDDEN = { status: "forbidden" } as const;
 
@@ -48,4 +48,15 @@ export async function discardImportAction(jobId: string): Promise<DiscardState> 
   if (!discarded.ok) return { status: discarded.code };
   refresh();
   return { status: "discarded" };
+}
+
+/** Reads an uploaded job's file and records what was found; a job already read answers with its outcome. */
+export async function readImportAction(jobId: string): Promise<ReadState> {
+  const ctx = await writer();
+  if (!ctx) return FORBIDDEN;
+  if (!isUuid(jobId)) return { status: "not_found" };
+  const read = await ctx.container.readImport(jobId);
+  if (!read.ok) return { status: read.code };
+  refresh();
+  return read.outcome;
 }

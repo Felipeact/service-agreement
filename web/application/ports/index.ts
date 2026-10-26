@@ -1,7 +1,7 @@
 import type { AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
-import type { ImportContentType, ImportFile } from "@/domain/imports";
+import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
@@ -209,7 +209,8 @@ export interface AssetStore {
   delete(id: string): Promise<DeleteResult>;
 }
 
-export type ImportJobStatus = "uploading" | "uploaded";
+/** `uploaded`: stored, not read yet; `parsed` / `unreadable`: read, with the outcome recorded (import-parse door 1). */
+export type ImportJobStatus = "uploading" | "uploaded" | "parsed" | "unreadable";
 
 export type ImportJobView = {
   id: string;
@@ -219,6 +220,8 @@ export type ImportJobView = {
   /** `null` when no email was recorded: shown as "Former member". */
   uploadedBy: string | null;
   createdAt: Date;
+  /** The recorded read, or `null` until the job is `parsed` or `unreadable`. */
+  outcome: ReadOutcome | null;
 };
 
 export interface ImportJobReader {
@@ -237,4 +240,33 @@ export interface ImportJobStore {
   confirmUploaded(jobId: string): Promise<ConfirmImportResult>;
   /** Deletes the row, then the object; a failed object delete is logged and still ok. */
   discard(jobId: string): Promise<WriteResult>;
+  /** The job's status, type and stored outcome; the file's bytes are downloaded as the member only while it is `uploaded`. */
+  fileOf(jobId: string): Promise<ImportFileResult>;
+  /** `uploaded` -> the outcome, compare-and-set; a job read meanwhile returns the outcome already stored. */
+  recordRead(jobId: string, outcome: ReadOutcome): Promise<RecordReadResult>;
+}
+
+export type ImportFileResult =
+  | { ok: true; status: ImportJobStatus; contentType: ImportContentType; outcome: ReadOutcome | null; bytes: Uint8Array | null }
+  | { ok: false; code: WriteFailure };
+
+export type RecordReadResult = { ok: true; outcome: ReadOutcome } | { ok: false; code: WriteFailure | "not_ready" };
+
+/** One table found in a file: a sheet, a CSV, or a Word table. `ref` is what extraction copies into `source_ref`. */
+export type ParsedTable = {
+  /** The sheet name, `CSV`, or `Table <n>`. */
+  source: string;
+  header: string[];
+  /** Data rows only; `ref` is `<sheet>!<row number>` or `Table <n>, row <m>`. */
+  rows: { ref: string; cells: string[] }[];
+};
+
+/** A file's content in one of two shapes, whatever its format (import-parse door 3). */
+export type ParsedImport = { format: "table"; tables: ParsedTable[]; text: string } | { format: "pdf"; bytes: Uint8Array };
+
+export type ParseResult = { ok: true; parsed: ParsedImport } | { ok: false; reason: ReadError };
+
+/** Opens a file by its content type; a file it cannot read is a `reason`, never a throw. */
+export interface ImportParser {
+  parse(contentType: ImportContentType, bytes: Uint8Array): Promise<ParseResult>;
 }

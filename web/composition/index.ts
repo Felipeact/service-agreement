@@ -3,8 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
-import { makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
+import { makeReadImport, makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
+import { importParser } from "@/infrastructure/import-parsers";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
@@ -93,6 +94,8 @@ export async function getContainer() {
     startImport: importJobs.start,
     confirmImportUpload: importJobs.confirmUploaded,
     discardImport: importJobs.discard,
+    // The same member-scoped store: the file is downloaded under RLS, never with a service-role key.
+    readImport: makeReadImport(importJobs, importParser),
     clock: systemClock,
   };
 }

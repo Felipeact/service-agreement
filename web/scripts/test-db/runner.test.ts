@@ -17,6 +17,7 @@ const ALL = [
   "staff_screens",
   "record_forms",
   "import_upload",
+  "import_parse",
   "demo_seed",
 ];
 
@@ -111,19 +112,19 @@ describe("test:db runner", () => {
     );
   });
 
-  test("C203: no argument runs all 11, one connection each, in order, and prints PASS per recipe", async () => {
+  test("C203: no argument runs all 12, one connection each, in order, and prints PASS per recipe", async () => {
     const f = fake();
     await runSuite(f.io);
-    expect(f.connects).toBe(11);
-    expect(f.sent).toHaveLength(11);
-    expect(f.ended).toBe(11);
-    expect(f.out.slice(0, 11)).toEqual(ALL.map((name) => `PASS ${name}`));
+    expect(f.connects).toBe(12);
+    expect(f.sent).toHaveLength(12);
+    expect(f.ended).toBe(12);
+    expect(f.out.slice(0, 12)).toEqual(ALL.map((name) => `PASS ${name}`));
   });
 
-  test("C204: all passing prints 11 passed, 0 failed and exits 0", async () => {
+  test("C204: all passing prints 12 passed, 0 failed and exits 0", async () => {
     const f = fake();
     const code = await runSuite(f.io);
-    expect(f.out.at(-1)).toBe("11 passed, 0 failed");
+    expect(f.out.at(-1)).toBe("12 passed, 0 failed");
     expect(code).toBe(0);
   });
 
@@ -133,9 +134,9 @@ describe("test:db runner", () => {
     });
     const code = await runSuite(f.io);
     expect(f.out).toContain("FAIL events_outbox: C3: anon can read");
-    expect(f.connects).toBe(11);
-    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(10);
-    expect(f.out.at(-1)).toBe("10 passed, 1 failed");
+    expect(f.connects).toBe(12);
+    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(11);
+    expect(f.out.at(-1)).toBe("11 passed, 1 failed");
     expect(code).toBe(1);
   });
 
@@ -202,7 +203,7 @@ describe("test:db runner", () => {
     expect(f.connects).toBe(0);
     expect(code).toBe(2);
 
-    expect(REAL_FILES).toHaveLength(13);
+    expect(REAL_FILES).toHaveLength(14);
     const covered = new Set(RECIPES.flatMap((recipe) => recipe.parts));
     for (const file of REAL_FILES) expect(covered.has(file), file).toBe(true);
   });
@@ -226,15 +227,15 @@ describe("test:db runner", () => {
     const f = fake({ read });
     f.io.readSeed = () => seed;
     expect(await runSuite(f.io)).toBe(0);
-    expect(f.connects).toBe(11);
+    expect(f.connects).toBe(12);
   });
 
   test("C212: a connection error fails that recipe and the rest still run", async () => {
     const f = fake({ connectError: (index) => (index === 0 ? new Error("connect ECONNREFUSED") : undefined) });
     const code = await runSuite(f.io);
     expect(f.out[0]).toBe("FAIL catalog_seed: connect ECONNREFUSED");
-    expect(f.connects).toBe(11);
-    expect(f.out.at(-1)).toBe("10 passed, 1 failed");
+    expect(f.connects).toBe(12);
+    expect(f.out.at(-1)).toBe("11 passed, 1 failed");
     expect(code).toBe(1);
   });
 

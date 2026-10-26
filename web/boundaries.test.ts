@@ -39,7 +39,22 @@ const APPLICATION_FORBIDDEN = [
 const UI_FORBIDDEN = ["@/infrastructure/clock", "@supabase/ssr"];
 const INFRASTRUCTURE_FORBIDDEN = ["react", "@/app/layout", "@/components/ui/button", "@/composition"];
 
+const PARSER_LIBRARY_PLACES = ["application/x.ts", "components/x.tsx", "app/x.tsx", "domain/x.ts", "infrastructure/supabase/x.ts"];
+
 describe("layer boundaries", () => {
+  test.each(PARSER_LIBRARY_PLACES.flatMap((file) => ["xlsx", "mammoth"].map((specifier) => [file, specifier])))(
+    "C487: %s importing %s is a lint error naming it",
+    async (file, specifier) => {
+      const messages = await restrictedImports(file, specifier);
+      expect(messages).toHaveLength(1);
+      expect(messages[0].message).toContain(specifier);
+    },
+  );
+
+  test.each(["xlsx", "mammoth"])("C487: infrastructure/import-parsers may import %s", async (specifier) => {
+    expect(await restrictedImports("infrastructure/import-parsers/x.ts", specifier)).toHaveLength(0);
+  });
+
   test.each(APPLICATION_FORBIDDEN)("C24: importing %s from application/ is a lint error", async (specifier) => {
     const messages = await restrictedImports("application/x.ts", specifier);
     expect(messages).toHaveLength(1);

@@ -107,6 +107,33 @@ describe("composition root", () => {
     expect(body("SiteStore")).not.toContain("delete(");
   });
 
+  test("C491: getContainer() returns readImport", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.readImport).toBe("function");
+  });
+
+  test("C483: readImport is built on the request's import job store, from the one Supabase client", () => {
+    const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
+    expect(source).toMatch(/const importJobs = supabaseImportJobStore\(supabase, /);
+    expect(source).toContain("readImport: makeReadImport(importJobs, importParser)");
+    expect(source.match(/createServerClient</g)).toHaveLength(1);
+  });
+
+  test("C490: the ports declare ImportParser, ParsedImport, ParsedTable and the store's fileOf and recordRead", () => {
+    const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
+    const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
+    expect(body("ImportParser")).toContain("parse(contentType: ImportContentType, bytes: Uint8Array)");
+    const parsedImport = ports.match(/^export type ParsedImport = (.*);$/m)?.[1] ?? "";
+    expect(parsedImport).toContain('format: "table"');
+    expect(parsedImport).toContain('format: "pdf"');
+    const parsedTable = ports.match(/export type ParsedTable = \{([\s\S]*?)\n\};/)?.[1] ?? "";
+    for (const field of ["source:", "header:", "rows:"]) expect(parsedTable).toContain(field);
+    expect(body("ImportJobStore")).toContain("fileOf(jobId: string)");
+    expect(body("ImportJobStore")).toContain("recordRead(jobId: string, outcome: ReadOutcome)");
+  });
+
   test.each([
     [URL_KEY, undefined, "sb_publishable_test"],
     [PUBLISHABLE_KEY, "https://example.supabase.co", undefined],

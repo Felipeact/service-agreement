@@ -11,6 +11,7 @@ const container = {
   startImport: vi.fn(),
   confirmImportUpload: vi.fn(),
   discardImport: vi.fn(),
+  readImport: vi.fn(),
 };
 const STORE_METHODS = ["startImport", "confirmImportUpload", "discardImport"] as const;
 
@@ -158,5 +159,31 @@ describe("the import page", () => {
     const out = renderToStaticMarkup(createElement(Loading));
     expect(out).toMatch(/<h1[^>]*>/);
     expect(out).toMatch(/role="status"[^>]*>Loading…/);
+  });
+});
+
+describe("readImportAction", () => {
+  test("C480: a viewer is forbidden and nothing is read", async () => {
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await actions.readImportAction(JOB)).toEqual({ status: "forbidden" });
+    expect(container.readImport).not.toHaveBeenCalled();
+  });
+
+  test("C481: a job id that is not a uuid is not_found, and nothing is read", async () => {
+    expect(await actions.readImportAction("not-a-uuid")).toEqual({ status: "not_found" });
+    expect(container.readImport).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["parsed", { ok: true, outcome: { status: "parsed", tables: 1, rows: 48 } }, { status: "parsed", tables: 1, rows: 48 }, 1],
+    ["unreadable", { ok: true, outcome: { status: "unreadable", reason: "no_table" } }, { status: "unreadable", reason: "no_table" }, 1],
+    ["not_ready", { ok: false, code: "not_ready" }, { status: "not_ready" }, 0],
+  ])("C498: %s passes through", async (_name, answer, state, refreshes) => {
+    const { refresh } = await import("next/cache");
+    container.readImport.mockResolvedValue(answer);
+
+    expect(await actions.readImportAction(JOB)).toEqual(state);
+    expect(container.readImport).toHaveBeenCalledWith(JOB);
+    expect(refresh).toHaveBeenCalledTimes(refreshes);
   });
 });

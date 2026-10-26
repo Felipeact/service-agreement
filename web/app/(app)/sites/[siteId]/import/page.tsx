@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ImportPageView } from "@/components/imports/import-page-view";
 import { canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
-import { confirmImportAction, discardImportAction, startImportAction } from "../../../import-actions";
+import { confirmImportAction, discardImportAction, readImportAction, startImportAction } from "../../../import-actions";
 
 export const metadata: Metadata = { title: "Import equipment list" };
 
@@ -20,6 +20,7 @@ export default async function ImportPage({ params }: PageProps<"/sites/[siteId]/
         start: startImportAction.bind(null, siteId),
         confirm: confirmImportAction,
         discard: (jobId: string) => discardImportAction.bind(null, jobId),
+        read: readImportAction,
       }
     : undefined;
 
