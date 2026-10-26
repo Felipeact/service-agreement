@@ -73,7 +73,7 @@ calls it directly.
 | Route | In | Out | Status |
 | --- | --- | --- | --- |
 | `GET /sites/[siteId]/import` | `siteId` | upload form (writers), job list for the site | `200`, `404`, `307` |
-| `POST` Server Action `startImport` | `siteId` (route), `fileName`, `size`, `extension` | `{ ok: true, jobId, signedUrl, contentType }` · state `invalid` · `forbidden` · `not_found` · `unavailable` | `200` |
+| `POST` Server Action `startImport` | `siteId` (route), `fileName`, `size`, `extension` | state `started` with `jobId`, `signedUrl`, `contentType` (amended 2026-10-26, user) · state `invalid` · `forbidden` · `not_found` · `unavailable` | `200` |
 | `PUT <signedUrl>` (Supabase Storage) | file bytes, `content-type`, `x-upsert: false` | `{ Key }` | `200`, `400`, `409`, `413`, `415` |
 | `POST` Server Action `confirmImport` | `jobId` | state `uploaded` · `upload_missing` · `forbidden` · `not_found` · `unavailable` | `200` |
 | `POST` Server Action `discardImport` | `jobId` | state `discarded` · `forbidden` · `not_found` · `unavailable` | `200` |

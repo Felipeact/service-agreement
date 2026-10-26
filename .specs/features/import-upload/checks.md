@@ -58,7 +58,7 @@ Proof: `npx vitest run components/imports -t "C402:"`
 **C403** - as a writer, `startImport` for site `<siteId>` with `fileName = "Units.xlsx"`,
 `size = 2048` calls `ImportJobStore.start` exactly once with
 `(member.orgId, "<siteId>", { name: "Units.xlsx", size: 2048, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })`
-and returns the store's `{ ok: true, jobId, signedUrl, contentType }` unchanged (AC 3)
+and returns `{ status: "started", jobId, signedUrl, contentType }` with the store's `jobId`, `signedUrl` and `contentType` (AC 3; amended 2026-10-26 by the user after verification: every action returns one status-tagged shape)
 Proof: `npx vitest run "app/(app)" -t "C403:"`
 
 **C404** - the Supabase `ImportJobStore.start` adapter inserts into `import_jobs` exactly
@@ -297,7 +297,7 @@ Proof: `grep -c -E "^\| AD-03[1-4] \|.*\| active \|" ../.specs/STATE.md`
 
 At each size: no horizontal scroll; every touched control is at least 44x44 px below 1024 px
 (touch taps on mobile and tablet); `browser_console_messages` has no error or warning; and
-`browser_network_requests` has no failed request apart from C414's deliberate one. After the run,
+`browser_network_requests` has no failed request apart from C414's deliberate one, where a failed request is a 4xx or 5xx answer or a network error; a `200` response whose body the Next client stops reading (`net::ERR_ABORTED` on a Server Action POST) is not one (amended 2026-10-26 by the user after verification). The `.txt` and 21 MB refusals run at each size. After the run,
 SQL shows 0 `import_jobs` rows and 0 `imports` objects for the demo org (AC 1-10, 14-17;
 Surface `200`)
 Proof: live - Playwright MCP `browser_navigate`, `browser_resize`, `browser_file_upload`, `browser_click`, `browser_snapshot`, `browser_console_messages`, `browser_network_requests`
@@ -392,6 +392,7 @@ Proof: `npx vitest run components/sites -t "C444:"`
   - The migration was applied to the live project with the user's go-ahead (2026-10-26).
   - Earlier exact-inventory pins changed because this feature adds a table and a recipe: `rls_isolation` C35 now lists 16 public tables, `demo_seed_rerun` C19 expects 16 snapshot rows, and the runner tests C203-C212 and C210 count 11 recipes and 13 SQL files. Each still asserts an exact value.
   - The discard failure copy ("This import no longer exists.", "We couldn't discard the file. Try again.") is additive; the plan named only the upload failures.
+- **After verification (user, 2026-10-26):** C403 amended to the status-tagged `started` shape (the code was right, the check named the store's shape); C442 amended to define a failed request as a 4xx/5xx or network error. The plan's Surface row for `startImport` follows C403.
 - **C440 (mcp, 2026-10-26):** `get_advisors` type `security` returned exactly `rls_enabled_no_policy` on `public.outbox` and `auth_leaked_password_protection`, nothing on `import_jobs` or `storage.objects`; the Verifier re-ran it with the same result.
 - **Abandoned:** calling the start and confirm Server Actions from the submit handler outside a transition; the Next guide requires `startTransition` for event-handler calls, and outside it the refresh request was aborted.
 - **Boundary (live):** C414, C442 and C443 closed in the commit after `555f05c`, signed in as the demo owner on "Brookhaven Community Centre", after the user approved stopping the other session's Chrome.
