@@ -30,14 +30,15 @@
 | AD-024 | Staff URLs are flat with uuid ids: `/customers`, `/customers/[customerId]`, `/sites/[siteId]`, `/settings`; a site page is not nested under its customer | agreements, import jobs and a future sites list link to a site without knowing its customer | active | 2026-10-24 |
 | AD-025 | `org_settings.governing_province` holds a two-letter code from `PROVINCES` in `web/domain/org-settings`; single-row writes are a Server Action, the pure `validate...` function and a store port, not an RPC | the seed already stores `BC`, the contract will print the code; one update is already atomic, and later forms copy this shape | active | 2026-10-24 |
 | AD-026 | SQL tests run with `npm run test:db [recipe...]` in `web/` (`pg` dev dependency, `SUPABASE_DB_URL` = session-pooler string in `web/.env.local`, never `NEXT_PUBLIC_`). Every `supabase/tests/*.sql` file belongs to a recipe in `web/scripts/test-db/runner.mts` `RECIPES`; `SEED_BODY` = `seed.sql` without `begin;`/`commit;`; a recipe passes only when its last row is `<last file>: pass`, and one containing a `commit` is refused | the owner can run the suite without an agent, and a test file nobody wired in fails the command instead of never running | active | 2026-10-26 |
+| AD-027 | `getContainer()` calls `await connection()` (from `next/server`) before `cookies()` and before any Supabase call | the Supabase client reads the clock (token expiry); under Cache Components and Partial Prefetching that read must happen at request time, or every `(app)` page logs a blocking-prerender-current-time error | active | 2026-10-26 |
 
 ## Handoff
 
 **Feature**: phase1-validation
-**Where**: built and committed; C201-C218 green, C215/C216 run against the live project 2026-10-26 (9/9 twice, 4/4); first Verifier round FAIL only on blocked proofs
+**Where**: built and committed; every C201-C222 proof run green (C219-C222 live on 2026-10-26 after the AD-027 fix); Verifier round 2 dispatched
 **In progress**: none
-**Next step**: (1) user invites their email and says go on running `seed.sql` with `app.demo_owner_email` -> live C219-C222 plus auth-magic-link C8, C18, C21 and the staff-screens live proofs (C101 SQL half, C120, C22, C23 already green via `npm run test:db`); (2) scoped re-verification of phase1-validation, auth-magic-link and staff-screens; (3) tick ROADMAP items 5 and 8; (4) decide the "Customer, site and asset forms" roadmap item
-**Blockers**: the demo owner (plan open question 1)
+**Next step**: (1) Verifier round 2 on phase1-validation; (2) run the remaining staff-screens live proofs (C103, C105, C107, C109, and the search/clear/touch ones) signed in as the demo owner, then scoped re-verification of auth-magic-link (C8, C18, C21 settled live, C22, C23 via `npm run test:db demo_owner`) and staff-screens; (3) tick ROADMAP items 5 and 8; (4) decide the "Customer, site and asset forms" roadmap item
+**Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
