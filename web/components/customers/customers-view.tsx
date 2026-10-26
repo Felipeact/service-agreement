@@ -2,22 +2,36 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import type { CustomerSummary } from "@/application/ports";
+import type { CustomerSummary, MemberRole } from "@/application/ports";
+import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
+import { LinkButton } from "@/components/ui/link-button";
 import { SearchInput } from "@/components/ui/search-input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { filterCustomers } from "./filter";
 
 const COLUMNS = "md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_5rem_5rem]";
 
+type CustomersViewProps = {
+  customers: CustomerSummary[];
+  initialQuery?: string;
+  /** Decides whether New customer shows; without a role the screen is read-only. */
+  role?: MemberRole;
+};
+
 /** The Customers page body: header with a count and search, then one row per customer. */
-export function CustomersView({ customers, initialQuery = "" }: { customers: CustomerSummary[]; initialQuery?: string }) {
+export function CustomersView({ customers, initialQuery = "", role }: CustomersViewProps) {
   const [query, setQuery] = useState(initialQuery);
   const searchRef = useRef<HTMLInputElement>(null);
   const shown = filterCustomers(customers, query);
   const count = `${customers.length} ${customers.length === 1 ? "customer" : "customers"}`;
+  const newCustomer = role && canWriteRecords(role) && (
+    <LinkButton href="/customers/new" variant="primary">
+      New customer
+    </LinkButton>
+  );
 
   function clearSearch() {
     setQuery("");
@@ -39,10 +53,13 @@ export function CustomersView({ customers, initialQuery = "" }: { customers: Cus
             className="w-full md:w-60"
           />
         }
+        action={newCustomer || undefined}
       />
 
       {customers.length === 0 ? (
-        <EmptyPanel title="No customers yet" text="Customers appear here once they are added or imported." />
+        <EmptyPanel title="No customers yet" text="Customers appear here once they are added or imported.">
+          {newCustomer}
+        </EmptyPanel>
       ) : shown.length === 0 ? (
         <EmptyPanel title={`No customers match "${query}"`}>
           <Button onClick={clearSearch}>Clear search</Button>

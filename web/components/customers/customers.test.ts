@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
-import type { CustomerDetail, CustomerSummary } from "@/application/ports";
+import type { CustomerDetail, CustomerSummary, MemberRole } from "@/application/ports";
 import { CustomerDetailView } from "./customer-detail-view";
 import { filterCustomers } from "./filter";
 import { CustomersView } from "./customers-view";
@@ -134,5 +134,56 @@ describe("CustomerDetailView", () => {
   test("C133: empty sections say so", () => {
     const out = detailHtml(detail());
     for (const text of ["No contacts yet", "No sites yet", "No agreements yet"]) expect(out).toContain(text);
+  });
+});
+
+const populated = detail({
+  contacts: [{ id: "ct1", name: "Dana", email: "dana@example.com", phone: null }],
+  sites: [{ id: "s1", name: "Tower A", address: "1 Main St", contactName: "Dana", assetCount: 3 }],
+  agreements: [{ id: "ag1", siteName: "Tower A", number: "AG-1", versionNo: 1, stage: "sent", annualCents: 120000 }],
+});
+const listAs = (role: MemberRole, customers: CustomerSummary[]) => html(createElement(CustomersView, { customers, role }));
+const detailAs = (role: MemberRole, customer: CustomerDetail = populated) => html(createElement(CustomerDetailView, { customer, role }));
+
+describe("record write controls on the customer screens", () => {
+  test("C301: a writer sees New customer in the header and in the empty state", () => {
+    expect(listAs("estimator", [summary("1", "Alpha")])).toMatch(/<a[^>]*href="\/customers\/new"[^>]*>New customer<\/a>/);
+    const empty = listAs("estimator", []);
+    expect(empty.match(/<a[^>]*href="\/customers\/new"[^>]*>New customer<\/a>/g)).toHaveLength(2);
+    expect(empty).toMatch(/No customers yet[\s\S]*<a[^>]*href="\/customers\/new"/);
+  });
+
+  test("C306: a writer sees Edit linking to the customer's edit page", () => {
+    expect(detailAs("estimator")).toMatch(/<a[^>]*href="\/customers\/c1\/edit"[^>]*>Edit<\/a>/);
+  });
+
+  test("C308: a writer sees Add contact, and Edit on each contact row", () => {
+    const out = detailAs("estimator");
+    expect(out).toMatch(/<a[^>]*href="\/customers\/c1\/contacts\/new"[^>]*>Add contact<\/a>/);
+    expect(out).toMatch(/<a[^>]*href="\/contacts\/ct1\/edit"[^>]*>Edit<\/a>/);
+  });
+
+  test("C316: a writer sees Add site on the customer page", () => {
+    expect(detailAs("estimator")).toMatch(/<a[^>]*href="\/customers\/c1\/sites\/new"[^>]*>Add site<\/a>/);
+  });
+
+  test.each([
+    ["list with customers", () => listAs("viewer", [summary("1", "Alpha")])],
+    ["empty list", () => listAs("viewer", [])],
+    ["customer with records", () => detailAs("viewer")],
+    ["empty customer", () => detailAs("viewer", detail())],
+  ])("C329: a viewer's %s has no write controls", (_name, render) => {
+    const out = render();
+    expect(out).not.toMatch(/href="[^"]*\/(new|edit)"/);
+    for (const text of ["New customer", "Add contact", "Add site", "Add asset", ">Edit<", "Delete"]) expect(out).not.toContain(text);
+  });
+
+  test("C348: a writer still sees every contact, site and agreement row", () => {
+    const out = detailAs("estimator");
+    expect(out).toContain("dana@example.com");
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Tower A</);
+    expect(out).toContain("1 Main St");
+    expect(out).toContain("AG-1 · v1");
+    expect(out).toContain("$1,200/yr");
   });
 });

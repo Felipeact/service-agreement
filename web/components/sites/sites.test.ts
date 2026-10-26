@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
-import type { AssetView, SiteView } from "@/application/ports";
+import type { AssetView, MemberRole, SiteView } from "@/application/ports";
 import { filterAssets, groupAssets } from "./assets";
 import { SiteRegisterView } from "./site-register-view";
 
@@ -23,6 +23,7 @@ const site = (assets: AssetView[]): SiteView => ({
   address: "2150 Harbour Lane, North Vancouver, BC",
   customerId: "cust-1",
   customerName: "Harbourview Towers Strata",
+  siteContactId: "ct-1",
   contactName: "Dana Whitfield",
   assets,
 });
@@ -110,5 +111,43 @@ describe("filterAssets", () => {
 
   test("C139: a group left with no rows disappears", () => {
     expect(groupAssets(filterAssets(all, "roof")).map((group) => group.code)).toEqual(["EXPANSION_TANK"]);
+  });
+});
+
+const siteAs = (role: MemberRole, assets: AssetView[]) => html(createElement(SiteRegisterView, { site: site(assets), role }));
+
+describe("record write controls on the site register", () => {
+  test("C316: a writer sees Edit site", () => {
+    expect(siteAs("estimator", [])).toMatch(/<a[^>]*href="\/sites\/s1\/edit"[^>]*>Edit site<\/a>/);
+  });
+
+  test("C322: a writer sees Add asset in the header, and Edit on each asset row", () => {
+    const out = siteAs("estimator", [asset({ id: "a-1" }), asset({ id: "a-2" })]);
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/);
+    expect(out).toMatch(/<a[^>]*href="\/assets\/a-1\/edit"[^>]*>Edit<\/a>/);
+    expect(out).toMatch(/<a[^>]*href="\/assets\/a-2\/edit"[^>]*>Edit<\/a>/);
+  });
+
+  test("C322: an empty register offers Add asset too", () => {
+    const out = siteAs("estimator", []);
+    expect(out.match(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/g)).toHaveLength(2);
+    expect(out).toMatch(/No equipment recorded yet[\s\S]*<a[^>]*href="\/sites\/s1\/assets\/new"/);
+  });
+
+  test.each([
+    ["register with assets", [asset()]],
+    ["empty register", []],
+  ] as [string, AssetView[]][])("C329: a viewer's %s has no write controls", (_name, assets) => {
+    const out = siteAs("viewer", assets);
+    expect(out).not.toMatch(/href="[^"]*\/(new|edit)"/);
+    for (const text of ["New customer", "Add contact", "Add site", "Add asset", ">Edit<", "Edit site", "Delete"]) expect(out).not.toContain(text);
+  });
+
+  test("C348: a writer still sees every asset row", () => {
+    const out = siteAs("estimator", [asset({ unitNo: "B-7", typeModel: "Condensing boiler", location: "Roof" })]);
+    expect(out).toContain("B-7");
+    expect(out).toContain("Condensing boiler");
+    expect(out).toContain("Roof");
+    expect(out).toContain("Manual");
   });
 });

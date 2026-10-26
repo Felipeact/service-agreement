@@ -35,6 +35,7 @@ const loadings = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "owner@example.com", orgId: "org-1", orgName: "Org", role: "owner" });
 });
 
 describe("screen states", () => {
