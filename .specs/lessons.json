@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 6,
+  "next_id": 7,
   "lessons": [
     {
       "id": "L-001",
@@ -94,6 +94,24 @@
       ],
       "created": "2026-10-23T22:03:05Z",
       "last_seen": "2026-10-23T22:03:05Z"
+    },
+    {
+      "id": "L-006",
+      "key": "ac_gap::when a page computes a link from route ids assert the exact href per route with distinct ids in the fixture never a prefix pattern",
+      "text": "When a page computes a link from route ids, assert the exact href per route with distinct ids in the fixture, never a prefix pattern.",
+      "signal": "ac_gap",
+      "scope": "app pages",
+      "status": "candidate",
+      "features": [
+        "record-forms"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C339 web/app/(app)/record-forms.test.ts:318 (app pages)"
+      ],
+      "created": "2026-10-26T19:27:11Z",
+      "last_seen": "2026-10-26T19:27:11Z"
     }
   ]
 }

@@ -38,9 +38,9 @@
 ## Handoff
 
 **Feature**: record-forms
-**Where**: record-forms built and validated live (C343 at 375/768/1440 with touch, C312 live half); ROADMAP Phase 1 item ticked; Verifier dispatched
+**Where**: record-forms done - Verifier round 2 PASS (48/48, validate_verification exit 0) after round 1 failed C339 (fixed in `4cf20ce`); validated live; ROADMAP Phase 1 item ticked
 **In progress**: none
-**Next step**: (1) read the record-forms Verifier report; (2) the live demo org still holds 3 "Validation Test Co" customers, each with one site, from the live journeys; the user declined the cleanup delete; (3) remaining staff-screens live proofs
+**Next step**: (1) optional: delete the 3 "Validation Test Co" customers and their sites left in the live demo org by the live journeys (SQL in the record-forms session; the user declined it once); (2) remaining staff-screens live proofs, then scoped re-verification of auth-magic-link and staff-screens; (3) Phase 2: upload to Storage and import jobs
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)

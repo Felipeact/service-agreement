@@ -44,6 +44,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md precision gap: C34 'same counts and totals as before' (web/ui)
 - last seen: 2026-10-23T22:03:05Z
 
+### L-006 - When a page computes a link from route ids, assert the exact href per route with distinct ids in the fixture, never a prefix pattern.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `app pages` · harmful: 0
+- features: record-forms
+- evidence: C339 web/app/(app)/record-forms.test.ts:318 (app pages)
+- last seen: 2026-10-26T19:27:11Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
