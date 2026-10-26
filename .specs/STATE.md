@@ -29,14 +29,15 @@
 | AD-023 | Each screen reads through one narrow port in `web/application/ports` (`PipelineReader`, `CustomerDirectory`, `SiteRegister`, `OrgSettingsStore`) returning plain view types, `null` for a missing record, throwing on unexpected errors; adapters in `web/infrastructure/supabase` use embedded selects, cap lists at 500 rows (`.limit(500)`), and pages get them only from `getContainer()` | pages cannot import `@supabase/*` (AD-014), and one wide repository would grow for callers that use none of it | active | 2026-10-24 |
 | AD-024 | Staff URLs are flat with uuid ids: `/customers`, `/customers/[customerId]`, `/sites/[siteId]`, `/settings`; a site page is not nested under its customer | agreements, import jobs and a future sites list link to a site without knowing its customer | active | 2026-10-24 |
 | AD-025 | `org_settings.governing_province` holds a two-letter code from `PROVINCES` in `web/domain/org-settings`; single-row writes are a Server Action, the pure `validate...` function and a store port, not an RPC | the seed already stores `BC`, the contract will print the code; one update is already atomic, and later forms copy this shape | active | 2026-10-24 |
+| AD-026 | SQL tests run with `npm run test:db [recipe...]` in `web/` (`pg` dev dependency, `SUPABASE_DB_URL` = session-pooler string in `web/.env.local`, never `NEXT_PUBLIC_`). Every `supabase/tests/*.sql` file belongs to a recipe in `web/scripts/test-db/runner.mts` `RECIPES`; `SEED_BODY` = `seed.sql` without `begin;`/`commit;`; a recipe passes only when its last row is `<last file>: pass`, and one containing a `commit` is refused | the owner can run the suite without an agent, and a test file nobody wired in fails the command instead of never running | active | 2026-10-26 |
 
 ## Handoff
 
-**Feature**: staff-screens
-**Where**: built and committed (`1c35d9d` code, docs commit after it); 390 vitest tests, lint, tsc and `next build` green; live and SQL proofs not run (see checks Handoff); Verifier dispatched after the docs commit
+**Feature**: phase1-validation
+**Where**: S1 built and committed; vitest C201-C214 and C218 green, `npm run test:db nope` exits 2; C217 (advisors) run 2026-10-26, exactly the two accepted lints
 **In progress**: none
-**Next step**: (1) user signs in as the demo owner (auth-magic-link steps are still open) and says go on running `supabase/seed.sql` on the live project and the rolled-back `staff_screens.sql` proofs; (2) run the live proofs C103, C105, C107, C109, C126, C127, C139, C160, C161 with Playwright; (3) then the Verifier's findings; (4) plan the next roadmap item (Phase 1: Vitest unit tests, RLS isolation check, Playwright validation), and add the "customer, site and asset forms" item the plan asked about
-**Blockers**: live proofs need the demo owner provisioned; the seed run needs the user's go-ahead
+**Next step**: (1) user puts `SUPABASE_DB_URL` in `web/.env.local` and says go -> run C215, C216; (2) user invites their email and says go on running `seed.sql` with `app.demo_owner_email` -> live C219-C222 plus auth-magic-link C8, C18, C21-C23 and the 12 staff-screens live/seed proofs (the seed proofs now run as `npm run test:db demo_owner staff_screens`); (3) scoped re-verification of both earlier features; (4) tick ROADMAP items 5 and 8; (5) decide the "Customer, site and asset forms" roadmap item
+**Blockers**: open questions 1 and 2 of the plan (user actions)
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
