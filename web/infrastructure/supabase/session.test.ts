@@ -112,3 +112,23 @@ describe("updateSession on the staff screens", () => {
     expect(locationPath(response)).toBe("/login");
   });
 });
+
+describe("updateSession on the record forms", () => {
+  const id = "00000000-0000-4000-8000-000000000003";
+  test.each([
+    "/customers/new",
+    `/customers/${id}/edit`,
+    `/customers/${id}/contacts/new`,
+    `/contacts/${id}/edit`,
+    `/customers/${id}/sites/new`,
+    `/sites/${id}/edit`,
+    `/sites/${id}/assets/new`,
+    `/assets/${id}/edit`,
+  ])("C345: signed out, %s redirects to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+});

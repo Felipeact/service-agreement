@@ -8,7 +8,13 @@ import { systemClock } from "@/infrastructure/clock";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
-import { supabaseCustomerDirectory, supabasePipelineReader, supabaseSiteRegister } from "@/infrastructure/supabase/readers";
+import {
+  supabaseAssetTypeCatalog,
+  supabaseCustomerDirectory,
+  supabasePipelineReader,
+  supabaseSiteRegister,
+} from "@/infrastructure/supabase/readers";
+import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supabaseSiteStore } from "@/infrastructure/supabase/records";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
 
 function required(name: string, value: string | undefined): string {
@@ -50,6 +56,10 @@ export async function getContainer() {
   const customers = supabaseCustomerDirectory(supabase);
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
+  const customerStore = supabaseCustomerStore(supabase);
+  const contactStore = supabaseContactStore(supabase);
+  const siteStore = supabaseSiteStore(supabase);
+  const assetStore = supabaseAssetStore(supabase);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -64,6 +74,19 @@ export async function getContainer() {
     siteRegister: sites.get,
     getOrgSettings: settings.get,
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
+    contactForEdit: customers.contact,
+    assetForEdit: sites.asset,
+    listAssetTypes: supabaseAssetTypeCatalog(supabase).list,
+    createCustomer: customerStore.create,
+    updateCustomer: customerStore.update,
+    createContact: contactStore.create,
+    updateContact: contactStore.update,
+    deleteContact: contactStore.delete,
+    createSite: siteStore.create,
+    updateSite: siteStore.update,
+    createAsset: assetStore.create,
+    updateAsset: assetStore.update,
+    deleteAsset: assetStore.delete,
     clock: systemClock,
   };
 }

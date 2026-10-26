@@ -34,10 +34,10 @@
 
 ## Handoff
 
-**Feature**: phase1-validation
-**Where**: phase1-validation done - Verifier round 3 PASS (22/22, validator exit 0); ROADMAP Phase 1 items 5 and 8 ticked
+**Feature**: record-forms
+**Where**: `.specs/features/record-forms/plan.md` written (38 criteria, 5 slices, 3 doors), validate_plan exit 0; awaiting the user's review
 **In progress**: none
-**Next step**: (1) remaining staff-screens live proofs (C103, C105, C107, C109, search/clear/touch) as the demo owner, then scoped re-verification of auth-magic-link and staff-screens; (2) plan the new Phase 1 item "Customer, site and asset forms"
+**Next step**: (1) user reviews record-forms plan, then write checks.md; (2) remaining staff-screens live proofs (C103, C105, C107, C109, search/clear/touch) as the demo owner, then scoped re-verification of auth-magic-link and staff-screens
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)

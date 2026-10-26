@@ -16,7 +16,7 @@ export function stubClient(tables: Record<string, Reply>) {
     from(table: string) {
       const reply = () => tables[table] ?? { data: null, error: null };
       const query: Record<string, unknown> = {};
-      for (const method of ["select", "eq", "order", "limit", "update"]) {
+      for (const method of ["select", "eq", "order", "limit", "update", "insert", "delete"]) {
         query[method] = (...args: unknown[]) => {
           calls.push({ table, method, args });
           return query;

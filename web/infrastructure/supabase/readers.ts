@@ -4,6 +4,7 @@ import type { ContractStatus } from "@/domain/contract";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { pipelineStage } from "@/domain/pipeline";
 import type {
+  AssetTypeCatalog,
   AssetView,
   Clock,
   CustomerAgreementView,
@@ -201,6 +202,14 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
       };
       return detail;
     },
+
+    async contact(id) {
+      if (!UUID.test(id)) return null;
+      const { data, error } = await client.from("contacts").select("id, customer_id, name, email, phone").eq("id", id).maybeSingle();
+      if (error) throw unexpected(error);
+      if (!data) return null;
+      return { id: data.id, customerId: data.customer_id, name: data.name, email: data.email, phone: data.phone };
+    },
   };
 }
 
@@ -244,6 +253,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         address: row.address,
         customerId: row.customer_id,
         customerName: row.customers.name,
+        siteContactId: row.site_contact_id,
         contactName: row.customers.contacts.find((contact) => contact.id === row.site_contact_id)?.name ?? null,
         assets: row.assets.map<AssetView>((asset) => ({
           id: asset.id,
@@ -255,6 +265,35 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
           source: asset.source === "import" ? "import" : "manual",
         })),
       };
+    },
+
+    async asset(id) {
+      if (!UUID.test(id)) return null;
+      const { data, error } = await client
+        .from("assets")
+        .select("id, site_id, asset_type_id, unit_no, type_model, location")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw unexpected(error);
+      if (!data) return null;
+      return {
+        id: data.id,
+        siteId: data.site_id,
+        assetTypeId: data.asset_type_id,
+        unitNo: data.unit_no,
+        typeModel: data.type_model,
+        location: data.location,
+      };
+    },
+  };
+}
+
+export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
+  return {
+    async list() {
+      const { data, error } = await client.from("asset_types").select("id, code, name").order("name").limit(ROW_CAP);
+      if (error) throw unexpected(error);
+      return data.map(({ id, code, name }) => ({ id, code, name }));
     },
   };
 }

@@ -1,6 +1,7 @@
 import type { AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
 
@@ -106,10 +107,15 @@ export type CustomerDetail = {
   agreements: CustomerAgreementView[];
 };
 
+/** One contact as its edit form needs it. */
+export type ContactRecord = { id: string; customerId: string; name: string; email: string | null; phone: string | null };
+
 export interface CustomerDirectory {
   list(): Promise<CustomerSummary[]>;
   /** `null` for a malformed id, a missing row, or a row of another org. */
   detail(id: string): Promise<CustomerDetail | null>;
+  /** `null` for a malformed id, a missing row, or a row of another org. */
+  contact(id: string): Promise<ContactRecord | null>;
 }
 
 export type AssetView = {
@@ -128,13 +134,33 @@ export type SiteView = {
   address: string | null;
   customerId: string;
   customerName: string;
+  siteContactId: string | null;
   contactName: string | null;
   assets: AssetView[];
+};
+
+/** One asset as its edit form needs it. */
+export type AssetRecord = {
+  id: string;
+  siteId: string;
+  assetTypeId: string;
+  unitNo: string | null;
+  typeModel: string | null;
+  location: string | null;
 };
 
 export interface SiteRegister {
   /** `null` for a malformed id, a missing row, or a row of another org. */
   get(id: string): Promise<SiteView | null>;
+  /** `null` for a malformed id, a missing row, or a row of another org. */
+  asset(id: string): Promise<AssetRecord | null>;
+}
+
+export type AssetTypeOption = { id: string; code: string; name: string };
+
+export interface AssetTypeCatalog {
+  /** The org's asset types, ordered by name. */
+  list(): Promise<AssetTypeOption[]>;
 }
 
 export type OrgSettings = OrgSettingsValue;
@@ -145,4 +171,39 @@ export interface OrgSettingsStore {
   get(orgId: string): Promise<OrgSettings | null>;
   /** Overwrites the org's row. Nothing updated means RLS refused: `forbidden`. */
   save(orgId: string, value: OrgSettingsValue, at: Date): Promise<SaveSettingsResult>;
+}
+
+/**
+ * Why a record write wrote nothing (door 2). `not_found`: the row or its parent is gone or in another org;
+ * `in_use`: a delete another row still references; `unavailable`: anything unexpected, already logged.
+ */
+export type WriteFailure = "forbidden" | "not_found" | "unavailable";
+
+export type CreateResult = { ok: true; id: string } | { ok: false; code: WriteFailure };
+export type WriteResult = { ok: true } | { ok: false; code: WriteFailure };
+export type DeleteResult = { ok: true } | { ok: false; code: WriteFailure | "in_use" };
+
+export interface CustomerStore {
+  create(orgId: string, value: CustomerValue): Promise<CreateResult>;
+  update(id: string, value: CustomerValue): Promise<WriteResult>;
+}
+
+export interface ContactStore {
+  create(orgId: string, customerId: string, value: ContactValue): Promise<CreateResult>;
+  update(id: string, value: ContactValue): Promise<WriteResult>;
+  delete(id: string): Promise<DeleteResult>;
+}
+
+export interface SiteStore {
+  create(orgId: string, customerId: string, value: SiteValue): Promise<CreateResult>;
+  /** The site's customer never changes. */
+  update(id: string, value: SiteValue): Promise<WriteResult>;
+}
+
+export interface AssetStore {
+  /** Writes `source = 'manual'`. */
+  create(orgId: string, siteId: string, value: AssetValue): Promise<CreateResult>;
+  /** Leaves `source` as it is. */
+  update(id: string, value: AssetValue): Promise<WriteResult>;
+  delete(id: string): Promise<DeleteResult>;
 }

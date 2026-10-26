@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { fixedClock } from "@/infrastructure/clock";
-import { supabaseCustomerDirectory, supabasePipelineReader, supabaseSiteRegister } from "./readers";
+import { supabaseAssetTypeCatalog, supabaseCustomerDirectory, supabasePipelineReader, supabaseSiteRegister } from "./readers";
 import { stubClient } from "./stub-client";
 
 const ID = "00000000-0000-4000-8000-000000000001";
@@ -253,5 +253,64 @@ describe("site register", () => {
     const { typed, calls } = stubClient({ sites: ok(row) });
     await supabaseSiteRegister(typed).get(ID);
     expect(calls).toContainEqual({ table: "sites", method: "limit", args: [500, { foreignTable: "assets" }] });
+  });
+});
+
+describe("record reads for the edit forms", () => {
+  test("the site register carries the site contact id", async () => {
+    const row = {
+      id: ID,
+      name: "Site",
+      address: null,
+      customer_id: "cust",
+      site_contact_id: "c1",
+      customers: { name: "Customer", contacts: [{ id: "c1", name: "Dana" }] },
+      assets: [],
+    };
+    expect(await supabaseSiteRegister(stubClient({ sites: ok(row) }).typed).get(ID)).toMatchObject({ siteContactId: "c1" });
+  });
+
+  test("C332: a malformed contact or asset id returns null without querying", async () => {
+    const { typed, calls } = stubClient({});
+    expect(await supabaseCustomerDirectory(typed).contact("not-a-uuid")).toBeNull();
+    expect(await supabaseSiteRegister(typed).asset("not-a-uuid")).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("C332: no contact or asset row returns null", async () => {
+    expect(await supabaseCustomerDirectory(stubClient({ contacts: ok(null) }).typed).contact(ID)).toBeNull();
+    expect(await supabaseSiteRegister(stubClient({ assets: ok(null) }).typed).asset(ID)).toBeNull();
+  });
+
+  test("a contact and an asset map to their edit records; an unexpected error throws", async () => {
+    const contactRow = { id: ID, customer_id: "cust", name: "Dana", email: "dana@example.com", phone: null };
+    expect(await supabaseCustomerDirectory(stubClient({ contacts: ok(contactRow) }).typed).contact(ID)).toEqual({
+      id: ID,
+      customerId: "cust",
+      name: "Dana",
+      email: "dana@example.com",
+      phone: null,
+    });
+
+    const assetRow = { id: ID, site_id: "s1", asset_type_id: "t1", unit_no: "1", type_model: null, location: "Roof" };
+    expect(await supabaseSiteRegister(stubClient({ assets: ok(assetRow) }).typed).asset(ID)).toEqual({
+      id: ID,
+      siteId: "s1",
+      assetTypeId: "t1",
+      unitNo: "1",
+      typeModel: null,
+      location: "Roof",
+    });
+    await expect(supabaseSiteRegister(stubClient({ assets: fail("XX000") }).typed).asset(ID)).rejects.toThrow("XX000");
+  });
+
+  test("C323: asset types are read ordered by name and mapped to id, code and name", async () => {
+    const { typed, calls } = stubClient({ asset_types: ok([{ id: "t1", code: "BOILER", name: "Boiler" }, { id: "t2", code: "RTU", name: "Rooftop unit" }]) });
+    expect(await supabaseAssetTypeCatalog(typed).list()).toEqual([
+      { id: "t1", code: "BOILER", name: "Boiler" },
+      { id: "t2", code: "RTU", name: "Rooftop unit" },
+    ]);
+    expect(calls).toContainEqual({ table: "asset_types", method: "select", args: ["id, code, name"] });
+    expect(calls).toContainEqual({ table: "asset_types", method: "order", args: ["name"] });
   });
 });

@@ -58,6 +58,38 @@ describe("composition root", () => {
     }
   });
 
+  test("C340: getContainer() exposes the record stores and the edit-form reads", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    const names = [
+      "createCustomer",
+      "updateCustomer",
+      "createContact",
+      "updateContact",
+      "deleteContact",
+      "createSite",
+      "updateSite",
+      "createAsset",
+      "updateAsset",
+      "deleteAsset",
+      "listAssetTypes",
+      "contactForEdit",
+      "assetForEdit",
+    ] as const;
+    for (const name of names) expect(typeof container[name], name).toBe("function");
+  });
+
+  test("C340: the ports declare one store per entity, and delete only on contacts and assets", () => {
+    const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
+    const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
+    for (const name of ["CustomerStore", "ContactStore", "SiteStore", "AssetStore"]) expect(body(name), name).toContain("create(");
+    expect(body("ContactStore")).toContain("delete(id: string)");
+    expect(body("AssetStore")).toContain("delete(id: string)");
+    expect(body("CustomerStore")).not.toContain("delete(");
+    expect(body("SiteStore")).not.toContain("delete(");
+  });
+
   test.each([
     [URL_KEY, undefined, "sb_publishable_test"],
     [PUBLISHABLE_KEY, "https://example.supabase.co", undefined],
