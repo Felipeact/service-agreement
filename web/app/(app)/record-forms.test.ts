@@ -313,9 +313,20 @@ describe("form pages", () => {
     },
   );
 
-  test.each(Object.keys(pages) as Route[])("C339: a writer on %s gets a form with Cancel", async (route) => {
+  test.each([
+    ["/customers/new", "/customers"],
+    ["/customers/[customerId]/edit", `/customers/${CUSTOMER}`],
+    ["/customers/[customerId]/contacts/new", `/customers/${CUSTOMER}`],
+    ["/contacts/[contactId]/edit", `/customers/${CUSTOMER}`],
+    ["/customers/[customerId]/sites/new", `/customers/${CUSTOMER}`],
+    ["/sites/[siteId]/edit", `/customers/${CUSTOMER}`],
+    ["/sites/[siteId]/assets/new", `/sites/${SITE}`],
+    ["/assets/[assetId]/edit", `/sites/${SITE}`],
+  ] as [Route, string][])("C339: a writer on %s gets a form whose Cancel goes to %s", async (route, href) => {
     const out = await renderPage(route);
-    expect(out).toMatch(/<form[\s\S]*<a[^>]*href="\/(customers|sites)[^"]*"[^>]*>Cancel<\/a>/);
+    const cancels = [...out.matchAll(/<a[^>]*href="([^"]*)"[^>]*>Cancel<\/a>/g)].map(([, target]) => target);
+    expect(cancels).toEqual([href]);
+    expect(out).toMatch(/<form[\s\S]*>Cancel<\/a>/);
   });
 
   const loadings = {
