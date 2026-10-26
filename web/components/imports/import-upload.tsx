@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import { IMPORT_ACCEPT, IMPORT_MESSAGES, validateImportFile } from "@/domain/imports";
 import { Button } from "@/components/ui/button";
 import { uploadFile, uploadMessage, type ConfirmState, type StartState, type UploadState } from "./state";
@@ -64,30 +64,43 @@ export function ImportUploader({ start, confirm }: UploaderProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [state, setState] = useState<UploadState>({ status: "idle" });
+  const [uploading, startTransition] = useTransition();
 
   function choose(next: File | null) {
     setFile(next);
     setState({ status: "idle" });
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (state.status === "uploading") return;
+    if (uploading) return;
     // No file chosen gets the extension message: it names what to choose.
     if (!file) return setState({ status: "invalid", message: IMPORT_MESSAGES.extension });
     const checked = validateImportFile({ name: file.name, size: file.size });
     if (!checked.ok) return setState({ status: "invalid", message: checked.message });
 
-    setState({ status: "uploading" });
-    const result = await uploadFile(file, { start, confirm, fetch: globalThis.fetch.bind(globalThis) });
-    setState(result);
-    if (result.status === "uploaded") {
-      formRef.current?.reset();
-      setFile(null);
-    }
-    // The job list re-reads either way: a failed upload leaves its job "Upload not finished".
-    router.refresh();
+    // Server Actions called from an event handler run inside a transition (Next server-actions guide).
+    startTransition(async () => {
+      const result = await uploadFile(file, { start, confirm, fetch: globalThis.fetch.bind(globalThis) });
+      startTransition(() => {
+        setState(result);
+        if (result.status === "uploaded") {
+          formRef.current?.reset();
+          setFile(null);
+        }
+        // The job list re-reads either way: a failed upload leaves its job "Upload not finished".
+        router.refresh();
+      });
+    });
   }
 
-  return <ImportUploadFields state={state} fileName={file?.name ?? null} onChoose={choose} onSubmit={submit} formRef={formRef} />;
+  return (
+    <ImportUploadFields
+      state={uploading ? { status: "uploading" } : state}
+      fileName={file?.name ?? null}
+      onChoose={choose}
+      onSubmit={submit}
+      formRef={formRef}
+    />
+  );
 }
