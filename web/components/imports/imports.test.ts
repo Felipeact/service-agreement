@@ -159,9 +159,24 @@ describe("ImportJobList", () => {
         ],
       }),
     );
-    for (const text of ["a.csv", "1 KB", "1.0 MB", "15 KB", "20.0 MB", "dana@example.com", "Former member", "Oct 26, 2026", "Uploaded", "Upload not finished"]) {
-      expect(out, text).toContain(text);
-    }
+    const rows = out.match(/<li[\s\S]*?<\/li>/g) ?? [];
+    expect(rows).toHaveLength(4);
+    const expected = [
+      ["a.csv", "1 KB", "dana@example.com", "Uploaded"],
+      ["b.pdf", "1.0 MB", "Former member", "Upload not finished"],
+      ["c.docx", "15 KB", "dana@example.com", "Uploaded"],
+      ["d.pdf", "20.0 MB", "dana@example.com", "Uploaded"],
+    ];
+    expected.forEach((texts, index) => {
+      for (const text of [...texts, "Oct 26, 2026"]) expect(rows[index], `row ${index}: ${text}`).toContain(text);
+    });
+    expect(rows[0]).not.toContain("Upload not finished");
+  });
+
+  test("C420: each job's Discard is bound to that job's id", () => {
+    const discard = vi.fn<(jobId: string) => () => Promise<{ status: "discarded" }>>(() => vi.fn());
+    html(createElement(ImportJobList, { jobs: [job({ id: "a", originalName: "a.csv" }), job({ id: "b", originalName: "b.pdf" })], discard }));
+    expect(discard.mock.calls.map(([id]) => id)).toEqual(["a", "b"]);
   });
 
   test("C419: no jobs -> No equipment lists imported yet", () => {

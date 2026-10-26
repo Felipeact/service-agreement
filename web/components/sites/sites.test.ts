@@ -154,7 +154,8 @@ describe("record write controls on the site register", () => {
 
 describe("import entry point on the site register", () => {
   test("C401: a writer sees Import equipment list in the header", () => {
-    expect(siteAs("estimator", [asset()])).toMatch(/<a[^>]*href="\/sites\/s1\/import"[^>]*>Import equipment list<\/a>/);
+    const header = siteAs("estimator", [asset()]).match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
+    expect(header).toMatch(/<a[^>]*href="\/sites\/s1\/import"[^>]*>Import equipment list<\/a>/);
   });
 
   test("C424: a viewer has no link to the import page", () => {

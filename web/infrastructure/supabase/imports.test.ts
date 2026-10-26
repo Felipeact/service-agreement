@@ -110,6 +110,12 @@ describe("ImportJobStore.confirmUploaded", () => {
     expect(storageCalls(calls)).toHaveLength(0);
   });
 
+  test("C427: the compare-and-set matches no row and the job is gone -> not_found", async () => {
+    const { store: s } = store({ sequence: [ok([jobRow("uploading")]), ok([]), ok(null)] }, { info: { data: { size: 2048 }, error: null } });
+
+    expect(await s.confirmUploaded(JOB)).toEqual({ ok: false, code: "not_found" });
+  });
+
   test("C427: a job that is not readable -> not_found", async () => {
     const { store: s, calls } = store(ok(null));
 
