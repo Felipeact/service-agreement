@@ -178,6 +178,7 @@ describe("readImportAction", () => {
     ["parsed", { ok: true, outcome: { status: "parsed", tables: 1, rows: 48 } }, { status: "parsed", tables: 1, rows: 48 }, 1],
     ["unreadable", { ok: true, outcome: { status: "unreadable", reason: "no_table" } }, { status: "unreadable", reason: "no_table" }, 1],
     ["not_ready", { ok: false, code: "not_ready" }, { status: "not_ready" }, 0],
+    ["unavailable", { ok: false, code: "unavailable" }, { status: "unavailable" }, 0],
   ])("C498: %s passes through", async (_name, answer, state, refreshes) => {
     const { refresh } = await import("next/cache");
     container.readImport.mockResolvedValue(answer);

@@ -59,3 +59,6 @@ write(
 write("text-only.docx", [paragraph("Boiler room has two Lochinvar boilers"), paragraph("Rooftop has four RTUs")])
 
 write("blank.docx", [paragraph("   "), paragraph(" ")])
+
+# One 2-column table with a header and 2,001 data rows: one past the 2,000-row cap.
+write("big-table.docx", [table([["Unit", "Type"]] + [[f"VAV-{i}", "VAV box"] for i in range(1, 2002)])])

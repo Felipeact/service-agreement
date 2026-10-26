@@ -285,6 +285,8 @@ describe("reading a file", () => {
     );
     expect(out).toContain("48 rows in 1 table");
     expect(out).toContain("This document has no text.");
+    expect(out).toMatch(/<span data-tone="neutral"[^>]*>Read<\/span>/);
+    expect(out).toMatch(/<span data-tone="attention"[^>]*>Can't read<\/span>/);
     expect(out).not.toContain("Read file");
   });
 

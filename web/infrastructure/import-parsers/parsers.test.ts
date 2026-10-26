@@ -196,6 +196,9 @@ describe("files that cannot be read", () => {
     const data = xlsx({ name: "A", rows: [HEADER, ...dataRows(1000)] }, { name: "B", rows: [HEADER, ...dataRows(1001)] });
     expect(await readXlsx(data)).toEqual({ ok: false, reason: "too_many_rows" });
   });
+  test("C471: a Word table of 2,001 data rows is too_many_rows", async () => {
+    expect(await readDocx(fixture("big-table.docx"))).toEqual({ ok: false, reason: "too_many_rows" });
+  });
   test("C471: a sheet of 100,000 data rows is too_many_rows", async () => {
     expect(await readXlsx(xlsx({ name: "Big", rows: [HEADER, ...dataRows(100_000)] }))).toEqual({ ok: false, reason: "too_many_rows" });
   }, 30_000);
