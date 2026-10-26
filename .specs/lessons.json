@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 9,
+  "next_id": 11,
   "lessons": [
     {
       "id": "L-001",
@@ -148,6 +148,42 @@
       ],
       "created": "2026-10-26T21:19:40Z",
       "last_seen": "2026-10-26T21:19:40Z"
+    },
+    {
+      "id": "L-009",
+      "key": "ac_gap::when a check names several rendered parts for a role pill and line assert each part in that role s own render a writer view test does not prove the viewer view",
+      "text": "When a check names several rendered parts for a role (pill and line), assert each part in that role's own render; a writer-view test does not prove the viewer view.",
+      "signal": "ac_gap",
+      "scope": "components",
+      "status": "candidate",
+      "features": [
+        "import-parse"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/components/imports/imports.test.ts:287 (C484) (components)"
+      ],
+      "created": "2026-10-26T22:35:12Z",
+      "last_seen": "2026-10-26T22:35:12Z"
+    },
+    {
+      "id": "L-010",
+      "key": "spec_precision_gap::name the layer that owns each mapping in the claim action vs component and say in a live check whether server action responses aborted after a 200 are acceptable",
+      "text": "Name the layer that owns each mapping in the claim (action vs component), and say in a live check whether Server Action responses aborted after a 200 are acceptable.",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "import-parse"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C477, C499 (checks)"
+      ],
+      "created": "2026-10-26T22:35:12Z",
+      "last_seen": "2026-10-26T22:35:12Z"
     }
   ]
 }

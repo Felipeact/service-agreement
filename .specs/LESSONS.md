@@ -62,6 +62,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: checks.md C442 (live validation)
 - last seen: 2026-10-26T21:19:40Z
 
+### L-009 - When a check names several rendered parts for a role (pill and line), assert each part in that role's own render; a writer-view test does not prove the viewer view.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `components` · harmful: 0
+- features: import-parse
+- evidence: web/components/imports/imports.test.ts:287 (C484) (components)
+- last seen: 2026-10-26T22:35:12Z
+
+### L-010 - Name the layer that owns each mapping in the claim (action vs component), and say in a live check whether Server Action responses aborted after a 200 are acceptable.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: import-parse
+- evidence: C477, C499 (checks)
+- last seen: 2026-10-26T22:35:12Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

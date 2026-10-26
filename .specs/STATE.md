@@ -45,9 +45,9 @@
 ## Handoff
 
 **Feature**: import-parse (ROADMAP Phase 2 item 2)
-**Where**: built and live-validated (C499 passed at 1440/768/375, 2026-10-26); ROADMAP Phase 2 item 2 ticked; Verifier dispatched over `3895d37..HEAD`
-**In progress**: Verifier report `.specs/features/import-parse/verification.md`
-**Next step**: act on the Verifier's report; then ROADMAP Phase 2 item 3, Claude structured extraction and type normalization
+**Where**: import-parse done: Verifier PASS in round 2 at `5d574d3` (report `.specs/features/import-parse/verification.md`), `validate_verification.py` exit 0; ROADMAP Phase 2 item 2 ticked
+**In progress**: none
+**Next step**: (1) optional follow-ups from the Verifier: the ESLint-running tests in `boundaries.test.ts` (C487) and `domain/purity.test.ts` (C32) can pass 5 s under full-suite load (once in three runs), so give them a longer timeout; the uploader's `unavailable` -> `read_failed` mapping (`import-upload.tsx:102`) has no test; C488 asserts only `23514`; (2) ROADMAP Phase 2 item 3, Claude structured extraction and type normalization
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
