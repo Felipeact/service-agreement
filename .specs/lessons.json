@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 7,
+  "next_id": 9,
   "lessons": [
     {
       "id": "L-001",
@@ -112,6 +112,42 @@
       ],
       "created": "2026-10-26T19:27:11Z",
       "last_seen": "2026-10-26T19:27:11Z"
+    },
+    {
+      "id": "L-007",
+      "key": "spec_precision_gap::when a check names a server action s result write the action s own status tagged state not the store port s ok result it maps from",
+      "text": "When a check names a Server Action's result, write the action's own status-tagged state, not the store port's { ok } result it maps from.",
+      "signal": "spec_precision_gap",
+      "scope": "web/app server actions",
+      "status": "candidate",
+      "features": [
+        "import-upload"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C403 (web/app server actions)"
+      ],
+      "created": "2026-10-26T21:19:39Z",
+      "last_seen": "2026-10-26T21:19:39Z"
+    },
+    {
+      "id": "L-008",
+      "key": "spec_precision_gap::define a failed request as a 4xx 5xx answer or a network error in live checks next drops server action and rsc streams with net err aborted after a 200",
+      "text": "Define a failed request as a 4xx/5xx answer or a network error in live checks: Next drops Server Action and RSC streams with net::ERR_ABORTED after a 200.",
+      "signal": "spec_precision_gap",
+      "scope": "live validation",
+      "status": "candidate",
+      "features": [
+        "import-upload"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C442 (live validation)"
+      ],
+      "created": "2026-10-26T21:19:40Z",
+      "last_seen": "2026-10-26T21:19:40Z"
     }
   ]
 }

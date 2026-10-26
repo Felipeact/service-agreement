@@ -42,9 +42,9 @@
 ## Handoff
 
 **Feature**: import-upload (ROADMAP Phase 2 item 1)
-**Where**: built, committed and validated live at 375/768/1440 with touch; migration `20261026200326_import_upload` applied; ROADMAP Phase 2 item 1 ticked; Verifier dispatched over `0aec48f..HEAD`
+**Where**: import-upload done: Verifier PASS in round 3 at `f461e37` (report `.specs/features/import-upload/verification.md`), `validate_verification.py` exit 0; ROADMAP Phase 2 item 1 ticked
 **In progress**: none
-**Next step**: (1) read the import-upload Verifier report; (2) ROADMAP Phase 2 item 2, the parsers behind `AssetExtractor`
+**Next step**: (1) optional wording follow-ups from the Verifier: C442 should also name RSC GETs dropped after a 200, and C414 does not say whether the list must update without a reload; (2) ROADMAP Phase 2 item 2, the xlsx/csv, docx and pdf parsers behind `AssetExtractor`
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)

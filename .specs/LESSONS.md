@@ -50,6 +50,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C339 web/app/(app)/record-forms.test.ts:318 (app pages)
 - last seen: 2026-10-26T19:27:11Z
 
+### L-007 - When a check names a Server Action's result, write the action's own status-tagged state, not the store port's { ok } result it maps from.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `web/app server actions` · harmful: 0
+- features: import-upload
+- evidence: checks.md C403 (web/app server actions)
+- last seen: 2026-10-26T21:19:39Z
+
+### L-008 - Define a failed request as a 4xx/5xx answer or a network error in live checks: Next drops Server Action and RSC streams with net::ERR_ABORTED after a 200.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `live validation` · harmful: 0
+- features: import-upload
+- evidence: checks.md C442 (live validation)
+- last seen: 2026-10-26T21:19:40Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
