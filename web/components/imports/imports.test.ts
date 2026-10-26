@@ -90,7 +90,7 @@ describe("uploadFile", () => {
   test("C408: PUTs the bytes with the server's content type and x-upsert false, never File.type", async () => {
     const file = new File(["a,b"], "units.csv", { type: "application/vnd.ms-excel" });
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(null, { status: 200 }));
-    const start = vi.fn(async (_form: FormData) => started);
+    const start = vi.fn<(form: FormData) => Promise<typeof started>>(async () => started);
     const confirm = vi.fn(async () => ({ status: "uploaded" as const }));
 
     expect(await uploadFile(file, { start, confirm, fetch })).toEqual({ status: "uploaded" });
