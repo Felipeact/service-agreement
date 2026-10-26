@@ -101,7 +101,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Screens built to DESIGN.md: dashboard, customers, customer detail, site asset register, company settings
 - [x] Form control `Select`, built with the company settings form (`TextInput` and the field error state shipped with auth)
 - [x] Vitest unit tests, RLS isolation check, Playwright validation: `npm test`, `npm run test:db` (every SQL test, rolled back), security advisors clean apart from two accepted findings, and the signed-in journey validated live at 1440 and 375 px
-- [ ] Customer, site and asset forms: staff add and edit customers, contacts, sites and assets by hand (M3, M4 `source: manual`)
+- [x] Customer, site and asset forms: staff add and edit customers, contacts, sites and assets by hand (M3, M4 `source: manual`)
 
 ### Phase 2: Asset import
 - [ ] Upload to Storage and import jobs

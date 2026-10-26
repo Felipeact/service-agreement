@@ -173,7 +173,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
 
-- **2026-10-26:** Phase 1 customer, site and asset forms built ([.specs/features/record-forms/](.specs/features/record-forms/)): eight form pages, ten Server Actions, per-entity store ports (AD-028 to AD-030), `record_forms` SQL recipe (`npm run test:db` now runs 10). Live browser validation still pending.
+- **2026-10-26:** Phase 1 customer, site and asset forms built ([.specs/features/record-forms/](.specs/features/record-forms/)): eight form pages, ten Server Actions, per-entity store ports (AD-028 to AD-030), `record_forms` SQL recipe (`npm run test:db` now runs 10). Validated live as the demo owner at 375, 768 and 1440 px with touch.
 
 - **2026-10-26:** Phase 1 items 5 and 8 done. Live sign-in as the demo owner works end to end (custom SMTP, demo seed with owner); `getContainer()` awaits `connection()` (AD-027) to stop the prerender clock error on every `(app)` page. New Phase 1 item: customer, site and asset forms.
 

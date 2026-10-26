@@ -38,9 +38,9 @@
 ## Handoff
 
 **Feature**: record-forms
-**Where**: record-forms built at `459d218` (3 commits); every non-live proof green (568 Vitest tests, lint, `next build` with the 8 routes, `npm run test:db` 10/10). Not yet run: live journey C343 and the live half of C312
+**Where**: record-forms built and validated live (C343 at 375/768/1440 with touch, C312 live half); ROADMAP Phase 1 item ticked; Verifier dispatched
 **In progress**: none
-**Next step**: (1) user go-ahead for the live journey writing "Validation Test Co" to the live demo org and for the cleanup SQL; free the Playwright browser (another process holds its profile) and the dev server on :3000 (PID 15348, not started by this session); then C343, tick ROADMAP, dispatch the Verifier; (2) remaining staff-screens live proofs
+**Next step**: (1) read the record-forms Verifier report; (2) the live demo org still holds 3 "Validation Test Co" customers, each with one site, from the live journeys; the user declined the cleanup delete; (3) remaining staff-screens live proofs
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
