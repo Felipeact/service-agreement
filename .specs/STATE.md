@@ -35,9 +35,9 @@
 ## Handoff
 
 **Feature**: phase1-validation
-**Where**: built and committed; every C201-C222 proof run green (C219-C222 live on 2026-10-26 after the AD-027 fix); Verifier round 2 dispatched
+**Where**: phase1-validation done - Verifier round 3 PASS (22/22, validator exit 0); ROADMAP Phase 1 items 5 and 8 ticked
 **In progress**: none
-**Next step**: (1) Verifier round 2 on phase1-validation; (2) run the remaining staff-screens live proofs (C103, C105, C107, C109, and the search/clear/touch ones) signed in as the demo owner, then scoped re-verification of auth-magic-link (C8, C18, C21 settled live, C22, C23 via `npm run test:db demo_owner`) and staff-screens; (3) tick ROADMAP items 5 and 8; (4) decide the "Customer, site and asset forms" roadmap item
+**Next step**: (1) remaining staff-screens live proofs (C103, C105, C107, C109, search/clear/touch) as the demo owner, then scoped re-verification of auth-magic-link and staff-screens; (2) plan the new Phase 1 item "Customer, site and asset forms"
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
