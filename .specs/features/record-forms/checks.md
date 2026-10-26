@@ -431,3 +431,7 @@ Proof: `npx vitest run components/customers components/sites -t "C348:"`
 - S1-S5 plus doors: about 108k tokens in total, under the 150k budget, so one builder.
 - Live proofs (C312 live half, C343) write to the live demo org. Removing "Validation Test Co"
   and "Validation Site" afterwards needs the user's go-ahead.
+
+- **Boundary:** C301-C311, C313-C342, C345-C348 closed at `459d218` (one builder). C344 partly: AD-028 to AD-030 and `CONTEXT.md` in the docs commit; the ROADMAP tick waits for C343. Not run: C343 and the live half of C312, because live writes to the demo org need the user's go-ahead, the Playwright browser profile is held by another process, and a dev server not started by this session holds :3000
+- **Settled mid-build:** phase1-validation's pinned recipe list and counts (C201, C203-C205, C210-C212) extended from 9 recipes / 11 files to 10 / 12, approved by the user; `cancelHrefFor` added so C339 is provable at the component layer; the three views take an optional `role` (absent means read-only), and the list, detail and site pages now read `currentMember()`; `screens.test.ts` sets a member in `beforeEach` for that; the delete actions take only the bound id
+- **Abandoned:** nothing

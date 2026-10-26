@@ -39,22 +39,26 @@ Other sources:
 ### Customer (M3)
 **What it is:** the client company that owns the equipment and receives the service agreement, for example a property-management firm.
 **What we built:** table `customers` (per org). The demo org has 12 customers, each with one contact (`@example.com` email) and one site.
-- **Screens:** `/customers` lists customers by name with the primary contact (the earliest-created contact), site count and asset count, and a search. `/customers/[customerId]` shows contacts, sites and the customer's agreements. Both are read-only (no screen creates customers yet). Code: [web/components/customers/](web/components/customers/).
+- **Screens:** `/customers` lists customers by name with the primary contact (the earliest-created contact), site count and asset count, and a search. `/customers/[customerId]` shows contacts, sites and the customer's agreements. Code: [web/components/customers/](web/components/customers/).
+- **Forms (record-forms):** owners, admins and estimators get "New customer" on `/customers`, and "Edit", "Add contact" and "Add site" on a customer. Create pages nest under the parent (`/customers/new`, `/customers/[id]/contacts/new`, `/customers/[id]/sites/new`); edit pages are flat (`/customers/[id]/edit`, `/contacts/[id]/edit`) (AD-028). Viewers see no write controls, and a form route shows them "Only owners, admins and estimators can change customer records." Each form posts to a Server Action in [web/app/(app)/record-actions.ts](web/app/(app)/record-actions.ts): it refuses viewers, validates with [web/domain/records](web/domain/records/index.ts), then writes through a per-entity store port ([web/infrastructure/supabase/records.ts](web/infrastructure/supabase/records.ts), AD-029) and redirects to the record. Customers cannot be deleted. Field bounds: names 1-120, addresses 300, phone 40. Last write wins. Spec: [.specs/features/record-forms/](.specs/features/record-forms/).
 
 ### Contact / site contact (M3)
 **What it is:** the person at the customer, usually a facility or property manager, who reviews the agreement through the portal and signs the contract. Their email approval counts as written approval. They are non-technical and use the portal rarely.
 **What we built:** table `contacts`, belonging to a customer. A site's `site_contact_id` must name a contact of that site's customer, enforced by the composite FK `(site_contact_id, customer_id)`.
+- **Forms:** add and edit contacts (name, optional email and phone). A contact can be deleted from its edit page after a confirm prompt; a contact that is some site's contact is refused (FK `23503`, AD-030).
 
 ### Site (M3)
 **What it is:** a physical address belonging to a customer, where the equipment is installed. A customer can have several sites.
 **What we built:** table `sites`, belonging to a customer, with an optional site contact. A site that has an agreement cannot be deleted.
-- **Screen:** `/sites/[siteId]` ([web/app/(app)/sites/[siteId]/](web/app/(app)/sites/[siteId]/)) is the equipment register: assets grouped by asset type (ordered by type name, rows by unit with numbers compared as numbers), a search, and a link back to the customer. Read-only.
+- **Screen:** `/sites/[siteId]` ([web/app/(app)/sites/[siteId]/](web/app/(app)/sites/[siteId]/)) is the equipment register: assets grouped by asset type (ordered by type name, rows by unit with numbers compared as numbers), a search, and a link back to the customer. Writers get "Edit site", "Add asset" and per-asset "Edit".
+- **Forms:** add a site to a customer (`/customers/[id]/sites/new`) and edit it (`/sites/[id]/edit`): name, address and a site contact chosen only from that customer's contacts. The customer never changes. Sites cannot be deleted (agreements hang off them).
 
 ### Asset and asset type (M4)
 **What it is:** one piece of equipment at a site. Fields: asset type, unit #, type/model, location/access, and source (manual or import). The asset type comes from a catalog of about 40 equipment types, for example RTU (rooftop unit) and MUA (make-up air unit).
 **What we built:** tables `asset_types` (catalog per org, `unique (org_id, code)`) and `assets` (per site, `source` is `manual` or `import`).
 - **Codes:** an asset type code must match `^[A-Z][A-Z0-9_]*$`, for example `RTU`, `MUA` or `HWT_HIGH_EFFICIENCY` (check `asset_types_code_format`). Phase 2 synonyms map onto these codes.
 - **Demo assets:** 57 assets across the 12 demo sites, using 27 of the 40 types, all `source = 'manual'`.
+- **Forms:** `/sites/[id]/assets/new` and `/assets/[id]/edit`: equipment type (the org's `asset_types`, shown as `Name (CODE)`), unit #, type/model, location/access. New assets get `source = 'manual'`; an edit keeps `source`. An asset can be deleted after a confirm prompt (hard delete, AD-030). With an empty catalog the add page says "Your equipment catalog is empty."
 
 ### Asset import (M5)
 **What it is:** turning a customer's messy equipment list (xlsx, csv, docx or pdf) into assets. The steps are upload, parse by format, extract with Claude structured output, normalize types with a synonym table (for example "Rooftop unit" → RTU), review in a grid, then commit. Uncertain rows are flagged, never hidden. Extraction sits behind the `AssetExtractor` port.
@@ -157,7 +161,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## How to run the tests
 
 - **Unit tests:** `npm test` in `web/` (Vitest, `*.test.ts` beside the code, AD-013). No network.
-- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 9 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
+- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 10 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
 - **Web validation:** live, in a real browser through the Playwright MCP, as AGENTS..md describes (375, 768 and 1440 px, touch, console and network). Not committed.
 - **Security advisors** (Supabase MCP `get_advisors`, type `security`) report two accepted findings, and any other finding is a bug:
   - `rls_enabled_no_policy` on `public.outbox`: on purpose. No user role may read or write the outbox; only `private.enqueue_outbox` writes it (AD-016).
@@ -168,6 +172,8 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-26:** Phase 1 customer, site and asset forms built ([.specs/features/record-forms/](.specs/features/record-forms/)): eight form pages, ten Server Actions, per-entity store ports (AD-028 to AD-030), `record_forms` SQL recipe (`npm run test:db` now runs 10). Live browser validation still pending.
 
 - **2026-10-26:** Phase 1 items 5 and 8 done. Live sign-in as the demo owner works end to end (custom SMTP, demo seed with owner); `getContainer()` awaits `connection()` (AD-027) to stop the prerender clock error on every `(app)` page. New Phase 1 item: customer, site and asset forms.
 
