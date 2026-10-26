@@ -1,7 +1,7 @@
 -- staff-screens: C101 (isolation of the reader shapes) and C120 (the demo agreements).
 -- Run as one execute_sql call: fixture.sql, then this file with the line SEED_BODY below replaced by the body of
--- supabase/seed.sql (the file without its `begin;` and `commit;` lines). The starting state is the fixture's:
--- no demo org, so the first run really inserts. Ends in rollback and returns `staff_screens: pass`.
+-- supabase/seed.sql (the file without its `begin;` and `commit;` lines). Any existing demo org is deleted first, so
+-- the first run really inserts. Ends in rollback and returns `staff_screens: pass`.
 
 create function tests.demo() returns uuid
 language sql immutable as $$ select '00000000-0000-4000-8000-00000000de30'::uuid $$;
@@ -40,7 +40,9 @@ language sql as $$
   where a.org_id = tests.demo() and tests.stage(a.status, c.status) = p_stage
 $$;
 
--- C120: first run, from the fixture state.
+-- C120: first run, from the fixture state. On the live project the demo org already exists, so remove it inside
+-- this transaction (every tenant table cascades from orgs, AD-003); the rollback at the end restores it.
+delete from public.orgs where id = tests.demo();
 do $$ begin
   perform tests.ok('C120 start', (select count(*) from public.orgs where id = tests.demo()) = 0, 'the demo org already exists');
 end $$;
@@ -92,7 +94,7 @@ end $$;
 
 -- C101: a member of another org reads none of the demo data through the shapes the readers use;
 -- a member of the demo org reads it (positive control).
-insert into public.orgs (id, name) values (tests.id('orgB'), 'Other contractor');
+-- orgB comes from fixture.sql.
 insert into auth.users (id, email, aud, role) values
   (tests.id('userB'), 'b@example.test', 'authenticated', 'authenticated'),
   (tests.id('userDemo'), 'demo@example.test', 'authenticated', 'authenticated');

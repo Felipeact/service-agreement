@@ -34,10 +34,10 @@
 ## Handoff
 
 **Feature**: phase1-validation
-**Where**: S1 built and committed; vitest C201-C214 and C218 green, `npm run test:db nope` exits 2; C217 (advisors) run 2026-10-26, exactly the two accepted lints
+**Where**: built and committed; C201-C218 green, C215/C216 run against the live project 2026-10-26 (9/9 twice, 4/4); first Verifier round FAIL only on blocked proofs
 **In progress**: none
-**Next step**: (1) user puts `SUPABASE_DB_URL` in `web/.env.local` and says go -> run C215, C216; (2) user invites their email and says go on running `seed.sql` with `app.demo_owner_email` -> live C219-C222 plus auth-magic-link C8, C18, C21-C23 and the 12 staff-screens live/seed proofs (the seed proofs now run as `npm run test:db demo_owner staff_screens`); (3) scoped re-verification of both earlier features; (4) tick ROADMAP items 5 and 8; (5) decide the "Customer, site and asset forms" roadmap item
-**Blockers**: open questions 1 and 2 of the plan (user actions)
+**Next step**: (1) user invites their email and says go on running `seed.sql` with `app.demo_owner_email` -> live C219-C222 plus auth-magic-link C8, C18, C21 and the staff-screens live proofs (C101 SQL half, C120, C22, C23 already green via `npm run test:db`); (2) scoped re-verification of phase1-validation, auth-magic-link and staff-screens; (3) tick ROADMAP items 5 and 8; (4) decide the "Customer, site and asset forms" roadmap item
+**Blockers**: the demo owner (plan open question 1)
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`

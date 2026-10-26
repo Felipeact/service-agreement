@@ -178,5 +178,7 @@ Proof: live - `browser_click` "Sign out", then `browser_navigate` to `/pipeline`
   staff-screens (12), re-verify both scoped, then tick the ROADMAP auth item and this item
 
 - **Boundary:** C201-C214 and C218 closed in the feature commit (vitest 25/25, plus `npm run test:db nope` exit 2); C217 run on 2026-10-26 (two lints, both accepted). Open: C215, C216 need `SUPABASE_DB_URL` (open question 2); C219-C222 need the demo owner (open question 1)
-- **Settled mid-build:** `tsconfig.json` gains `allowImportingTsExtensions` so Vitest and `tsc` accept the `./runner.mts` import Node needs; files are CRLF on this machine, so `SEED_BODY` matching ignores a trailing ``
+- **Settled mid-build:** `tsconfig.json` gains `allowImportingTsExtensions` so Vitest and `tsc` accept the `./runner.mts` import Node needs; files are CRLF on this machine, so `SEED_BODY` matching ignores a trailing `
+`
 - **Abandoned:** a test-only `onRecipe` hook on `SuiteIO` - the fake derives the recipe order from argv instead
+- **Boundary:** C215 (9/9, two runs) and C216 (4/4) green against the live project on 2026-10-26. The first run failed `staff_screens`: its start guard assumed no demo org (live has one) and it re-inserted the fixture's `orgB`. `supabase/tests/staff_screens.sql` now deletes the demo org inside its transaction and reuses the fixture's `orgB`; no assertion changed. The same runs settle staff-screens C101 (SQL half), C120 and auth-magic-link C22, C23. Open: C219-C222 (demo owner)
