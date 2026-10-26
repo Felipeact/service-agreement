@@ -390,3 +390,9 @@ Proof: mcp - `execute_sql` counting the demo org's `import_jobs` and `storage.ob
   - `recordRead` answers `forbidden` when the compare-and-set wrote nothing and the job is still `uploaded` (RLS refused the update); the action already refuses viewers before it.
   - `database.types.ts` was edited by hand before the migration, then compared with `generate_typescript_types` after it: the `import_jobs` columns match.
 - **Abandoned:** none.
+- **Boundary (live):** C499 and C497's ROADMAP proof closed in the commit after `7899ae9`, signed in again as the demo owner with a fresh link (the first scripted run had clicked the shell's Sign out button through a bare `form button[type="submit"]` selector; no email went out, no job was created), on "Brookhaven Community Centre".
+  - 1440x900, 768x1024, 375x812: `units.xlsx` -> "Read · 5 rows in 1 table", `units.csv` (`;`) -> "3 rows in 1 table", `units.docx` -> "4 rows in 1 table", `units.pdf` -> "PDF, read at extraction", `notes.pdf` (text) -> "Can't read · This file is damaged or isn't the format its name says."; the button went "Uploading…" > "Reading…" > "Upload" for every file; no horizontal scroll.
+  - Touch targets at 768 and 375: back link 713x44 / 328x44, picker 542x44 / 294x44, Upload 73x44, Discard 78x44.
+  - Console: no error or warning. Network: no 4xx/5xx and no failed non-POST request; Server Action POSTs answered 200.
+  - Fixed during the run: the first pass logged two aborted RSC GETs per five uploads, because `readImportAction` refreshes and the uploader then called `router.refresh()` again; the uploader now refreshes only when no read ran. Re-run clean at all three sizes.
+  - Cleanup: every upload discarded through the UI; SQL afterwards shows 0 `import_jobs` for the demo org and 0 objects in `imports`.

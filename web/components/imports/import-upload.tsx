@@ -107,8 +107,9 @@ export function ImportUploader({ start, confirm, read }: UploaderProps) {
           formRef.current?.reset();
           setFile(null);
         }
-        // The job list re-reads either way: a failed upload leaves its job "Upload not finished".
-        router.refresh();
+        // readImportAction refreshes the page after a read; otherwise the list re-reads here, since a failed upload
+        // leaves its job "Upload not finished". Refreshing twice would cut off the first refresh's request.
+        if (result.status !== "parsed" && result.status !== "unreadable") router.refresh();
       });
     });
   }

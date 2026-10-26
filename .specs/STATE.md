@@ -45,10 +45,10 @@
 ## Handoff
 
 **Feature**: import-parse (ROADMAP Phase 2 item 2)
-**Where**: built at `8d1ca2d` plus the migration/docs commit; migration `import_parse` applied (version `20261026220638`, user go-ahead 2026-10-26); `npm test`, `npm run lint`, `npx next build`, `npm run test:db` (12 recipes) green; advisors at the two accepted findings
-**In progress**: C499 (live journey) not run: the Playwright MCP Chrome profile is held by another Playwright MCP session; ROADMAP Phase 2 item 2 stays unticked until C499 passes; then the Verifier
-**Next step**: free the Playwright browser, run C499 at 1440/768/375 on Brookhaven Community Centre (files in the session scratchpad `live/`), tick ROADMAP, dispatch the Verifier
-**Blockers**: Playwright MCP browser in use by another session
+**Where**: built and live-validated (C499 passed at 1440/768/375, 2026-10-26); ROADMAP Phase 2 item 2 ticked; Verifier dispatched over `3895d37..HEAD`
+**In progress**: Verifier report `.specs/features/import-parse/verification.md`
+**Next step**: act on the Verifier's report; then ROADMAP Phase 2 item 3, Claude structured extraction and type normalization
+**Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
