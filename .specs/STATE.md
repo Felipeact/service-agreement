@@ -42,10 +42,10 @@
 ## Handoff
 
 **Feature**: import-upload (ROADMAP Phase 2 item 1)
-**Where**: plan, checks and code committed; migration `20261026200326_import_upload` applied to the live project; `npm test`, `npm run test:db` (11 recipes), lint, tsc, `next build` and the security advisors green
-**In progress**: live browser proofs C414, C442, C443
-**Next step**: (1) run the live journey once the Playwright profile is free; (2) tick ROADMAP Phase 2 item 1; (3) dispatch the Verifier over `0aec48f..HEAD`
-**Blockers**: the Playwright MCP Chrome profile is held by another Playwright MCP server (node started 11:25)
+**Where**: built, committed and validated live at 375/768/1440 with touch; migration `20261026200326_import_upload` applied; ROADMAP Phase 2 item 1 ticked; Verifier dispatched over `0aec48f..HEAD`
+**In progress**: none
+**Next step**: (1) read the import-upload Verifier report; (2) ROADMAP Phase 2 item 2, the parsers behind `AssetExtractor`
+**Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`

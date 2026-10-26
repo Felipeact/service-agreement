@@ -104,7 +104,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Customer, site and asset forms: staff add and edit customers, contacts, sites and assets by hand (M3, M4 `source: manual`)
 
 ### Phase 2: Asset import
-- [ ] Upload to Storage and import jobs
+- [x] Upload to Storage and import jobs
 - [ ] xlsx/csv, docx and pdf parsers behind `AssetExtractor`
 - [ ] Claude structured extraction and type normalization
 - [ ] Review grid and commit
