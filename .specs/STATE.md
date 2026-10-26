@@ -43,8 +43,8 @@
 
 **Feature**: import-upload (ROADMAP Phase 2 item 1)
 **Where**: import-upload done: Verifier PASS in round 3 at `f461e37` (report `.specs/features/import-upload/verification.md`), `validate_verification.py` exit 0; ROADMAP Phase 2 item 1 ticked
-**In progress**: none
-**Next step**: (1) optional wording follow-ups from the Verifier: C442 should also name RSC GETs dropped after a 200, and C414 does not say whether the list must update without a reload; (2) ROADMAP Phase 2 item 2, the xlsx/csv, docx and pdf parsers behind `AssetExtractor`
+**In progress**: import-parse (ROADMAP Phase 2 item 2): plan `.specs/features/import-parse/plan.md` written, `validate_plan.py` exit 0, awaiting user review; no checks, no code
+**Next step**: (1) user reviews the import-parse plan, then write `checks.md`; (2) optional wording follow-ups from the import-upload Verifier: C442 should also name RSC GETs dropped after a 200, and C414 does not say whether the list must update without a reload
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
