@@ -40,6 +40,9 @@ describe("test:db wiring", () => {
     expect(section).toBeDefined();
     expect(section).toContain("npm test");
     expect(section).toContain("npm run test:db");
-    expect(section).toMatch(/Playwright/);
+    expect(section).toMatch(/Playwright MCP/);
+    for (const width of ["375", "768", "1440"]) expect(section).toContain(width);
+    expect(section).toMatch(/touch/);
+    expect(section).toMatch(/console/);
   });
 });

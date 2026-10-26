@@ -152,6 +152,9 @@ describe("test:db runner", () => {
   test("C206: demo_seed passes on demo_seed: pass, and a single result object is read too", async () => {
     const f = fake({ argv: ["demo_seed"], reply: () => [{ rows: [{ result: "demo_seed: pass" }] }] });
     expect(await runSuite(f.io)).toBe(0);
+    const rerun = fake({ argv: ["demo_seed"], reply: () => [{ rows: [{ result: "demo_seed_rerun: pass" }] }] });
+    expect(await runSuite(rerun.io)).toBe(1);
+    expect(rerun.out[0]).toMatch(/^FAIL demo_seed: /);
     const single = fake({ argv: ["rls_roles"] });
     single.io.connect = async () => ({
       query: async () => ({ rows: [{ result: "rls_roles: pass" }] }),
