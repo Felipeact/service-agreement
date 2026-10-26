@@ -382,3 +382,11 @@ Proof: mcp - `execute_sql` counting the demo org's `import_jobs` and `storage.ob
   C204 (11 recipes) and the SQL-file counts become 12 and 14. Each still asserts an exact value.
 
 - Mechanism: one builder (estimate under budget, no ask).
+- **Boundary:** C451-C498 closed at `8d1ca2d` plus the migration and docs commit after it (one builder). Not run: C499 (live), because the Playwright MCP Chrome profile is held by another Playwright MCP session; the ROADMAP proof of C497 waits for it.
+- **Settled mid-build:**
+  - The migration was applied to the live project with the user's go-ahead (2026-10-26), version `20261026220638`; `npm run test:db` 12 passed; `get_advisors` security returned exactly `rls_enabled_no_policy` on `public.outbox` and `auth_leaked_password_protection` (C496).
+  - Earlier exact pins changed because this feature adds a recipe and a field: runner tests C201, C203-C205, C210-C212 now expect 12 recipes and 14 SQL files; import-upload's C410 reader test now expects `outcome: null` on the view; import-upload's C408 test gives `uploadFile` a `read` dependency and expects the read's state, because AC 1 moves the end of the upload sequence to the read; the C412 and C416 tests also pass `read` and assert it is never called. Each still asserts an exact value.
+  - C455's number and date cases first used text-only data rows, which are valid headers themselves; their data rows now carry a number each, so the case row is the only header candidate. The claim and its expectation are unchanged.
+  - `recordRead` answers `forbidden` when the compare-and-set wrote nothing and the job is still `uploaded` (RLS refused the update); the action already refuses viewers before it.
+  - `database.types.ts` was edited by hand before the migration, then compared with `generate_typescript_types` after it: the `import_jobs` columns match.
+- **Abandoned:** none.
