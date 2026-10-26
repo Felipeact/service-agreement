@@ -6,6 +6,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({
   cookies: async () => ({ getAll: () => [], set: () => {} }),
 }));
+vi.mock("next/server", () => ({ connection: async () => {} }));
 
 const URL_KEY = "NEXT_PUBLIC_SUPABASE_URL";
 const PUBLISHABLE_KEY = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY";

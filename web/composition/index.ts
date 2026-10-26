@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import { makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
@@ -23,6 +24,9 @@ export async function getContainer() {
   // Literal process.env reads, so Next inlines the NEXT_PUBLIC_ values.
   const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
   const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  // Request time only: the Supabase client reads the clock (token expiry), which a prerender or a runtime
+  // prefetch must not do (blocking-prerender-current-time).
+  await connection();
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(url, key, {
