@@ -9,6 +9,7 @@ import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { importParser } from "@/infrastructure/import-parsers";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
+import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
@@ -105,6 +106,10 @@ export async function getContainer() {
     skipImportRow: importRows.setSkipped,
     mapImportType: importRows.mapType,
     commitImport: importJobs.commit,
+    // Agreements and their lines are read and written as the member, from the same client (AC 29).
+    agreementReader: supabaseAgreementReader(supabase),
+    agreementStore: supabaseAgreementStore(supabase),
+    serviceLineStore: supabaseServiceLineStore(supabase),
     clock: systemClock,
   };
 }

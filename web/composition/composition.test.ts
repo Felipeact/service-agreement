@@ -1,6 +1,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type {
+  AddServiceLineResult,
+  AgreementDetail,
+  AgreementReader,
+  AgreementStore,
+  CreateAgreementResult,
+  ServiceLineStore,
+  ServiceLineWriteResult,
+  SiteView,
+} from "@/application/ports";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({
@@ -199,5 +209,66 @@ describe("composition root", () => {
     const row = ports.match(/export type ImportRowView = \{([\s\S]*?)\r?\n\};/)?.[1] ?? "";
     for (const field of ["skipped:", "assetId:"]) expect(row).toContain(field);
     expect(ports.match(/export type ImportJobStatus =([^;]*);/)?.[1] ?? "").toContain('"committed"');
+  });
+
+  test("C749: getContainer() exposes agreementReader, agreementStore and serviceLineStore", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.agreementReader.get).toBe("function");
+    expect(typeof container.agreementStore.create).toBe("function");
+    for (const method of ["add", "update", "remove"] as const) expect(typeof container.serviceLineStore[method], method).toBe("function");
+  });
+
+  test("C745: the agreement adapters are built from the request's one member client", () => {
+    const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
+    expect(source).toMatch(/agreementReader: supabaseAgreementReader\(supabase\),/);
+    expect(source).toMatch(/agreementStore: supabaseAgreementStore\(supabase\),/);
+    expect(source).toMatch(/serviceLineStore: supabaseServiceLineStore\(supabase\),/);
+    expect(source.match(/createServerClient</g)).toHaveLength(1);
+  });
+
+  test("C748: door 7's literal result shapes are assignable to the ports", async () => {
+    const detail: AgreementDetail = {
+      id: "g1",
+      number: "AG-1052",
+      status: "draft",
+      stage: "in_progress",
+      site: { id: "s1", name: "Site" },
+      customer: { id: "c1", name: "Customer" },
+      versions: [{ versionNo: 1, createdAt: new Date(0) }],
+      shown: {
+        versionNo: 1,
+        current: true,
+        lines: [{ id: "l1", position: 0, description: "PM", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000 }],
+        annualCents: 357000,
+      },
+      editable: true,
+    };
+    const reader: AgreementReader = { get: async () => detail };
+    const created: CreateAgreementResult[] = [
+      { ok: true, id: "g1" },
+      { ok: false, code: "forbidden" },
+      { ok: false, code: "not_found" },
+      { ok: false, code: "unavailable" },
+      { ok: false, code: "open_exists", agreementId: "g0", number: "AG-1048" },
+    ];
+    const store: AgreementStore = { create: async () => created[0] };
+    const added: AddServiceLineResult[] = [{ ok: true, id: "l1" }, { ok: false, code: "locked" }, { ok: false, code: "too_many" }];
+    const written: ServiceLineWriteResult[] = [{ ok: true }, { ok: false, code: "locked" }, { ok: false, code: "not_found" }];
+    const lines: ServiceLineStore = { add: async () => added[0], update: async () => written[0], remove: async () => written[0] };
+    const live: SiteView["liveAgreement"][] = [{ id: "g1", number: "AG-1048", status: "sent" }, null];
+    expect(await reader.get("g1")).toBe(detail);
+    expect(await store.create("s1")).toEqual({ ok: true, id: "g1" });
+    expect(await lines.add("g1", { description: "PM", visitsPerYear: 4, costPerVisitCents: 0 })).toEqual({ ok: true, id: "l1" });
+    expect(live).toHaveLength(2);
+
+    const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
+    const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
+    expect(body("AgreementReader")).toContain("get(id: string, versionNo?: number): Promise<AgreementDetail | null>");
+    expect(body("AgreementStore")).toContain("create(siteId: string): Promise<CreateAgreementResult>");
+    for (const method of ["add(agreementId: string, value: ServiceLineValue)", "update(lineId: string, value: ServiceLineValue)", "remove(lineId: string)"]) {
+      expect(body("ServiceLineStore")).toContain(method);
+    }
   });
 });

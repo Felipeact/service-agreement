@@ -171,3 +171,35 @@ describe("import entry point on the site register", () => {
     expect(out).toMatch(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/);
   });
 });
+
+describe("the site's agreement", () => {
+  const newAgreement = async () => ({ status: "idle" }) as const;
+  const render = (role: MemberRole, liveAgreement: SiteView["liveAgreement"]) =>
+    html(createElement(SiteRegisterView, { site: { ...site([]), liveAgreement }, role, newAgreement }));
+
+  test("C701: a writer sees a New agreement submit button while the site has no live agreement; a viewer does not", () => {
+    const writer = render("estimator", null);
+    expect(writer).toMatch(/<form[^>]*>\s*<button type="submit"[^>]*>New agreement<\/button>\s*<\/form>/);
+    const viewer = render("viewer", null);
+    expect(viewer).not.toContain("New agreement");
+  });
+
+  test.each<[SiteView["liveAgreement"] & object, string]>([
+    [{ id: "g1", number: "AG-1048", status: "draft" }, "AG-1048 · In progress"],
+    [{ id: "g1", number: "AG-1048", status: "sent" }, "AG-1048 · Sent to customer"],
+    [{ id: "g1", number: "AG-1048", status: "changes_requested" }, "AG-1048 · In progress"],
+  ])("C702: a live %o shows every member the link %j and no New agreement", (live, text) => {
+    for (const role of ["estimator", "viewer"] as const) {
+      const out = render(role, live);
+      expect(out, role).toMatch(new RegExp(`<a[^>]*href="/agreements/g1"[^>]*>${text}</a>`));
+      expect(out, role).not.toContain("New agreement");
+    }
+  });
+
+  test("C711: open_exists names the live agreement with a link to it", async () => {
+    const { NewAgreementPrompt } = await import("./new-agreement");
+    const out = html(createElement(NewAgreementPrompt, { state: { status: "open_exists", agreementId: "g9", number: "AG-1048" }, pending: false }));
+    expect(out).toContain("AG-1048 is already in progress for this site.");
+    expect(out).toMatch(/<a[^>]*href="\/agreements\/g9"/);
+  });
+});

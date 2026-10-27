@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { MemberRole, SiteView } from "@/application/ports";
+import type { CreateAgreementState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,9 @@ import { EmptyPanel } from "@/components/ui/empty-panel";
 import { LinkButton } from "@/components/ui/link-button";
 import { SearchInput } from "@/components/ui/search-input";
 import { StatusPill } from "@/components/ui/status-pill";
+import { statusLabel } from "@/domain/agreement";
 import { filterAssets, groupAssets } from "./assets";
+import { NewAgreementControl } from "./new-agreement";
 
 const value = (text: string | null) => text ?? "-";
 
@@ -19,10 +22,12 @@ type SiteRegisterViewProps = {
   initialQuery?: string;
   /** Decides whether the edit and add controls show; without a role the register is read-only. */
   role?: MemberRole;
+  /** `createAgreementAction` bound to this site; shown to writers while the site has no live agreement. */
+  newAgreement?: () => Promise<CreateAgreementState>;
 };
 
 /** The site page body: who and where, then the equipment grouped by type. */
-export function SiteRegisterView({ site, initialQuery = "", role }: SiteRegisterViewProps) {
+export function SiteRegisterView({ site, initialQuery = "", role, newAgreement }: SiteRegisterViewProps) {
   const [query, setQuery] = useState(initialQuery);
   const searchRef = useRef<HTMLInputElement>(null);
   const groups = groupAssets(filterAssets(site.assets, query));
@@ -73,6 +78,16 @@ export function SiteRegisterView({ site, initialQuery = "", role }: SiteRegister
         <p className="text-[13px] text-ink-2">
           {value(site.address)} · Site contact: {value(site.contactName)}
         </p>
+        {site.liveAgreement ? (
+          <p className="text-[13px] text-ink-2">
+            Agreement:{" "}
+            <Link href={`/agreements/${site.liveAgreement.id}`} className="inline-flex min-h-11 items-center font-semibold text-action lg:min-h-0">
+              {`${site.liveAgreement.number} · ${statusLabel(site.liveAgreement.status)}`}
+            </Link>
+          </p>
+        ) : (
+          canWrite && newAgreement && <NewAgreementControl action={newAgreement} />
+        )}
       </div>
 
       {total === 0 ? (
