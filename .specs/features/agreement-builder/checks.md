@@ -530,3 +530,52 @@ table and the trigger are proven only by the live run that crosses three of thei
   another role's temp table; it is `tests.ab_rev_v1` now); reading `old`/`new` in one `union all` inside the trigger
   (replaced by explicit `tg_op` branches); asserting "no service_role" inside `composition.test.ts` (the line itself
   made the C745 grep count 1).
+- **Boundary (batch 2):** at `34fdfdb` (code) plus the docs commit that carries this line, the proofs of C746, C747,
+  C750, C752-C757 pass, and so does every batch 1 proof: `npm test` 54 files / 1227 tests, `npm run lint` exit 0,
+  `npx tsc --noEmit` exit 0, `npx next build` exit 0 (`/agreements/[agreementId]` partial prerender, AD-022),
+  `npm run test:db` 15 passed / 0 failed against the migrated project (`agreement_builder: pass`, `demo_seed` with the
+  trigger in place). C757 greps: CONTEXT.md prints 6, ROADMAP.md prints 1, STATE.md has AD-051 to AD-057. Two older
+  lint-driven tests (`boundaries.test.ts` C539, `domain/purity.test.ts` C32) timed out at 5 s in two of five full runs
+  under 54 parallel workers and pass alone (~1.3 s for ESLint's cold start); the recorded 1227 is a full green run, and
+  the tests are unchanged.
+- **MCP results (2026-10-27, `gnxebrtcpbujhvcamtoe`):** `list_migrations` before: 7 migrations, no `agreement_builder`.
+  `apply_migration` name `agreement_builder` with the file's content: success; `list_migrations` after reports
+  `20261027202354 agreement_builder`, and the file is now `supabase/migrations/20261027202354_agreement_builder.sql`
+  (C752; no code referenced the placeholder name). `get_advisors` security: exactly `rls_enabled_no_policy` on
+  `public.outbox` and `auth_leaked_password_protection` (C754). `generate_typescript_types` diffed with
+  `database.types.ts`: no type differed; the file had two ordering differences left by earlier hand edits
+  (`import_rows.asset_id` placed after `asset_type_raw`, and `apply_contract_transition` last in `Functions`), so the
+  file was replaced by the generator output and now equals it byte for byte, header included (C753).
+- **Live run (C756, 2026-10-27, demo owner, one Playwright context, `npm run dev`):** pages `/pipeline`,
+  `/customers/<Fernwood Dental>`, `/sites/<Fernwood Dental>` (live link) and `/sites/<Saltmarsh Bakery>` (New agreement,
+  not pressed), `/agreements/<AG-1052>`, `/agreements/<AG-1048>`, `?version=1`; widths 1440x900, 768x1024, 375x812.
+  Steps: Fernwood Dental (agreement AG-1029 refused, no live one) "New agreement" opened
+  `/agreements/577e841b-504c-4938-b296-dad72a58cf0e` showing `AG-1052`, `In progress`, `Version 1`, the add form
+  pre-filled "Preventive maintenance visit", 4; adding that line at `$892.50` and "Filter changes", 2, `$150` showed
+  $3,570.00, $300.00 and `Total per year $3,870.00`; `/pipeline` listed AG-1052 in "In progress" with `$3,870/yr`, and
+  its card opened the agreement; AG-1048's card opened it with "Start version 2", which landed on `Version 2` with the
+  copied line ($3,570.00 x 4 = $14,280.00) editable and Withdraw; `?version=1` showed "Version 1 of 2, read-only" with
+  the same line and total and no line controls. Remove asked "Remove Filter changes?" and Withdraw asked "Withdraw
+  AG-1052? It leaves the pipeline and frees the site for a new agreement."; both were cancelled, so nothing was removed
+  or withdrawn. Touch (CDP touch emulation in the same page, `maxTouchPoints` 5, taps sent as `Input.dispatchTouchEvent`)
+  at 768 and 375: the In progress tab (375), the AG-1052 card, line Edit (opens with `150.00`) and Cancel, Remove and
+  Cancel, Withdraw and Cancel, the Version 1 link, the customer's agreement row, the site's `AG-1052 · In progress`
+  link; each responded, none needs hover. Measured on every page and open state: horizontal overflow 0 at all three
+  widths; no target under 44x44 at 768 and 375 after the fixes ("New agreement" 128x44). Console: 0 errors and 0
+  warnings over 18 clean loads (6 pages x 3 widths) and the interactive steps; no response >= 400 and no failed request
+  (dev server: 61 GET and 4 POST, all 200). One hydration warning appeared only when a screenshot was taken mid-load: it
+  names `caret-color: transparent`, which Playwright's screenshot injects into inputs; it did not recur without a
+  screenshot.
+  Issues found and fixed (`34fdfdb`, with tests): the customer's agreement rows were 43 px tall at 768 (`min-h-11`);
+  a contact's Edit link was 24 px wide at 768 (`min-w-11`, older than this feature, same page); from md up the line
+  columns showed bare numbers because the per-line labels are mobile-only, so a header row (Description, Visits per year,
+  Per visit, Per year) now heads them. The 375 run first tapped the Next.js dev-tools badge, which covers the bottom-left
+  corner in dev only; the badge was hidden for the taps.
+  Data left in place, as approved: AG-1052 with its two lines; AG-1048 is `draft` with version 2 (one copied line).
+- **Settled mid-build:** card and customer row become the link element itself (`<a data-card>`, `<a data-agreement-row>`),
+  so the proofs read the href from the element that carries the marker. `database.types.ts` takes the generator output
+  whole rather than a hand-placed line. Touch targets beyond the checks: the contact Edit link fix touches a record-forms
+  control because it sits on a page this batch changed.
+- **Abandoned:** Playwright's mouse clicks with `setEmitTouchEventsForMouse` on (each click hung after navigating;
+  replaced by explicit CDP touch events); running `prettier --write` on the changed components (the repo has no
+  Prettier config and it reflowed whole files to 80 columns; reverted before commit).

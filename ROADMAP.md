@@ -110,7 +110,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Review grid and commit
 
 ### Phase 3: Agreement & customer review
-- [ ] Agreement builder with versions and service price lines
+- [x] Agreement builder with versions and service price lines
 - [ ] "Service included" generated from the asset types on site
 - [ ] Agreement PDF
 - [ ] Customer review portal (Accept, Refuse, Request changes)
