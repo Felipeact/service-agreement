@@ -273,3 +273,67 @@ describe("service line store", () => {
     expect(error).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("agreement reader: the service scope", () => {
+  const SCOPE = {
+    schema: 1,
+    types: [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }],
+  };
+  const TYPES = [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }];
+  const TAKEN = "2026-10-27T18:00:00+00:00";
+  const versions = [
+    { id: "v1", version_no: 1 },
+    { id: "v2", version_no: 2 },
+  ];
+
+  test("C804: the current version of a draft reads the live scope of its site", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow(versions)), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(ok(SCOPE));
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(stub.client.rpc).toHaveBeenCalledTimes(1);
+    expect(stub.client.rpc).toHaveBeenCalledWith("site_service_scope", { p_site_id: "s1" });
+    expect(detail?.serviceScope).toEqual({ source: "live", takenAt: null, types: TYPES });
+    expect(stub.calls.some((call) => call.table === "agreement_versions")).toBe(false);
+  });
+
+  test.each<[string, string, number | undefined, string]>([
+    ["version 1 of a draft", "draft", 1, "v1"],
+    ["the current version of a sent agreement", "sent", undefined, "v2"],
+  ])("C804: %s reads its own snapshot, without the live scope", async (_, status, versionNo, versionId) => {
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, status)),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { ...SCOPE, takenAt: TAKEN } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR, versionNo);
+    expect(stub.client.rpc).not.toHaveBeenCalled();
+    expect(stub.calls).toContainEqual({ table: "agreement_versions", method: "eq", args: ["id", versionId] });
+    expect(detail?.serviceScope).toEqual({ source: "frozen", takenAt: new Date(TAKEN), types: TYPES });
+  });
+
+  test("C804: a frozen version holding {} was not recorded, and nothing is logged", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stub = stubClient({ agreements: ok(agreementRow(versions, "sent")), service_lines: ok([]), agreement_versions: ok({ snapshot: {} }) });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("C804: a malformed snapshot was not recorded, and is logged once", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, "sent")),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { schema: 1, types: 3 } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+
+  test("C804: an error from the live scope rejects", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow(versions)), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(fail("XX000"));
+    await expect(supabaseAgreementReader(stub.typed).get(AGR)).rejects.toThrow("XX000");
+  });
+});

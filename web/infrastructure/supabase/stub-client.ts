@@ -64,7 +64,8 @@ export function stubClient(tables: Record<string, Reply | Sequence>, storage: Re
         return api;
       },
     },
-    rpc: vi.fn(),
+    /** Answers `{ data: null, error: null }` until a test gives it a reply. */
+    rpc: vi.fn<(...args: unknown[]) => Promise<Reply>>(async () => ({ data: null, error: null })),
   };
   return { client, calls, typed: client as unknown as SupabaseClient<Database> };
 }

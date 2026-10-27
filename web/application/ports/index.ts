@@ -1,4 +1,4 @@
-import type { AgreementStatus, ServiceLineValue } from "@/domain/agreement";
+import type { AgreementStatus, ScopeType, ServiceLineValue } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
@@ -409,7 +409,14 @@ export type AgreementDetail = {
   shown: { versionNo: number; current: boolean; lines: ServiceLineView[]; annualCents: number };
   /** The agreement is `draft` and the shown version is the current one. */
   editable: boolean;
+  /**
+   * What the shown version covers: live from the site while it is editable, else what the version recorded when the
+   * agreement left draft (service-included door 4).
+   */
+  serviceScope: AgreementServiceScope;
 };
+
+export type AgreementServiceScope = { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
 
 export interface AgreementReader {
   /** `null` for a malformed id, a missing row, or a row of another org. An unknown `versionNo` shows the current version. */

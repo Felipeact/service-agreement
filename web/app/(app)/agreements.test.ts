@@ -64,6 +64,7 @@ const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
     annualCents: 357000,
   },
   editable: true,
+  serviceScope: { source: "live", takenAt: null, types: [] },
   ...over,
 });
 
@@ -252,6 +253,25 @@ describe("the agreement page", () => {
     container.agreementReader.get.mockResolvedValue(detail());
     const html = await render();
     for (const label of ["Add line", "Edit", "Remove", "Withdraw"]) expect(html, label).toContain(`>${label}</button>`);
+  });
+
+  test("C824: the page shows the reader's service scope as it comes", async () => {
+    const takenAt = new Date("2026-10-27T18:00:00Z");
+    container.agreementReader.get.mockResolvedValue(
+      detail({
+        status: "sent",
+        editable: false,
+        serviceScope: {
+          source: "frozen",
+          takenAt,
+          types: [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: null }] }],
+        },
+      }),
+    );
+    const html = await render();
+    const day = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" }).format(takenAt);
+    expect(html).toContain(`As recorded on ${day}`);
+    expect(html).toContain("Rooftop unit, 1 unit");
   });
 
   test("C741: a malformed id and a missing agreement are 404", async () => {

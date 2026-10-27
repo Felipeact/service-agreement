@@ -1,11 +1,12 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { LIVE_STATUSES, MAX_SERVICE_LINES, type AgreementStatus } from "@/domain/agreement";
+import { LIVE_STATUSES, MAX_SERVICE_LINES, parseServiceScope, type AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { pipelineStage } from "@/domain/pipeline";
 import type {
   AgreementReader,
+  AgreementServiceScope,
   AgreementStore,
   ServiceLineStore,
   ServiceLineView,
@@ -44,7 +45,33 @@ type AgreementRow = {
 
 type LineRow = { id: string; position: number; description: string; visits_per_year: number; cost_per_visit_cents: number; created_at: string };
 
+/** An empty object is the placeholder of a version that never recorded a scope. */
+const isPlaceholder = (value: unknown) =>
+  value === null || (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0);
+
 export function supabaseAgreementReader(client: Client): AgreementReader {
+  /** Live from the site while the version is editable; otherwise what the version recorded (service-included door 4). */
+  async function serviceScope(siteId: string, versionId: string | undefined, editable: boolean): Promise<AgreementServiceScope> {
+    let document: unknown;
+    if (editable) {
+      const { data, error } = await client.rpc("site_service_scope", { p_site_id: siteId });
+      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+      document = data;
+    } else {
+      if (!versionId) return { source: "not_recorded" };
+      const { data, error } = await client.from("agreement_versions").select("snapshot").eq("id", versionId).maybeSingle();
+      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+      if (isPlaceholder(data?.snapshot ?? null)) return { source: "not_recorded" };
+      document = data?.snapshot;
+    }
+    const scope = parseServiceScope(document);
+    if (!scope) {
+      console.error(`The service scope of ${editable ? `site ${siteId}` : `version ${versionId}`} is not a scope document`);
+      return { source: "not_recorded" };
+    }
+    return { source: editable ? "live" : "frozen", takenAt: scope.takenAt === null ? null : new Date(scope.takenAt), types: scope.types };
+  }
+
   return {
     async get(id, versionNo) {
       if (!isUuid(id)) return null;
@@ -84,6 +111,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
 
       const status = row.status as AgreementStatus;
       const current = shownVersion !== undefined && shownVersion === latest;
+      const editable = status === "draft" && current;
       return {
         id: row.id,
         number: row.number ?? "",
@@ -98,7 +126,8 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
           lines,
           annualCents: sumCents(lines.map((line) => cents(line.annualCents))),
         },
-        editable: status === "draft" && current,
+        editable,
+        serviceScope: await serviceScope(row.sites.id, shownVersion?.id, editable),
       };
     },
   };

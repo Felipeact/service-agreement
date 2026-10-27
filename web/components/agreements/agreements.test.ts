@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
-import type { AgreementDetail, MemberRole, ServiceLineView } from "@/application/ports";
+import type { AgreementDetail, AgreementServiceScope, MemberRole, ServiceLineView } from "@/application/ports";
 import type { AgreementStatus } from "@/domain/agreement";
 import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./agreement-view";
@@ -19,7 +19,9 @@ const LINES: ServiceLineView[] = [
   { id: "l2", position: 1, description: "Filter changes", visitsPerYear: 2, costPerVisitCents: 15000, annualCents: 30000 },
 ];
 
-function agreement(over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number } = {}): AgreementDetail {
+function agreement(
+  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope } = {},
+): AgreementDetail {
   const status = over.status ?? "draft";
   const count = over.versions ?? 2;
   const shownNo = over.shownNo ?? count;
@@ -34,6 +36,7 @@ function agreement(over: { status?: AgreementStatus; lines?: ServiceLineView[]; 
     versions: Array.from({ length: count }, (_, i) => ({ versionNo: count - i, createdAt: new Date(Date.UTC(2026, 9, 20 + count - i, 18)) })),
     shown: { versionNo: shownNo, current: shownNo === count, lines, annualCents: lines.reduce((t, l) => t + l.annualCents, 0) },
     editable: status === "draft" && shownNo === count,
+    serviceScope: over.serviceScope ?? { source: "live", takenAt: null, types: [] },
   };
 }
 
@@ -199,5 +202,85 @@ describe("the line form and prompts", () => {
 
   test("C744: unavailable says to try again", () => {
     expect(form({ status: "unavailable" }).replace(/&#x27;/g, "'")).toMatch(/role="alert"[^>]*>We couldn't save this\. Try again\.</);
+  });
+});
+
+describe("the agreement view: service included and equipment", () => {
+  const RTU = {
+    code: "RTU",
+    name: "Rooftop unit",
+    tasks: ["Replace filters", "Check belts"],
+    assets: [
+      { unitNo: "RTU-1", typeModel: "Carrier 48TC", location: "Roof" },
+      { unitNo: "RTU-2", typeModel: null, location: null },
+    ],
+  };
+  const BOILER = { code: "BOILER", name: "Boiler", tasks: ["Flow switch test"], assets: [{ unitNo: "B-1", typeModel: "Condensing", location: "P1" }] };
+  const live = (types: unknown[]): AgreementServiceScope => ({ source: "live", takenAt: null, types } as AgreementServiceScope);
+  const TAKEN = new Date("2026-10-27T18:00:00Z");
+  const frozen = (types: unknown[]): AgreementServiceScope => ({ source: "frozen", takenAt: TAKEN, types } as AgreementServiceScope);
+  const recorded = `As recorded on ${new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" }).format(TAKEN)}`;
+
+  /** The markup of the `<section>` labelled `label`. */
+  const section = (html: string, label: string) => {
+    const match = new RegExp(`<section[^>]*aria-label="${label}"[^>]*>([\\s\\S]*?)</section>`).exec(html);
+    expect(match, `no section ${label}`).not.toBeNull();
+    return match ? match[1] : "";
+  };
+
+  test("C805: types in order with unit counts and their tasks; equipment in closed groups per type", () => {
+    const html = view(agreement({ serviceScope: live([BOILER, RTU]) }));
+    const included = section(html, "Service included");
+    const includedText = text(included);
+    expect(includedText.indexOf("Boiler, 1 unit")).toBeGreaterThanOrEqual(0);
+    expect(includedText.indexOf("Rooftop unit, 2 units")).toBeGreaterThan(includedText.indexOf("Boiler, 1 unit"));
+    expect(included).toMatch(/<li[^>]*>Replace filters<\/li>\s*<li[^>]*>Check belts<\/li>/);
+    expect(included).not.toContain("<details");
+
+    const equipment = section(html, "Equipment");
+    expect(equipment.match(/<details/g)).toHaveLength(2);
+    expect(equipment).not.toMatch(/<details[^>]*\sopen/);
+    expect(equipment).toMatch(/<summary[^>]*>[\s\S]*?Boiler · 1[\s\S]*?<\/summary>/);
+    expect(equipment).toMatch(/<summary[^>]*>[\s\S]*?Rooftop unit · 2[\s\S]*?<\/summary>/);
+    const equipmentText = text(equipment);
+    for (const value of ["RTU-1", "Carrier 48TC", "Roof", "RTU-2", "B-1", "Condensing", "P1"]) expect(equipmentText).toContain(value);
+    expect(equipmentText).toMatch(/RTU-2 — —/);
+  });
+
+  test("C806: a type with no checklist says so", () => {
+    const included = text(section(view(agreement({ serviceScope: live([{ ...BOILER, tasks: [] }]) })), "Service included"));
+    expect(included).toContain("Boiler, 1 unit No checklist for this type yet.");
+  });
+
+  test("C807: no equipment on the site: both sections say so, and writers get a link to the site", () => {
+    const writer = view(agreement({ serviceScope: live([]) }));
+    for (const label of ["Service included", "Equipment"]) expect(text(section(writer, label))).toContain("No equipment on this site yet.");
+    expect(writer).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Add equipment<\/a>/);
+    const viewer = view(agreement({ serviceScope: live([]) }), "viewer");
+    for (const label of ["Service included", "Equipment"]) expect(text(section(viewer, label))).toContain("No equipment on this site yet.");
+    expect(viewer).not.toContain("Add equipment");
+  });
+
+  test("C815: a frozen version shows what it recorded, and when", () => {
+    const html = view(agreement({ status: "sent", serviceScope: frozen([RTU]) }));
+    for (const label of ["Service included", "Equipment"]) expect(text(section(html, label))).toContain(recorded);
+    expect(text(section(html, "Service included"))).toContain("Rooftop unit, 2 units");
+    expect(section(html, "Equipment")).toMatch(/<summary[^>]*>[\s\S]*?Rooftop unit · 2/);
+    expect(html).not.toContain("Add equipment");
+  });
+
+  test("C816: a version that recorded nothing says so", () => {
+    const html = view(agreement({ status: "sent", serviceScope: { source: "not_recorded" } }));
+    for (const label of ["Service included", "Equipment"]) expect(text(section(html, label))).toContain("Not recorded for this version.");
+    expect(html).not.toContain("As recorded on");
+    expect(html).not.toContain("Add equipment");
+  });
+
+  test("C818: a frozen version with no equipment says so", () => {
+    const html = view(agreement({ status: "sent", serviceScope: frozen([]) }));
+    for (const label of ["Service included", "Equipment"]) {
+      expect(text(section(html, label))).toContain("No equipment was recorded for this version.");
+    }
+    expect(html).not.toContain("Add equipment");
   });
 });

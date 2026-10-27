@@ -8,6 +8,7 @@ import { formatCadExact } from "@/lib/money";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
+import { ServiceScopeSections } from "./service-scope";
 import type { LineState, MoveState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
@@ -117,6 +118,8 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
           />
         </section>
       )}
+
+      <ServiceScopeSections scope={agreement.serviceScope} siteId={agreement.site.id} canAddEquipment={canWriteRecords(role)} />
 
       {agreement.versions.length > 1 && (
         <section aria-label="Versions" className="flex flex-col gap-1">

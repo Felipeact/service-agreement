@@ -244,6 +244,7 @@ describe("composition root", () => {
         annualCents: 357000,
       },
       editable: true,
+      serviceScope: { source: "live", takenAt: null, types: [] },
     };
     const reader: AgreementReader = { get: async () => detail };
     const created: CreateAgreementResult[] = [

@@ -870,6 +870,7 @@ export type Database = {
         }
         Returns: number
       }
+      site_service_scope: { Args: { p_site_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

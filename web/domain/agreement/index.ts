@@ -127,3 +127,51 @@ export function labelFor(stage: PipelineStage | null, status: AgreementStatus): 
 export function statusLabel(status: AgreementStatus, contract?: ContractStatus | null): string {
   return labelFor(pipelineStage(status, contract), status);
 }
+
+/** One equipment type of a service scope: its checklist and its assets on the site (service-included door 1). */
+export type ScopeAsset = { unitNo: string | null; typeModel: string | null; location: string | null };
+export type ScopeType = { code: string; name: string; tasks: string[]; assets: ScopeAsset[] };
+/** What an agreement covers; `takenAt` (ISO timestamp) is when a frozen version recorded it, `null` for a live scope. */
+export type ServiceScope = { takenAt: string | null; types: ScopeType[] };
+
+const compareText = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true, sensitivity: "base" });
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+const isText = (value: unknown): value is string => typeof value === "string";
+const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === "string";
+
+function parseAsset(value: unknown): ScopeAsset | null {
+  if (!isRecord(value) || !isOptionalText(value.unitNo) || !isOptionalText(value.typeModel) || !isOptionalText(value.location)) return null;
+  return { unitNo: value.unitNo, typeModel: value.typeModel, location: value.location };
+}
+
+function parseType(value: unknown): ScopeType | null {
+  if (!isRecord(value) || !isText(value.code) || !isText(value.name)) return null;
+  if (!Array.isArray(value.tasks) || !value.tasks.every(isText)) return null;
+  if (!Array.isArray(value.assets)) return null;
+  const assets = value.assets.map(parseAsset);
+  if (assets.some((asset) => asset === null)) return null;
+  return { code: value.code, name: value.name, tasks: [...value.tasks], assets: assets as ScopeAsset[] };
+}
+
+/**
+ * A stored or live scope document (`schema` 1) as types by name and units compared as numbers, no unit last, the
+ * order of the site register. `null` for anything else, `{}` included.
+ */
+export function parseServiceScope(document: unknown): ServiceScope | null {
+  if (!isRecord(document) || document.schema !== 1 || !Array.isArray(document.types)) return null;
+  let takenAt: string | null = null;
+  if (document.takenAt !== undefined) {
+    if (!isText(document.takenAt) || Number.isNaN(Date.parse(document.takenAt))) return null;
+    takenAt = document.takenAt;
+  }
+  const types = document.types.map(parseType);
+  if (types.some((type) => type === null)) return null;
+  const ordered = (types as ScopeType[]).map((type) => ({
+    ...type,
+    assets: [...type.assets].sort((a, b) => {
+      if (a.unitNo === null || b.unitNo === null) return a.unitNo === b.unitNo ? 0 : a.unitNo === null ? 1 : -1;
+      return compareText(a.unitNo, b.unitNo);
+    }),
+  }));
+  return { takenAt, types: ordered.sort((a, b) => compareText(a.name, b.name)) };
+}
