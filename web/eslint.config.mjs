@@ -8,6 +8,12 @@ const PARSER_LIBRARIES = {
   message: "Parse files only in infrastructure/import-parsers, behind the ImportParser port.",
 };
 
+// The Claude SDK stays behind the AssetExtractor adapter (import-extract door 5).
+const CLAUDE_SDK = {
+  group: ["@anthropic-ai/sdk", "@anthropic-ai/sdk/*"],
+  message: "Call Claude only in infrastructure/claude, behind the AssetExtractor port.",
+};
+
 const ADAPTER_PATTERNS = [
   {
     group: [
@@ -38,6 +44,7 @@ const eslintConfig = defineConfig([
               message: "The domain layer must not import UI or app code.",
             },
             PARSER_LIBRARIES,
+            CLAUDE_SDK,
           ],
         },
       ],
@@ -63,6 +70,7 @@ const eslintConfig = defineConfig([
               message: "The application layer must not import UI, adapters or the composition root.",
             },
             PARSER_LIBRARIES,
+            CLAUDE_SDK,
           ],
         },
       ],
@@ -71,12 +79,16 @@ const eslintConfig = defineConfig([
   // Adapters implement ports; they never reach UI or the composition root. Only the parser adapter parses files.
   {
     files: ["infrastructure/**/*.ts"],
-    ignores: ["infrastructure/import-parsers/**"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES] }] },
+    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK] }] },
   },
   {
     files: ["infrastructure/import-parsers/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: ADAPTER_PATTERNS }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, CLAUDE_SDK] }] },
+  },
+  {
+    files: ["infrastructure/claude/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES] }] },
   },
   // UI reaches adapters only through @/composition, which is server-only.
   {
@@ -91,6 +103,7 @@ const eslintConfig = defineConfig([
               message: "UI code must not use adapters or the database client directly; use @/composition.",
             },
             PARSER_LIBRARIES,
+            CLAUDE_SDK,
           ],
         },
       ],

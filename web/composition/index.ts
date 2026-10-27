@@ -3,8 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
-import { makeReadImport, makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
+import { makeExtractImport, makeReadImport, makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
+import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { importParser } from "@/infrastructure/import-parsers";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
@@ -96,6 +97,7 @@ export async function getContainer() {
     discardImport: importJobs.discard,
     // The same member-scoped store: the file is downloaded under RLS, never with a service-role key.
     readImport: makeReadImport(importJobs, importParser),
+    extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase)),
     clock: systemClock,
   };
 }

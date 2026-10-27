@@ -41,7 +41,26 @@ const INFRASTRUCTURE_FORBIDDEN = ["react", "@/app/layout", "@/components/ui/butt
 
 const PARSER_LIBRARY_PLACES = ["application/x.ts", "components/x.tsx", "app/x.tsx", "domain/x.ts", "infrastructure/supabase/x.ts"];
 
+const SDK_PLACES = [
+  "application/x.ts",
+  "components/x.tsx",
+  "app/x.tsx",
+  "domain/x.ts",
+  "infrastructure/supabase/x.ts",
+  "infrastructure/import-parsers/x.ts",
+];
+
 describe("layer boundaries", () => {
+  test.each(SDK_PLACES)("C539: %s importing @anthropic-ai/sdk is a lint error naming it", async (file) => {
+    const messages = await restrictedImports(file, "@anthropic-ai/sdk");
+    expect(messages).toHaveLength(1);
+    expect(messages[0].message).toContain("infrastructure/claude");
+  });
+
+  test("C539: infrastructure/claude may import @anthropic-ai/sdk", async () => {
+    expect(await restrictedImports("infrastructure/claude/x.ts", "@anthropic-ai/sdk")).toHaveLength(0);
+  });
+
   test.each(PARSER_LIBRARY_PLACES.flatMap((file) => ["xlsx", "mammoth"].map((specifier) => [file, specifier])))(
     "C487: %s importing %s is a lint error naming it",
     async (file, specifier) => {

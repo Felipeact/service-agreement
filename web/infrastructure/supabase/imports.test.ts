@@ -165,7 +165,7 @@ describe("ImportJobReader.forSite", () => {
     const jobs = await supabaseImportJobReader(stub.typed).forSite(SITE);
 
     expect(jobs.map((job) => job.id)).toEqual(["j2", "j1"]);
-    expect(jobs[1]).toEqual({ id: "j1", originalName: "a.csv", sizeBytes: 5, status: "uploading", uploadedBy: null, createdAt: new Date("2026-10-25T10:00:00Z"), outcome: null });
+    expect(jobs[1]).toEqual({ id: "j1", originalName: "a.csv", sizeBytes: 5, status: "uploading", uploadedBy: null, createdAt: new Date("2026-10-25T10:00:00Z"), outcome: null, extraction: null });
     const methods = stub.calls.map((call) => [call.method, call.args]);
     expect(methods).toContainEqual(["eq", ["site_id", SITE]]);
     expect(methods).toContainEqual(["order", ["created_at", { ascending: false }]]);

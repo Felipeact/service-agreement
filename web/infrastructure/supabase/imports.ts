@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import type { Clock, ImportJobReader, ImportJobStatus, ImportJobStore, WriteFailure } from "@/application/ports";
+import type { Clock, ExtractionView, ImportJobReader, ImportJobStatus, ImportJobStore, WriteFailure } from "@/application/ports";
 import type { ImportContentType, ReadError, ReadOutcome } from "@/domain/imports";
 import type { Database } from "./database.types";
 
@@ -38,15 +38,22 @@ type ReadColumns = { status: string; read_error: string | null; table_count: num
 
 const READ_COLUMNS = "id, org_id, status, content_type, read_error, table_count, row_count";
 
+/** A job being, or done being, extracted was read first: its read outcome stays on the row. */
+const WAS_READ = new Set(["parsed", "extracting", "extracted"]);
+
 /** The outcome stored on a job, or `null` while it has not been read (import-parse door 1). */
 function outcomeFrom(row: ReadColumns): ReadOutcome | null {
-  if (row.status === "parsed") return { status: "parsed", tables: row.table_count, rows: row.row_count };
+  if (WAS_READ.has(row.status)) return { status: "parsed", tables: row.table_count, rows: row.row_count };
   if (row.status === "unreadable") return { status: "unreadable", reason: row.read_error as ReadError };
   return null;
 }
 
 /** A job counts as uploaded once its file is stored, whether or not it has been read since. */
-const isStored = (status: string) => status === "uploaded" || status === "parsed" || status === "unreadable";
+const isStored = (status: string) => status !== "uploading";
+
+const SOURCE_COLUMNS = `${READ_COLUMNS}, extract_cursor, extract_total`;
+
+type Counts = { rows: number; unmatched: number };
 
 export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobStore {
   async function job(jobId: string) {
@@ -136,6 +143,70 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
       }
     },
 
+    async sourceOf(jobId) {
+      try {
+        const { data, error } = await client.from("import_jobs").select(SOURCE_COLUMNS).eq("id", jobId).maybeSingle();
+        if (error) return failure("Reading an import", error);
+        if (!data) return { ok: false, code: "not_found" };
+        const status = data.status as ImportJobStatus;
+        const contentType = data.content_type as ImportContentType;
+        const progress =
+          data.extract_cursor !== null && data.extract_total !== null ? { cursor: data.extract_cursor, total: data.extract_total } : null;
+
+        let result: Counts | null = null;
+        if (status === "extracted") {
+          const counts = await client.from("import_row_counts").select("rows, unmatched").eq("job_id", jobId).maybeSingle();
+          if (counts.error) return failure("Counting import rows", counts.error);
+          result = { rows: counts.data?.rows ?? 0, unmatched: counts.data?.unmatched ?? 0 };
+        }
+        if (status !== "parsed" && status !== "extracting") return { ok: true, status, contentType, progress, result, bytes: null };
+
+        // As the member, like fileOf: the `imports` select policy decides who may read the file.
+        const file = await client.storage.from(BUCKET).download(importKey(data.org_id, data.id));
+        if (file.error) return unavailable("Downloading an import", file.error.message);
+        return { ok: true, status, contentType, progress, result, bytes: new Uint8Array(await file.data.arrayBuffer()) };
+      } catch (cause) {
+        return unavailable("Reading an import", describe(cause));
+      }
+    },
+
+    async recordExtraction(jobId, expectedCursor, total, rows) {
+      try {
+        const { data, error } = await client.rpc("record_extraction_chunk", {
+          p_job_id: jobId,
+          // SQL reads null as the first chunk; the generated argument types cannot say an argument may be null.
+          p_expected_cursor: expectedCursor as number,
+          p_total: total,
+          p_rows: rows.map((row) => ({
+            asset_type_raw: row.assetTypeRaw,
+            unit_no: row.unitNo,
+            type_model: row.typeModel,
+            location: row.location,
+            confidence: row.confidence,
+            source_ref: row.sourceRef,
+            asset_type_id: row.assetTypeId,
+          })),
+        });
+        if (!error) return { ok: true, progress: { cursor: data, total }, done: data === total };
+        if (error.code === "P0002") return { ok: false, code: "not_found" };
+        if (error.code === "42501") return { ok: false, code: "forbidden" };
+        if (error.code !== "40001") return failure("Recording an import chunk", error);
+
+        // Stale: another call recorded this chunk first. Answer with where the job stands now.
+        const { data: row, error: readError } = await client
+          .from("import_jobs")
+          .select("status, extract_cursor, extract_total")
+          .eq("id", jobId)
+          .maybeSingle();
+        if (readError) return failure("Reading an import", readError);
+        if (!row) return { ok: false, code: "not_found" };
+        if (row.extract_cursor === null || row.extract_total === null) return { ok: false, code: "unavailable" };
+        return { ok: true, progress: { cursor: row.extract_cursor, total: row.extract_total }, done: row.status === "extracted" };
+      } catch (cause) {
+        return unavailable("Recording an import chunk", describe(cause));
+      }
+    },
+
     async recordRead(jobId, outcome) {
       try {
         const at = clock.now().toISOString();
@@ -162,18 +233,40 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
   };
 }
 
+function extractionFrom(
+  row: { status: string; extract_cursor: number | null; extract_total: number | null },
+  counts: Counts | undefined,
+): ExtractionView | null {
+  if (row.status === "extracting" && row.extract_cursor !== null && row.extract_total !== null) {
+    return { status: "extracting", cursor: row.extract_cursor, total: row.extract_total };
+  }
+  if (row.status === "extracted") return { status: "extracted", rows: counts?.rows ?? 0, unmatched: counts?.unmatched ?? 0 };
+  return null;
+}
+
 export function supabaseImportJobReader(client: Client): ImportJobReader {
   return {
     async forSite(siteId) {
       if (!UUID.test(siteId)) return [];
       const { data, error } = await client
         .from("import_jobs")
-        .select("id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count")
+        .select("id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count, extract_cursor, extract_total")
         .eq("site_id", siteId)
         .order("created_at", { ascending: false })
         .limit(ROW_CAP);
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-      return (data ?? []).map((row) => ({
+      const jobs = data ?? [];
+
+      // Counts only for finished extractions, from the view so RLS and a 2,000-row job both hold.
+      const counts = new Map<string, Counts>();
+      const extracted = jobs.filter((row) => row.status === "extracted").map((row) => row.id);
+      if (extracted.length > 0) {
+        const { data: rows, error: countError } = await client.from("import_row_counts").select("job_id, rows, unmatched").in("job_id", extracted);
+        if (countError) throw new Error(`Supabase error ${countError.code}: ${countError.message}`);
+        for (const row of rows ?? []) if (row.job_id) counts.set(row.job_id, { rows: row.rows ?? 0, unmatched: row.unmatched ?? 0 });
+      }
+
+      return jobs.map((row) => ({
         id: row.id,
         originalName: row.original_name,
         sizeBytes: row.size_bytes,
@@ -181,6 +274,7 @@ export function supabaseImportJobReader(client: Client): ImportJobReader {
         uploadedBy: row.created_by_email,
         createdAt: new Date(row.created_at),
         outcome: outcomeFrom(row),
+        extraction: extractionFrom(row, counts.get(row.id)),
       }));
     },
   };

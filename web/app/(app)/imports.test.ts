@@ -12,6 +12,7 @@ const container = {
   confirmImportUpload: vi.fn(),
   discardImport: vi.fn(),
   readImport: vi.fn(),
+  extractImport: vi.fn(),
 };
 const STORE_METHODS = ["startImport", "confirmImportUpload", "discardImport"] as const;
 
@@ -185,6 +186,35 @@ describe("readImportAction", () => {
 
     expect(await actions.readImportAction(JOB)).toEqual(state);
     expect(container.readImport).toHaveBeenCalledWith(JOB);
+    expect(refresh).toHaveBeenCalledTimes(refreshes);
+  });
+});
+
+describe("extractImportAction", () => {
+  test("C534: a viewer is forbidden and nothing is extracted", async () => {
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await actions.extractImportAction(JOB)).toEqual({ status: "forbidden" });
+    expect(container.extractImport).not.toHaveBeenCalled();
+  });
+
+  test("C535: a job id that is not a uuid is not_found, and nothing is extracted", async () => {
+    expect(await actions.extractImportAction("not-a-uuid")).toEqual({ status: "not_found" });
+    expect(container.extractImport).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["extracting", { ok: true, state: "extracting", done: 2, total: 4 }, { status: "extracting", done: 2, total: 4 }, 1],
+    ["extracted", { ok: true, state: "extracted", rows: 338, unmatched: 14 }, { status: "extracted", rows: 338, unmatched: 14 }, 1],
+    ["not_ready", { ok: false, code: "not_ready" }, { status: "not_ready" }, 0],
+    ["too_large", { ok: false, code: "too_large" }, { status: "too_large" }, 0],
+    ["not_found", { ok: false, code: "not_found" }, { status: "not_found" }, 0],
+    ["unavailable", { ok: false, code: "unavailable" }, { status: "unavailable" }, 0],
+  ])("C546: %s passes through", async (_name, answer, state, refreshes) => {
+    const { refresh } = await import("next/cache");
+    container.extractImport.mockResolvedValue(answer);
+
+    expect(await actions.extractImportAction(JOB)).toEqual(state);
+    expect(container.extractImport).toHaveBeenCalledWith(JOB);
     expect(refresh).toHaveBeenCalledTimes(refreshes);
   });
 });

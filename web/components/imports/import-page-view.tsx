@@ -3,7 +3,7 @@ import type { ImportJobView } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { ImportUploader } from "./import-upload";
 import { ImportJobList } from "./job-list";
-import type { ConfirmState, DiscardState, ReadState, StartState } from "./state";
+import type { ConfirmState, DiscardState, ExtractState, ReadState, StartState } from "./state";
 
 type ImportPageViewProps = {
   site: { id: string; name: string };
@@ -14,6 +14,7 @@ type ImportPageViewProps = {
     confirm: (jobId: string) => Promise<ConfirmState>;
     discard: (jobId: string) => () => Promise<DiscardState>;
     read: (jobId: string) => Promise<ReadState>;
+    extract: (jobId: string) => Promise<ExtractState>;
   };
 };
 
@@ -35,7 +36,7 @@ export function ImportPageView({ site, jobs, actions }: ImportPageViewProps) {
       )}
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold">Imported lists</h2>
-        <ImportJobList jobs={jobs} discard={actions?.discard} read={actions && ((jobId) => () => actions.read(jobId))} />
+        <ImportJobList jobs={jobs} discard={actions?.discard} read={actions && ((jobId) => () => actions.read(jobId))} extract={actions?.extract} />
       </section>
     </div>
   );

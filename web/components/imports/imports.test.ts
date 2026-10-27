@@ -25,6 +25,7 @@ const job = (patch: Partial<ImportJobView> = {}): ImportJobView => ({
   uploadedBy: "dana@example.com",
   createdAt: new Date("2026-10-26T18:00:00Z"),
   outcome: null,
+  extraction: null,
   ...patch,
 });
 
@@ -33,6 +34,7 @@ const actions = {
   confirm: vi.fn(),
   discard: () => vi.fn(),
   read: vi.fn(),
+  extract: vi.fn(),
 };
 
 const writerView = (jobs: ImportJobView[] = []) => html(createElement(ImportPageView, { site: SITE, jobs, actions }));

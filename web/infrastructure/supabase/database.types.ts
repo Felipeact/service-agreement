@@ -396,6 +396,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           created_by_email: string | null
+          extract_cursor: number | null
+          extract_total: number | null
+          extracted_at: string | null
           id: string
           org_id: string
           original_name: string
@@ -413,6 +416,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          extract_cursor?: number | null
+          extract_total?: number | null
+          extracted_at?: string | null
           id?: string
           org_id: string
           original_name: string
@@ -430,6 +436,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          extract_cursor?: number | null
+          extract_total?: number | null
+          extracted_at?: string | null
           id?: string
           org_id?: string
           original_name?: string
@@ -456,6 +465,70 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
+      import_rows: {
+        Row: {
+          asset_type_id: string | null
+          asset_type_raw: string | null
+          confidence: string
+          id: string
+          job_id: string
+          location: string | null
+          org_id: string
+          position: number
+          source_ref: string | null
+          type_model: string | null
+          unit_no: string | null
+        }
+        Insert: {
+          asset_type_id?: string | null
+          asset_type_raw?: string | null
+          confidence: string
+          id?: string
+          job_id: string
+          location?: string | null
+          org_id: string
+          position: number
+          source_ref?: string | null
+          type_model?: string | null
+          unit_no?: string | null
+        }
+        Update: {
+          asset_type_id?: string | null
+          asset_type_raw?: string | null
+          confidence?: string
+          id?: string
+          job_id?: string
+          location?: string | null
+          org_id?: string
+          position?: number
+          source_ref?: string | null
+          type_model?: string | null
+          unit_no?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_rows_asset_type_id_org_id_fkey"
+            columns: ["asset_type_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "asset_types"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "import_rows_job_id_org_id_fkey"
+            columns: ["job_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "import_rows_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -718,7 +791,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      import_row_counts: {
+        Row: {
+          job_id: string | null
+          org_id: string | null
+          rows: number | null
+          unmatched: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apply_agreement_transition: {
@@ -730,6 +811,15 @@ export type Database = {
           p_to_status: string
         }
         Returns: string
+      }
+      record_extraction_chunk: {
+        Args: {
+          p_expected_cursor: number
+          p_job_id: string
+          p_rows: Json
+          p_total: number
+        }
+        Returns: number
       }
       apply_contract_transition: {
         Args: {

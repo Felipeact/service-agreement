@@ -81,6 +81,13 @@ export function readSummary(tables: number | null, rows: number | null): string 
   return `${plural(rows, "row")} in ${plural(tables, "table")}`;
 }
 
+/** The line under an extracted job: rows found and how many still need an equipment type. */
+export function extractionSummary(rows: number, unmatched: number): string {
+  if (rows === 0) return "No equipment found";
+  if (unmatched === 0) return plural(rows, "row");
+  return `${plural(rows, "row")}, ${unmatched} ${unmatched === 1 ? "needs" : "need"} an equipment type`;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(id: string): boolean {

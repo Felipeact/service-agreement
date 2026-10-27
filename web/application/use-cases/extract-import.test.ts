@@ -58,8 +58,8 @@ function setup(options: Setup = {}) {
   let served = 0;
   const store = {
     sourceOf: vi.fn(async () => sources[Math.min(served++, sources.length - 1)]),
-    recordExtraction: vi.fn(async (_id: string, _cursor: number | null, total: number): Promise<RecordExtractionResult> =>
-      options.record ?? { ok: true, progress: { cursor: 1, total }, done: false },
+    recordExtraction: vi.fn(async (...args: [string, number | null, number, unknown[]]): Promise<RecordExtractionResult> =>
+      options.record ?? { ok: true, progress: { cursor: 1, total: args[2] }, done: false },
     ),
   };
   const parse = options.parse ?? tableOf(3);
@@ -182,7 +182,7 @@ describe("extractImport", () => {
 
     await extractImport(JOB);
     expect(catalog.list).toHaveBeenCalledTimes(1);
-    expect(recorded(store)[3].map((r: { assetTypeId: string | null }) => r.assetTypeId)).toEqual(["t-mua", null]);
+    expect((recorded(store)[3] as { assetTypeId: string | null }[]).map((r) => r.assetTypeId)).toEqual(["t-mua", null]);
   });
 
   test("C519: the raw wording is kept, trimmed, whatever type was matched", async () => {

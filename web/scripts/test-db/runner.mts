@@ -38,6 +38,7 @@ export const RECIPES: Recipe[] = [
   plain("record_forms"),
   plain("import_upload"),
   plain("import_parse"),
+  plain("import_extract"),
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
 ];
 

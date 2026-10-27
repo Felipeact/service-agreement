@@ -121,6 +121,35 @@ describe("composition root", () => {
     expect(source.match(/createServerClient</g)).toHaveLength(1);
   });
 
+  test("C555: getContainer() returns extractImport", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.extractImport).toBe("function");
+  });
+
+  test("C537: extractImport is built on the request's import job store and catalog, from the one Supabase client", () => {
+    const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
+    expect(source).toMatch(/const importJobs = supabaseImportJobStore\(supabase, /);
+    expect(source).toMatch(/extractImport: makeExtractImport\(importJobs, importParser, .*supabaseAssetTypeCatalog\(supabase\)\)/);
+    expect(source.match(/createServerClient</g)).toHaveLength(1);
+  });
+
+  test("C551: the ports declare AssetExtractor, ExtractChunk, ExtractedRow and the store's sourceOf and recordExtraction", () => {
+    const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
+    const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
+    expect(body("AssetExtractor")).toContain("extract(chunk: ExtractChunk)");
+    const chunk = ports.match(/export type ExtractChunk =([\s\S]*?);\r?\n/)?.[1] ?? "";
+    for (const kind of ['kind: "rows"', 'kind: "text"', 'kind: "pdf"']) expect(chunk).toContain(kind);
+    const extractedRow = ports.match(/export type ExtractedRow = \{([\s\S]*?)\r?\n\};/)?.[1] ?? "";
+    for (const field of ["assetTypeRaw:", "unitNo:", "typeModel:", "location:", "confidence:", "sourceRef:"]) expect(extractedRow).toContain(field);
+    expect(body("ImportJobStore")).toContain("sourceOf(jobId: string)");
+    expect(body("ImportJobStore")).toContain("recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[])");
+    const status = ports.match(/export type ImportJobStatus =([^;]*);/)?.[1] ?? "";
+    expect(status).toContain('"extracting"');
+    expect(status).toContain('"extracted"');
+  });
+
   test("C490: the ports declare ImportParser, ParsedImport, ParsedTable and the store's fileOf and recordRead", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";

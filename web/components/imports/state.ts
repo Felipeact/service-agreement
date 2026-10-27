@@ -17,6 +17,34 @@ export type ReadState =
   | { status: "unreadable"; reason: ReadError }
   | { status: "not_ready" | Failure };
 
+/** What `extractImportAction` answers: progress, the finished counts, or why nothing moved. */
+export type ExtractState =
+  | { status: "extracting"; done: number; total: number }
+  | { status: "extracted"; rows: number; unmatched: number }
+  | { status: "not_ready" | "too_large" | Failure };
+
+export const EXTRACT_MESSAGES = {
+  unavailable: "We couldn't read this list. Try again.",
+  too_large: "This document lists more equipment than can be read at once. Split it and upload each part.",
+  not_ready: "The upload didn't finish. Try again.",
+  forbidden: "You don't have permission to import equipment lists.",
+  not_found: "This import no longer exists.",
+} as const;
+
+type ExtractDeps = {
+  extract: (jobId: string) => Promise<ExtractState>;
+  onProgress?: (progress: { done: number; total: number }) => void;
+};
+
+/** Calls `extract` once per chunk until the job is extracted or something stops it, and returns that last answer. */
+export async function runExtraction(jobId: string, { extract, onProgress }: ExtractDeps): Promise<ExtractState> {
+  for (;;) {
+    const answer = await extract(jobId);
+    if (answer.status !== "extracting") return answer;
+    onProgress?.({ done: answer.done, total: answer.total });
+  }
+}
+
 /**
  * What the upload form shows. `upload_failed`: the file never reached Storage, or never matched its job. `reading`: the
  * file is stored and being read; `read_failed`: the read hit an unexpected error and the job stays "Uploaded".

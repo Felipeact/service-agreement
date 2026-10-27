@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { isUuid, validateImportFile } from "@/domain/imports";
 import { canWriteRecords } from "@/components/records/state";
-import type { ConfirmState, DiscardState, ReadState, StartState } from "@/components/imports/state";
+import type { ConfirmState, DiscardState, ExtractState, ReadState, StartState } from "@/components/imports/state";
 
 const FORBIDDEN = { status: "forbidden" } as const;
 
@@ -59,4 +59,16 @@ export async function readImportAction(jobId: string): Promise<ReadState> {
   if (!read.ok) return { status: read.code };
   refresh();
   return read.outcome;
+}
+
+/** Extracts the next chunk of a read file; the browser calls again until the job is extracted. */
+export async function extractImportAction(jobId: string): Promise<ExtractState> {
+  const ctx = await writer();
+  if (!ctx) return FORBIDDEN;
+  if (!isUuid(jobId)) return { status: "not_found" };
+  const extracted = await ctx.container.extractImport(jobId);
+  if (!extracted.ok) return { status: extracted.code };
+  refresh();
+  if (extracted.state === "extracting") return { status: "extracting", done: extracted.done, total: extracted.total };
+  return { status: "extracted", rows: extracted.rows, unmatched: extracted.unmatched };
 }
