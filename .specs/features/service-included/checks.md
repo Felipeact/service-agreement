@@ -296,3 +296,20 @@ Cost: about 20 proofs at their own layer across 4 files. Without these rows, the
 - Live validation (C822): about 35k tokens of snapshots.
 - Total: S1-S2 with the read set come to about 95k. S3 enters at about 102k, S4 and delivery at about 115k, and the live run brings it to about 150k, at the 150k budget. The live run is screenshots, not reading, so this is one builder.
 - Mechanism: one builder (fits the budget, no ask).
+
+### Build record
+
+- **Before the migration (C820):** 14 versions, all `{}`. The editable ones were AG-1046 v1, AG-1048 v2, AG-1051 v1 and AG-1052 v1. The other 10 were to be backfilled.
+- **Migration:** `apply_migration` recorded `20261027212052` / `service_included` (C825), and the file is `supabase/migrations/20261027212052_service_included.sql`.
+- **After (C820):** `execute_sql` reports `frozen_still_empty` 0, `editable_changed` 0 and `frozen_with_scope` 10, and the editable versions are unchanged. AG-1039 holds 2 types.
+- **Types (C826):** `generate_typescript_types` contains `site_service_scope: { Args: { p_site_id: string }; Returns: Json }`, identical to the line already in `database.types.ts`. The file is unchanged.
+- **Advisors (C827):** `get_advisors` security reports exactly `rls_enabled_no_policy` (`public.outbox`) and `auth_leaked_password_protection`.
+- **C828:**
+  - The first `npm run test:db` failed `rls_roles` C12 (supabase-init). It expects a viewer's update of `agreement_versions` to affect 0 rows and now gets `42501`.
+  - The user approved option 1 on 2026-10-27: `agreement_versions` leaves C12's loop as `events` did, and C817 proves the refusal.
+  - After that change, 16 passed and 0 failed.
+- **Settled mid-build:**
+  - The C821 draft count was corrected from 3 to 2 before any code, because `seed.sql` creates 2 drafts.
+  - `ServiceScope.takenAt` is an ISO string in the domain, and the reader makes the port's `Date`. The domain purity test C33 forbids `new Date(`.
+  - The stub client's `rpc` now answers `{ data: null, error: null }` by default.
+- **C822:** not run. The dev server on :3000 answers 500 on every page, because its compile worker died after `next build` rewrote `.next`. Stopping it was refused by the permission classifier. No site on the live project has 300+ assets (the largest, Brookhaven, has 9).
