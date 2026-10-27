@@ -98,15 +98,17 @@ export function CustomerDetailView({ customer, role }: { customer: CustomerDetai
 
       <Section title="Agreements" empty="No agreements yet" isEmpty={customer.agreements.length === 0}>
         {customer.agreements.map((agreement) => (
-          <li key={agreement.id} className={ROW}>
-            <span className="font-semibold md:w-56">{agreement.siteName}</span>
-            <span className="text-ink-2 md:w-40">
-              {agreement.number ?? "Unnumbered"} · v{agreement.versionNo}
-            </span>
-            <StatusPill stage={agreement.stage} label={STAGE_META[agreement.stage].label} />
-            {agreement.annualCents !== undefined && (
-              <span className="font-semibold md:ml-auto">{formatCad(agreement.annualCents)}/yr</span>
-            )}
+          <li key={agreement.id}>
+            <Link href={`/agreements/${agreement.id}`} data-agreement-row className={`${ROW} text-ink hover:bg-ground`}>
+              <span className="font-semibold md:w-56">{agreement.siteName}</span>
+              <span className="text-ink-2 md:w-40">
+                {agreement.number ?? "Unnumbered"} · v{agreement.versionNo}
+              </span>
+              <StatusPill stage={agreement.stage} label={STAGE_META[agreement.stage].label} />
+              {agreement.annualCents !== undefined && (
+                <span className="font-semibold md:ml-auto">{formatCad(agreement.annualCents)}/yr</span>
+              )}
+            </Link>
           </li>
         ))}
       </Section>

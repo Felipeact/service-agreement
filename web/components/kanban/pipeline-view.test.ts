@@ -74,6 +74,13 @@ describe("PipelineView", () => {
     expect(html).not.toContain("No agreements match");
   });
 
+  test("C746: each card is a link to its agreement page", () => {
+    const html = render([card({ id: "a1" }), card({ id: "a2" }), card({ id: "a3", stage: "sent" })]);
+    const cards = [...html.matchAll(/<a\b[^>]*\bdata-card\b[^>]*>/g)].map((m) => m[0]);
+    expect(cards).toHaveLength(3);
+    expect(cards.map((tag) => /\bhref="([^"]*)"/.exec(tag)?.[1])).toEqual(["/agreements/a1", "/agreements/a2", "/agreements/a3"]);
+  });
+
   test("C119: there is no Sample data badge and no sample data module", () => {
     expect(render([card()])).not.toContain("Sample data");
     const webRoot = path.join(__dirname, "..", "..");

@@ -131,6 +131,20 @@ describe("CustomerDetailView", () => {
     expect(out).toContain("$16,000/yr");
   });
 
+  test("C747: each agreement row is a link to its agreement page", () => {
+    const out = detailHtml(
+      detail({
+        agreements: [
+          { id: "g1", siteName: "Harbourview Towers", number: "AG-1048", versionNo: 1, stage: "sent", annualCents: 1600000 },
+          { id: "g2", siteName: "Lonsdale Quay", number: "AG-1049", versionNo: 2, stage: "in_progress" },
+        ],
+      }),
+    );
+    const rows = [...out.matchAll(/<a\b[^>]*\bdata-agreement-row\b[^>]*>/g)].map((m) => m[0]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((tag) => /\bhref="([^"]*)"/.exec(tag)?.[1])).toEqual(["/agreements/g1", "/agreements/g2"]);
+  });
+
   test("C133: empty sections say so", () => {
     const out = detailHtml(detail());
     for (const text of ["No contacts yet", "No sites yet", "No agreements yet"]) expect(out).toContain(text);
