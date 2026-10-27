@@ -57,11 +57,11 @@
 
 ## Handoff
 
-**Feature**: import-extract (ROADMAP Phase 2 item 3), profile standard
-**Where**: done. Live-validated (C561, C562 on 2026-10-27); Verifier PASS round 2 (scoped) over `7791dc0..6b61a9c`: 62/62 checks, 5/5 faults killed, `validate_verification.py` exit 0; ROADMAP Phase 2 item 3 ticked
-**In progress**: import-review (ROADMAP Phase 2 item 4), profile standard: plan approved, checks written, code committed (`17a7013..HEAD`); every local proof green, SQL proven in a rolled-back dry run
-**Next step**: with the user's go-ahead, apply `import_review` to the live project (rename the file to the recorded version), run `npm run test:db`, advisors and the live run C658 (its SQL cleanup also needs the go-ahead), tick ROADMAP, then dispatch the Verifier
-**Open, non-failing (import-extract)**: the `ExtractControl` progress fix (AC 32) has only the live run as proof, since the repo has no DOM test environment (lesson L-014)
+**Feature**: import-review (ROADMAP Phase 2 item 4), profile standard
+**Where**: done. Migration `20261027162030_import_review` applied; live-validated (C658, 2026-10-27); Verifier round 1 FAIL (C640 bug, three tests that could not fail) fixed in `be16688`; round 2 (scoped) PASS over `caa104f..be16688`: 56/58 proven by the Verifier, C656 and C658 from the Handoff evidence, 5/5 faults killed, `validate_verification.py` exit 0; ROADMAP Phase 2 item 4 ticked
+**In progress**: none
+**Next step**: ROADMAP Phase 3 item 1, agreement builder with versions and service price lines (new feature, plan first)
+**Open, non-failing**: the live run's data is still in the demo org (4 `import` assets on Brookhaven Community Centre, committed job `7320a90f-ad98-4176-92bd-1ad8c9934c61` with 6 rows and its `imports` object): the SQL cleanup was declined twice by the permission prompt. The `mapType` job lookup added after the live run is proven by stub tests only. The `ExtractControl` progress fix (import-extract AC 32) has only a live proof (lesson L-014)
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
