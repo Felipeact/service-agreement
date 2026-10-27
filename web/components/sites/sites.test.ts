@@ -26,6 +26,7 @@ const site = (assets: AssetView[]): SiteView => ({
   siteContactId: "ct-1",
   contactName: "Dana Whitfield",
   assets,
+  liveAgreement: null,
 });
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');

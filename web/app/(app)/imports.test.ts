@@ -46,6 +46,7 @@ const site: SiteView = {
   siteContactId: null,
   contactName: null,
   assets: [],
+  liveAgreement: null,
 };
 
 const form = (fields: Record<string, string>) => {

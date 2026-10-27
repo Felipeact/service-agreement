@@ -73,6 +73,7 @@ const site: SiteView = {
   siteContactId: null,
   contactName: null,
   assets: [],
+  liveAgreement: null,
 };
 const contact: ContactRecord = { id: CONTACT, customerId: CUSTOMER, name: "Dana", email: null, phone: null };
 const asset: AssetRecord = { id: ASSET, siteId: SITE, assetTypeId: TYPE, unitNo: "1", typeModel: null, location: "Roof" };

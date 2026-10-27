@@ -6,6 +6,15 @@ export const PIPELINE_STAGES = ["in_progress", "sent", "accepted", "completed", 
 
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
+/** The full label of each stage, for pills and the agreement page; `lib/pipeline-stage` reads it for `STAGE_META`. */
+export const STAGE_LABELS: Record<PipelineStage, string> = {
+  in_progress: "In progress",
+  sent: "Sent to customer",
+  accepted: "Accepted, awaiting signature",
+  completed: "Completed",
+  refused: "Refused",
+};
+
 /**
  * The column a deal sits in, or `null` when it is off the board. Customer-side endings show
  * under Refused; contractor-side endings (withdrawn, voided) leave the board.

@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import type { AgreementStatus } from "@/domain/agreement";
+import { LIVE_STATUSES, type AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { pipelineStage } from "@/domain/pipeline";
@@ -222,7 +222,8 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         .select(
           `id, name, address, customer_id, site_contact_id,
            customers(name, contacts(id, name)),
-           assets(id, unit_no, type_model, location, source, asset_types(code, name))`,
+           assets(id, unit_no, type_model, location, source, asset_types(code, name)),
+           agreements(id, number, status)`,
         )
         .eq("id", id)
         .limit(ROW_CAP, { foreignTable: "assets" })
@@ -245,7 +246,9 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
           source: string;
           asset_types: { code: string; name: string };
         }[];
+        agreements?: { id: string; number: string | null; status: string }[];
       };
+      const live = (row.agreements ?? []).find((agreement) => LIVE_STATUSES.includes(agreement.status as AgreementStatus));
 
       return {
         id: row.id,
@@ -264,6 +267,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
           location: asset.location,
           source: asset.source === "import" ? "import" : "manual",
         })),
+        liveAgreement: live ? { id: live.id, number: live.number ?? "", status: live.status as AgreementStatus } : null,
       };
     },
 

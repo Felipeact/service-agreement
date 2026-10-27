@@ -850,6 +850,7 @@ export type Database = {
         Returns: string
       }
       commit_import: { Args: { p_job_id: string }; Returns: number }
+      create_agreement: { Args: { p_site_id: string }; Returns: string }
       record_extraction_chunk: {
         Args: {
           p_expected_cursor: number

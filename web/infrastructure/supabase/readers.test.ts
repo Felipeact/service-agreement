@@ -254,6 +254,34 @@ describe("site register", () => {
     await supabaseSiteRegister(typed).get(ID);
     expect(calls).toContainEqual({ table: "sites", method: "limit", args: [500, { foreignTable: "assets" }] });
   });
+
+  test.each<[string, string | null]>([
+    ["draft", "draft"],
+    ["sent", "sent"],
+    ["changes_requested", "changes_requested"],
+    ["accepted", null],
+    ["refused", null],
+    ["expired", null],
+    ["withdrawn", null],
+    ["none", null],
+  ])("C703: a site whose agreement is %s has liveAgreement %s", async (status, live) => {
+    const agreements =
+      status === "none"
+        ? []
+        : [
+            { id: "old", number: "AG-1001", status: "withdrawn" },
+            { id: "g1", number: "AG-1048", status },
+          ];
+    const site = await supabaseSiteRegister(stubClient({ sites: ok({ ...row, agreements }) }).typed).get(ID);
+    expect(site?.liveAgreement).toEqual(live ? { id: "g1", number: "AG-1048", status: live } : null);
+  });
+
+  test("C703: the register reads the site's agreements with their id, number and status", async () => {
+    const { typed, calls } = stubClient({ sites: ok({ ...row, agreements: [] }) });
+    await supabaseSiteRegister(typed).get(ID);
+    const select = String(calls.find((call) => call.table === "sites" && call.method === "select")?.args[0]);
+    expect(select.replace(/\s+/g, " ")).toContain("agreements(id, number, status)");
+  });
 });
 
 describe("record reads for the edit forms", () => {

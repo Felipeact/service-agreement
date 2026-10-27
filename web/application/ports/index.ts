@@ -1,4 +1,4 @@
-import type { AgreementStatus } from "@/domain/agreement";
+import type { AgreementStatus, ServiceLineValue } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
@@ -138,6 +138,8 @@ export type SiteView = {
   siteContactId: string | null;
   contactName: string | null;
   assets: AssetView[];
+  /** The site's agreement in `draft`, `sent` or `changes_requested`, if any (agreement-builder door 2). */
+  liveAgreement: { id: string; number: string; status: AgreementStatus } | null;
 };
 
 /** One asset as its edit form needs it. */
@@ -381,4 +383,56 @@ export type ParseResult = { ok: true; parsed: ParsedImport } | { ok: false; reas
 /** Opens a file by its content type; a file it cannot read is a `reason`, never a throw. */
 export interface ImportParser {
   parse(contentType: ImportContentType, bytes: Uint8Array): Promise<ParseResult>;
+}
+
+/** One priced line of a version, with its annual amount (agreement-builder door 7). */
+export type ServiceLineView = {
+  id: string;
+  position: number;
+  description: string;
+  visitsPerYear: number;
+  costPerVisitCents: number;
+  annualCents: number;
+};
+
+/** An agreement as its page shows it: the version asked for, or the current one. */
+export type AgreementDetail = {
+  id: string;
+  number: string;
+  status: AgreementStatus;
+  /** `null` when the agreement is off the board: withdrawn, or its contract voided. */
+  stage: PipelineStage | null;
+  site: { id: string; name: string };
+  customer: { id: string; name: string };
+  /** Every version, newest first. */
+  versions: { versionNo: number; createdAt: Date }[];
+  shown: { versionNo: number; current: boolean; lines: ServiceLineView[]; annualCents: number };
+  /** The agreement is `draft` and the shown version is the current one. */
+  editable: boolean;
+};
+
+export interface AgreementReader {
+  /** `null` for a malformed id, a missing row, or a row of another org. An unknown `versionNo` shows the current version. */
+  get(id: string, versionNo?: number): Promise<AgreementDetail | null>;
+}
+
+export type CreateAgreementResult =
+  | { ok: true; id: string }
+  | { ok: false; code: WriteFailure }
+  | { ok: false; code: "open_exists"; agreementId: string; number: string };
+
+export interface AgreementStore {
+  /** Numbers the agreement and creates version 1 in one transaction (`create_agreement`, door 3). */
+  create(siteId: string): Promise<CreateAgreementResult>;
+}
+
+export type AddServiceLineResult = { ok: true; id: string } | { ok: false; code: WriteFailure | "locked" | "too_many" };
+export type ServiceLineWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" };
+
+/** Lines of the current version of a draft; anything else answers `locked` (door 4). */
+export interface ServiceLineStore {
+  /** Adds after the last line of the agreement's current version. */
+  add(agreementId: string, value: ServiceLineValue): Promise<AddServiceLineResult>;
+  update(lineId: string, value: ServiceLineValue): Promise<ServiceLineWriteResult>;
+  remove(lineId: string): Promise<ServiceLineWriteResult>;
 }
