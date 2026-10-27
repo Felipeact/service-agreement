@@ -79,7 +79,12 @@ Other sources:
 - **Matching:** `matchAssetType` in [web/domain/imports/index.ts](web/domain/imports/index.ts) compares code or name (lowercased, punctuation collapsed), then a built-in synonym table (`SYNONYMS`, by catalog code, e.g. "Rooftop unit" -> RTU, "MAU" -> MUA); no match or more than one gives no type, and the row is stored with `asset_type_id` null and counted as needing a type.
 - **Data:** `import_rows`, the extraction columns on `import_jobs`, the `record_extraction_chunk` function and the `import_row_counts` view, in [supabase/migrations/20261027045548_import_extract.sql](supabase/migrations/20261027045548_import_extract.sql). `import_rows` joined the tenant-table inventory (17 tables).
 - **Screen:** the job list shows "Extract equipment", "Extracting" with `n of m`, and "Extracted" with `338 rows, 14 need an equipment type` ("No equipment found" for none).
-- **Not yet:** the review grid and commit to `assets` (next Phase 2 item); real-file validation against the Claude API (needs an API key); per-org synonyms; spend limits.
+- **Not yet:** per-org synonyms; spend limits.
+**What we built (step 4, review and commit):** spec [.specs/features/import-review/](.specs/features/import-review/).
+- **Screen:** "Review rows" on an extracted or committed job opens `/imports/[jobId]` ([web/app/(app)/imports/[jobId]/](web/app/(app)/imports/[jobId]/), [web/components/imports/review-view.tsx](web/components/imports/review-view.tsx)): every row in file order, 100 a page, with the matched type beside what the file said, and a "Needs attention" filter. Writers edit a row (the asset form's fields and limits), skip or include it, give one type to every untyped row with the same spelling, then press "Add N assets to <site>" and confirm. Below 768px rows are stacked cards.
+- **Flags** (`flagRows` in [web/domain/imports/index.ts](web/domain/imports/index.ts)): "Needs a type" and "Too long" block the commit; "Check this row" (low confidence), "Same as row n" (same type and unit #) and "Already on this site" only ask for a look. A row with no unit # is never a duplicate. Merging duplicates means skipping all but one; nothing is skipped automatically.
+- **Commit:** `public.commit_import` adds every included row as an asset (`source = 'import'`) on the job's site in one transaction and marks the job `committed` ("Added to site: 336 assets, 2 skipped"); a repeat adds nothing. Rows keep `skipped` and the `asset_id` they became; deleting that asset clears the link. A trigger freezes a job's rows unless it is `extracted`, and a committed job cannot be discarded (AD-045 to AD-050). Migration [supabase/migrations/20261027100000_import_review.sql](supabase/migrations/20261027100000_import_review.sql).
+- **Not yet:** updating an existing asset from a row flagged "Already on this site"; undoing a commit as a whole; adding rows the file did not have.
 
 ### Maintenance task library (M6)
 **What it is:** a preventive-maintenance checklist for each equipment type. Each tenant can edit it, and it is snapshotted into each agreement version so later edits don't change sent agreements.
@@ -189,6 +194,8 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## Build log
 
 Newest first. Use one line per completed change: date, what was done, and the key files.
+
+- **2026-10-27:** Phase 2 item 4, review extracted rows and add them to the site ([.specs/features/import-review/](.specs/features/import-review/)): review grid at `/imports/[jobId]`, row flags, spelling mapping, skip, migration `import_review` (`skipped` / `asset_id` on `import_rows`, `committed` on `import_jobs`, `commit_import`, the `import_rows_frozen` trigger, AD-045 to AD-050), `import_review` SQL recipe (`npm run test:db` now runs 14).
 
 - **2026-10-27:** Phase 2 item 3, extract equipment rows with Claude and match their types ([.specs/features/import-extract/](.specs/features/import-extract/)): `AssetExtractor` on the Claude API, `matchAssetType` and synonyms, migration `import_extract` (`import_rows`, cursor on `import_jobs`, `record_extraction_chunk`, `import_row_counts`, AD-038 to AD-044), "Extract equipment" on the import page, `import_extract` SQL recipe (`npm run test:db` now runs 13; table-inventory pins C35 and C19 now count 17). Live checks passed 2026-10-27 (C561 without a key, C562 against the real API with xlsx, docx and pdf and a resumed run); the run also fixed the progress label ("Extracting… 1 of 2").
 
