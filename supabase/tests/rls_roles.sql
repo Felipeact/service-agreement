@@ -39,13 +39,14 @@ begin
   end loop;
 end $$;
 
--- C12
+-- C12. agreement_versions has no update grant for members since service-included (its C817 proves the refusal),
+-- so it leaves this loop the way events did.
 do $$
 declare
   t text;
   a uuid := tests.id('orgA');
 begin
-  foreach t in array array_remove(array_remove(tests.tenant_tables(), 'outbox'), 'events') loop
+  foreach t in array array_remove(array_remove(array_remove(tests.tenant_tables(), 'outbox'), 'events'), 'agreement_versions') loop
     perform tests.expect_rows('C12 update ' || t,
       format('update public.%I set org_id = org_id where org_id = %L', t, a), 0);
     perform tests.expect_rows('C12 delete ' || t,
