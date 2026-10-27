@@ -153,17 +153,19 @@ do $$ begin
   perform tests.expect_rows('C547 estimator insert',
     format('insert into public.import_rows (org_id, job_id, position, confidence) values (%L, %L, 6, ''low'')', tests.id('orgA'), tests.id('jK')), 1);
 end $$;
+-- Updates target an extracted job: import-review's trigger freezes the rows of any job not `extracted`.
 reset role;
+insert into public.import_rows (org_id, job_id, position, confidence) values (tests.id('orgA'), tests.id('jEX'), 1, 'low');
 select tests.act_as('uA');
 do $$ begin
   perform tests.expect_rows('C547 owner update',
-    format('update public.import_rows set unit_no = ''X'' where job_id = %L and position = 1', tests.id('jK')), 1);
+    format('update public.import_rows set unit_no = ''X'' where job_id = %L and position = 1', tests.id('jEX')), 1);
 end $$;
 reset role;
 select tests.act_as('uV');
 do $$ begin
   perform tests.expect_rows('C547 viewer update',
-    format('update public.import_rows set unit_no = ''Y'' where job_id = %L and position = 1', tests.id('jK')), 0);
+    format('update public.import_rows set unit_no = ''Y'' where job_id = %L and position = 1', tests.id('jEX')), 0);
 end $$;
 reset role;
 
