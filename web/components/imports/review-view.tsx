@@ -3,7 +3,7 @@ import type { AssetTypeOption, ImportReview, ImportRowView } from "@/application
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, unmatchedSpellings, type ReviewFlag } from "@/domain/imports";
-import { CommitControl, MapControl, RowControls } from "./review-controls";
+import { CommitControl, MappingSection, RowControls } from "./review-controls";
 import type { CommitState, MapState, RowState } from "./state";
 
 export type ReviewActions = {
@@ -72,7 +72,8 @@ export function ReviewView({ review, types, siteAssets, show, page, actions }: R
   const open = job.status === "extracted";
   const writer = open ? actions : undefined;
   const typeLabel = new Map(types.map((type) => [type.id, `${type.name} (${type.code})`]));
-  const flags = flagRows(rows, siteAssets);
+  // Once committed, the site holds the rows' own assets, so comparing against it would flag every added row.
+  const flags = flagRows(rows, open ? siteAssets : []);
   const flagsOf = (row: ImportRowView) => flags.get(row.id) ?? [];
   const included = rows.filter((row) => !row.skipped);
   const attention = included.filter((row) => flagsOf(row).length > 0);
@@ -118,14 +119,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions }: R
             </section>
           )}
 
-          {writer && spellings.length > 0 && (
-            <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
-              <h2 className="text-[15px] font-semibold">Equipment types not recognised</h2>
-              {spellings.map((spelling, index) => (
-                <MapControl key={spelling.key} spelling={spelling} types={types} index={index} map={writer.map} />
-              ))}
-            </section>
-          )}
+          {writer && <MappingSection spellings={spellings} types={types} map={writer.map} />}
 
           <section className="flex flex-col gap-3">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -143,7 +137,8 @@ export function ReviewView({ review, types, siteAssets, show, page, actions }: R
             {pageRows.length === 0 ? (
               <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">Every row is ready to add.</p>
             ) : (
-              <div className="rounded-panel border border-hairline bg-surface md:overflow-x-auto">
+              <div className="relative rounded-panel border border-hairline bg-surface md:overflow-x-auto">
+                {/* `relative` keeps the `md:sr-only` column labels (absolutely positioned) inside the scroll area. */}
                 <div className="md:min-w-[960px]">
                   <div aria-hidden="true" className="hidden grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] gap-3 border-b border-hairline px-4 py-2 text-[11px] font-semibold text-ink-2 md:grid">
                     {COLUMNS.map((column) => (

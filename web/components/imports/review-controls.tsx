@@ -144,9 +144,44 @@ export function MapPrompt({ spelling, types, state, pending, index, action }: Ma
   );
 }
 
-export function MapControl({ spelling, types, index, map }: Omit<MapPromptProps, "state" | "pending" | "action"> & { map: (formData: FormData) => Promise<MapState> }) {
-  const [state, formAction, pending] = useActionState<MapState, FormData>((_, formData) => map(formData), { status: "idle" });
+type MapControlProps = Omit<MapPromptProps, "state" | "pending" | "action"> & {
+  map: (formData: FormData) => Promise<MapState>;
+  onMapped?: (rows: number) => void;
+};
+
+export function MapControl({ spelling, types, index, map, onMapped }: MapControlProps) {
+  const [state, formAction, pending] = useActionState<MapState, FormData>(async (_, formData) => {
+    const answer = await map(formData);
+    if (answer.status === "mapped") onMapped?.(answer.rows);
+    return answer;
+  }, { status: "idle" });
   return <MapPrompt spelling={spelling} types={types} state={state} pending={pending} index={index} action={formAction} />;
+}
+
+type MappingSectionProps = {
+  spellings: { key: string; raw: string; count: number }[];
+  types: AssetTypeOption[];
+  map: (formData: FormData) => Promise<MapState>;
+};
+
+/**
+ * The unrecognised spellings. It stays mounted when the last one is mapped, so "Applied to n rows" survives the
+ * refresh that removes the spelling it was applied to.
+ */
+export function MappingSection({ spellings, types, map }: MappingSectionProps) {
+  const [applied, setApplied] = useState<number | null>(null);
+  if (spellings.length === 0 && applied === null) return null;
+  return (
+    <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
+      {spellings.length > 0 && <h2 className="text-[15px] font-semibold">Equipment types not recognised</h2>}
+      {spellings.map((spelling, index) => (
+        <MapControl key={spelling.key} spelling={spelling} types={types} index={index} map={map} onMapped={setApplied} />
+      ))}
+      {spellings.length === 0 && applied !== null && (
+        <p role="status" className="text-[13px] text-ink">{`Applied to ${applied} ${applied === 1 ? "row" : "rows"}. Every equipment type is recognised.`}</p>
+      )}
+    </section>
+  );
 }
 
 type CommitPromptProps = {
@@ -180,7 +215,8 @@ export function CommitPrompt({ label, siteName, added, blocked, confirming, pend
         </form>
       ) : (
         <div>
-          <Button variant="primary" disabled={blocked !== null} onClick={onStart}>
+          {/* A long site name wraps on a phone instead of running past the card. */}
+          <Button variant="primary" disabled={blocked !== null} onClick={onStart} className="h-auto! min-h-11 py-2 text-left whitespace-normal! lg:min-h-[34px]">
             {label}
           </Button>
         </div>

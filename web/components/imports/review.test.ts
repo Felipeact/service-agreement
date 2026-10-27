@@ -222,6 +222,14 @@ describe("review view", () => {
     expect(html).not.toMatch(/>(Edit|Skip|Include|Apply)<\/button>|Add \d+ asset|id="map-/);
   });
 
+  test("C634: a committed row is not flagged as already on the site it was added to", () => {
+    const html = view(review([row({ unitNo: "RTU-1", assetId: "a1" })], "committed", { added: 1, skipped: 0, at: new Date() }), {
+      site: [{ assetTypeId: RTU, unitNo: "RTU-1" }],
+    });
+    expect(html).toContain(">Added<");
+    expect(html).not.toContain("Already on this site");
+  });
+
   test("C638: a viewer sees the rows and flags and no control", () => {
     const html = view(review([row({ assetTypeId: null, assetTypeRaw: "Widget" }), row()]), { writer: false });
     expect(rowPositions(html)).toHaveLength(2);
