@@ -70,11 +70,11 @@
 ## Handoff
 
 **Feature**: service-included (ROADMAP Phase 3 item 2), profile standard
-**Where**: built as one builder. Migration `20261027212052_service_included` applied (user go-ahead 2026-10-27); `npm run test:db` 16/16 after the user-approved C12 change in `rls_roles.sql`; `npm test` 1250 passed; tsc, lint and `next build` clean; types match `generate_typescript_types`; security advisors at the two accepted findings; backfill checked (C820). ROADMAP Phase 3 item 2 ticked. C822 (live) not run yet; the Verifier has not run yet
-**In progress**: C822 live validation
-**Next step**: restart the dev server (the one on :3000, PID 26348, returns 500 since its compile worker died; stopping it was refused by the permission classifier), run C822, then dispatch the Verifier over C801-C832 (base `05a934e`)
-**Open, non-failing**: no site on the live project has 300+ assets (Brookhaven has 9; the import-review rows did not stay as 336 assets), so C822's large-site case needs data or a narrower reading. The agreement-builder Verifier did run (`.specs/features/agreement-builder/verification.md`). The two lint-driven tests (C539, C32) can still time out under full parallel runs
-**Blockers**: the dev server restart (user)
+**Where**: built as one builder. Migration `20261027212052_service_included` applied (user go-ahead 2026-10-27); `npm run test:db` 16/16 after the user-approved C12 change in `rls_roles.sql`; `npm test` 1250 passed; tsc, lint and `next build` clean; types match `generate_typescript_types`; security advisors at the two accepted findings; backfill checked (C820). ROADMAP Phase 3 item 2 ticked. C822 live-validated 2026-10-27 (narrowed to Brookhaven, 9 assets, user option 1); the Verifier is running
+**In progress**: Verifier over C801-C832
+**Next step**: check the Verifier's report with `validate_verification.py service-included`; then ROADMAP Phase 3 item 3, the agreement PDF
+**Open, non-failing**: no site on the live project has 300+ assets (Brookhaven has 9; the import-review rows did not stay as 336 assets), so C822's large-site case ran on Brookhaven (user option 1). The live test asset `CH-LIVE-1` (chiller) stays on Pinecrest Office Park, Building A (cleanup delete declined). The agreement-builder Verifier did run (`.specs/features/agreement-builder/verification.md`). The two lint-driven tests (C539, C32) can still time out under full parallel runs
+**Blockers**: none
 **Uncommitted**: none
 **Branch**: development (local commits ahead of origin, not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`

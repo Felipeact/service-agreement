@@ -178,7 +178,7 @@ Proof: `npm run test:db demo_seed` (assertions `C821`)
 - draft AG-1046 shows `Service included` and `Equipment` with its site's types
 - adding an asset of a type not yet on that site and reloading shows the new type with its checklist
 - sent AG-1039 shows `As recorded on`
-- an agreement on a site with 300+ assets shows its `Equipment` groups closed, and one opens on tap
+- an agreement on a site with 300+ assets shows its `Equipment` groups closed, and one opens on tap (narrowed 2026-10-27, user option 1: run on Brookhaven's AG-1022, 9 assets, the largest site on the live project; no site has 300+)
 - `document.documentElement.scrollWidth <= window.innerWidth` at each width
 - each `<summary>` is at least 44 px tall
 
@@ -312,4 +312,8 @@ Cost: about 20 proofs at their own layer across 4 files. Without these rows, the
   - The C821 draft count was corrected from 3 to 2 before any code, because `seed.sql` creates 2 drafts.
   - `ServiceScope.takenAt` is an ISO string in the domain, and the reader makes the port's `Date`. The domain purity test C33 forbids `new Date(`.
   - The stub client's `rpc` now answers `{ data: null, error: null }` by default.
-- **C822:** not run. The dev server on :3000 answers 500 on every page, because its compile worker died after `next build` rewrote `.next`. Stopping it was refused by the permission classifier. No site on the live project has 300+ assets (the largest, Brookhaven, has 9).
+- **C822 (live, 2026-10-27, demo owner, one Playwright context, `npm run dev` restarted by the user):** passed.
+  - **AG-1046 (draft, Pinecrest):** shows Service included and Equipment live. An asset `CH-LIVE-1` of type `CHILLER`, inserted with `execute_sql`, appeared after a reload as `Chiller, 1 unit` with its 6 tasks. The user declined the cleanup delete, so `CH-LIVE-1` stays on Pinecrest Office Park, Building A.
+  - **AG-1039 (sent):** shows `As recorded on Oct 27, 2026` in both sections, with no `Add equipment`.
+  - **AG-1022 (Brookhaven, 9 assets, narrowed case):** 8 groups, all closed. One opened on click at 1440 px, and on a tap at 375 px it showed its 2 rows.
+  - **At every width:** each `<summary>` is 44 px tall. `scrollWidth` vs `innerWidth` is 1434 / 1449, 753 / 768 and 360 / 375.
