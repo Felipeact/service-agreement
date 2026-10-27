@@ -86,3 +86,89 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function isUuid(id: string): boolean {
   return UUID.test(id);
 }
+
+/** Data rows sent to Claude per call (import-extract door 3). */
+export const CHUNK_ROWS = 100;
+
+/** What `ParsedImport` needs to be cut into chunks. The domain cannot import the ports, so the shape is repeated; the use case's call checks the two stay in step. */
+export type ChunkSource =
+  | { format: "table"; tables: { source: string; header: string[]; rows: { ref: string; cells: string[] }[] }[]; text: string }
+  | { format: "pdf"; bytes: Uint8Array };
+
+export type Chunk =
+  | { kind: "rows"; table: string; header: string[]; rows: { ref: string; cells: string[] }[] }
+  | { kind: "text"; text: string }
+  | { kind: "pdf"; bytes: Uint8Array };
+
+/** Chunks per table: up to `CHUNK_ROWS` data rows, never spanning two tables. */
+function tableChunks(source: Extract<ChunkSource, { format: "table" }>): Extract<Chunk, { kind: "rows" }>[] {
+  return source.tables.flatMap((table) => {
+    const chunks: Extract<Chunk, { kind: "rows" }>[] = [];
+    for (let from = 0; from < table.rows.length; from += CHUNK_ROWS) {
+      chunks.push({ kind: "rows", table: table.source, header: table.header, rows: table.rows.slice(from, from + CHUNK_ROWS) });
+    }
+    return chunks;
+  });
+}
+
+/** The chunks of a file in order: its tables' rows, else the document text, else the whole PDF. The text of a file that has tables is not sent. */
+export function chunksOf(source: ChunkSource): Chunk[] {
+  if (source.format === "pdf") return [{ kind: "pdf", bytes: source.bytes }];
+  return source.tables.length > 0 ? tableChunks(source) : [{ kind: "text", text: source.text }];
+}
+
+/** The text compared when matching a type: lowercased, every run of non-letters and non-digits one space, trimmed. */
+export function normalized(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+export type AssetTypeRef = { id: string; code: string; name: string };
+
+/** Other ways a list writes a standard type, by catalog code. Compared after `normalized`. Grows from review-grid misses. */
+export const SYNONYMS: Record<string, string[]> = {
+  AHU: ["air handling unit", "air handler", "air handler unit"],
+  BOILER: ["hot water boiler", "steam boiler", "boilers"],
+  CHILLER: ["water chiller", "chillers"],
+  COOLING_TOWER: ["cooling towers"],
+  DUCTLESS_SPLIT: ["mini split", "ductless mini split", "ductless heat pump"],
+  ERV: ["energy recovery ventilator", "energy recovery unit"],
+  EXHAUST_FAN: ["exhaust fans", "ef", "roof exhaust fan"],
+  FAN_COIL: ["fan coil unit", "fcu"],
+  FURNACE: ["gas furnace", "furnaces"],
+  HEAT_EXCHANGER: ["plate heat exchanger", "hx"],
+  HRV: ["heat recovery ventilator"],
+  ICE_MACHINE: ["ice maker"],
+  MINI_VRF: ["mini vrf system"],
+  MUA: ["mau", "make up air", "make up air unit", "makeup air unit", "make up air handler"],
+  PTAC: ["packaged terminal ac", "packaged terminal air conditioner"],
+  PUMP: ["circulating pump", "circulation pump", "pumps"],
+  RTU: ["rooftop unit", "rooftop", "roof top unit", "roof top", "rooftop air conditioner", "packaged rooftop unit"],
+  STORAGE_TANK: ["storage tanks", "hot water storage tank"],
+  SUPPLY_FAN: ["supply fans"],
+  UNITARY_SPLIT: ["split system", "unitary split"],
+  UNIT_HEATER_ELECTRIC: ["electric unit heater"],
+  UNIT_HEATER_GAS: ["gas unit heater", "gas fired unit heater"],
+  VRF_OUTDOOR: ["vrf outdoor unit", "vrf condenser"],
+  WSHP: ["water source heat pump", "water to air heat pump"],
+  WALK_IN_COOLER: ["walk in cooler", "walk in refrigerator"],
+  WALK_IN_FREEZER: ["walk in freezer"],
+  WYE_STRAINER: ["y strainer", "wye strainers"],
+};
+
+/**
+ * The org's type a list's wording means, or `null`. A code or name wins; only then a synonym of a code the org has.
+ * Blank text, no match and more than one distinct match all give `null`: a guess would hide a row the review must see.
+ */
+export function matchAssetType(raw: string | null, types: AssetTypeRef[]): string | null {
+  const wanted = normalized(raw ?? "");
+  if (!wanted) return null;
+  const direct = new Set(types.filter((t) => normalized(t.code) === wanted || normalized(t.name) === wanted).map((t) => t.id));
+  if (direct.size > 0) return direct.size === 1 ? [...direct][0] : null;
+  const viaSynonym = new Set(
+    types.filter((t) => (SYNONYMS[t.code] ?? []).some((synonym) => normalized(synonym) === wanted)).map((t) => t.id),
+  );
+  return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
+}
