@@ -166,9 +166,27 @@ describe("review view", () => {
   });
 
   test("C615: a skipped row is labelled and dimmed", () => {
-    const html = view(review([row({ position: 1, skipped: true, assetTypeId: null, confidence: "low" })]));
-    expect(html).toMatch(/data-row="1"[\s\S]*class="[^"]*text-ink-2[^"]*"[\s\S]*>Skipped</);
+    const html = view(review([row({ position: 1, skipped: true, assetTypeId: null, confidence: "low" }), row({ position: 2 })]));
+    // The row's own grid carries the ink, not the column labels inside it.
+    const gridOf = (position: number) => html.match(new RegExp(`data-row="${position}"[^>]*><div class="(grid [^"]*)"`))?.[1] ?? "";
+    expect(gridOf(1).split(" ")).toContain("text-ink-2");
+    expect(gridOf(2).split(" ")).toContain("text-ink");
+    expect(gridOf(2).split(" ")).not.toContain("text-ink-2");
+    expect(html).toMatch(/data-tone="neutral"[^>]*>Skipped</);
     expect(html).not.toContain(">Check this row<");
+  });
+
+  test.each<[string, Partial<ImportRowView>[], { assetTypeId: string; unitNo: string | null }[], string]>([
+    ["C609", [{ position: 1, assetTypeId: null }], [], "Needs a type"],
+    ["C610", [{ position: 1, unitNo: "u".repeat(41) }], [], "Too long: Unit #"],
+    ["C610", [{ position: 1, typeModel: "m".repeat(121) }], [], "Too long: Type/model"],
+    ["C610", [{ position: 1, location: "l".repeat(301) }], [], "Too long: Location/access"],
+    ["C611", [{ position: 1, confidence: "low" }], [], "Check this row"],
+    ["C612", [{ position: 1, unitNo: "RTU-1" }, { position: 2, unitNo: "rtu 1" }], [], "Same as row 1"],
+    ["C613", [{ position: 1, unitNo: "RTU 2" }], [{ assetTypeId: RTU, unitNo: "rtu-2" }], "Already on this site"],
+  ])("%s: the review view shows the flag pill %j", (_, rows, site, label) => {
+    const html = view(review(rows.map((over) => row(over))), { site });
+    expect(html).toMatch(new RegExp(`data-tone="attention"[^>]*>${label.replace(/[()#/]/g, "\\$&")}<`));
   });
 
   test("C620: each unrecognised spelling with its count and a type select, for a writer", () => {
@@ -233,7 +251,8 @@ describe("review view", () => {
   test("C638: a viewer sees the rows and flags and no control", () => {
     const html = view(review([row({ assetTypeId: null, assetTypeRaw: "Widget" }), row()]), { writer: false });
     expect(rowPositions(html)).toHaveLength(2);
-    expect(html).toContain(">Needs a type<");
+    // The flag pill, not the equipment-type cell that also reads "Needs a type".
+    expect(html).toMatch(/data-tone="attention"[^>]*>Needs a type</);
     expect(html).not.toMatch(/>(Edit|Skip|Include|Apply)<\/button>|Add \d+ asset|id="map-/);
   });
 });

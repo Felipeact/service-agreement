@@ -108,7 +108,7 @@ describe("ImportReviewReader.forJob", () => {
 
 describe("ImportRowStore", () => {
   test("C619: each write sends only the columns it owns", async () => {
-    const { typed, calls } = stubClient({ import_rows: ok([{ id: ROW }]) });
+    const { typed, calls } = stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: ok([{ id: ROW }]) });
     const store = supabaseImportRowStore(typed);
     await store.update(ROW, { assetTypeId: TYPE, unitNo: "RTU-1", typeModel: "Carrier", location: null });
     await store.setSkipped(ROW, true);
@@ -131,14 +131,14 @@ describe("ImportRowStore", () => {
       { id: "w3", asset_type_raw: "WIDGET" },
       { id: "n1", asset_type_raw: null },
     ];
-    const { typed, calls } = stubClient({ import_rows: { sequence: [ok(untyped), ok([{ id: "w1" }, { id: "w2" }, { id: "w3" }])] } });
+    const { typed, calls } = stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: { sequence: [ok(untyped), ok([{ id: "w1" }, { id: "w2" }, { id: "w3" }])] } });
 
     const result = await supabaseImportRowStore(typed).mapType(JOB, "widget", TYPE);
 
     expect(result).toEqual({ ok: true, rows: 3 });
     const read = calls.filter((c) => c.method === "is");
     expect(read[0].args).toEqual(["asset_type_id", null]);
-    expect(calls.find((c) => c.method === "eq")?.args).toEqual(["job_id", JOB]);
+    expect(calls.find((c) => c.table === "import_rows" && c.method === "eq")?.args).toEqual(["job_id", JOB]);
     expect(calls.find((c) => c.method === "update")?.args[0]).toEqual({ asset_type_id: TYPE });
     expect(calls.find((c) => c.method === "in")?.args).toEqual(["id", ["w1", "w2", "w3"]]);
     expect(read[1].args).toEqual(["asset_type_id", null]);
@@ -146,7 +146,7 @@ describe("ImportRowStore", () => {
 
   test.each(["update", "setSkipped", "mapType"] as const)("C636: %s maps SQLSTATE 55000 to locked", async (method) => {
     const reply = fail("55000");
-    const { typed } = stubClient({ import_rows: method === "mapType" ? { sequence: [ok([{ id: "w1", asset_type_raw: "Widget" }]), reply] } : reply });
+    const { typed } = stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: method === "mapType" ? { sequence: [ok([{ id: "w1", asset_type_raw: "Widget" }]), reply] } : reply });
     const store = supabaseImportRowStore(typed);
     const result =
       method === "update"
@@ -165,8 +165,22 @@ describe("ImportRowStore", () => {
   });
 
   test("C640: mapType answers not_found when its update names a job's row RLS no longer shows", async () => {
-    const { typed } = stubClient({ import_rows: { sequence: [ok([{ id: "w1", asset_type_raw: "Widget" }]), fail("23503")] } });
+    const { typed } = stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: { sequence: [ok([{ id: "w1", asset_type_raw: "Widget" }]), fail("23503")] } });
     expect(await supabaseImportRowStore(typed).mapType(JOB, "widget", TYPE)).toEqual({ ok: false, code: "not_found" });
+  });
+});
+
+describe("ImportRowStore.mapType and its job", () => {
+  test("C640: a missing or other-org job is not_found and no row is read or written", async () => {
+    const { typed, calls } = stubClient({ import_jobs: ok(null), import_rows: ok([]) });
+    expect(await supabaseImportRowStore(typed).mapType(JOB, "widget", TYPE)).toEqual({ ok: false, code: "not_found" });
+    expect(calls.some((c) => c.table === "import_rows")).toBe(false);
+  });
+
+  test("C636: a job no longer extracted is locked and no row is written", async () => {
+    const { typed, calls } = stubClient({ import_jobs: ok([{ status: "committed" }]), import_rows: ok([]) });
+    expect(await supabaseImportRowStore(typed).mapType(JOB, "widget", TYPE)).toEqual({ ok: false, code: "locked" });
+    expect(calls.some((c) => c.table === "import_rows" && c.method === "update")).toBe(false);
   });
 });
 

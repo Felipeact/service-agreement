@@ -530,3 +530,9 @@ table and the commit refusals are proven only by the live run that happens to cr
   - A committed job flagged every added row "Already on this site" (its own assets are now on the site); site duplicates are compared only while the job is `extracted` (new C634 test).
   - A console error ("Element type is invalid … Lazy") appeared once during Fast Refresh right after an edit and not on any clean load.
 - **Not done:** cleanup of the live data. The user chose to delete it by SQL, and the `execute_sql` delete was declined twice by the permission prompt. The demo org still holds the 4 imported assets on Brookhaven Community Centre, the committed job `7320a90f-ad98-4176-92bd-1ad8c9934c61` with its 6 rows, and its object in `imports`.
+- **Verifier round 1 (FAIL, `caa104f..9091a31`), fixed:**
+  - C640: `mapType` answered `{ ok: true, rows: 0 }` for a well-formed missing or other-org job id, so `mapImportTypeAction` said `mapped`. It now reads the job first: no row is `not_found`, a job not `extracted` is `locked`, before any row is read or written. New tests under C640 and C636; C622's `eq` assertion is scoped to `import_rows` because the job read is now the first `eq`.
+  - C615: the dimming assertion matched the column labels' own `text-ink-2`; it now reads the row grid's class list (skipped `text-ink-2`, included `text-ink` only). The Verifier's surviving fault (ink always `text-ink`) now fails C615.
+  - C638: the viewer assertion matched the type cell's "Needs a type"; it now requires the attention pill.
+  - Flag labels on screen (AC 9-13) had no positive proof; a table-driven view test now asserts each attention pill ("Needs a type", "Too long: Unit #" / "Type/model" / "Location/access", "Check this row", "Same as row 1", "Already on this site"). Removing the pills fails 8 tests.
+  - 1,037 tests, lint clean.

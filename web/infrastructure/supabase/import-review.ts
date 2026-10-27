@@ -118,6 +118,11 @@ export function supabaseImportRowStore(client: Client): ImportRowStore {
 
     async mapType(jobId, rawNormalized, assetTypeId) {
       try {
+        // The job first: a missing or other-org job reads no rows, which would otherwise answer "0 rows mapped".
+        const { data: job, error: jobError } = await client.from("import_jobs").select("status").eq("id", jobId).maybeSingle();
+        if (jobError) return failure("Mapping an import spelling", jobError);
+        if (!job) return { ok: false, code: "not_found" };
+        if (job.status !== "extracted") return { ok: false, code: "locked" };
         const untyped = await allPages((from, to) =>
           client
             .from("import_rows")
