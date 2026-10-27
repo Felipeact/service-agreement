@@ -167,7 +167,7 @@ Proof: mcp `execute_sql` before and after `apply_migration`, recorded in the Han
 
 **C821** - The `demo_seed` recipe runs `SEED_BODY` twice. After the first run:
 - every demo version that is not the highest of a `draft` agreement has `snapshot->>'schema'` = `1`
-- the 3 demo `draft` agreements' current versions hold `{}`
+- the 2 demo `draft` agreements' current versions (AG-1046, AG-1051) hold `{}` (corrected from 3 before any build: `seed.sql` creates 2 drafts; the third on the live project came from the agreement-builder live run)
 
 After the second run, every snapshot is byte-for-byte equal to its value after the first run, so the `takenAt` values are unchanged (AC 15, door 5).
 Proof: `npm run test:db demo_seed` (assertions `C821`)

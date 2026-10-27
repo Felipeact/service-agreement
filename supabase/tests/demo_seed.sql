@@ -140,6 +140,25 @@ do $$ begin
     'a phone is outside 555-01xx');
 end $$;
 
+-- C821 (service-included): frozen demo versions hold their site's scope; the current version of a draft stays live.
+do $$ begin
+  perform tests.ok('C821 frozen',
+    not exists (select 1 from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
+                where v.org_id = tests.demo()
+                  and not (a.status = 'draft' and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id))
+                  and (v.snapshot ->> 'schema') is distinct from '1'),
+    'a frozen demo version has no scope');
+  perform tests.ok('C821 drafts live',
+    (select count(*) from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
+     where v.org_id = tests.demo() and a.status = 'draft' and v.snapshot = '{}'::jsonb
+       and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id)) = 2,
+    'the 2 demo drafts do not all keep an empty snapshot');
+end $$;
+
+-- Snapshots after the first run, for C821 on the second.
+create table tests.demo_snapshots as
+select id, snapshot::text as snapshot from public.agreement_versions where org_id = tests.demo();
+
 -- Counts after the first run, for C19.
 create table tests.demo_counts as
 select 'orgs' as t, (select count(*) from public.orgs where id = tests.demo()) as n

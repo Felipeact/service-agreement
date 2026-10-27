@@ -15,5 +15,13 @@ begin
   end loop;
 end $$;
 
+-- C821 (service-included): the second run changes no snapshot.
+do $$ begin
+  perform tests.ok('C821 rerun',
+    not exists (select 1 from tests.demo_snapshots s join public.agreement_versions v on v.id = s.id
+                where v.snapshot::text <> s.snapshot),
+    'a snapshot changed on the second run');
+end $$;
+
 rollback;
 select 'demo_seed: pass' as result;
