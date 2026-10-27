@@ -479,8 +479,8 @@ export type Database = {
       }
       import_rows: {
         Row: {
-          asset_type_id: string | null
           asset_id: string | null
+          asset_type_id: string | null
           asset_type_raw: string | null
           confidence: string
           id: string
@@ -494,8 +494,8 @@ export type Database = {
           unit_no: string | null
         }
         Insert: {
-          asset_type_id?: string | null
           asset_id?: string | null
+          asset_type_id?: string | null
           asset_type_raw?: string | null
           confidence: string
           id?: string
@@ -509,8 +509,8 @@ export type Database = {
           unit_no?: string | null
         }
         Update: {
-          asset_type_id?: string | null
           asset_id?: string | null
+          asset_type_id?: string | null
           asset_type_raw?: string | null
           confidence?: string
           id?: string
@@ -849,6 +849,16 @@ export type Database = {
         }
         Returns: string
       }
+      apply_contract_transition: {
+        Args: {
+          p_contract_id: string
+          p_event_type: string
+          p_expected_status: string
+          p_payload: Json
+          p_to_status: string
+        }
+        Returns: string
+      }
       commit_import: { Args: { p_job_id: string }; Returns: number }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
       record_extraction_chunk: {
@@ -859,16 +869,6 @@ export type Database = {
           p_total: number
         }
         Returns: number
-      }
-      apply_contract_transition: {
-        Args: {
-          p_contract_id: string
-          p_event_type: string
-          p_expected_status: string
-          p_payload: Json
-          p_to_status: string
-        }
-        Returns: string
       }
     }
     Enums: {
