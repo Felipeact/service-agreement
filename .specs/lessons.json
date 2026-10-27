@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 11,
+  "next_id": 17,
   "lessons": [
     {
       "id": "L-001",
@@ -184,6 +184,114 @@
       ],
       "created": "2026-10-26T22:35:12Z",
       "last_seen": "2026-10-26T22:35:12Z"
+    },
+    {
+      "id": "L-011",
+      "key": "surviving_mutant::when a check names a pill s tone assert the tone attribute on the pill element itself not only its label text",
+      "text": "When a check names a pill's tone, assert the tone attribute on the pill element itself, not only its label text.",
+      "signal": "surviving_mutant",
+      "scope": "components",
+      "status": "candidate",
+      "features": [
+        "import-extract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C543 web/components/imports/job-list.tsx:18 (round-1 fault 1) (components)"
+      ],
+      "created": "2026-10-27T15:28:56Z",
+      "last_seen": "2026-10-27T15:28:56Z"
+    },
+    {
+      "id": "L-012",
+      "key": "surviving_mutant::when a port can fail by returning a failure value as well as by throwing fake both shapes in the use case failure table",
+      "text": "When a port can fail by returning a failure value as well as by throwing, fake both shapes in the use-case failure table.",
+      "signal": "surviving_mutant",
+      "scope": "application/use-cases",
+      "status": "candidate",
+      "features": [
+        "import-extract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C529 web/application/use-cases/extract-import.ts:56 (round-1 fault 2) (application/use-cases)"
+      ],
+      "created": "2026-10-27T15:28:56Z",
+      "last_seen": "2026-10-27T15:28:56Z"
+    },
+    {
+      "id": "L-013",
+      "key": "ac_gap::give every defensive early return in a use case one asserted case or a regression that changes its answer passes unnoticed",
+      "text": "Give every defensive early return in a use case one asserted case, or a regression that changes its answer passes unnoticed.",
+      "signal": "ac_gap",
+      "scope": "application/use-cases",
+      "status": "candidate",
+      "features": [
+        "import-extract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/application/use-cases/extract-import.ts:48,:67,:87 (round-1 gap 3) (application/use-cases)"
+      ],
+      "created": "2026-10-27T15:28:56Z",
+      "last_seen": "2026-10-27T15:28:56Z"
+    },
+    {
+      "id": "L-014",
+      "key": "ac_gap::when a fix lands in a stateful client control add a proof that imports that control since props only tests of its presentational child cannot see the fix",
+      "text": "When a fix lands in a stateful client control, add a proof that imports that control, since props-only tests of its presentational child cannot see the fix.",
+      "signal": "ac_gap",
+      "scope": "components",
+      "status": "candidate",
+      "features": [
+        "import-extract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/components/imports/extract-control.tsx:121 (AC 32, round-1 gap 4, still open at 6b61a9c) (components)"
+      ],
+      "created": "2026-10-27T15:28:57Z",
+      "last_seen": "2026-10-27T15:28:57Z"
+    },
+    {
+      "id": "L-015",
+      "key": "spec_precision_gap::recount the numbered check ids before writing the check total in a checks header",
+      "text": "Recount the numbered check ids before writing the check total in a checks header.",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "import-extract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/import-extract/checks.md:6 (round-1 gap 6) (checks)"
+      ],
+      "created": "2026-10-27T15:28:57Z",
+      "last_seen": "2026-10-27T15:28:57Z"
+    },
+    {
+      "id": "L-016",
+      "key": "spec_precision_gap::when a check says a lint message names the module assert the module specifier in the message not the allowed folder",
+      "text": "When a check says a lint message names the module, assert the module specifier in the message, not the allowed folder.",
+      "signal": "spec_precision_gap",
+      "scope": "lint-boundaries",
+      "status": "candidate",
+      "features": [
+        "import-extract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C539 web/boundaries.test.ts:57 (round-1 gap 5) (lint-boundaries)"
+      ],
+      "created": "2026-10-27T15:29:02Z",
+      "last_seen": "2026-10-27T15:29:02Z"
     }
   ]
 }

@@ -74,6 +74,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C477, C499 (checks)
 - last seen: 2026-10-26T22:35:12Z
 
+### L-011 - When a check names a pill's tone, assert the tone attribute on the pill element itself, not only its label text.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `components` · harmful: 0
+- features: import-extract
+- evidence: C543 web/components/imports/job-list.tsx:18 (round-1 fault 1) (components)
+- last seen: 2026-10-27T15:28:56Z
+
+### L-012 - When a port can fail by returning a failure value as well as by throwing, fake both shapes in the use-case failure table.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `application/use-cases` · harmful: 0
+- features: import-extract
+- evidence: C529 web/application/use-cases/extract-import.ts:56 (round-1 fault 2) (application/use-cases)
+- last seen: 2026-10-27T15:28:56Z
+
+### L-013 - Give every defensive early return in a use case one asserted case, or a regression that changes its answer passes unnoticed.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `application/use-cases` · harmful: 0
+- features: import-extract
+- evidence: web/application/use-cases/extract-import.ts:48,:67,:87 (round-1 gap 3) (application/use-cases)
+- last seen: 2026-10-27T15:28:56Z
+
+### L-014 - When a fix lands in a stateful client control, add a proof that imports that control, since props-only tests of its presentational child cannot see the fix.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `components` · harmful: 0
+- features: import-extract
+- evidence: web/components/imports/extract-control.tsx:121 (AC 32, round-1 gap 4, still open at 6b61a9c) (components)
+- last seen: 2026-10-27T15:28:57Z
+
+### L-015 - Recount the numbered check ids before writing the check total in a checks header.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: import-extract
+- evidence: .specs/features/import-extract/checks.md:6 (round-1 gap 6) (checks)
+- last seen: 2026-10-27T15:28:57Z
+
+### L-016 - When a check says a lint message names the module, assert the module specifier in the message, not the allowed folder.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `lint-boundaries` · harmful: 0
+- features: import-extract
+- evidence: C539 web/boundaries.test.ts:57 (round-1 gap 5) (lint-boundaries)
+- last seen: 2026-10-27T15:29:02Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

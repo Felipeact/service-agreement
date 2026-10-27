@@ -52,9 +52,9 @@
 ## Handoff
 
 **Feature**: import-extract (ROADMAP Phase 2 item 3), profile standard
-**Where**: built, applied and live-validated (C561 and C562 passed 2026-10-27; the run fixed the progress label in `ExtractControl`); ROADMAP Phase 2 item 3 ticked; Verifier dispatched over `7791dc0..HEAD`
-**In progress**: Verifier report `.specs/features/import-extract/verification.md`
-**Next step**: act on the Verifier's report; then ROADMAP Phase 2 item 4, review grid and commit
+**Where**: done. Live-validated (C561, C562 on 2026-10-27); Verifier PASS round 2 (scoped) over `7791dc0..6b61a9c`: 62/62 checks, 5/5 faults killed, `validate_verification.py` exit 0; ROADMAP Phase 2 item 3 ticked
+**In progress**: none
+**Next step**: ROADMAP Phase 2 item 4, review grid and commit (new feature, plan first). Open, non-failing: the `ExtractControl` progress fix (AC 32) has only the live run as proof, since the repo has no DOM test environment (lesson L-014)
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
