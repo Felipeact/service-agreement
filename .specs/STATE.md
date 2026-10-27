@@ -64,5 +64,5 @@
 **Open, non-failing**: the live run's data is still in the demo org (4 `import` assets on Brookhaven Community Centre, committed job `7320a90f-ad98-4176-92bd-1ad8c9934c61` with 6 rows and its `imports` object): the SQL cleanup was declined twice by the permission prompt. The `mapType` job lookup added after the live run is proven by stub tests only. The `ExtractControl` progress fix (import-extract AC 32) has only a live proof (lesson L-014)
 **Blockers**: none
 **Uncommitted**: none
-**Branch**: development (not pushed)
+**Branch**: development (pushed to origin)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
