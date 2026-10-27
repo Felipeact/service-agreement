@@ -209,8 +209,14 @@ export interface AssetStore {
   delete(id: string): Promise<DeleteResult>;
 }
 
-/** `uploaded`: stored, not read yet; `parsed` / `unreadable`: read, with the outcome recorded (import-parse door 1). */
-export type ImportJobStatus = "uploading" | "uploaded" | "parsed" | "unreadable";
+/**
+ * `uploaded`: stored, not read yet; `parsed` / `unreadable`: read, with the outcome recorded (import-parse door 1);
+ * `extracting` / `extracted`: rows are being, or have been, taken from a read file (import-extract door 2).
+ */
+export type ImportJobStatus = "uploading" | "uploaded" | "parsed" | "unreadable" | "extracting" | "extracted";
+
+/** Where extraction stands on a job: chunks recorded of the total, or the rows it produced. */
+export type ExtractionView = { status: "extracting"; cursor: number; total: number } | { status: "extracted"; rows: number; unmatched: number };
 
 export type ImportJobView = {
   id: string;
@@ -220,8 +226,10 @@ export type ImportJobView = {
   /** `null` when no email was recorded: shown as "Former member". */
   uploadedBy: string | null;
   createdAt: Date;
-  /** The recorded read, or `null` until the job is `parsed` or `unreadable`. */
+  /** The recorded read, or `null` until the job is read. */
   outcome: ReadOutcome | null;
+  /** `null` until extraction starts. */
+  extraction: ExtractionView | null;
 };
 
 export interface ImportJobReader {
@@ -244,6 +252,53 @@ export interface ImportJobStore {
   fileOf(jobId: string): Promise<ImportFileResult>;
   /** `uploaded` -> the outcome, compare-and-set; a job read meanwhile returns the outcome already stored. */
   recordRead(jobId: string, outcome: ReadOutcome): Promise<RecordReadResult>;
+  /** Status, progress and result of extraction; the file's bytes are downloaded as the member only while `parsed` or `extracting` (import-extract door 6). */
+  sourceOf(jobId: string): Promise<SourceOfResult>;
+  /** Records one chunk's rows and moves the cursor in one transaction; a stale cursor answers with the stored progress. */
+  recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[]): Promise<RecordExtractionResult>;
+}
+
+export type ExtractionProgress = { cursor: number; total: number };
+
+export type SourceOfResult =
+  | {
+      ok: true;
+      status: ImportJobStatus;
+      contentType: ImportContentType;
+      progress: ExtractionProgress | null;
+      result: { rows: number; unmatched: number } | null;
+      bytes: Uint8Array | null;
+    }
+  | { ok: false; code: WriteFailure };
+
+export type RecordExtractionResult = { ok: true; progress: ExtractionProgress; done: boolean } | { ok: false; code: WriteFailure };
+
+export type ExtractConfidence = "low" | "medium" | "high";
+
+/** One row as Claude read it (import-extract door 3). */
+export type ExtractedRow = {
+  assetTypeRaw: string | null;
+  unitNo: string | null;
+  typeModel: string | null;
+  location: string | null;
+  confidence: ExtractConfidence;
+  sourceRef: string | null;
+};
+
+/** A stored row: what Claude read, plus the org's type it matched (`null` when none). */
+export type ImportRowInput = ExtractedRow & { assetTypeId: string | null };
+
+/** The unit of one Claude call: up to 100 data rows of one table, a text-only document, or a whole PDF. */
+export type ExtractChunk =
+  | { kind: "rows"; table: string; header: string[]; rows: { ref: string; cells: string[] }[] }
+  | { kind: "text"; text: string }
+  | { kind: "pdf"; bytes: Uint8Array };
+
+export type ExtractResult = { ok: true; rows: ExtractedRow[] } | { ok: false; code: "unavailable" | "too_large" };
+
+/** Turns a chunk of a read file into candidate rows. Knows nothing about orgs, sites or customers. */
+export interface AssetExtractor {
+  extract(chunk: ExtractChunk): Promise<ExtractResult>;
 }
 
 export type ImportFileResult =
