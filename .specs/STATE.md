@@ -44,11 +44,11 @@
 
 ## Handoff
 
-**Feature**: import-parse (ROADMAP Phase 2 item 2)
-**Where**: import-parse done: Verifier PASS in round 2 at `5d574d3` (report `.specs/features/import-parse/verification.md`), `validate_verification.py` exit 0; ROADMAP Phase 2 item 2 ticked
-**In progress**: none
-**Next step**: (1) optional follow-ups from the Verifier: the ESLint-running tests in `boundaries.test.ts` (C487) and `domain/purity.test.ts` (C32) can pass 5 s under full-suite load (once in three runs), so give them a longer timeout; the uploader's `unavailable` -> `read_failed` mapping (`import-upload.tsx:102`) has no test; C488 asserts only `23514`; (2) ROADMAP Phase 2 item 3, Claude structured extraction and type normalization
-**Blockers**: none
+**Feature**: import-extract (ROADMAP Phase 2 item 3), profile standard
+**Where**: plan and checks approved; code, unit tests, lint and typecheck green at `aab2270`; migration `supabase/migrations/20261027000000_import_extract.sql` written but NOT applied to the live project
+**In progress**: waiting for the user's go-ahead to run MCP `apply_migration` (rename the file to the recorded version, AD-006), then: regenerate `database.types.ts` and compare, `npm run test:db`, advisors (C559), the live runs C561 (no key) and C562 (needs an Anthropic API key), then docs (AD rows for the seven doors, CONTEXT.md, ROADMAP tick), then the Verifier over `7791dc0..HEAD`
+**Next step**: apply the migration, run the SQL proofs, finish `.specs/features/import-extract/checks.md` Handoff
+**Blockers**: go-ahead for the migration; an `ANTHROPIC_API_KEY` for C562 (and consent to send a fictitious file to the Anthropic API)
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`

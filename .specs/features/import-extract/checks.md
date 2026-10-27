@@ -574,3 +574,12 @@ call is the only thing that would ever exercise the extractor's failure table.
   asserts an exact value.
 
 - Mechanism: one builder (estimate under budget, no ask).
+- **Boundary (part 1):** every vitest, lint and grep proof is green at `aab2270` (889 tests, `npm run lint` clean, `tsc` clean apart from the typed-route errors that need a `next build` to generate): C501-C504, C506, C508-C512, C514-C524 (adapter and unit parts), C526-C531, C534-C535, C537-C546, C551-C553, C555. Not run, waiting on the user's go-ahead to apply the migration to the live project: the SQL proofs (C505, C507, C513, C525, C532, C533, C536, C547-C550), C554, C556, C559, C560 (docs, after the live run), C561, C562 (also needs an API key).
+- **Settled mid-build:**
+  - Deriving the checks showed the plan's Flow and Impact had `fileOf` returning bytes for `parsed` jobs, which would make every re-read of a read job download the file (import-parse AC 19). `Flow` hop 3 and the `Impact` AD-037 row were corrected in the plan, and Landing rows 6 (`sourceOf` / `recordExtraction`) and 7 (`import_row_counts`) were added before the code. `fileOf` is unchanged.
+  - `database.types.ts` was edited by hand for the new columns, table, view and function; it is compared with `generate_typescript_types` after the migration is applied.
+  - The migration file is named `20261027000000_import_extract.sql` provisionally; AD-006 renames it to the version `apply_migration` records.
+  - `npm install` of the SDK needed `--allow-remote=all` once, because npm 12 refuses the project's pinned SheetJS CDN tarball by default; the lockfile pins its integrity hash.
+  - The domain cannot import the ports, so `Chunk` / `ChunkSource` in `domain/imports` repeat the shape of `ExtractChunk` / `ParsedImport`; the use case's call keeps them in step at compile time.
+  - C543's singular wording for one unmatched row ("1 needs an equipment type") is not in a numbered AC; the check pins "needs".
+- **Abandoned:** none.
