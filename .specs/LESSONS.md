@@ -110,6 +110,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C539 web/boundaries.test.ts:57 (round-1 gap 5) (lint-boundaries)
 - last seen: 2026-10-27T15:29:02Z
 
+### L-017 - When a view's control table depends on a flag the reader computes (editable), give the reader's rule its own labelled check, since a view test that builds the flag in its helper cannot fail when the reader is wrong.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `components` · harmful: 0
+- features: agreement-builder
+- evidence: C716 web/components/agreements/agreements.test.ts:36 (fault F2) (components)
+- last seen: 2026-10-27T20:50:10Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

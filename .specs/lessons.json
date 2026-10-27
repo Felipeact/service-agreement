@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 17,
+  "next_id": 18,
   "lessons": [
     {
       "id": "L-001",
@@ -292,6 +292,24 @@
       ],
       "created": "2026-10-27T15:29:02Z",
       "last_seen": "2026-10-27T15:29:02Z"
+    },
+    {
+      "id": "L-017",
+      "key": "ac_gap::when a view s control table depends on a flag the reader computes editable give the reader s rule its own labelled check since a view test that builds the flag in its helper cannot fail when the reader is wrong",
+      "text": "When a view's control table depends on a flag the reader computes (editable), give the reader's rule its own labelled check, since a view test that builds the flag in its helper cannot fail when the reader is wrong.",
+      "signal": "ac_gap",
+      "scope": "components",
+      "status": "candidate",
+      "features": [
+        "agreement-builder"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C716 web/components/agreements/agreements.test.ts:36 (fault F2) (components)"
+      ],
+      "created": "2026-10-27T20:50:10Z",
+      "last_seen": "2026-10-27T20:50:10Z"
     }
   ]
 }
