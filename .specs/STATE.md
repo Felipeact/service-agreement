@@ -53,8 +53,8 @@
 
 **Feature**: import-extract (ROADMAP Phase 2 item 3), profile standard
 **Where**: done. Live-validated (C561, C562 on 2026-10-27); Verifier PASS round 2 (scoped) over `7791dc0..6b61a9c`: 62/62 checks, 5/5 faults killed, `validate_verification.py` exit 0; ROADMAP Phase 2 item 3 ticked
-**In progress**: none
-**Next step**: ROADMAP Phase 2 item 4, review grid and commit (new feature, plan first). Open, non-failing: the `ExtractControl` progress fix (AC 32) has only the live run as proof, since the repo has no DOM test environment (lesson L-014)
+**In progress**: import-review (ROADMAP Phase 2 item 4): `plan.md` written 2026-10-27, `validate_plan.py` exit 0, awaiting human review; no checks, no code
+**Next step**: answer the plan's two open questions, approve it, then write `checks.md`. Open, non-failing: the `ExtractControl` progress fix (AC 32) has only the live run as proof, since the repo has no DOM test environment (lesson L-014)
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
