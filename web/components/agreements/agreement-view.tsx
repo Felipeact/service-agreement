@@ -78,15 +78,26 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         {shown.lines.length === 0 ? (
           <p className="px-4 py-6 text-center text-[13px] text-ink-2">No service lines yet.</p>
         ) : (
-          <ul className="divide-y divide-hairline">
-            {shown.lines.map((line) => (
-              <LineRow
-                key={line.id}
-                line={line}
-                actions={lineActions && { update: lineActions.update(line.id), remove: lineActions.remove(line.id) }}
-              />
-            ))}
-          </ul>
+          <>
+            <div
+              data-line-head
+              className="hidden gap-x-3 border-b border-hairline px-4 py-2 text-[12px] font-medium text-ink-2 md:grid md:grid-cols-[minmax(0,3fr)_6rem_8rem_8rem]"
+            >
+              <span>Description</span>
+              <span>Visits per year</span>
+              <span className="text-right">Per visit</span>
+              <span className="text-right">Per year</span>
+            </div>
+            <ul className="divide-y divide-hairline">
+              {shown.lines.map((line) => (
+                <LineRow
+                  key={line.id}
+                  line={line}
+                  actions={lineActions && { update: lineActions.update(line.id), remove: lineActions.remove(line.id) }}
+                />
+              ))}
+            </ul>
+          </>
         )}
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
           <p className="text-[14px] font-semibold">

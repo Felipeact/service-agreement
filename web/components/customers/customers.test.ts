@@ -192,6 +192,14 @@ describe("record write controls on the customer screens", () => {
     for (const text of ["New customer", "Add contact", "Add site", "Add asset", ">Edit<", "Delete"]) expect(out).not.toContain(text);
   });
 
+  test("touch targets: an agreement row link is at least 44px tall and a contact's Edit link at least 44px wide below lg", () => {
+    const out = detailAs("estimator");
+    const row = /<a\b[^>]*\bdata-agreement-row\b[^>]*>/.exec(out)?.[0] ?? "";
+    expect(row).toMatch(/class="[^"]*\bmin-h-11\b/);
+    const edit = /<a\b[^>]*href="\/contacts\/ct1\/edit"[^>]*>/.exec(out)?.[0] ?? "";
+    expect(edit).toMatch(/class="[^"]*\bmin-w-11\b/);
+  });
+
   test("C348: a writer still sees every contact, site and agreement row", () => {
     const out = detailAs("estimator");
     expect(out).toContain("dana@example.com");

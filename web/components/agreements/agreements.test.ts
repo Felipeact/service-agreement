@@ -65,6 +65,14 @@ describe("the agreement view", () => {
     expect(out).toContain("Before tax");
   });
 
+  test("the line columns are headed from md up, where the per-line labels are hidden", () => {
+    const html = view(agreement());
+    const head = /<div[^>]*data-line-head[^>]*>.*?<\/div>/.exec(html)?.[0] ?? "";
+    expect(head).toMatch(/class="[^"]*\bhidden\b[^"]*\bmd:grid\b/);
+    expect(text(head).trim()).toBe("Description Visits per year Per visit Per year");
+    expect(view(agreement({ lines: [] }))).not.toContain("data-line-head");
+  });
+
   test("C715: an empty editable version says so; writers get the add form pre-filled, viewers no form", () => {
     const empty = agreement({ lines: [] });
     const writer = view(empty);

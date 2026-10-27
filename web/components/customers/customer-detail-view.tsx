@@ -38,7 +38,7 @@ function ContactLink({ href, text }: { href: string; text: string | null }) {
   );
 }
 
-const EDIT_LINK = "inline-flex min-h-11 items-center font-medium text-action lg:min-h-0 md:ml-auto";
+const EDIT_LINK = "inline-flex min-h-11 min-w-11 items-center font-medium text-action lg:min-h-0 lg:min-w-0 md:ml-auto";
 
 /** The customer record: contacts, sites and the agreements on those sites. Without a role it is read-only. */
 export function CustomerDetailView({ customer, role }: { customer: CustomerDetail; role?: MemberRole }) {
@@ -99,7 +99,7 @@ export function CustomerDetailView({ customer, role }: { customer: CustomerDetai
       <Section title="Agreements" empty="No agreements yet" isEmpty={customer.agreements.length === 0}>
         {customer.agreements.map((agreement) => (
           <li key={agreement.id}>
-            <Link href={`/agreements/${agreement.id}`} data-agreement-row className={`${ROW} text-ink hover:bg-ground`}>
+            <Link href={`/agreements/${agreement.id}`} data-agreement-row className={`${ROW} min-h-11 text-ink hover:bg-ground`}>
               <span className="font-semibold md:w-56">{agreement.siteName}</span>
               <span className="text-ink-2 md:w-40">
                 {agreement.number ?? "Unnumbered"} · v{agreement.versionNo}
