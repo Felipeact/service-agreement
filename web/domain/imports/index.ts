@@ -179,3 +179,99 @@ export function matchAssetType(raw: string | null, types: AssetTypeRef[]): strin
   );
   return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
 }
+
+/** One extracted row as the review needs it. The domain cannot import the ports, so this repeats `ImportRowView`'s fields. */
+export type ReviewRow = {
+  id: string;
+  position: number;
+  assetTypeRaw: string | null;
+  assetTypeId: string | null;
+  unitNo: string | null;
+  typeModel: string | null;
+  location: string | null;
+  confidence: "low" | "medium" | "high";
+  skipped: boolean;
+};
+
+/** What stops a row becoming a good asset. `needs_type` and `too_long` block the commit; the others only ask for a look. */
+export type ReviewFlag =
+  | { kind: "needs_type" }
+  | { kind: "too_long"; field: "Unit #" | "Type/model" | "Location/access" }
+  | { kind: "check" }
+  | { kind: "same_as"; position: number }
+  | { kind: "on_site" };
+
+/** The asset form's limits (`validateAsset`), which the commit enforces too. */
+const LIMITS = [
+  { key: "unitNo", max: 40, field: "Unit #" },
+  { key: "typeModel", max: 120, field: "Type/model" },
+  { key: "location", max: 300, field: "Location/access" },
+] as const;
+
+/** The same unit read twice: same type and same `normalized` unit #. No key without both. */
+function duplicateKey(assetTypeId: string | null, unitNo: string | null): string | null {
+  const unit = normalized(unitNo ?? "");
+  return assetTypeId && unit ? `${assetTypeId} ${unit}` : null;
+}
+
+/** Each row's flags, by row id. A skipped row has none; the first included row of a duplicate key is not flagged. */
+export function flagRows(rows: ReviewRow[], siteAssets: { assetTypeId: string; unitNo: string | null }[]): Map<string, ReviewFlag[]> {
+  const onSite = new Set(siteAssets.map((asset) => duplicateKey(asset.assetTypeId, asset.unitNo)).filter((key) => key !== null));
+  const firstOf = new Map<string, number>();
+  const flags = new Map<string, ReviewFlag[]>();
+  for (const row of [...rows].sort((a, b) => a.position - b.position)) {
+    const found: ReviewFlag[] = [];
+    flags.set(row.id, found);
+    if (row.skipped) continue;
+    if (row.assetTypeId === null) found.push({ kind: "needs_type" });
+    for (const limit of LIMITS) if ((row[limit.key]?.length ?? 0) > limit.max) found.push({ kind: "too_long", field: limit.field });
+    if (row.confidence === "low") found.push({ kind: "check" });
+    const key = duplicateKey(row.assetTypeId, row.unitNo);
+    if (key !== null) {
+      const first = firstOf.get(key);
+      if (first === undefined) firstOf.set(key, row.position);
+      else found.push({ kind: "same_as", position: first });
+      if (onSite.has(key)) found.push({ kind: "on_site" });
+    }
+  }
+  return flags;
+}
+
+export const isBlocking = (flag: ReviewFlag) => flag.kind === "needs_type" || flag.kind === "too_long";
+
+/** Rows shown per page of the review. */
+export const REVIEW_PAGE_ROWS = 100;
+
+/** The page a `?page` value asks for: a whole number from 1 to the last page, else page 1. `from` and `to` are 1-based. */
+export function pageOf(total: number, raw: string | undefined): { page: number; pages: number; from: number; to: number } {
+  const pages = Math.max(1, Math.ceil(total / REVIEW_PAGE_ROWS));
+  const asked = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : 1;
+  const page = asked >= 1 && asked <= pages ? asked : 1;
+  const from = total === 0 ? 0 : (page - 1) * REVIEW_PAGE_ROWS + 1;
+  return { page, pages, from, to: Math.min(total, page * REVIEW_PAGE_ROWS) };
+}
+
+/** Each distinct spelling among included untyped rows, with its count, most rows first. Rows with no text have no spelling. */
+export function unmatchedSpellings(rows: ReviewRow[]): { key: string; raw: string; count: number }[] {
+  const byKey = new Map<string, { key: string; raw: string; count: number; first: number }>();
+  for (const row of [...rows].sort((a, b) => a.position - b.position)) {
+    if (row.skipped || row.assetTypeId !== null) continue;
+    const key = normalized(row.assetTypeRaw ?? "");
+    if (!key) continue;
+    const entry = byKey.get(key);
+    if (entry) entry.count += 1;
+    else byKey.set(key, { key, raw: (row.assetTypeRaw ?? "").trim(), count: 1, first: row.position });
+  }
+  return [...byKey.values()].sort((a, b) => b.count - a.count || a.first - b.first).map(({ key, raw, count }) => ({ key, raw, count }));
+}
+
+/** "Add 3 assets to <site>". */
+export const addLabel = (added: number, site: string) => `Add ${plural(added, "asset")} to ${site}`;
+
+/** Why the commit button is disabled. */
+export const fixLine = (rows: number) =>
+  rows === 1 ? "1 row needs a fix before it can be added" : `${rows} rows need a fix before they can be added`;
+
+/** The line on a committed job. */
+export const committedSummary = (added: number, skipped: number) =>
+  `Added to site: ${plural(added, "asset")}${skipped > 0 ? `, ${skipped} skipped` : ""}`;

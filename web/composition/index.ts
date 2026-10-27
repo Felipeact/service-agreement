@@ -10,6 +10,7 @@ import { importParser } from "@/infrastructure/import-parsers";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
+import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
 import {
   supabaseAssetTypeCatalog,
@@ -64,6 +65,7 @@ export async function getContainer() {
   const siteStore = supabaseSiteStore(supabase);
   const assetStore = supabaseAssetStore(supabase);
   const importJobs = supabaseImportJobStore(supabase, systemClock);
+  const importRows = supabaseImportRowStore(supabase);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -98,6 +100,11 @@ export async function getContainer() {
     // The same member-scoped store: the file is downloaded under RLS, never with a service-role key.
     readImport: makeReadImport(importJobs, importParser),
     extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase)),
+    reviewImport: supabaseImportReviewReader(supabase).forJob,
+    updateImportRow: importRows.update,
+    skipImportRow: importRows.setSkipped,
+    mapImportType: importRows.mapType,
+    commitImport: importJobs.commit,
     clock: systemClock,
   };
 }

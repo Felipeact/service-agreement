@@ -1,5 +1,6 @@
+import Link from "next/link";
 import type { ImportJobStatus, ImportJobView } from "@/application/ports";
-import { extractionSummary, formatFileSize, READ_ERROR_MESSAGES, readSummary } from "@/domain/imports";
+import { committedSummary, extractionSummary, formatFileSize, READ_ERROR_MESSAGES, readSummary } from "@/domain/imports";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DiscardControl } from "./discard-control";
 import { ExtractControl } from "./extract-control";
@@ -13,7 +14,11 @@ const STATUS_LABELS: Record<ImportJobStatus, string> = {
   unreadable: "Can't read",
   extracting: "Extracting",
   extracted: "Extracted",
+  committed: "Added to site",
 };
+
+/** Jobs whose rows can be opened in the review grid. */
+const REVIEWABLE = new Set<ImportJobStatus>(["extracted", "committed"]);
 
 const ATTENTION = new Set<ImportJobStatus>(["uploading", "unreadable"]);
 
@@ -21,6 +26,7 @@ const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "
 
 /** What the read found, or why it could not read the file; nothing before a read. */
 function outcomeLine(job: ImportJobView): string | null {
+  if (job.committed) return committedSummary(job.committed.added, job.committed.skipped);
   if (job.extraction?.status === "extracting") return `${job.extraction.cursor} of ${job.extraction.total}`;
   if (job.extraction?.status === "extracted") return extractionSummary(job.extraction.rows, job.extraction.unmatched);
   if (job.outcome?.status === "parsed") return readSummary(job.outcome.tables, job.outcome.rows);
@@ -61,7 +67,12 @@ export function ImportJobList({ jobs, discard, read, extract }: ImportJobListPro
             {extract && (job.status === "parsed" || job.status === "extracting") && (
               <ExtractControl jobId={job.id} extract={extract} resume={job.status === "extracting"} />
             )}
-            {discard && <DiscardControl name={job.originalName} action={discard(job.id)} />}
+            {REVIEWABLE.has(job.status) && (
+              <Link href={`/imports/${job.id}`} className="inline-flex min-h-11 items-center self-start text-[13px] font-medium text-action lg:min-h-0">
+                Review rows
+              </Link>
+            )}
+            {discard && job.status !== "committed" && <DiscardControl name={job.originalName} action={discard(job.id)} />}
           </li>
         );
       })}

@@ -211,9 +211,13 @@ export interface AssetStore {
 
 /**
  * `uploaded`: stored, not read yet; `parsed` / `unreadable`: read, with the outcome recorded (import-parse door 1);
- * `extracting` / `extracted`: rows are being, or have been, taken from a read file (import-extract door 2).
+ * `extracting` / `extracted`: rows are being, or have been, taken from a read file (import-extract door 2);
+ * `committed`: the included rows were added to the site as assets (import-review door 2).
  */
-export type ImportJobStatus = "uploading" | "uploaded" | "parsed" | "unreadable" | "extracting" | "extracted";
+export type ImportJobStatus = "uploading" | "uploaded" | "parsed" | "unreadable" | "extracting" | "extracted" | "committed";
+
+/** What a commit added: assets created and rows skipped. */
+export type CommitView = { added: number; skipped: number };
 
 /** Where extraction stands on a job: chunks recorded of the total, or the rows it produced. */
 export type ExtractionView = { status: "extracting"; cursor: number; total: number } | { status: "extracted"; rows: number; unmatched: number };
@@ -230,6 +234,8 @@ export type ImportJobView = {
   outcome: ReadOutcome | null;
   /** `null` until extraction starts. */
   extraction: ExtractionView | null;
+  /** Set only on a `committed` job. */
+  committed?: CommitView | null;
 };
 
 export interface ImportJobReader {
@@ -246,8 +252,8 @@ export interface ImportJobStore {
   start(orgId: string, siteId: string, file: ImportFile): Promise<StartImportResult>;
   /** `uploading` -> `uploaded` once the stored object exists with the declared size; an already uploaded job is ok. */
   confirmUploaded(jobId: string): Promise<ConfirmImportResult>;
-  /** Deletes the row, then the object; a failed object delete is logged and still ok. */
-  discard(jobId: string): Promise<WriteResult>;
+  /** Deletes the row, then the object; a failed object delete is logged and still ok. A `committed` job is `locked`. */
+  discard(jobId: string): Promise<DiscardImportResult>;
   /** The job's status, type and stored outcome; the file's bytes are downloaded as the member only while it is `uploaded`. */
   fileOf(jobId: string): Promise<ImportFileResult>;
   /** `uploaded` -> the outcome, compare-and-set; a job read meanwhile returns the outcome already stored. */
@@ -256,6 +262,57 @@ export interface ImportJobStore {
   sourceOf(jobId: string): Promise<SourceOfResult>;
   /** Records one chunk's rows and moves the cursor in one transaction; a stale cursor answers with the stored progress. */
   recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[]): Promise<RecordExtractionResult>;
+  /** Adds every included row to the job's site as an asset, once (import-review door 3); a repeat answers with the stored result. */
+  commit(jobId: string): Promise<CommitImportResult>;
+}
+
+export type DiscardImportResult = { ok: true } | { ok: false; code: WriteFailure | "locked" };
+
+export type CommitImportResult = ({ ok: true } & CommitView) | { ok: false; code: WriteFailure | "not_ready" | "incomplete" };
+
+/** One extracted row as the review grid shows it (import-review door 6). */
+export type ImportRowView = {
+  id: string;
+  position: number;
+  assetTypeRaw: string | null;
+  assetTypeId: string | null;
+  unitNo: string | null;
+  typeModel: string | null;
+  location: string | null;
+  confidence: ExtractConfidence;
+  sourceRef: string | null;
+  skipped: boolean;
+  /** The asset the row became, once committed; `null` again if that asset is deleted. */
+  assetId: string | null;
+};
+
+export type ImportReview = {
+  job: {
+    id: string;
+    siteId: string;
+    siteName: string;
+    originalName: string;
+    status: ImportJobStatus;
+    committed: (CommitView & { at: Date }) | null;
+  };
+  /** Every row of the job in `position` order, however many. */
+  rows: ImportRowView[];
+};
+
+export interface ImportReviewReader {
+  /** `null` for a malformed id, a missing job, another org's, or a job neither `extracted` nor `committed`. */
+  forJob(jobId: string): Promise<ImportReview | null>;
+}
+
+export type RowWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" };
+
+/** Writes to the rows of a job under review; a job no longer `extracted` answers `locked` (import-review door 4). */
+export interface ImportRowStore {
+  /** Sets the row's type, unit #, type/model and location only. */
+  update(rowId: string, value: AssetValue): Promise<RowWriteResult>;
+  setSkipped(rowId: string, skipped: boolean): Promise<RowWriteResult>;
+  /** Types every untyped row of the job whose `normalized` `asset_type_raw` is `rawNormalized`; typed rows are never changed. */
+  mapType(jobId: string, rawNormalized: string, assetTypeId: string): Promise<{ ok: true; rows: number } | { ok: false; code: WriteFailure | "locked" }>;
 }
 
 export type ExtractionProgress = { cursor: number; total: number };

@@ -171,4 +171,33 @@ describe("composition root", () => {
     const { getContainer } = await import("./index");
     await expect(getContainer()).rejects.toThrow(missing);
   });
+
+  test("C652: getContainer() returns the review reader, the row writes and commitImport", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    for (const name of ["reviewImport", "updateImportRow", "skipImportRow", "mapImportType", "commitImport"] as const) {
+      expect(typeof container[name], name).toBe("function");
+    }
+  });
+
+  test("C641: the review reader, the row store and the job store share the request's one Supabase client", () => {
+    const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
+    expect(source).toMatch(/const importJobs = supabaseImportJobStore\(supabase, /);
+    expect(source).toMatch(/const importRows = supabaseImportRowStore\(supabase\);/);
+    expect(source).toMatch(/reviewImport: supabaseImportReviewReader\(supabase\)\.forJob,/);
+    expect(source).toMatch(/commitImport: importJobs\.commit,/);
+    expect(source.match(/createServerClient</g)).toHaveLength(1);
+  });
+
+  test("C649: the ports declare the review reader, the row store, commit and the committed status", () => {
+    const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
+    const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
+    expect(body("ImportReviewReader")).toContain("forJob(jobId: string)");
+    for (const method of ["update(rowId: string", "setSkipped(rowId: string", "mapType(jobId: string"]) expect(body("ImportRowStore")).toContain(method);
+    expect(body("ImportJobStore")).toContain("commit(jobId: string)");
+    const row = ports.match(/export type ImportRowView = \{([\s\S]*?)\r?\n\};/)?.[1] ?? "";
+    for (const field of ["skipped:", "assetId:"]) expect(row).toContain(field);
+    expect(ports.match(/export type ImportJobStatus =([^;]*);/)?.[1] ?? "").toContain('"committed"');
+  });
 });

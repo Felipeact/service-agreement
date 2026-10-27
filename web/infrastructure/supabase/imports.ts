@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import type { Clock, ExtractionView, ImportJobReader, ImportJobStatus, ImportJobStore, WriteFailure } from "@/application/ports";
+import type { Clock, CommitImportResult, CommitView, ExtractionView, ImportJobReader, ImportJobStatus, ImportJobStore, WriteFailure } from "@/application/ports";
 import type { ImportContentType, ReadError, ReadOutcome } from "@/domain/imports";
 import type { Database } from "./database.types";
 
@@ -39,7 +39,7 @@ type ReadColumns = { status: string; read_error: string | null; table_count: num
 const READ_COLUMNS = "id, org_id, status, content_type, read_error, table_count, row_count";
 
 /** A job being, or done being, extracted was read first: its read outcome stays on the row. */
-const WAS_READ = new Set(["parsed", "extracting", "extracted"]);
+const WAS_READ = new Set(["parsed", "extracting", "extracted", "committed"]);
 
 /** The outcome stored on a job, or `null` while it has not been read (import-parse door 1). */
 function outcomeFrom(row: ReadColumns): ReadOutcome | null {
@@ -55,11 +55,24 @@ const SOURCE_COLUMNS = `${READ_COLUMNS}, extract_cursor, extract_total`;
 
 type Counts = { rows: number; unmatched: number };
 
+/** A commit's result: rows cannot change once committed (import-review door 4), so the rows not added were skipped. */
+const commitFrom = (committedCount: number | null, rows: number): CommitView => ({ added: committedCount ?? 0, skipped: rows - (committedCount ?? 0) });
+
 export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobStore {
   async function job(jobId: string) {
     const { data, error } = await client.from("import_jobs").select("id, org_id, size_bytes, status").eq("id", jobId).maybeSingle();
     if (error) throw new Error(`${error.code} ${error.message}`);
     return data;
+  }
+
+  async function committedResult(jobId: string): Promise<CommitImportResult> {
+    const { data, error } = await client.from("import_jobs").select("status, committed_count").eq("id", jobId).maybeSingle();
+    if (error) return failure("Reading an import", error);
+    if (!data) return { ok: false, code: "not_found" };
+    if (data.status !== "committed") return { ok: false, code: "not_ready" };
+    const counts = await client.from("import_row_counts").select("rows").eq("job_id", jobId).maybeSingle();
+    if (counts.error) return failure("Counting import rows", counts.error);
+    return { ok: true, ...commitFrom(data.committed_count, counts.data?.rows ?? 0) };
   }
 
   return {
@@ -111,10 +124,11 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
     async discard(jobId) {
       try {
         // Row first: a failed object delete then leaves an orphan file nothing reads, never a job without its file.
-        const { data, error } = await client.from("import_jobs").delete().eq("id", jobId).select("id, org_id");
+        // A committed job is the record of what was added to the site, so it stays.
+        const { data, error } = await client.from("import_jobs").delete().eq("id", jobId).neq("status", "committed").select("id, org_id");
         if (error) return failure("Discarding an import", error);
         const [row] = data ?? [];
-        if (!row) return { ok: false, code: "not_found" };
+        if (!row) return (await job(jobId))?.status === "committed" ? { ok: false, code: "locked" } : { ok: false, code: "not_found" };
 
         const key = importKey(row.org_id, row.id);
         const removed = await client.storage.from(BUCKET).remove([key]);
@@ -207,6 +221,22 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
       }
     },
 
+    async commit(jobId) {
+      try {
+        const { error } = await client.rpc("commit_import", { p_job_id: jobId });
+        if (error) {
+          if (error.code === "P0002") return { ok: false, code: "not_found" };
+          if (error.code === "42501") return { ok: false, code: "forbidden" };
+          if (error.code === "23514") return { ok: false, code: "incomplete" };
+          if (error.code !== "40001") return failure("Adding imported assets", error);
+        }
+        // Done, or stale: either way the stored commit is the answer, so a repeat reports what the first call added.
+        return await committedResult(jobId);
+      } catch (cause) {
+        return unavailable("Adding imported assets", describe(cause));
+      }
+    },
+
     async recordRead(jobId, outcome) {
       try {
         const at = clock.now().toISOString();
@@ -250,16 +280,18 @@ export function supabaseImportJobReader(client: Client): ImportJobReader {
       if (!UUID.test(siteId)) return [];
       const { data, error } = await client
         .from("import_jobs")
-        .select("id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count, extract_cursor, extract_total")
+        .select(
+          "id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count, extract_cursor, extract_total, committed_count",
+        )
         .eq("site_id", siteId)
         .order("created_at", { ascending: false })
         .limit(ROW_CAP);
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
       const jobs = data ?? [];
 
-      // Counts only for finished extractions, from the view so RLS and a 2,000-row job both hold.
+      // Counts only for finished extractions and commits, from the view so RLS and a 2,000-row job both hold.
       const counts = new Map<string, Counts>();
-      const extracted = jobs.filter((row) => row.status === "extracted").map((row) => row.id);
+      const extracted = jobs.filter((row) => row.status === "extracted" || row.status === "committed").map((row) => row.id);
       if (extracted.length > 0) {
         const { data: rows, error: countError } = await client.from("import_row_counts").select("job_id, rows, unmatched").in("job_id", extracted);
         if (countError) throw new Error(`Supabase error ${countError.code}: ${countError.message}`);
@@ -275,6 +307,7 @@ export function supabaseImportJobReader(client: Client): ImportJobReader {
         createdAt: new Date(row.created_at),
         outcome: outcomeFrom(row),
         extraction: extractionFrom(row, counts.get(row.id)),
+        ...(row.status === "committed" ? { committed: commitFrom(row.committed_count, counts.get(row.id)?.rows ?? 0) } : {}),
       }));
     },
   };

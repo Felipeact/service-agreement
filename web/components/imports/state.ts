@@ -1,4 +1,5 @@
 import type { ImportContentType, ReadError } from "@/domain/imports";
+import type { AssetInput, FieldErrors } from "@/domain/records";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
@@ -9,13 +10,39 @@ export type StartState =
 
 export type ConfirmState = { status: "uploaded" | "upload_missing" | Failure };
 
-export type DiscardState = { status: "idle" | "discarded" | Failure };
+export type DiscardState = { status: "idle" | "discarded" | "locked" | Failure };
 
 /** What `readImportAction` answers: the recorded outcome, or why nothing was read. */
 export type ReadState =
   | { status: "parsed"; tables: number | null; rows: number | null }
   | { status: "unreadable"; reason: ReadError }
   | { status: "not_ready" | Failure };
+
+/** What the row actions answer (`updateImportRowAction`, `skipImportRowAction`). */
+export type RowState =
+  | { status: "idle" | "saved" | "locked" | Failure }
+  | { status: "invalid"; errors: FieldErrors<keyof AssetInput> };
+
+/** What `mapImportTypeAction` answers. */
+export type MapState = { status: "idle" | "invalid" | "locked" | Failure } | { status: "mapped"; rows: number };
+
+/** What `commitImportAction` answers. */
+export type CommitState =
+  | { status: "idle" | "nothing_to_add" | "not_ready" | Failure }
+  | { status: "committed"; added: number; skipped: number }
+  | { status: "incomplete"; count: number };
+
+/** The review's alerts, by state; each names what to do next. */
+export const REVIEW_MESSAGES = {
+  row_unavailable: "We couldn't save this row. Try again.",
+  commit_unavailable: "We couldn't add these assets. Try again.",
+  locked: "This import was already added to the site.",
+  forbidden: "You don't have permission to import equipment lists.",
+  not_found: "This import no longer exists.",
+  not_ready: "This import isn't ready to add yet.",
+  nothing_to_add: "Include at least one row to add.",
+  invalid: "Choose an equipment type",
+} as const;
 
 /** What `extractImportAction` answers: progress, the finished counts, or why nothing moved. */
 export type ExtractState =

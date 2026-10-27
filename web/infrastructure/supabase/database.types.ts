@@ -393,6 +393,9 @@ export type Database = {
       import_jobs: {
         Row: {
           content_type: string
+          committed_at: string | null
+          committed_by: string | null
+          committed_count: number | null
           created_at: string
           created_by: string | null
           created_by_email: string | null
@@ -413,6 +416,9 @@ export type Database = {
         }
         Insert: {
           content_type: string
+          committed_at?: string | null
+          committed_by?: string | null
+          committed_count?: number | null
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
@@ -433,6 +439,9 @@ export type Database = {
         }
         Update: {
           content_type?: string
+          committed_at?: string | null
+          committed_by?: string | null
+          committed_count?: number | null
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
@@ -471,6 +480,7 @@ export type Database = {
       import_rows: {
         Row: {
           asset_type_id: string | null
+          asset_id: string | null
           asset_type_raw: string | null
           confidence: string
           id: string
@@ -478,12 +488,14 @@ export type Database = {
           location: string | null
           org_id: string
           position: number
+          skipped: boolean
           source_ref: string | null
           type_model: string | null
           unit_no: string | null
         }
         Insert: {
           asset_type_id?: string | null
+          asset_id?: string | null
           asset_type_raw?: string | null
           confidence: string
           id?: string
@@ -491,12 +503,14 @@ export type Database = {
           location?: string | null
           org_id: string
           position: number
+          skipped?: boolean
           source_ref?: string | null
           type_model?: string | null
           unit_no?: string | null
         }
         Update: {
           asset_type_id?: string | null
+          asset_id?: string | null
           asset_type_raw?: string | null
           confidence?: string
           id?: string
@@ -504,11 +518,19 @@ export type Database = {
           location?: string | null
           org_id?: string
           position?: number
+          skipped?: boolean
           source_ref?: string | null
           type_model?: string | null
           unit_no?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "import_rows_asset_fkey"
+            columns: ["asset_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id", "org_id"]
+          },
           {
             foreignKeyName: "import_rows_asset_type_id_org_id_fkey"
             columns: ["asset_type_id", "org_id"]
@@ -827,6 +849,7 @@ export type Database = {
         }
         Returns: string
       }
+      commit_import: { Args: { p_job_id: string }; Returns: number }
       record_extraction_chunk: {
         Args: {
           p_expected_cursor: number

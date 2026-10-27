@@ -511,3 +511,13 @@ table and the commit refusals are proven only by the live run that happens to cr
   again.` and `This import isn't ready to add yet.`
 
 - Mechanism: one builder (estimate under budget, no ask).
+- **Boundary (part 1):** every vitest, lint, shell and build proof is green locally (1,027 tests, `npm run lint` clean, `npx next build` exits 0): C601-C626, C628 (adapter and view parts), C629-C632 (vitest parts), C634-C636, C638-C642 (vitest and shell parts), C646-C650, C652, C654, C655. The SQL file passes in a dry run: fixture, then the unapplied migration, then each of the 14 recipes in one transaction ending in `rollback`, against the live project (nothing persisted). Waiting on the user's go-ahead to apply the migration: `npm run test:db` itself (C627-C633, C637, C639, C640, C642-C645 SQL parts, C653), C651 (file renamed to the applied version), C656, C657, C658.
+- **Settled mid-build:**
+  - Door 4's trigger refuses changes to rows of a `parsed` job, so import-extract's C547 owner and viewer updates (which used the `parsed` job `jK`) now target a row of the `extracted` job `jEX`; the claim ("an owner update is accepted, a viewer's updates 0 rows") is unchanged.
+  - Door 2 listed four import-extract checks to rewrite; `import_jobs_extracted_at_iff_extracted` is a fifth, since a committed job keeps its `extracted_at`. Rewritten the same way.
+  - The trigger lets through an update that only clears `asset_id`: that is the `on delete set null (asset_id)` of a deleted asset, which AC 33 (C633) requires on a committed job.
+  - The dry run showed door 2's check accepts an `extracted` job carrying only `committed_at`; Landing row 2b (`import_jobs_committed_together`) was appended before the fix.
+  - `ImportJobView.committed` is optional and set only on committed jobs, so earlier exact `forSite` expectations hold; skipped = the view's `rows` minus `committed_count`, exact because rows are frozen once committed.
+  - `mapType` updates in batches of 100 ids (each still filtered on `asset_type_id is null`) to keep the PATCH URL short; a failure part way leaves the rest untyped, and applying again types them.
+  - The page reads `?show` / `?page` in a child inside `<Suspense>` (AD-022), so C607's page proof calls that child, `ReviewForRequest`.
+  - `database.types.ts` was edited by hand; it is compared with `generate_typescript_types` after the migration is applied.

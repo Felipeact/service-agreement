@@ -35,7 +35,7 @@ export function stubClient(tables: Record<string, Reply | Sequence>, storage: Re
         return reply;
       };
       const query: Record<string, unknown> = {};
-      for (const method of ["select", "eq", "in", "order", "limit", "update", "insert", "delete"]) {
+      for (const method of ["select", "eq", "neq", "is", "in", "order", "limit", "range", "update", "insert", "delete"]) {
         query[method] = (...args: unknown[]) => {
           calls.push({ table, method, args });
           return query;

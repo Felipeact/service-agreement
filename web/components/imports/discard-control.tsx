@@ -7,6 +7,7 @@ import { IMPORT_FORM_MESSAGES, type DiscardState } from "./state";
 const DISCARD_MESSAGES = {
   forbidden: IMPORT_FORM_MESSAGES.forbidden,
   not_found: "This import no longer exists.",
+  locked: "This import was already added to the site.",
   unavailable: "We couldn't discard the file. Try again.",
 } as const;
 
