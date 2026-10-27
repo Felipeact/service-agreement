@@ -33,6 +33,13 @@ describe("parseServiceScope", () => {
     ["a type with no name", { schema: 1, types: [{ code: "RTU", tasks: [], assets: [] }] }],
     ["a task that is not a string", { schema: 1, types: [type("RTU", { tasks: [1] })] }],
     ["an asset that is not an object", { schema: 1, types: [type("RTU", { assets: ["RTU-1"] })] }],
+    ["a takenAt that is not a time", { schema: 1, types: [], takenAt: "yesterday" }],
+    ["a takenAt that is not text", { schema: 1, types: [], takenAt: 1730000000 }],
+    ["a code that is not text", { schema: 1, types: [type("RTU", { code: 7 })] }],
+    ["tasks that are not a list", { schema: 1, types: [type("RTU", { tasks: "Replace filters" })] }],
+    ["assets that are not a list", { schema: 1, types: [type("RTU", { assets: { unitNo: "RTU-1" } })] }],
+    ["an asset field that is neither text nor null", { schema: 1, types: [type("RTU", { assets: [{ unitNo: 1, typeModel: null, location: null }] })] }],
+    ["an asset with a field missing", { schema: 1, types: [type("RTU", { assets: [{ unitNo: "RTU-1", typeModel: null }] })] }],
   ])("C803: %s is not a scope", (_, document) => {
     expect(parseServiceScope(document)).toBeNull();
   });

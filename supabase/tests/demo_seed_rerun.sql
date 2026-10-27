@@ -21,6 +21,9 @@ do $$ begin
     not exists (select 1 from tests.demo_snapshots s join public.agreement_versions v on v.id = s.id
                 where v.snapshot::text <> s.snapshot),
     'a snapshot changed on the second run');
+  perform tests.ok('C821 guard',
+    (select snapshot ->> 'takenAt' from public.agreement_versions where id = md5('demo:version:4')::uuid) = '2026-01-01T00:00:00+00:00',
+    'the second run overwrote a version that already held a scope');
 end $$;
 
 rollback;

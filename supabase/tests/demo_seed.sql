@@ -155,6 +155,11 @@ do $$ begin
     'the 2 demo drafts do not all keep an empty snapshot');
 end $$;
 
+-- C821: a frozen version already holding a scope keeps it on the next run. This one's takenAt differs from what the
+-- backfill would write, so a run that ignored the `snapshot = '{}'` guard would change it.
+update public.agreement_versions set snapshot = '{"schema": 1, "types": [], "takenAt": "2026-01-01T00:00:00+00:00"}'
+where id = md5('demo:version:4')::uuid;
+
 -- Snapshots after the first run, for C821 on the second.
 create table tests.demo_snapshots as
 select id, snapshot::text as snapshot from public.agreement_versions where org_id = tests.demo();

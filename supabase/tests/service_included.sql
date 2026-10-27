@@ -115,6 +115,22 @@ begin
     'RTU-2 is not carried with its type/model and location');
 end $$;
 
+-- C801: tasks follow position, not creation time or id. 'zLate' sorts last by id and was created last, yet sits first.
+reset role;
+select set_config('request.jwt.claims', '', true);
+insert into public.asset_types (id, org_id, code, name) values (tests.id('orderA'), tests.id('orgA'), 'ORDERT', 'Order type');
+insert into public.asset_type_tasks (id, org_id, asset_type_id, position, description, created_at) values
+  ('00000000-0000-4000-8000-000000000001', tests.id('orgA'), tests.id('orderA'), 2, 'Second', now() - interval '2 days'),
+  ('ffffffff-ffff-4fff-8fff-ffffffffffff', tests.id('orgA'), tests.id('orderA'), 1, 'First', now() - interval '1 day');
+select tests.si_site('s801order');
+select tests.si_asset('s801order', 'orderA', 'O-1');
+select tests.act_as('uE');
+do $$ begin
+  perform tests.ok('C801 position order',
+    (select t -> 'tasks' from jsonb_array_elements(public.site_service_scope(tests.id('s801order')) -> 'types') t) = '["First", "Second"]'::jsonb,
+    'tasks are not in position order when creation and id order disagree');
+end $$;
+
 -- C802: nothing from another site, a type with no asset on the site, or another org.
 do $$ begin
   perform tests.ok('C802 codes',

@@ -52,6 +52,9 @@ begin
     perform tests.expect_rows('C12 delete ' || t,
       format('delete from public.%I where org_id = %L', t, a), 0);
   end loop;
+  -- Only the update half moved to C817; a viewer's delete still affects nothing.
+  perform tests.expect_rows('C12 delete agreement_versions',
+    format('delete from public.agreement_versions where org_id = %L', a), 0);
 end $$;
 
 reset role;

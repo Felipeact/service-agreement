@@ -181,7 +181,7 @@ Proof: `sql supabase/tests/rls_isolation.sql#C35`
 | membership roles (5) | `owner` C8 · `admin` C8 · `estimator` C8 · `viewer` C8 · `contractor` rejected C8 | - |
 | viewer reads (13) | C10, table-driven over all 13 | - |
 | viewer cannot insert (13) | C11, table-driven over all 13 | - |
-| viewer cannot update or delete (13) | `memberships` C12 · `org_settings` C12 · `customers` C12 · `contacts` C12 · `sites` C12 · `asset_types` C12 · `asset_type_tasks` C12 · `assets` C12 · `agreements` C12 · `agreement_versions` C12, update since 2026-10-27 service-included C817 (`42501`; user-approved) · `service_lines` C12 · `contracts` C12 · `events` C28 | - |
+| viewer cannot update or delete (13) | `memberships` C12 · `org_settings` C12 · `customers` C12 · `contacts` C12 · `sites` C12 · `asset_types` C12 · `asset_type_tasks` C12 · `assets` C12 · `agreements` C12 · `agreement_versions` C12 (delete), update since 2026-10-27 service-included C817 (`42501`; user-approved) · `service_lines` C12 · `contracts` C12 · `events` C28 | - |
 | estimator writes domain data (7) | `customers` C13 · `contacts` C13 · `sites` C13 · `assets` C13 · `agreements` C13 · `agreement_versions` C13 · `service_lines` C13 | - |
 | estimator cannot change company policy (4) | `org_settings` update C14 · `memberships` insert C14 · `memberships` update C14 · `memberships` delete C14 | - |
 | owner manages the org (2) | `org_settings` update C15 · `memberships` insert C15 | - |
