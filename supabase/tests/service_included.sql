@@ -115,7 +115,7 @@ begin
     'RTU-2 is not carried with its type/model and location');
 end $$;
 
--- C801: tasks follow position, not creation time or id. 'zLate' sorts last by id and was created last, yet sits first.
+-- C801: tasks follow position, not creation time or id. 'First' sorts last by id and was created last, yet sits first.
 reset role;
 select set_config('request.jwt.claims', '', true);
 insert into public.asset_types (id, org_id, code, name) values (tests.id('orderA'), tests.id('orgA'), 'ORDERT', 'Order type');

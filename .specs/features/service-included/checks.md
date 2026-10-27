@@ -328,3 +328,8 @@ Cost: about 20 proofs at their own layer across 4 files. Without these rows, the
     - `npx vitest run domain/agreement`: 113 passed
     - `npm test`: 55 files, 1257 passed
 - **Outside the checks:** writers keep `delete` on `agreement_versions` (the init policy). A sent version with no service lines can therefore be deleted. This is pre-existing and left for a hardening pass.
+- **Verifier round 2 (FAIL), with the gaps fixed in the next commit:**
+  - **F7 (takenAt):** the C803 "takenAt not text" case used `1730000000`, which `Date.parse` also rejects, so it tested nothing. It now uses `2026` (a number `Date.parse` accepts) and `["2026-10-27"]`. Removing the `isText` check fails 2 cases.
+  - **F11 (asset fields):** the asset-field case is now one case per field (`unitNo`, `typeModel`, `location`). Removing the `typeModel` check fails 1 case.
+  - The SQL comment now names the `First` task.
+  - The C803 claim keeps its 7 named inputs. The test now has 17 rejection cases, a superset of them.
