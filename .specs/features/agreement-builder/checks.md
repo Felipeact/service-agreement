@@ -501,3 +501,32 @@ table and the trigger are proven only by the live run that crosses three of thei
 - Pre-migration live check (batch 1, 2026-10-27, read-only `execute_sql` on `gnxebrtcpbujhvcamtoe`): 12 agreements,
   0 with a null number, 0 orgs with a repeated `number`, 0 sites with two agreements in `draft` / `sent` /
   `changes_requested`. Doors 1 and 2 apply to the live data without a backfill.
+- **Boundary (batch 1):** at `ab5f570` the vitest and shell proofs of C701-C703, C705, C710, C711, C713-C716,
+  C718-C729, C731-C734, C737, C739-C741, C743-C745, C748, C749 pass (`npm test` 54 files / 1223 tests, `npm run
+  lint` clean, `npx tsc --noEmit` exit 0, the C745 grep prints 0). The SQL proofs C704, C706-C709, C712, C717,
+  C730, C735, C736, C738, C742, C751 pass only in a dry run: the migration is NOT applied. Dry run (2026-10-27): every
+  recipe run through the runner against `SUPABASE_DB_URL` with
+  `supabase/migrations/20261027200000_agreement_builder.sql` spliced in after `fixture.sql`, each ending in rollback:
+  15 passed, 0 failed (`agreement_builder: pass` included). Without the migration the 14 older recipes still pass on
+  the rearranged fixtures and `agreement_builder` fails (`create_agreement` does not exist). C755 stays pending until
+  the migration is applied and `npm run test:db` runs on it.
+- **Settled mid-build:** amounts on the agreement page use a new `formatCadExact` (always two decimals), because
+  C713 pins `$150.00` / `$3,870.00` and `formatCad` drops whole-dollar decimals; the pipeline keeps `formatCad`. The
+  stage labels moved to `STAGE_LABELS` in `domain/pipeline` (`STAGE_META` reads them) so the status label (C734)
+  lives in `domain/agreement` without a `lib` import. The migration file carries a placeholder version
+  `20261027200000`; batch 2 renames it to the version `apply_migration` records (AD-006, C752). Fixtures rearranged,
+  no assertion changed: `fixture.sql` puts `lineA`/`lineB` on version 2 (the current one), `insert_sql('agreements')`
+  inserts `withdrawn`, `insert_sql('service_lines')` aims at the agreement's latest version via
+  `tests.latest_version`; `domain_constraints.sql` C16 gives each status its own site; `rls_isolation.sql` C5's
+  cross-org probe is `withdrawn` so the FK, not door 2's index, answers; the runner pins move to 15 recipes and 17
+  files. The trigger checks both the old and the new version of an update and looks a version up in the row's own
+  org (a version of another org passes to RLS / the FK). Line actions take `(id, formData)` and their controls wrap
+  them, as the import actions do; update and remove revalidate `/agreements/[agreementId]`. Revise and withdraw
+  answer `unavailable` (logged) when the transition throws. "Posting `createAgreementAction` with the site id"
+  (C701) is proven in `app/(app)` (the site page passes `createAgreementAction.bind(null, siteId)`); static markup
+  cannot name a Server Action. The dry run used the project's own runner over `SUPABASE_DB_URL` rather than pasting
+  each recipe into `execute_sql`: same database, same transaction-and-rollback, nothing persisted.
+- **Abandoned:** a temporary table for C730's "version 1 before" snapshot (a role switch cannot be relied on to read
+  another role's temp table; it is `tests.ab_rev_v1` now); reading `old`/`new` in one `union all` inside the trigger
+  (replaced by explicit `tg_op` branches); asserting "no service_role" inside `composition.test.ts` (the line itself
+  made the C745 grep count 1).
