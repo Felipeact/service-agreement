@@ -106,7 +106,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 2: Asset import
 - [x] Upload to Storage and import jobs
 - [x] xlsx/csv, docx and pdf parsers behind `ImportParser`, whose output `AssetExtractor` consumes
-- [ ] Claude structured extraction and type normalization
+- [x] Claude structured extraction and type normalization
 - [ ] Review grid and commit
 
 ### Phase 3: Agreement & customer review

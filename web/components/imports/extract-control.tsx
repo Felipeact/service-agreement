@@ -47,7 +47,8 @@ export function ExtractControl({ jobId, extract, resume }: { jobId: string; extr
     startTransition(async () => {
       setProgress(null);
       setState({ status: "idle" });
-      const last = await runExtraction(jobId, { extract, onProgress: (next) => startTransition(() => setProgress(next)) });
+      // A plain update: wrapped in startTransition it would wait for the whole action and never show mid-way.
+      const last = await runExtraction(jobId, { extract, onProgress: setProgress });
       startTransition(() => setState(last));
     });
   }

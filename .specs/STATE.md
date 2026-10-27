@@ -52,10 +52,10 @@
 ## Handoff
 
 **Feature**: import-extract (ROADMAP Phase 2 item 3), profile standard
-**Where**: built and applied; migration `20261027045548_import_extract` is on the live project; `npm run test:db` 13 passed, `npm test` 889 passed, lint and `next build` clean, advisors show only the two accepted findings. NOT run: live browser checks C561 and C562 (the app needs a signed-in demo owner and C562 an Anthropic API key); ROADMAP Phase 2 item 3 stays unticked until C561 passes
-**In progress**: Verifier over `7791dc0..HEAD`
-**Next step**: (1) sign in as the demo owner and run C561 (no key), then C562 once `ANTHROPIC_API_KEY` is in `web/.env.local`; (2) tick the ROADMAP item; (3) review-grid and commit is Phase 2 item 4
-**Blockers**: a signed-in browser session (magic link goes to the demo owner's mailbox); an `ANTHROPIC_API_KEY` and consent to send a fictitious file to the Anthropic API
+**Where**: built, applied and live-validated (C561 and C562 passed 2026-10-27; the run fixed the progress label in `ExtractControl`); ROADMAP Phase 2 item 3 ticked; Verifier dispatched over `7791dc0..HEAD`
+**In progress**: Verifier report `.specs/features/import-extract/verification.md`
+**Next step**: act on the Verifier's report; then ROADMAP Phase 2 item 4, review grid and commit
+**Blockers**: none
 **Uncommitted**: none
 **Branch**: development (not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
