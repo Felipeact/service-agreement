@@ -392,10 +392,10 @@ export type Database = {
       }
       import_jobs: {
         Row: {
-          content_type: string
           committed_at: string | null
           committed_by: string | null
           committed_count: number | null
+          content_type: string
           created_at: string
           created_by: string | null
           created_by_email: string | null
@@ -415,10 +415,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          content_type: string
           committed_at?: string | null
           committed_by?: string | null
           committed_count?: number | null
+          content_type: string
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
@@ -438,10 +438,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          content_type?: string
           committed_at?: string | null
           committed_by?: string | null
           committed_count?: number | null
+          content_type?: string
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
