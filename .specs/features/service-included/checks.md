@@ -302,7 +302,7 @@ Cost: about 20 proofs at their own layer across 4 files. Without these rows, the
 - **Before the migration (C820):** 14 versions, all `{}`. The editable ones were AG-1046 v1, AG-1048 v2, AG-1051 v1 and AG-1052 v1. The other 10 were to be backfilled.
 - **Migration:** `apply_migration` recorded `20261027212052` / `service_included` (C825), and the file is `supabase/migrations/20261027212052_service_included.sql`.
 - **After (C820):** `execute_sql` reports `frozen_still_empty` 0, `editable_changed` 0 and `frozen_with_scope` 10, and the editable versions are unchanged. AG-1039 holds 2 types.
-- **Types (C826):** `generate_typescript_types` contains `site_service_scope: { Args: { p_site_id: string }; Returns: Json }`, identical to the line already in `database.types.ts`. The file is unchanged.
+- **Types (C826):** the line in `generate_typescript_types`, `site_service_scope: { Args: { p_site_id: string }; Returns: Json }`, matches the one added to `database.types.ts` by hand in `f9f1927` before the migration. Regenerating left the file unchanged.
 - **Advisors (C827):** `get_advisors` security reports exactly `rls_enabled_no_policy` (`public.outbox`) and `auth_leaked_password_protection`.
 - **C828:**
   - The first `npm run test:db` failed `rls_roles` C12 (supabase-init). It expects a viewer's update of `agreement_versions` to affect 0 rows and now gets `42501`.
@@ -317,3 +317,14 @@ Cost: about 20 proofs at their own layer across 4 files. Without these rows, the
   - **AG-1039 (sent):** shows `As recorded on Oct 27, 2026` in both sections, with no `Add equipment`.
   - **AG-1022 (Brookhaven, 9 assets, narrowed case):** 8 groups, all closed. One opened on click at 1440 px, and on a tap at 375 px it showed its 2 rows.
   - **At every width:** each `<summary>` is 44 px tall. `scrollWidth` vs `innerWidth` is 1434 / 1449, 753 / 768 and 360 / 375.
+- **Verifier round 1 (FAIL), with the gaps fixed in `8d52c31`:**
+  - **M6:** C801 gains a `position order` assertion on a type whose tasks are created and keyed in the reverse of their positions.
+  - **M7:** `demo_seed.sql` gives demo version 4 a scope with `takenAt` 2026-01-01 before the second run, and `demo_seed_rerun.sql` asserts `C821 guard`, so ignoring the guard would overwrite it.
+  - **C12's delete half:** it is asserted again for `agreement_versions` in `rls_roles.sql`, and the supabase-init coverage row says so.
+  - **C803:** gains 7 more rejection cases. These are a `takenAt` that is not a time and one that is not text, a non-text `code`, `tasks` or `assets` that are not lists, a non-text asset field, and a missing asset field.
+  - **C829:** `npx next build` exited 0 at `8d52c31`. It ran in a separate git worktree with its own `npm ci`, so the running dev server's `.next` was untouched.
+  - Test runs after the fixes:
+    - `npm run test:db rls_roles service_included demo_seed`: 3 passed
+    - `npx vitest run domain/agreement`: 113 passed
+    - `npm test`: 55 files, 1257 passed
+- **Outside the checks:** writers keep `delete` on `agreement_versions` (the init policy). A sent version with no service lines can therefore be deleted. This is pre-existing and left for a hardening pass.
