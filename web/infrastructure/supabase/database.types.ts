@@ -798,7 +798,22 @@ export type Database = {
           rows: number | null
           unmatched: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "import_rows_job_id_org_id_fkey"
+            columns: ["job_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "import_rows_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
