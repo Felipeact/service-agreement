@@ -54,6 +54,7 @@ describe("layer boundaries", () => {
   test.each(SDK_PLACES)("C539: %s importing @anthropic-ai/sdk is a lint error naming it", async (file) => {
     const messages = await restrictedImports(file, "@anthropic-ai/sdk");
     expect(messages).toHaveLength(1);
+    expect(messages[0].message).toContain("@anthropic-ai/sdk");
     expect(messages[0].message).toContain("infrastructure/claude");
   });
 

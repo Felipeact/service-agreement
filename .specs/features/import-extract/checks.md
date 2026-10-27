@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/import-extract/plan.md`
 
-63 checks in 5 slices plus doors and delivery · 7 one-way doors · 2 open, of which 0 block (question 1 blocks go-live only)
+62 checks in 5 slices plus doors and delivery · 7 one-way doors · 2 open, of which 0 block (question 1 blocks go-live only)
 
 ## How proofs run
 

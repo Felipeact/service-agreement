@@ -232,6 +232,7 @@ describe("extractImport", () => {
   test.each<[string, Setup, boolean]>([
     ["sourceOf is unavailable", { source: { ok: false, code: "unavailable" } }, false],
     ["the parser throws", { parse: () => { throw new Error("boom"); } }, true],
+    ["the parser no longer reads the file", { parse: { ok: false, reason: "corrupt" } }, true],
     ["the catalog throws", { types: () => { throw new Error("db down"); } }, true],
     ["the extractor is unavailable", { answer: async () => ({ ok: false, code: "unavailable" }) }, false],
     ["recordExtraction is unavailable", { record: { ok: false, code: "unavailable" } }, false],
@@ -243,6 +244,22 @@ describe("extractImport", () => {
     if (name !== "recordExtraction is unavailable") expect(store.recordExtraction).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledTimes(logs ? 1 : 0);
     if (logs) expect(String(log.mock.calls[0][0])).toContain(JOB);
+  });
+
+  test.each<[string, Setup, boolean]>([
+    ["an extracted job has no stored result", { source: { ok: true, status: "extracted", contentType: CSV, progress: null, result: null, bytes: null } }, false],
+    ["no chunk sits at the stored cursor", { source: extractingJob(5, 6) }, true],
+    [
+      "the re-read after the last chunk is not extracted",
+      { source: [parsedJob, extractingJob(1, 1)], record: { ok: true, progress: { cursor: 1, total: 1 }, done: true } },
+      false,
+    ],
+  ])("use case: when %s the answer is unavailable", async (_name, options, logs) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { extractImport } = setup(options);
+
+    expect(await extractImport(JOB)).toEqual({ ok: false, code: "unavailable" });
+    expect(log).toHaveBeenCalledTimes(logs ? 1 : 0);
   });
 
   test("C531: a too_large answer is returned and nothing is recorded", async () => {
