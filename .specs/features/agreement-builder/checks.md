@@ -498,3 +498,6 @@ table and the trigger are proven only by the live run that crosses three of thei
   and `Contract voided` (C734); `Current` beside the current version (C726).
 
 - Mechanism: handoff (user choice, 2026-10-27): batch 1 = C701-C745, C748, C749, C751, C755; batch 2 = C746, C747, C750, C752-C757, only on green.
+- Pre-migration live check (batch 1, 2026-10-27, read-only `execute_sql` on `gnxebrtcpbujhvcamtoe`): 12 agreements,
+  0 with a null number, 0 orgs with a repeated `number`, 0 sites with two agreements in `draft` / `sent` /
+  `changes_requested`. Doors 1 and 2 apply to the live data without a backfill.

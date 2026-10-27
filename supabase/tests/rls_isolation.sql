@@ -67,8 +67,9 @@ begin
     format('insert into public.assets (org_id, site_id, asset_type_id, unit_no) values (%L, %L, %L, ''x'')', a, tests.id('siteB'), tests.id('typeA')), '23503');
   perform tests.expect_error('C5 assets->asset_types',
     format('insert into public.assets (org_id, site_id, asset_type_id, unit_no) values (%L, %L, %L, ''x'')', a, tests.id('siteA'), tests.id('typeB')), '23503');
+  -- Withdrawn, so siteB's live agreement (agreement-builder door 2) cannot answer before the foreign key does.
   perform tests.expect_error('C5 agreements->sites',
-    format('insert into public.agreements (org_id, site_id) values (%L, %L)', a, tests.id('siteB')), '23503');
+    format('insert into public.agreements (org_id, site_id, status) values (%L, %L, ''withdrawn'')', a, tests.id('siteB')), '23503');
   perform tests.expect_error('C5 agreement_versions->agreements',
     format('insert into public.agreement_versions (org_id, agreement_id, version_no) values (%L, %L, 99)', a, tests.id('agrB')), '23503');
   perform tests.expect_error('C5 service_lines->agreement_versions',

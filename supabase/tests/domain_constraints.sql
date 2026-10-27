@@ -8,12 +8,16 @@ declare
   a uuid := tests.id('orgA');
   site uuid := tests.id('siteA');
 begin
+  -- A site per agreement: a site holds one live agreement (agreement-builder door 2), and siteA already has agrA.
+  foreach s in array array['draft','sent','accepted','refused','changes_requested','expired','withdrawn', 'default'] loop
+    insert into public.sites (id, org_id, customer_id, name) values (tests.id('c16:' || s), a, tests.id('custA'), 'C16 ' || s);
+  end loop;
   foreach s in array array['draft','sent','accepted','refused','changes_requested','expired','withdrawn'] loop
-    insert into public.agreements (org_id, site_id, status) values (a, site, s);
+    insert into public.agreements (org_id, site_id, status) values (a, tests.id('c16:' || s), s);
   end loop;
   perform tests.expect_error('C16 pending',
     format('insert into public.agreements (org_id, site_id, status) values (%L, %L, ''pending'')', a, site), '23514');
-  insert into public.agreements (org_id, site_id) values (a, site) returning status into got;
+  insert into public.agreements (org_id, site_id) values (a, tests.id('c16:default')) returning status into got;
   perform tests.ok('C16 default', got = 'draft', 'default is ' || coalesce(got, 'null'));
 end $$;
 

@@ -40,6 +40,7 @@ export const RECIPES: Recipe[] = [
   plain("import_parse"),
   plain("import_extract"),
   plain("import_review"),
+  plain("agreement_builder"),
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
 ];
 
