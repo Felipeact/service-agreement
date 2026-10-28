@@ -28,5 +28,23 @@ export function pdfPages(bytes: Uint8Array): string[] {
   return pages;
 }
 
+/** The colour operators (`r g b scn` fill, `r g b SCN` stroke) of every page, as "#rrggbb" strings. */
+export function pdfColours(bytes: Uint8Array): Set<string> {
+  const raw = Buffer.from(bytes).toString("latin1");
+  const colours = new Set<string>();
+  for (const match of raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)) {
+    let content: string;
+    try {
+      content = inflateSync(Buffer.from(match[1], "latin1")).toString("latin1");
+    } catch {
+      continue;
+    }
+    for (const op of content.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) (?:scn|SCN)\b/g)) {
+      colours.add("#" + [op[1], op[2], op[3]].map((v) => Math.round(Number(v) * 255).toString(16).padStart(2, "0")).join(""));
+    }
+  }
+  return colours;
+}
+
 /** WinAnsi bytes read as latin1 differ from Unicode only for 0x80-0x9F: the typographic apostrophe is 0x92. */
 export const winAnsi = (text: string) => text.replace(/’/g, "\x92");

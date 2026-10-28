@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { DRAFT_MARK, type AgreementDocument } from "@/domain/agreement";
 import { reactPdfDocumentRenderer } from "./index";
-import { pdfPages, winAnsi } from "./pdf-text.testing";
+import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
@@ -181,6 +181,42 @@ describe("the agreement PDF, rendered", () => {
     const lines = text(await render({ lines: [{ ...base.lines[0], description: long }] })).split("\n");
     expect(lines.filter((line) => /^x+-?$/.test(line)).length).toBeGreaterThan(3);
     expect(Math.max(...lines.map((line) => line.length))).toBeLessThan(60);
+  });
+
+  test("C858: the accent colour is drawn on the page, and a different accent draws a different colour", async () => {
+    const draw = async (accent: string) => pdfColours(await reactPdfDocumentRenderer.renderAgreement({ ...base, tenant: { ...base.tenant, accent } }));
+    const teal = await draw("#1f6f8b");
+    const plum = await draw("#7a1f5c");
+    expect(teal.has("#1f6f8b")).toBe(true);
+    expect(teal.has("#7a1f5c")).toBe(false);
+    expect(plum.has("#7a1f5c")).toBe(true);
+    expect(plum.has("#1f6f8b")).toBe(false);
+  });
+
+  test("C860: each line prints its own visits per year between its description and its prices", async () => {
+    const lines = [
+      { description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 },
+      { description: "Monthly check", visitsPerYear: 12, costPerVisitCents: 10000, annualCents: 120000 },
+    ];
+    const rows = text(await render({ lines, totalCents: 300000 })).split("\n");
+    const at = (label: string) => rows.indexOf(label);
+    expect(rows.slice(at("Quarterly visit"), at("Quarterly visit") + 4)).toEqual(["Quarterly visit", "4", "$450.00", "$1,800.00"]);
+    expect(rows.slice(at("Monthly check"), at("Monthly check") + 4)).toEqual(["Monthly check", "12", "$100.00", "$1,200.00"]);
+  });
+
+  test("C863: exactly one row per asset, three for three assets, in two types", async () => {
+    const types = [type("AHU", [], [asset("A-1", "Model 7", "Roof"), asset("A-2", "Model 8", "Roof")]), type("Boiler", [], [asset("B-1", "Cast iron", "Basement")])];
+    const all = text(await render({ scope: { kind: "listed", recordedOn: null, types } }));
+    const section = all.slice(all.lastIndexOf("Equipment"), all.indexOf("Terms")).split("\n");
+    expect(section.filter((row) => /^[AB]-\d$/.test(row))).toEqual(["A-1", "A-2", "B-1"]);
+    expect(section.filter((row) => /^(Model 7|Model 8|Cast iron)$/.test(row))).toHaveLength(3);
+  });
+
+  test("C871: a 200-character word changes the page count by no more than the lines it adds", async () => {
+    const plain = await render({});
+    const long = await render({ lines: [{ ...base.lines[0], description: "Abcdefghij".repeat(20) }, base.lines[1]] });
+    expect(plain).toHaveLength(1);
+    expect(long).toHaveLength(plain.length);
   });
 
   test("C872: accents and apostrophes survive as the customer, a task and a location", async () => {

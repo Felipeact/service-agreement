@@ -63,6 +63,26 @@ describe("the PDF route with the real renderer", () => {
     expect(pdfPages(body)[0]).toContain("Kettle Ridge Mechanical Ltd.");
   });
 
+  test("C870: a site with 2,000 assets answers 200 through the route, with every row in the PDF", async () => {
+    const types = Array.from({ length: 40 }, (_, t) => ({
+      code: `T${t + 1}`,
+      name: `Type ${String(t + 1).padStart(2, "0")}`,
+      tasks: ["Inspect"],
+      assets: Array.from({ length: 50 }, (_, a) => ({ unitNo: `T${t + 1}-${a + 1}`, typeModel: null, location: null })),
+    }));
+    const big = { ...detail, serviceScope: { source: "frozen" as const, takenAt: new Date("2026-10-20T15:00:00Z"), types } };
+    const original = container.agreementReader.get;
+    container.agreementReader.get = async () => big;
+    try {
+      const response = await GET(new NextRequest(`http://localhost:3000/agreements/${AGR}/pdf`), { params: Promise.resolve({ agreementId: AGR }) });
+      expect(response.status).toBe(200);
+      const found = new Set(pdfPages(Buffer.from(await response.arrayBuffer())).join("\n").match(/^T\d+-\d+$/gm));
+      expect(found.size).toBe(2000);
+    } finally {
+      container.agreementReader.get = original;
+    }
+  }, 120_000);
+
   test("C868: a version with no recorded scope answers 200 and says so", async () => {
     const response = await GET(new NextRequest(`http://localhost:3000/agreements/${AGR}/pdf`), { params: Promise.resolve({ agreementId: AGR }) });
 

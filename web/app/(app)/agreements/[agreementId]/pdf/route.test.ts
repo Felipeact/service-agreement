@@ -134,6 +134,20 @@ describe("GET /agreements/[agreementId]/pdf", () => {
     expect(renderAgreement.mock.calls[0][0].scope).toEqual({ kind: "not_recorded" });
   });
 
+  test("C866: the draft mark is handed over only for the current version of a draft", async () => {
+    get.mockResolvedValue(detail({ status: "draft", stage: "in_progress", editable: true, serviceScope: { source: "live", takenAt: null, types: [] } }));
+    await call();
+    expect(renderAgreement.mock.calls[0][0].mark).toBe("DRAFT - not yet sent to the customer");
+
+    get.mockResolvedValue(detail({ status: "draft", stage: "in_progress", editable: false }, 1));
+    await call(AGR, "?version=1");
+    expect(renderAgreement.mock.calls[1][0].mark).toBeNull();
+
+    get.mockResolvedValue(detail());
+    await call();
+    expect(renderAgreement.mock.calls[2][0].mark).toBeNull();
+  });
+
   test("the document handed to the renderer is the agreement with the org's settings", async () => {
     await call();
     const document = renderAgreement.mock.calls[0][0];
