@@ -337,3 +337,59 @@ describe("agreement reader: the service scope", () => {
     await expect(supabaseAgreementReader(stub.typed).get(AGR)).rejects.toThrow("XX000");
   });
 });
+
+describe("agreement reader: terms and the customer link", () => {
+  const TERMS = { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null };
+  const SNAPSHOT = { schema: 1, types: [], takenAt: "2026-10-27T18:00:00+00:00", terms: TERMS };
+  const sent = agreementRow([{ id: "v1", version_no: 1 }], "sent");
+
+  test("C936: a frozen version returns the terms of its snapshot", async () => {
+    const stub = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.terms).toEqual(TERMS);
+  });
+
+  test("C936: the editable version has no terms and its snapshot is not read", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.terms).toBeNull();
+    expect(stub.calls.some((call) => call.table === "agreement_versions")).toBe(false);
+  });
+
+  test("C936: a frozen version whose snapshot has no terms, or malformed ones, gets null", async () => {
+    for (const snapshot of [{ schema: 1, types: [], takenAt: SNAPSHOT.takenAt }, { ...SNAPSHOT, terms: [TERMS] }]) {
+      const stub = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot }) });
+      expect((await supabaseAgreementReader(stub.typed).get(AGR))?.terms).toBeNull();
+    }
+  });
+
+  test("C905: a sent agreement's current version reads the live link's first view", async () => {
+    const stub = stubClient({
+      agreements: ok(sent),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: SNAPSHOT }),
+      portal_links: ok({ first_viewed_at: "2026-10-28T09:00:00Z" }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.portalLink).toEqual({ firstViewedAt: new Date("2026-10-28T09:00:00Z") });
+    expect(stub.calls.filter((call) => call.table === "portal_links" && call.method === "is")[0].args).toEqual(["revoked_at", null]);
+  });
+
+  test("C905: a live link nobody opened has a null first view, and no live link gives null", async () => {
+    const unopened = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }), portal_links: ok({ first_viewed_at: null }) });
+    expect((await supabaseAgreementReader(unopened.typed).get(AGR))?.portalLink).toEqual({ firstViewedAt: null });
+    const none = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
+    expect((await supabaseAgreementReader(none.typed).get(AGR))?.portalLink).toBeNull();
+  });
+
+  test("C905: a draft, or a past version of a sent agreement, reads no link", async () => {
+    const draft = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    draft.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
+    await supabaseAgreementReader(draft.typed).get(AGR);
+    const past = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }, { id: "v2", version_no: 2 }], "sent")), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
+    await supabaseAgreementReader(past.typed).get(AGR, 1);
+    expect(draft.calls.some((call) => call.table === "portal_links")).toBe(false);
+    expect(past.calls.some((call) => call.table === "portal_links")).toBe(false);
+  });
+});

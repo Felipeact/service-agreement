@@ -8,8 +8,10 @@ import { getContainer } from "@/composition";
 import { isUuid } from "@/domain/imports";
 import {
   addServiceLineAction,
+  reissueLinkAction,
   removeServiceLineAction,
   reviseAgreementAction,
+  sendAgreementAction,
   updateServiceLineAction,
   withdrawAgreementAction,
 } from "../../agreement-actions";
@@ -42,6 +44,8 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         remove: (lineId: string) => removeServiceLineAction.bind(null, lineId),
         revise: reviseAgreementAction.bind(null, agreementId),
         withdraw: withdrawAgreementAction.bind(null, agreementId),
+        send: sendAgreementAction.bind(null, agreementId),
+        reissue: reissueLinkAction.bind(null, agreementId),
       }
     : undefined;
 

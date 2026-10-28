@@ -1,4 +1,4 @@
-import type { AgreementDocument, AgreementStatus, ScopeType, ServiceLineValue } from "@/domain/agreement";
+import type { AgreementDocument, AgreementStatus, AgreementTerms, ScopeType, ServiceLineValue } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
@@ -414,6 +414,14 @@ export type AgreementDetail = {
    * agreement left draft (service-included door 4).
    */
   serviceScope: AgreementServiceScope;
+  /** The terms the shown version was sent with; `null` while it is editable or when it recorded none (customer-portal door 3). */
+  terms: AgreementTerms | null;
+  /**
+   * The live customer link of the shown version, when the agreement is `sent` and the version is the current one:
+   * when the customer first opened it, or `null` for not yet. `null` too when there is no live link. The link itself
+   * is never readable (customer-portal door 1).
+   */
+  portalLink: { firstViewedAt: Date | null } | null;
 };
 
 export type AgreementServiceScope = { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
@@ -447,4 +455,45 @@ export interface ServiceLineStore {
 /** Turns the content of one agreement into a PDF (agreement-pdf door 2). Rejects when it cannot render. */
 export interface DocumentRenderer {
   renderAgreement(document: AgreementDocument): Promise<Uint8Array>;
+}
+
+/** Why a send or a new link wrote nothing. Anything else is unexpected and thrown by the adapter. */
+export type PortalWriteFailure = "conflict" | "forbidden" | "not_found";
+
+export type SendAgreementResult = { ok: true } | { ok: false; code: PortalWriteFailure | "no_lines" };
+export type ReissueLinkResult = { ok: true } | { ok: false; code: PortalWriteFailure };
+
+/** Moves a draft to sent, freezes it and creates its customer link in one transaction (customer-portal door 2). */
+export interface AgreementSender {
+  send(agreementId: string, tokenHash: string, event: DomainEvent<AgreementStatus>): Promise<SendAgreementResult>;
+}
+
+/** Replaces the live link of a sent agreement's current version (customer-portal door 2). */
+export interface PortalLinkStore {
+  reissue(agreementId: string, tokenHash: string): Promise<ReissueLinkResult>;
+}
+
+/** A new link's secret and the SHA-256 hex the database keeps instead of it (customer-portal door 1). */
+export interface PortalTokens {
+  create(): { token: string; hash: string };
+  hash(token: string): string;
+}
+
+/** Everything the review page and PDF read about one link, as `public.portal_view` returns it (door 2). `null` for an unknown link. */
+export type PortalView = {
+  link: { versionNo: number; current: boolean; revoked: boolean; revokedAt: Date | null; firstViewedAt: Date | null };
+  agreement: { number: string; status: AgreementStatus };
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null } | null;
+  customer: { name: string };
+  site: { name: string };
+  lines: { description: string; visitsPerYear: number; costPerVisitCents: number; annualCents: number }[];
+  annualCents: number;
+  scope: unknown;
+  terms: AgreementTerms | null;
+  decision: { status: "accepted" | "refused" | "changes_requested"; decidedAt: Date; reason: string | null } | null;
+};
+
+/** Reads one link by the hash of its token and writes nothing. */
+export interface PortalReader {
+  view(tokenHash: string): Promise<PortalView | null>;
 }

@@ -36,6 +36,8 @@ function detail(over: Partial<AgreementDetail> = {}, versionNo = 1): AgreementDe
     },
     editable: false,
     serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [] },
+    terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
+    portalLink: null,
     ...over,
   };
 }

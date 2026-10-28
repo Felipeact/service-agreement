@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { LIVE_STATUSES, MAX_SERVICE_LINES, parseServiceScope, type AgreementStatus } from "@/domain/agreement";
+import { LIVE_STATUSES, MAX_SERVICE_LINES, parseServiceScope, parseTerms, type AgreementStatus, type AgreementTerms } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
@@ -50,26 +50,52 @@ const isPlaceholder = (value: unknown) =>
   value === null || (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0);
 
 export function supabaseAgreementReader(client: Client): AgreementReader {
-  /** Live from the site while the version is editable; otherwise what the version recorded (service-included door 4). */
-  async function serviceScope(siteId: string, versionId: string | undefined, editable: boolean): Promise<AgreementServiceScope> {
+  /**
+   * Live from the site while the version is editable; otherwise what the version recorded, terms included
+   * (service-included door 4, customer-portal door 3).
+   */
+  async function recorded(
+    siteId: string,
+    versionId: string | undefined,
+    editable: boolean,
+  ): Promise<{ serviceScope: AgreementServiceScope; terms: AgreementTerms | null }> {
     let document: unknown;
+    let terms: AgreementTerms | null = null;
     if (editable) {
       const { data, error } = await client.rpc("site_service_scope", { p_site_id: siteId });
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
       document = data;
     } else {
-      if (!versionId) return { source: "not_recorded" };
+      if (!versionId) return { serviceScope: { source: "not_recorded" }, terms };
       const { data, error } = await client.from("agreement_versions").select("snapshot").eq("id", versionId).maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-      if (isPlaceholder(data?.snapshot ?? null)) return { source: "not_recorded" };
+      terms = parseTerms(data?.snapshot ?? null);
+      if (isPlaceholder(data?.snapshot ?? null)) return { serviceScope: { source: "not_recorded" }, terms };
       document = data?.snapshot;
     }
     const scope = parseServiceScope(document);
     if (!scope) {
       console.error(`The service scope of ${editable ? `site ${siteId}` : `version ${versionId}`} is not a scope document`);
-      return { source: "not_recorded" };
+      return { serviceScope: { source: "not_recorded" }, terms };
     }
-    return { source: editable ? "live" : "frozen", takenAt: scope.takenAt === null ? null : new Date(scope.takenAt), types: scope.types };
+    return {
+      serviceScope: { source: editable ? "live" : "frozen", takenAt: scope.takenAt === null ? null : new Date(scope.takenAt), types: scope.types },
+      terms,
+    };
+  }
+
+  /** When the customer first opened the live link of a sent agreement's current version. */
+  async function portalLink(versionId: string | undefined, status: AgreementStatus, current: boolean) {
+    if (!versionId || status !== "sent" || !current) return null;
+    const { data, error } = await client
+      .from("portal_links")
+      .select("first_viewed_at")
+      .eq("agreement_version_id", versionId)
+      .is("revoked_at", null)
+      .maybeSingle();
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    if (!data) return null;
+    return { firstViewedAt: data.first_viewed_at === null ? null : new Date(data.first_viewed_at) };
   }
 
   return {
@@ -112,6 +138,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       const status = row.status as AgreementStatus;
       const current = shownVersion !== undefined && shownVersion === latest;
       const editable = status === "draft" && current;
+      const { serviceScope, terms } = await recorded(row.sites.id, shownVersion?.id, editable);
       return {
         id: row.id,
         number: row.number ?? "",
@@ -127,7 +154,9 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
           annualCents: sumCents(lines.map((line) => cents(line.annualCents))),
         },
         editable,
-        serviceScope: await serviceScope(row.sites.id, shownVersion?.id, editable),
+        serviceScope,
+        terms,
+        portalLink: await portalLink(shownVersion?.id, status, current),
       };
     },
   };

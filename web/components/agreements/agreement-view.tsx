@@ -9,7 +9,8 @@ import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
 import { ServiceScopeSections } from "./service-scope";
-import type { LineState, MoveState } from "./state";
+import { LinkControls } from "./link-controls";
+import type { LineState, LinkState, MoveState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -18,6 +19,8 @@ export type AgreementActions = {
   remove: (lineId: string) => () => Promise<LineState>;
   revise: () => Promise<MoveState>;
   withdraw: () => Promise<MoveState>;
+  send: () => Promise<LinkState>;
+  reissue: () => Promise<LinkState>;
 };
 
 type AgreementViewProps = {
@@ -44,6 +47,9 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
   const lineActions = writer && agreement.editable ? writer : undefined;
   const canRevise = writer && agreement.status === "changes_requested";
   const canWithdraw = writer && (agreement.status === "draft" || agreement.status === "sent");
+  const canSend = writer !== undefined && agreement.editable;
+  const canReissue = writer !== undefined && agreement.status === "sent" && shown.current;
+  const firstViewed = agreement.portalLink?.firstViewedAt ?? null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -76,7 +82,14 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
           {shown.current ? `Version ${shown.versionNo}` : `Version ${shown.versionNo} of ${latest}, read-only`}
           {shown.current && agreement.status !== "draft" && ` · ${label}, read-only`}
         </p>
+        {agreement.status === "sent" && shown.current && (
+          <p className="text-[13px] text-ink-2">{firstViewed ? `Viewed by the customer on ${date.format(firstViewed)}` : "Not viewed yet"}</p>
+        )}
       </div>
+
+      {writer && (canSend || canReissue) && (
+        <LinkControls number={agreement.number} canSend={canSend} canReissue={canReissue} send={writer.send} reissue={writer.reissue} />
+      )}
 
       <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
         <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>

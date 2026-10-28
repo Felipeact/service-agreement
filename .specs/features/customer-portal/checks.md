@@ -309,3 +309,18 @@ Measured with `wc -c` before any code:
 - Mechanism: handoff (the user answered "approved" to the ask that recommended it, 2026-10-28). Batches run sequentially and only on green; the parent dispatches the Verifier after batch 2.
 
 Expected follow-ons the build must report, not hide: `database.types.ts` regeneration; the AD entries (supersede AD-018, amend AD-016, add the four new decisions) in `STATE.md`; `CONTEXT.md` Customer review portal and Service agreement entries; the ROADMAP tick.
+
+### Build record
+
+#### Batch 1 (database and staff side, 2026-10-28)
+
+- **Boundary:** C901-C907, C919-C928 (SQL part), C925/C926 SQL, C933-C937, C939 (SQL part), C940-C943, C945-C947, C950 and C949 (for what exists so far) are closed at the commits listed in the batch report. Left for batch 2: C908-C918, the action side of C919-C924, C929-C932, C938, C939 page side, C944, C948 final, C951, C952.
+- **Migration:** `apply_migration` recorded `20261028053639` / `customer_portal`; the file is `supabase/migrations/20261028053639_customer_portal.sql`. C937 on the live project: 0 frozen versions without `terms` after the migration (before: 11 frozen, 0 with terms; 4 empty-snapshot drafts and 1 editable draft untouched).
+- **Advisors (C950), `get_advisors` security:** `rls_enabled_no_policy` (`public.outbox`), `auth_leaked_password_protection`, and `anon_security_definer_function_executable` for exactly `portal_decide`, `portal_record_view`, `portal_view`. It also reports `authenticated_security_definer_function_executable` for the same three: the plan grants them to `authenticated` too (a signed-in member opening a link), so the lint follows. See the batch report.
+- **Settled mid-build:**
+  - Landing rows 7 (`private.issue_portal_link`, `private.org_terms`) and 8 (the shape of `portal_view`) were appended to the plan: the invoker functions cannot write `portal_links`, and batch 2 reads the document.
+  - `portal_decide` builds the event payload itself and ignores every key of `p_payload` but `reason`.
+  - `parseTerms` takes the snapshot and reads its `terms` key (C936 lists "`terms` absent" among its inputs).
+  - The C19 pin stays at 17: it counts `orgs` plus `tests.tenant_tables()`, and `portal_links` is not in the fixture's tenant list (adding it would put it through the viewer, role and org-delete loops that assume a `delete`/`update` grant). The C35 pin (the public table list) is 18.
+  - Consequences of door 3 and the new recipe, edited and listed: the `C864` tests of `document.test.ts` now feed a draft source (the settings' terms print only for the current draft); fixtures of `AgreementDetail` gained `terms` and `portalLink`; `scripts/test-db/runner.test.ts` counts 17 recipes and 19 SQL files; `demo_seed.sql` stores `terms` on the snapshot it hand-writes for C821 and adds C937.
+- **Abandoned:** a `state` column computed in SQL (the page derives the seven states in `portalState`); relaxing `private.enqueue_outbox`; a `PortalReader` adapter in this batch (the port and `PortalView` type exist, batch 2 builds the adapter with the page).

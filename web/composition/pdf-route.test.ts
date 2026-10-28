@@ -37,6 +37,8 @@ const detail: AgreementDetail = {
   },
   editable: false,
   serviceScope: { source: "not_recorded" },
+  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
+  portalLink: null,
 };
 
 const member: CurrentMember = { status: "member", userId: "u1", email: "u@example.com", orgId: "o1", orgName: "Kettle Ridge", role: "viewer" };

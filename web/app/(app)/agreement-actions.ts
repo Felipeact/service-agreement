@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { validateServiceLine } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
-import type { AgreementInput } from "@/application/use-cases";
-import type { CreateAgreementState, LineState, MoveState } from "@/components/agreements/state";
+import { portalLinkUrl } from "@/domain/portal";
+import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
+import type { CreateAgreementState, LineState, LinkState, MoveState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 
 const FORBIDDEN = { status: "forbidden" } as const;
@@ -104,4 +106,45 @@ export async function withdrawAgreementAction(agreementId: string): Promise<Move
   if (!("ok" in moved)) return moved;
   revalidatePath(`/agreements/${agreementId}`);
   return { status: "withdrawn" };
+}
+
+/** `APP_BASE_URL` when set, otherwise the origin the request came in on (customer-portal assumption "Link address origin"). */
+async function linkBase(): Promise<string> {
+  const configured = process.env.APP_BASE_URL?.trim();
+  if (configured) return configured;
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
+  return `${protocol}://${host}`;
+}
+
+/** Runs a send or a re-link as a writer and turns the new secret into the full address, once. */
+async function issueLink(
+  agreementId: string,
+  done: "sent" | "reissued",
+  run: (container: NonNullable<Awaited<ReturnType<typeof writer>>>) => Promise<LinkIssueResult>,
+): Promise<LinkState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  try {
+    const result = await run(container);
+    if (!result.ok) return { status: result.code };
+    const url = portalLinkUrl(await linkBase(), result.token);
+    revalidatePath(`/agreements/${agreementId}`);
+    return { status: done, url };
+  } catch (cause) {
+    console.error(`Agreement ${done === "sent" ? "send" : "new link"} failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return { status: "unavailable" };
+  }
+}
+
+/** Sends a draft to the customer: `sent`, frozen, and a link shown once. */
+export async function sendAgreementAction(agreementId: string): Promise<LinkState> {
+  return issueLink(agreementId, "sent", (container) => container.sendAgreement(agreementId));
+}
+
+/** Replaces the live link of a sent agreement; the old address stops working. */
+export async function reissueLinkAction(agreementId: string): Promise<LinkState> {
+  return issueLink(agreementId, "reissued", (container) => container.reissueLink(agreementId));
 }

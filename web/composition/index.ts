@@ -3,17 +3,27 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
-import { makeExtractImport, makeReadImport, makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
+import {
+  makeExtractImport,
+  makeReadImport,
+  makeReissueLink,
+  makeRequestSignInLink,
+  makeSendAgreement,
+  makeTransitionAgreement,
+  makeTransitionContract,
+} from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { reactPdfDocumentRenderer } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
+import { portalTokens } from "@/infrastructure/portal-tokens";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
+import { supabaseAgreementSender, supabasePortalLinkStore } from "@/infrastructure/supabase/portal";
 import {
   supabaseAssetTypeCatalog,
   supabaseCustomerDirectory,
@@ -68,13 +78,14 @@ export async function getContainer() {
   const assetStore = supabaseAssetStore(supabase);
   const importJobs = supabaseImportJobStore(supabase, systemClock);
   const importRows = supabaseImportRowStore(supabase);
+  const agreementRepository = supabaseAgreementRepository(supabase);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
     verifyEmailLink: auth.verifyEmailLink,
     signOut: auth.signOut,
     currentMember: members.currentMember,
-    transitionAgreement: makeTransitionAgreement(supabaseAgreementRepository(supabase)),
+    transitionAgreement: makeTransitionAgreement(agreementRepository),
     transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
     pipelineBoard: pipeline.board,
     listCustomers: customers.list,
@@ -111,6 +122,9 @@ export async function getContainer() {
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
     serviceLineStore: supabaseServiceLineStore(supabase),
+    // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.
+    sendAgreement: makeSendAgreement(agreementRepository, supabaseAgreementSender(supabase), portalTokens),
+    reissueLink: makeReissueLink(supabasePortalLinkStore(supabase), portalTokens),
     documentRenderer: reactPdfDocumentRenderer,
     clock: systemClock,
   };

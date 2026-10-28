@@ -7,6 +7,7 @@ import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./agreement-view";
 import { LineForm } from "./line-form";
 import { RemovePrompt } from "./line-row";
+import { LinkPanel, ReissuePrompt, SendPrompt } from "./link-controls";
 import { RevisePrompt, WithdrawPrompt } from "./move-controls";
 import type { LineState, MoveState } from "./state";
 
@@ -20,7 +21,7 @@ const LINES: ServiceLineView[] = [
 ];
 
 function agreement(
-  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope } = {},
+  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"] } = {},
 ): AgreementDetail {
   const status = over.status ?? "draft";
   const count = over.versions ?? 2;
@@ -37,6 +38,8 @@ function agreement(
     shown: { versionNo: shownNo, current: shownNo === count, lines, annualCents: lines.reduce((t, l) => t + l.annualCents, 0) },
     editable: status === "draft" && shownNo === count,
     serviceScope: over.serviceScope ?? { source: "live", takenAt: null, types: [] },
+    terms: null,
+    portalLink: over.portalLink ?? null,
   };
 }
 
@@ -46,6 +49,8 @@ const actions: AgreementActions = {
   remove: () => async () => ({ status: "removed" }),
   revise: async () => ({ status: "idle" }),
   withdraw: async () => ({ status: "withdrawn" }),
+  send: async () => ({ status: "idle" }),
+  reissue: async () => ({ status: "idle" }),
 };
 
 const view = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions }));
@@ -297,5 +302,72 @@ describe("the agreement view: service included and equipment", () => {
       expect(text(section(html, label))).toContain("No equipment was recorded for this version.");
     }
     expect(html).not.toContain("Add equipment");
+  });
+});
+
+describe("sending an agreement and its customer link", () => {
+  const idle = { status: "idle" } as const;
+  const sendPrompt = (props: Partial<Parameters<typeof SendPrompt>[0]> = {}) =>
+    renderToStaticMarkup(createElement(SendPrompt, { number: "AG-1052", confirming: false, pending: false, state: idle, ...props }));
+
+  test("C901: the link panel shows the full URL and a Copy link button", () => {
+    const url = "https://app.example.com/review/" + "A".repeat(43);
+    const html = renderToStaticMarkup(createElement(LinkPanel, { url }));
+    expect(html).toContain(`value="${url}"`);
+    expect(has(html, "Copy link")).toBe(true);
+  });
+
+  test("C901: Send to customer asks first, then submits Send, with a Cancel that does not submit", () => {
+    expect(has(sendPrompt(), "Send to customer")).toBe(true);
+    const html = sendPrompt({ confirming: true });
+    expect(text(html)).toContain("Send AG-1052 to the customer?");
+    expect(html).toMatch(/<form[^>]*>.*<button type="submit"[^>]*>Send<\/button>/);
+    expect(html).toMatch(/<button type="button"[^>]*>Cancel<\/button>/);
+  });
+
+  test("C901: Send to customer is offered to a writer on the current version of a draft only", () => {
+    expect(has(view(agreement({ status: "draft" })), "Send to customer")).toBe(true);
+    expect(has(view(agreement({ status: "draft", shownNo: 1, versions: 2 })), "Send to customer")).toBe(false);
+    expect(has(view(agreement({ status: "sent" })), "Send to customer")).toBe(false);
+  });
+
+  test("C902: a draft with no lines says to add one before sending", () => {
+    expect(text(sendPrompt({ state: { status: "no_lines" } }))).toContain("Add at least one service line before sending.");
+  });
+
+  test("C903: a stale send says the agreement was changed by someone else", () => {
+    expect(text(sendPrompt({ state: { status: "conflict" } }))).toContain("This agreement was changed by someone else. Reload the page.");
+    const reissue = renderToStaticMarkup(createElement(ReissuePrompt, { confirming: false, pending: false, state: { status: "conflict" } }));
+    expect(text(reissue)).toContain("This agreement was changed by someone else. Reload the page.");
+  });
+
+  test("C904: Get a new link is offered to a writer on the current version of a sent agreement", () => {
+    expect(has(view(agreement({ status: "sent" })), "Get a new link")).toBe(true);
+    expect(has(view(agreement({ status: "draft" })), "Get a new link")).toBe(false);
+    expect(has(view(agreement({ status: "accepted" })), "Get a new link")).toBe(false);
+    expect(has(view(agreement({ status: "sent", shownNo: 1, versions: 2 })), "Get a new link")).toBe(false);
+    const html = renderToStaticMarkup(createElement(ReissuePrompt, { confirming: true, pending: false, state: idle }));
+    expect(text(html)).toContain("The link already given to the customer stops working.");
+  });
+
+  test("C905: a sent agreement says when the customer first opened the link, or that it has not been", () => {
+    const opened = view(agreement({ status: "sent", portalLink: { firstViewedAt: new Date("2026-10-28T20:00:00Z") } }));
+    expect(text(opened)).toContain("Viewed by the customer on Oct 28, 2026");
+    expect(text(opened)).not.toContain("Not viewed yet");
+    const unopened = view(agreement({ status: "sent", portalLink: { firstViewedAt: null } }));
+    expect(text(unopened)).toContain("Not viewed yet");
+    expect(text(unopened)).not.toContain("Viewed by the customer");
+  });
+
+  test("C905: a draft shows neither line", () => {
+    const out = text(view(agreement({ status: "draft" })));
+    expect(out).not.toContain("Viewed by the customer");
+    expect(out).not.toContain("Not viewed yet");
+  });
+
+  test.each(["draft", "sent"] as const)("C906: a viewer sees no Send to customer and no Get a new link on a %s agreement", (status) => {
+    const html = view(agreement({ status }), "viewer");
+    expect(html).not.toContain("Send to customer");
+    expect(html).not.toContain("Get a new link");
   });
 });
