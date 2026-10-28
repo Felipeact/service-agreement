@@ -711,6 +711,51 @@ export type Database = {
           },
         ]
       }
+      portal_links: {
+        Row: {
+          agreement_version_id: string
+          created_at: string
+          first_viewed_at: string | null
+          id: string
+          org_id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          agreement_version_id: string
+          created_at?: string
+          first_viewed_at?: string | null
+          id?: string
+          org_id: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          agreement_version_id?: string
+          created_at?: string
+          first_viewed_at?: string | null
+          id?: string
+          org_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_links_agreement_version_id_org_id_fkey"
+            columns: ["agreement_version_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_versions"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "portal_links_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_lines: {
         Row: {
           agreement_version_id: string
@@ -861,6 +906,17 @@ export type Database = {
       }
       commit_import: { Args: { p_job_id: string }; Returns: number }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
+      portal_decide: {
+        Args: {
+          p_event_type: string
+          p_payload: Json
+          p_to_status: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
+      portal_record_view: { Args: { p_token_hash: string }; Returns: undefined }
+      portal_view: { Args: { p_token_hash: string }; Returns: Json }
       record_extraction_chunk: {
         Args: {
           p_expected_cursor: number
@@ -869,6 +925,19 @@ export type Database = {
           p_total: number
         }
         Returns: number
+      }
+      reissue_portal_link: {
+        Args: { p_agreement_id: string; p_token_hash: string }
+        Returns: string
+      }
+      send_agreement: {
+        Args: {
+          p_agreement_id: string
+          p_event_type: string
+          p_payload: Json
+          p_token_hash: string
+        }
+        Returns: string
       }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
     }

@@ -35,6 +35,12 @@ begin
   return tests.id(p_name);
 end $$;
 
+-- The terms a freeze adds (customer-portal door 3): org A's fixture settings, which are the column defaults.
+create function tests.si_terms() returns jsonb
+language sql immutable as $$
+  select jsonb_build_object('terms', '{"repairDiscountPct": 0, "cpiCapPct": 0, "cancellationNoticeDays": null, "paymentDays": null, "governingProvince": null, "taxNote": null}'::jsonb)
+$$;
+
 create function tests.si_snapshot(p_version text) returns jsonb
 language sql security definer as $$ select snapshot from public.agreement_versions where id = tests.id(p_version) $$;
 
@@ -177,13 +183,13 @@ declare
 begin
   execute tests.si_transition('a810', 'draft', 'sent', 'agreement.sent');
   v2 := tests.si_snapshot('a810:v2');
-  perform tests.ok('C810 scope', v2 - 'takenAt' = public.site_service_scope(tests.id('a810:site')),
+  perform tests.ok('C810 scope', v2 - 'takenAt' = public.site_service_scope(tests.id('a810:site')) || tests.si_terms(),
     'the snapshot is not the site''s scope: ' || coalesce(v2::text, 'null'));
   perform tests.ok('C810 takenAt', (v2 ->> 'takenAt')::timestamptz = now(), 'takenAt is not the transaction time');
   perform tests.ok('C810 version 1 kept', tests.si_snapshot('a810:v1') = '{}'::jsonb, 'version 1 was written');
   perform tests.ok('C810 event',
     exists (select 1 from public.events where entity_id = tests.id('a810') and type = 'agreement.sent'), 'no agreement.sent event');
-  perform tests.ok('C832 same document', (v2 - 'takenAt')::text = public.site_service_scope(tests.id('a810:site'))::text,
+  perform tests.ok('C832 same document', (v2 - 'takenAt' - 'terms')::text = public.site_service_scope(tests.id('a810:site'))::text,
     'the frozen document differs from the live one');
 end $$;
 
@@ -193,7 +199,7 @@ declare v1 jsonb;
 begin
   execute tests.si_transition('a811', 'draft', 'withdrawn', 'agreement.withdrawn');
   v1 := tests.si_snapshot('a811:v1');
-  perform tests.ok('C811 scope', v1 - 'takenAt' = public.site_service_scope(tests.id('a811:site')),
+  perform tests.ok('C811 scope', v1 - 'takenAt' = public.site_service_scope(tests.id('a811:site')) || tests.si_terms(),
     'the withdrawn draft''s snapshot is not the site''s scope');
   perform tests.ok('C811 takenAt', (v1 ->> 'takenAt')::timestamptz = now(), 'takenAt is not the transaction time');
 end $$;

@@ -157,8 +157,25 @@ end $$;
 
 -- C821: a frozen version already holding a scope keeps it on the next run. This one's takenAt differs from what the
 -- backfill would write, so a run that ignored the `snapshot = '{}'` guard would change it.
-update public.agreement_versions set snapshot = '{"schema": 1, "types": [], "takenAt": "2026-01-01T00:00:00+00:00"}'
+update public.agreement_versions
+set snapshot = '{"schema": 1, "types": [], "takenAt": "2026-01-01T00:00:00+00:00", "terms": {"repairDiscountPct": 99, "cpiCapPct": 1, "cancellationNoticeDays": null, "paymentDays": null, "governingProvince": null, "taxNote": null}}'
 where id = md5('demo:version:4')::uuid;
+
+-- C937 (customer-portal): every frozen demo version holds terms after the first run.
+do $$ begin
+  perform tests.ok('C937 frozen terms',
+    not exists (select 1 from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
+                where v.org_id = tests.demo() and not (v.snapshot ? 'terms')
+                  and not (a.status = 'draft' and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id))),
+    'a frozen demo version has no terms');
+  perform tests.ok('C937 drafts keep none',
+    not exists (select 1 from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
+                where v.org_id = tests.demo() and a.status = 'draft' and v.snapshot = '{}'::jsonb and v.snapshot ? 'terms'),
+    'a live draft version holds terms');
+end $$;
+
+-- C937: the settings change before the second run; a version that already has terms must not follow them.
+update public.org_settings set repair_discount_pct = 42 where org_id = tests.demo();
 
 -- Snapshots after the first run, for C821 on the second.
 create table tests.demo_snapshots as

@@ -170,6 +170,18 @@ where a.id = v.agreement_id
   and not (a.status = 'draft'
            and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id));
 
+-- Customer portal (.specs/features/customer-portal, door 3): a demo version that is no longer editable also records the
+-- org's terms, as if it had been sent today. A version that already holds terms keeps them.
+update public.agreement_versions v
+set snapshot = v.snapshot || jsonb_build_object('terms', private.org_terms(v.org_id))
+from public.agreements a
+where a.id = v.agreement_id
+  and v.org_id = '00000000-0000-4000-8000-00000000de30'
+  and not (v.snapshot ? 'terms')
+  and private.org_terms(v.org_id) is not null
+  and not (a.status = 'draft'
+           and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id));
+
 -- Demo owner (.specs/features/auth-magic-link/plan.md, door 4): invite the user in the Supabase dashboard first,
 -- then run this file after `select set_config('app.demo_owner_email', '<email>', false);`. Unset, nothing is inserted.
 -- The address is passed in, never written here.

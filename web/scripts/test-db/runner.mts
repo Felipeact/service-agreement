@@ -42,6 +42,7 @@ export const RECIPES: Recipe[] = [
   plain("import_review"),
   plain("agreement_builder"),
   plain("service_included"),
+  plain("customer_portal"),
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
 ];
 
