@@ -221,6 +221,31 @@ do $$ begin
     'portal_view of the old hash does not show it revoked');
 end $$;
 
+-- C904 (roles): the org A owner and an admin (uX) reissue a sent agreement too.
+select tests.cp_sent('a904owner');
+select tests.cp_sent('a904admin');
+select tests.act_as('uA');
+do $$ begin
+  perform public.reissue_portal_link(tests.id('a904owner'), tests.cp_hash('a904owner-new'));
+end $$;
+reset role;
+select tests.act_as('uX');
+do $$ begin
+  perform public.reissue_portal_link(tests.id('a904admin'), tests.cp_hash('a904admin-new'));
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$
+declare n text;
+begin
+  foreach n in array array['a904owner', 'a904admin'] loop
+    perform tests.ok('C904 role ' || n, tests.cp_links(n) = 2 and tests.cp_live(n) = 1
+      and (select revoked_at is not null from public.portal_links where token_hash = tests.cp_hash(n))
+      and (select revoked_at is null from public.portal_links where token_hash = tests.cp_hash(n || '-new')),
+      'reissue by this role did not revoke the old link and leave 1 live');
+  end loop;
+end $$;
+
 -- C906: a viewer can do neither, and nothing is written.
 select tests.cp_agr('a906');
 select tests.cp_sent('a906sent');
@@ -626,6 +651,23 @@ begin
       and not exists (select 1 from pg_proc p, aclexplode(p.proacl) a where p.oid = o and a.grantee = 0),
       f || ' is not an invoker for authenticated only');
   end loop;
+end $$;
+
+-- C943 (private helpers): org_terms is a definer reachable by no API role; issue_portal_link is a definer that the two
+-- invoker functions call as authenticated, so it is executable by authenticated and not by anon or public.
+do $$
+declare o oid;
+begin
+  o := 'private.org_terms(uuid)'::regprocedure;
+  perform tests.ok('C943 private.org_terms', (select prosecdef and proconfig @> array['search_path=""'] from pg_proc where oid = o)
+    and not has_function_privilege('anon', o, 'execute') and not has_function_privilege('authenticated', o, 'execute')
+    and not exists (select 1 from pg_proc p, aclexplode(p.proacl) a where p.oid = o and a.grantee = 0),
+    'private.org_terms is not a definer with an empty search_path closed to public, anon and authenticated');
+  o := 'private.issue_portal_link(uuid, text)'::regprocedure;
+  perform tests.ok('C943 private.issue_portal_link', (select prosecdef and proconfig @> array['search_path=""'] from pg_proc where oid = o)
+    and has_function_privilege('authenticated', o, 'execute') and not has_function_privilege('anon', o, 'execute')
+    and not exists (select 1 from pg_proc p, aclexplode(p.proacl) a where p.oid = o and a.grantee = 0),
+    'private.issue_portal_link is not a definer with an empty search_path executable by authenticated only');
 end $$;
 
 -- C945: door 5.

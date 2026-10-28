@@ -56,7 +56,7 @@ describe("the proxy handler on /review/<token>", () => {
     expect(response.headers.get("x-session")).toBe("ran");
   });
 
-  test("C910: an empty token is not a page the proxy answers; the framework has no route for it and answers 404", async () => {
+  test("C910: an empty token is not a review page; the proxy passes it through to the session step and makes no database read", async () => {
     // Existing C944 proof pins "/review/" as not a review page; Next also redirects it to "/review", which has no page.
     const response = await call("/review/");
     expect(response.headers.get("x-session")).toBe("ran");

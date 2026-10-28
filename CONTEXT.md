@@ -198,11 +198,12 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 ## How to run the tests
 
 - **Unit tests:** `npm test` in `web/` (Vitest, `*.test.ts` beside the code, AD-013). No network.
-- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 15 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
+- **Database tests:** `npm run test:db [recipe...]` in `web/` runs [supabase/tests/](supabase/tests/) against the live project, one connection per recipe, every recipe rolled back ([web/scripts/test-db/runner.mts](web/scripts/test-db/runner.mts)). It needs `SUPABASE_DB_URL` (Supabase > Connect > Session pooler, with the database password) in `web/.env.local`. No argument runs all 17 recipes; exit 0 all passed, 1 a recipe failed, 2 setup error (unknown recipe, no URL, a test file in no recipe, or a recipe that would commit). A new test file must join a recipe in `RECIPES`; `SEED_BODY` stands for `seed.sql` without its `begin;`/`commit;` lines.
 - **Web validation:** live, in a real browser through the Playwright MCP, as AGENTS..md describes (375, 768 and 1440 px, touch, console and network). Not committed.
-- **Security advisors** (Supabase MCP `get_advisors`, type `security`) report two accepted findings, and any other finding is a bug:
+- **Security advisors** (Supabase MCP `get_advisors`, type `security`) report two accepted lints plus the `anon_security_definer_function_executable` and `authenticated_security_definer_function_executable` lints for exactly `portal_view`, `portal_record_view` and `portal_decide` (8 findings in all); any finding outside this list is a bug:
   - `rls_enabled_no_policy` on `public.outbox`: on purpose. No user role may read or write the outbox; only `private.enqueue_outbox` writes it (AD-016).
   - `auth_leaked_password_protection`: staff sign in by magic link only, so no password is ever set or checked.
+  - `anon_security_definer_function_executable` and `authenticated_security_definer_function_executable`, one each for `portal_view`, `portal_record_view` and `portal_decide` (6): the customer link opens without a login, and a signed-in member may open one too (customer-portal door 2).
 
 ---
 

@@ -66,7 +66,7 @@ Proof: `npm test -- domain/portal -t "C908:"`
 **C909** - The `open` page for the fixture contains the tenant's legal name, address and phone, `AG-1052`, `Version 1`, `Fernwood Dental`, the site name, each of the 2 lines with visits per year, cost per visit and annual amount, `Total per year` with `$3,870.00` and `before tax`, the headings `Service included` and `Equipment`, and each term that is set; with address and phone `null` it holds no `null` or `undefined` text (AC 8)
 Proof: `npm test -- app/review -t "C909:"`
 
-**C910** - For a token that is malformed (42 characters, 44 characters, 43 characters containing `+`, 43 characters containing a space: 4 inputs; an empty token is `/review/`, which no route serves, so the framework answers its own 404 - reworded 2026-10-28, see Handoff) or unknown (valid shape, no link), `portal_view` returns no link and the page answers `404` showing "This link doesn't work. Ask the company that sent it for a new one." and containing neither the tenant's name nor `AG-` (AC 9)
+**C910** - For a token that is malformed (42 characters, 44 characters, 43 characters containing `+`, 43 characters containing a space: 4 inputs, each answered `404` by the proxy; an empty token `/review/` is not a review page and follows the app's normal rule, a signed-out redirect to `/login`, proven by C944 - reworded 2026-10-28, see Handoff) or unknown (valid shape, no link), `portal_view` returns no link and the page answers `404` showing "This link doesn't work. Ask the company that sent it for a new one." and containing neither the tenant's name nor `AG-` (AC 9)
 Proof: `npm run test:db customer_portal` (assertions `C910`)
 Proof: `npm test -- app/review -t "C910:"`
 
@@ -192,7 +192,7 @@ Proof: `npm run test:db customer_portal` (assertions `C941`)
 **C942** - Door 1: `portal_links` exists with RLS enabled; `token_hash` is unique (a second insert of one hash fails `23505`); a second live link for one version fails `23505` and a second link after the first is revoked succeeds; the composite FK `(agreement_version_id, org_id)` rejects a version of another org; an org member can `select` their org's links and not another's; `authenticated` has no `insert`, `update` or `delete` on it (6 cases) (door 1)
 Proof: `npm run test:db customer_portal` (assertions `C942`)
 
-**C943** - Door 2: from `pg_proc`, `portal_view`, `portal_record_view` and `portal_decide` are `security definer` with `proconfig` containing `search_path=""`, executable by `anon` and `authenticated`; `send_agreement` and `reissue_portal_link` are `security invoker`, executable by `authenticated` and not by `anon` or `public`. 5 functions, one assertion each (door 2)
+**C943** - Door 2: from `pg_proc`, `portal_view`, `portal_record_view` and `portal_decide` are `security definer` with `proconfig` containing `search_path=""`, executable by `anon` and `authenticated`; `send_agreement` and `reissue_portal_link` are `security invoker`, executable by `authenticated` and not by `anon` or `public`. 5 functions, one assertion each, and the private helpers `private.org_terms` (definer, empty `search_path`, executable by none of `public`, `anon`, `authenticated`) and `private.issue_portal_link` (definer, empty `search_path`, executable by `authenticated` only, as the two invoker functions call it) (door 2)
 Proof: `npm run test:db customer_portal` (assertions `C943`)
 
 **C944** - Door 4: `proxy` lets a signed-out request through for `/review/abc` and `/review/abc/pdf` (2) and redirects it to `/login` for `/review`, `/reviews/abc`, `/review-x/abc`, `/agreements/<uuid>` (4); a signed-in request to `/review/abc` is not redirected; `/login` and `/auth/confirm` stay public (door 4)
@@ -243,13 +243,14 @@ Proof: live (Playwright MCP), result recorded in the Handoff
 | reason bounds (5) | empty C921 · whitespace C921 · 1 character C920 · 2000 C922 · 2001 C922 | - |
 | whitelist rejections (5) | wrong pair C926 · `withdrawn` C926 · `sent` C926 · foreign event C926 · empty status C926 | - |
 | malformed token shapes (4) | 42 chars C910 · 44 chars C910 · `+` C910 · space C910 | - |
-| roles for send and reissue (4) | owner C901 · admin C901 · estimator C901 · viewer C906 | - |
+| roles for send and reissue (4) | owner C901, C904 · admin C901, C904 · estimator C901 · viewer C906 | - |
 | terms (6) | repair discount C933 · CPI cap C933 · notice days C933 · payment days C933 · province C933 · tax note C933 | - |
 | terms sources (4) | frozen with terms C934 · frozen after settings differ C934 · editable draft C934 · frozen without terms C935 | - |
 | response headers (3) | `Cache-Control` C938 · `Referrer-Policy` C938 · `X-Robots-Tag` C938 | - |
 | view recorder states (7) | `open` C929 · `decided` C929 · `superseded` C929 · `replaced` C929 · `withdrawn` C929 · `expired` C929 · `unknown` C929 | - |
 | events written (5) | `agreement.sent` C946 · `agreement.viewed` C927 · `agreement.accepted` C919 · `agreement.refused` C920 · `agreement.changes_requested` C920 | - |
 | anon denials (5) | send C941 · reissue C941 · select links C941 · insert events C941 · enqueue for system C941 | - |
+| private helpers (2) | `private.org_terms` C943 · `private.issue_portal_link` C943 | - |
 | RPC functions (5) | `portal_view` C943 · `portal_record_view` C943 · `portal_decide` C943 · `send_agreement` C943 · `reissue_portal_link` C943 | - |
 | one-way doors (6) | door 1 C942 · door 2 C943, C926, C950 · door 3 C933, C936 · door 4 C944 · door 5 C945 · door 6 C946, C927 | - |
 | accent contrast (8) | `#000000` C913 · `#ffffff` C913 · `#1f6f8b` C913 · `#ffff00` C913 · `#ff0000` C913 · `#00ff00` C913 · `#808080` C913 · `#0000ff` C913 | - |
@@ -336,7 +337,9 @@ Expected follow-ons the build must report, not hide: `database.types.ts` regener
 
 ### Wording changes after the Verifier's round 1 (2026-10-28)
 
-The Verifier's round 1 found C948, C949 and C950 unsatisfiable as worded, and C910's empty token unserved by the proxy. The user's only reply to the question was "continue", read as accepting the recommended rewording (C948 `ƒ` or `◐`, C949 C35 only, C950 both advisor lints on the same three functions, C910 four malformed shapes with the empty token left to the framework's 404). No assertion was changed; C19 stays 17. The user may overrule any of these.
+The Verifier's round 1 found C948, C949 and C950 unsatisfiable as worded, and C910's empty token unserved by the proxy. The user's only reply to the question was "continue", read as accepting the recommended rewording (C948 `ƒ` or `◐`, C949 C35 only, C950 both advisor lints on the same three functions, C910 four malformed shapes with the empty token left to the app's normal rule; round 2 of the same day replaced "framework's 404" with the signed-out redirect to `/login`). No assertion was changed; C19 stays 17. The user may overrule any of these.
+
+**2026-10-28, round 2:** the user authorized rewording C910 so it is true: the proxy answers `404` for the four malformed shapes; an empty token `/review/` is not a review page and follows the normal signed-out redirect to `/login` (C944), replacing the "framework answers its own 404" text of commit 531326f. The user also confirmed the C948, C949 and C950 rewordings as written.
 
 ### Live record, staff halves (2026-10-28, run by the orchestrator, not the Verifier)
 
