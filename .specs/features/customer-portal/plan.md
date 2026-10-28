@@ -22,7 +22,7 @@ Staff path, sending:
 
 Customer path, reading and deciding:
 
-4. Browser `GET /review/[token]` (door 4, new; public in `proxy.ts` (exists)) -> the page hashes the token and calls `public.portal_view` (door 2). The tenant's branding and the version's frozen content come back as one document, or nothing for an unknown token.
+4. Browser `GET /review/[token]` (door 4, new; public in `proxy.ts` (exists), which first answers a malformed or unknown address with a real `404`, door 10) -> the page hashes the token and calls `public.portal_view` (door 2). The tenant's branding and the version's frozen content come back as one document, or nothing for an unknown token.
 5. A pure portal-state function (placement, per the domain layer's conventions) turns link, agreement status and version number into one of seven states; the page renders that state and nothing else.
 6. On mount, a client component calls a Server Action that runs `public.portal_record_view` (door 2): the first call per link stamps it and writes `agreement.viewed` (no outbox row); later calls write nothing.
 7. Decision: Server Action -> `applyAgreementCommand` (exists) validates the command and reason -> `public.portal_decide` (door 2): link live, link's version current, status still `sent`, then status update, event with no actor, and an outbox row through `private.enqueue_outbox_for_system` (door 5).
