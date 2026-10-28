@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/customer-portal/plan.md`
 
-53 checks in 6 slices plus doors and delivery · 6 one-way doors · 1 open (blocks go-live, not the build)
+52 checks in 6 slices plus doors and delivery · 6 one-way doors · 1 open (blocks go-live, not the build)
 
 ## How proofs run
 
@@ -66,7 +66,7 @@ Proof: `npm test -- domain/portal -t "C908:"`
 **C909** - The `open` page for the fixture contains the tenant's legal name, address and phone, `AG-1052`, `Version 1`, `Fernwood Dental`, the site name, each of the 2 lines with visits per year, cost per visit and annual amount, `Total per year` with `$3,870.00` and `before tax`, the headings `Service included` and `Equipment`, and each term that is set; with address and phone `null` it holds no `null` or `undefined` text (AC 8)
 Proof: `npm test -- app/review -t "C909:"`
 
-**C910** - For a token that is malformed (empty, 42 characters, 44 characters, 43 characters containing `+`, 43 characters containing a space: 5 inputs) or unknown (valid shape, no link), `portal_view` returns no link and the page answers `404` showing "This link doesn't work. Ask the company that sent it for a new one." and containing neither the tenant's name nor `AG-` (AC 9)
+**C910** - For a token that is malformed (42 characters, 44 characters, 43 characters containing `+`, 43 characters containing a space: 4 inputs; an empty token is `/review/`, which no route serves, so the framework answers its own 404 - reworded 2026-10-28, see Handoff) or unknown (valid shape, no link), `portal_view` returns no link and the page answers `404` showing "This link doesn't work. Ask the company that sent it for a new one." and containing neither the tenant's name nor `AG-` (AC 9)
 Proof: `npm run test:db customer_portal` (assertions `C910`)
 Proof: `npm test -- app/review -t "C910:"`
 
@@ -209,16 +209,16 @@ Proof: `npm run test:db customer_portal` (assertions `C946`)
 **C947** - No file under `web/` source (excluding tests, `node_modules`, `.next`) mentions `SERVICE_ROLE`, `service_role` or `SUPABASE_SECRET`, and `.env.example` gains no secret variable (plan Landing door 2)
 Proof: `grep -rniE "service_role|SUPABASE_SECRET" app components domain application infrastructure composition lib proxy.ts --include=*.ts --include=*.tsx --exclude=*.test.ts --exclude=*.test.tsx` (no output, exit 1)
 
-**C948** - `npm run build`, `npm run lint` and `npx tsc --noEmit` exit 0 in `web/`, and the route list shows `/review/[token]` and `/review/[token]/pdf` as dynamic (`ƒ`)
+**C948** - `npm run build`, `npm run lint` and `npx tsc --noEmit` exit 0 in `web/`, and the route list shows `/review/[token]` as dynamic or partially prerendered (`ƒ` or `◐`, as every page does under Cache Components) and `/review/[token]/pdf` as dynamic (`ƒ`) - reworded 2026-10-28
 Proof: `npm run build`
 Proof: `npm run lint`
 Proof: `npx tsc --noEmit`
 
-**C949** - `npm test` in `web/` and `npm run test:db` (all recipes, now including `customer_portal`) exit 0. The two table-inventory pins (`C35`, `C19`) count 18 tables, and the `service_included` assertions that compared a snapshot to the bare scope compare it to scope plus `terms`; both edits are consequences of doors 1 and 3 and are listed in the Handoff, not weakened
+**C949** - `npm test` in `web/` and `npm run test:db` (all recipes, now including `customer_portal`) exit 0. The table-inventory pin `C35` counts 18 tables and `C19` (which runs every table through the viewer, role and org-delete loops that assume update and delete grants `portal_links` deliberately lacks) stays 17 - reworded 2026-10-28, and the `service_included` assertions that compared a snapshot to the bare scope compare it to scope plus `terms`; both edits are consequences of doors 1 and 3 and are listed in the Handoff, not weakened
 Proof: `npm test`
 Proof: `npm run test:db`
 
-**C950** - Supabase `get_advisors` (security) reports the two accepted findings of CONTEXT.md and one `anon_security_definer_function_executable` finding for each of exactly `portal_view`, `portal_record_view`, `portal_decide` and no other function; no other finding (door 2)
+**C950** - Supabase `get_advisors` (security) reports the two accepted findings of CONTEXT.md and, for each of exactly `portal_view`, `portal_record_view`, `portal_decide` and no other function, one `anon_security_definer_function_executable` and one `authenticated_security_definer_function_executable` finding (the plan grants both roles); no other finding (door 2) - reworded 2026-10-28
 Proof: mcp `get_advisors` (security), result recorded in the Handoff
 
 **C951** - Live, staff context as the demo owner and a separate private context for the customer: Send on a draft with lines, copy the link, open it as the customer at 375, 768 and 1440 px, press Accept and confirm. No horizontal scroll, controls at least 44px tall at 375 and 768 px, `browser_console_messages` clean, no failed request; `curl -I` on the link shows the 3 headers; the pipeline card for that agreement moves to "Accepted (awaiting signature)"; the agreement page shows "Viewed by the customer on <date>" (AC 1, 5, 17, 18, 35, AGENTS..md)
@@ -242,7 +242,7 @@ Proof: live (Playwright MCP), result recorded in the Handoff
 | `not_open` causes (4) | version not current C923 · withdrawn C923 · already decided C923 · link revoked C923 | - |
 | reason bounds (5) | empty C921 · whitespace C921 · 1 character C920 · 2000 C922 · 2001 C922 | - |
 | whitelist rejections (5) | wrong pair C926 · `withdrawn` C926 · `sent` C926 · foreign event C926 · empty status C926 | - |
-| malformed token shapes (5) | empty C910 · 42 chars C910 · 44 chars C910 · `+` C910 · space C910 | - |
+| malformed token shapes (4) | 42 chars C910 · 44 chars C910 · `+` C910 · space C910 | - |
 | roles for send and reissue (4) | owner C901 · admin C901 · estimator C901 · viewer C906 | - |
 | terms (6) | repair discount C933 · CPI cap C933 · notice days C933 · payment days C933 · province C933 · tax note C933 | - |
 | terms sources (4) | frozen with terms C934 · frozen after settings differ C934 · editable draft C934 · frozen without terms C935 | - |
@@ -333,3 +333,7 @@ Expected follow-ons the build must report, not hide: `database.types.ts` regener
 - **Live (dev server, Playwright, minted links through SQL because staff sign-in is a magic link):** run, as a customer on the live project: 375/768/1440 px open page (no horizontal scroll; Accept, Refuse, Request changes and Download PDF 44px at 375 and 768, 34px at 1440), touch taps with `hasTouch`/`isMobile` at 375 and 768, Refuse with an empty reason shows "Tell us why so Kettle Ridge Mechanical Ltd. can respond.", then with a reason moves to the refused view; Accept with the confirm step; Request changes; revoked link shows the `replaced` message and its PDF is `404`; console and network clean; response headers via `curl -I` on `next start`; unknown and malformed links `404`. Database after the runs: one `agreement.viewed` (no actor, no outbox row), one decision event with `via: "portal"` and one outbox row per agreement. NOT run: the staff half of C951 and C952 (Send as the demo owner, the pipeline card moving to "Accepted (awaiting signature)" or Refused, "Viewed by the customer on <date>", "Start version 2", "Get a new link" from the staff button) because the demo owner signs in by emailed magic link, which this non-interactive session cannot complete; and the pale-accent `#ffeb3b` button live (proven in `C912` unit tests: near-black text).
 - **Advisors (C950), `get_advisors` security, 2026-10-28:** `rls_enabled_no_policy` (`public.outbox`), `auth_leaked_password_protection`, `anon_security_definer_function_executable` for exactly `portal_decide`, `portal_record_view`, `portal_view`, and `authenticated_security_definer_function_executable` for the same three (the plan's grants to `authenticated`). Not changed.
 - **Left to the user:** the C19 pin (17, not 18) and the C950 wording about `authenticated`.
+
+### Wording changes after the Verifier's round 1 (2026-10-28)
+
+The Verifier's round 1 found C948, C949 and C950 unsatisfiable as worded, and C910's empty token unserved by the proxy. The user's only reply to the question was "continue", read as accepting the recommended rewording (C948 `ƒ` or `◐`, C949 C35 only, C950 both advisor lints on the same three functions, C910 four malformed shapes with the empty token left to the framework's 404). No assertion was changed; C19 stays 17. The user may overrule any of these.
