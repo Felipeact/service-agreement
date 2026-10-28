@@ -45,7 +45,7 @@ export type DocumentSource = {
 
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 
-function termsOf(settings: AgreementTerms): AgreementDocument["terms"] {
+export function termsOf(settings: AgreementTerms): AgreementDocument["terms"] {
   const terms: AgreementDocument["terms"] = [
     { label: "Repair discount", value: `${formatSettingNumber(settings.repairDiscountPct)}%` },
     { label: "CPI cap", value: `${formatSettingNumber(settings.cpiCapPct)}%` },
