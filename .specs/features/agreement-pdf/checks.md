@@ -187,3 +187,10 @@ Cost: about 20 proofs across 5 test files. Without these rows, the builder's dec
 - Live validation (C877, C878): about 25k tokens of snapshots.
 - Total: S1-S2 with the read set come to about 100k. S3 and S4 enter at about 115k, and the live run brings it to about 140k, under the 150k budget. One builder.
 - Mechanism: one builder (fits the budget, no ask).
+
+### Build record
+
+- **Boundary:** C851-C876 closed at `2c0bef9` (tests), C875 grep clean, C876 build/lint/tsc clean. Open: C871 live part, C877, C878 live (need a signed-in browser). C878 signed-out half done: `/agreements/<uuid>/pdf`, with and without `?version=2`, and `/agreements/not-a-uuid/pdf` all answer `307` to `/login` on a dev server.
+- **Settled mid-build:** (1) C864 said "each of the 6 terms null"; repair discount and CPI cap are never null in `OrgSettingsValue`, so the check was corrected to the 4 nullable terms before any code. (2) Landing row 4 added to the plan (layout in `.tsx`). (3) The vitest filter in the proofs (`app/\(app\)/...`) does not match; `pdf/route` does. (4) C856 is proven in `proxy.test.ts` (matcher) and `session.test.ts` (the redirect), plus the route test (no member redirects). (5) C851 and C868 run with the real adapter in `composition/pdf-route.test.ts`, because the UI lint rule forbids `@/infrastructure` under `app/`. (6) The date style is the existing `medium`, not `long`. (7) The route's `getOrgSettings` is the container's existing name for `OrgSettingsStore.get`.
+- **Measured (C870):** 2,000 assets, 40 types, 56 pages, 21.5 to 21.8 s; `maxDuration` 60.
+- **Abandoned:** a PDF-parsing dev dependency for the tests (the content streams are readable with `zlib`); `createElement` in `index.ts` (the adapter lint rule forbids `react` in `.ts`, so `renderAgreementPdf` lives in the `.tsx`).

@@ -66,15 +66,19 @@
 | AD-060 | `private.freeze_agreement_version(agreement)` (security definer, `search_path = ''`, writer check) is the only writer of a snapshot, called by `apply_agreement_transition` whenever `p_expected_status = 'draft'`; `authenticated` has no `update` on `agreement_versions` (insert kept) | a trigger cannot tell the freeze from a member's PATCH; a withdrawn draft must not follow the site | active | 2026-10-27 |
 | AD-061 | `AgreementDetail.serviceScope` is `{ source: "live" \| "frozen"; takenAt: Date \| null; types }` or `{ source: "not_recorded" }`; the reader calls `site_service_scope` only for the editable version and reads the shown version's `snapshot` otherwise | the page and later the PDF read one view type through the reader that already knows `editable` | active | 2026-10-27 |
 | AD-062 | Any version that is not the current version of a `draft` and still holds `{}` gets its site's scope with `takenAt = now()`: once in migration `20261027212052_service_included`, and in `supabase/seed.sql` on every run (guarded by `snapshot = '{}'`) | demo agreements need something to render in the PDF and portal; only fictitious data existed | active | 2026-10-27 |
+| AD-063 | `@react-pdf/renderer` 4.9.0 (exact) is imported only in `web/infrastructure/documents`; ESLint `PDF_LIBRARY` forbids it in domain, application, UI and every other adapter | one adapter owns the layout engine, as `xlsx` and the Claude SDK already are (AD-036); the contract PDF and invoices reuse it | active | 2026-10-27 |
+| AD-064 | `DocumentRenderer.renderAgreement(AgreementDocument): Promise<Uint8Array>` in `web/application/ports`; `AgreementDocument` (`web/domain/agreement/document.ts`) is plain data with money in cents and dates as `Date`, built by the pure `buildAgreementDocument(detail, settings)`; the adapter formats | `web/application` and `domain` may not import `react` or `@/lib`; the portal and contract call the same port without the renderer's tree | active | 2026-10-27 |
+| AD-065 | `GET /agreements/[agreementId]/pdf?version=<n>` (flat by uuid, AD-056): any role; `version` is a positive whole number or the current one; `200` with `Content-Disposition: attachment; filename="<number>-v<n>.pdf"`, empty `404`, empty `503` (render failure or an org with no settings row, logged), a signed-out request redirected to `/login` by the proxy; `maxDuration = 60` | the portal and emails link by id; 2,000 assets measured 22 s; a document with no tenant identity must not go out | active | 2026-10-27 |
+| AD-066 | The layout is `infrastructure/documents/*.tsx` with the built-in Helvetica only; words over 20 characters are cut every 12 by `Font.registerHyphenationCallback`; tests read PDF text with `pdf-text.testing.ts` (inflate the content streams, read the WinAnsi hex), no extra dependency; the terms printed are the org's current terms | no font file for the next document to copy; one unbroken 200-character string must wrap; a PDF-parsing dev dependency would be a second door | active | 2026-10-27 |
 
-## Handoff
-
-**Feature**: service-included (ROADMAP Phase 3 item 2), profile standard
-**Where**: done. Verified PASS in round 3 (scoped) at `056701c`; `validate_verification.py service-included` exits 0. Migration `20261027212052_service_included` applied; `npm run test:db` 16/16; `npm test` 1260 passed; C822 live-validated (narrowed to Brookhaven, user option 1). ROADMAP Phase 3 item 2 ticked
-**In progress**: none
-**Next step**: ROADMAP Phase 3 item 3, the agreement PDF (`DocumentRenderer`, reads `AgreementDetail.serviceScope`)
-**Open, non-failing**: writers can still delete `agreement_versions` rows (init policy; a sent version with no lines could be deleted), left for a hardening pass. No site on the live project has 300+ assets (Brookhaven has 9; the import-review rows did not stay as 336 assets), so C822's large-site case ran on Brookhaven (user option 1). The live test asset `CH-LIVE-1` (chiller) stays on Pinecrest Office Park, Building A (cleanup delete declined). The agreement-builder Verifier did run (`.specs/features/agreement-builder/verification.md`). The two lint-driven tests (C539, C32) can still time out under full parallel runs
-**Blockers**: none
-**Uncommitted**: none
-**Branch**: development (local commits ahead of origin, not pushed)
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
+## Handoff
+
+**Feature**: agreement-pdf (ROADMAP Phase 3 item 3), profile standard
+**Where**: built and committed (`987fba0`, `099bfcc`, `2c0bef9`); `npm test` 1338 passed, `npm run lint`, `npx tsc --noEmit` and `npm run build` clean; C875 grep clean; the signed-out redirect checked on a dev server
+**In progress**: the live checks C871 (overflow by eye), C877 and C878 need a signed-in browser. Signing in is an emailed magic link, so they wait for the user. The Verifier has not run yet
+**Next step**: the user signs in (or says to skip), the live checks run, the Verifier is dispatched over `987fba0^..HEAD`, then tick ROADMAP Phase 3 item 3. After it: item 4, the customer review portal (the open question on freezing terms comes first)
+**Open, non-failing**: the plan's open question 1 (terms are live, not frozen with a sent version). Proof selectors in `checks.md` written as `app/\(app\)/...` do not match under vitest; `pdf/route` is the working filter. The sent-version PDF reads the org's current terms
+**Blockers**: live sign-in
+**Uncommitted**: CONTEXT.md, STATE.md and the checks Handoff (this docs commit)
+**Branch**: development (local commits ahead of origin, not pushed)
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
