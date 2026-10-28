@@ -75,10 +75,10 @@
 
 **Feature**: agreement-pdf (ROADMAP Phase 3 item 3), profile standard
 **Where**: built, committed, and code-level verified. Verifier round 2 (scoped) at `3f9620f`: every code-level gap closed, 5 faults injected and 5 killed, `npm test` 1344 passed, lint, tsc and build clean. Verdict still FAIL, blocked only by live rows: C877 and C878 signed-in half are author-recorded (not independently run), C871 live overflow and C878 other-org were run by nobody. One precision gap (C858 stroke colour pooled with fill) was fixed after the report, with a stroke-only mutant killed
-**In progress**: nothing. Waiting on the user to either run the live rows or accept the code-level proof for them
-**Next step**: the user decides; then re-verify scoped (round 3) and tick ROADMAP Phase 3 item 3. After it: item 4, the customer review portal (decide first whether a sent version freezes the terms)
+**In progress**: nothing. The user chose (2026-10-28) to accept the code-level proof and the author-recorded live run for the rows no independent run covers; the Verifier verdict stays FAIL on those rows and was not edited
+**Next step**: ROADMAP Phase 3 item 3 is ticked. Item 4, the customer review portal (decide first whether a sent version freezes the terms)
 **Open, non-failing**: the plan's open question 1 (terms are live, not frozen with a sent version). The live record does not show a `sent` PDF read back without the draft mark, or the accent seen on the live file
-**Blockers**: independent live validation (needs a signed-in human)
+**Blockers**: none
 **Uncommitted**: none after the next commit
 **Branch**: development (local commits ahead of origin, not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`

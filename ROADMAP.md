@@ -112,7 +112,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 3: Agreement & customer review
 - [x] Agreement builder with versions and service price lines
 - [x] "Service included" generated from the asset types on site
-- [ ] Agreement PDF
+- [x] Agreement PDF
 - [ ] Customer review portal (Accept, Refuse, Request changes)
 - [ ] Outbox dispatcher (`EventPublisher` port: outbox rows to n8n, HMAC-signed), n8n W1, W3 and W5, plus transactional email
 
