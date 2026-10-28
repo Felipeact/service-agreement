@@ -80,11 +80,11 @@
 ## Handoff
 
 **Feature**: customer-portal (ROADMAP Phase 3 item 4), profile standard
-**Where**: both batches built and committed locally; batch 2 (customer side) at `df26db7`. Not yet verified by the Verifier
-**In progress**: nothing
-**Next step**: the Verifier over the full check set; the staff halves of live C951 and C952 need a signed-in demo owner (not run); the user decides the C19 pin and the C950 wording. ROADMAP item 4 is not ticked until then
-**Open, non-failing**: plan open question 1 (rate limiting for `/review/*`); `/review/[token]` is `◐` not `ƒ` in the build list (C948)
+**Where**: built, committed and verified code-level over three Verifier rounds (last at `8863eb8`): 48 of 52 checks proven with located evidence, 14 faults injected and 13 killed, `npm test` 1599 passed, `npm run test:db` 17 passed, lint, tsc and build clean, advisors exactly the 8 expected lints. Verdict still FAIL, blocked only by C918, C938, C951 and C952, whose live halves are the orchestrator's own run (recorded in `checks.md`, not independently reproduced)
+**In progress**: nothing. The user chose (2026-10-28, "1") to accept that author-side live run for those four rows and to accept the surviving mutant M2a (drop the `status = 'sent'` guard on `portal_decide`'s update) as equivalent in a single session; the Verifier's verdict stays FAIL on those rows and was not edited
+**Next step**: ROADMAP Phase 3 item 4 is ticked. Item 5, the outbox dispatcher, n8n W1/W3/W5 and transactional email
+**Open, non-failing**: plan open question 1 (rate limiting for `/review/*`, blocks go-live); no two-session race proof for `portal_decide` (M2a); the pale `#ffeb3b` accent is unit-proven only; `/review/[token]` is `◐` in the build list
 **Blockers**: none
 **Uncommitted**: none after the next commit
-**Branch**: development (local commits ahead of origin, not pushed)
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`
+**Branch**: development (local commits ahead of origin after `ace5546`, not pushed)
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Demo data: AG-1039, AG-1042, AG-1044 and AG-1052 were moved by live runs; `seed.sql` restores them
