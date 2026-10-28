@@ -145,6 +145,21 @@ describe("the agreement view", () => {
   });
 });
 
+describe("the agreement view's PDF link", () => {
+  const pdfLink = (html: string) => html.match(/<a href="([^"]*\/pdf[^"]*)"[^>]*>Download PDF<\/a>/)?.[1];
+
+  test.each<[string, Parameters<typeof agreement>[0], MemberRole, string]>([
+    ["a draft's current version", { status: "draft" }, "estimator", "/agreements/g1/pdf?version=2"],
+    ["a sent current version", { status: "sent" }, "estimator", "/agreements/g1/pdf?version=2"],
+    ["a past version", { status: "draft", shownNo: 1 }, "estimator", "/agreements/g1/pdf?version=1"],
+    ["a version with no recorded scope", { serviceScope: { source: "not_recorded" } }, "estimator", "/agreements/g1/pdf?version=2"],
+    ["a viewer", { status: "sent" }, "viewer", "/agreements/g1/pdf?version=2"],
+  ])("C857: %s links to its own PDF", (_name, over, role, href) => {
+    const html = renderToStaticMarkup(createElement(AgreementView, { agreement: agreement(over), role, actions }));
+    expect(pdfLink(html)).toBe(href);
+  });
+});
+
 describe("the line form and prompts", () => {
   const form = (state: LineState) =>
     renderToStaticMarkup(

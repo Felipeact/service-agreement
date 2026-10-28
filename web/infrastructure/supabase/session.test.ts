@@ -97,6 +97,19 @@ describe("updateSession", () => {
   );
 });
 
+describe("updateSession on the agreement PDF", () => {
+  test.each(["/agreements/00000000-0000-4000-8000-000000000001/pdf", "/agreements/00000000-0000-4000-8000-000000000001/pdf?version=2"])(
+    "C856: signed out, %s redirects to /login",
+    async (path) => {
+      scenario = { claims: null };
+      const response = await updateSession(request(path));
+
+      expect(response.status).toBe(307);
+      expect(locationPath(response)).toBe("/login");
+    },
+  );
+});
+
 describe("updateSession on the staff screens", () => {
   test.each([
     "/pipeline",

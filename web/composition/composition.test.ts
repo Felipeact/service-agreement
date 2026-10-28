@@ -220,6 +220,14 @@ describe("composition root", () => {
     for (const method of ["add", "update", "remove"] as const) expect(typeof container.serviceLineStore[method], method).toBe("function");
   });
 
+  test("C874: getContainer() exposes the documentRenderer adapter", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.documentRenderer.renderAgreement).toBe("function");
+    expect(readFileSync(path.join(__dirname, "index.ts"), "utf8")).toMatch(/documentRenderer: reactPdfDocumentRenderer,/);
+  });
+
   test("C745: the agreement adapters are built from the request's one member client", () => {
     const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
     expect(source).toMatch(/agreementReader: supabaseAgreementReader\(supabase\),/);

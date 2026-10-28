@@ -6,6 +6,7 @@ import type { OrgSettingsValue } from "@/domain/org-settings";
 import { makeExtractImport, makeReadImport, makeRequestSignInLink, makeTransitionAgreement, makeTransitionContract } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
+import { reactPdfDocumentRenderer } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
@@ -110,6 +111,7 @@ export async function getContainer() {
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
     serviceLineStore: supabaseServiceLineStore(supabase),
+    documentRenderer: reactPdfDocumentRenderer,
     clock: systemClock,
   };
 }
