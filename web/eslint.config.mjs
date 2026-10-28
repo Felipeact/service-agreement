@@ -14,6 +14,12 @@ const CLAUDE_SDK = {
   message: "Call Claude only in infrastructure/claude, behind the AssetExtractor port.",
 };
 
+// The PDF library stays behind the DocumentRenderer adapter (agreement-pdf door 1).
+const PDF_LIBRARY = {
+  group: ["@react-pdf/renderer", "@react-pdf/renderer/*"],
+  message: "Render PDFs only in infrastructure/documents, behind the DocumentRenderer port.",
+};
+
 const ADAPTER_PATTERNS = [
   {
     group: [
@@ -45,6 +51,7 @@ const eslintConfig = defineConfig([
             },
             PARSER_LIBRARIES,
             CLAUDE_SDK,
+            PDF_LIBRARY,
           ],
         },
       ],
@@ -71,6 +78,7 @@ const eslintConfig = defineConfig([
             },
             PARSER_LIBRARIES,
             CLAUDE_SDK,
+            PDF_LIBRARY,
           ],
         },
       ],
@@ -79,16 +87,20 @@ const eslintConfig = defineConfig([
   // Adapters implement ports; they never reach UI or the composition root. Only the parser adapter parses files.
   {
     files: ["infrastructure/**/*.ts"],
-    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK] }] },
+    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**", "infrastructure/documents/**"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/import-parsers/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, CLAUDE_SDK] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, CLAUDE_SDK, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/claude/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, PDF_LIBRARY] }] },
+  },
+  {
+    files: ["infrastructure/documents/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK] }] },
   },
   // UI reaches adapters only through @/composition, which is server-only.
   {
@@ -104,6 +116,7 @@ const eslintConfig = defineConfig([
             },
             PARSER_LIBRARIES,
             CLAUDE_SDK,
+            PDF_LIBRARY,
           ],
         },
       ],

@@ -175,3 +175,5 @@ export function parseServiceScope(document: unknown): ServiceScope | null {
   }));
   return { takenAt, types: ordered.sort((a, b) => compareText(a.name, b.name)) };
 }
+
+export * from "./document";

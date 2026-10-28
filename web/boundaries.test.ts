@@ -50,7 +50,33 @@ const SDK_PLACES = [
   "infrastructure/import-parsers/x.ts",
 ];
 
+const PDF_PLACES = ["application/x.ts", "components/x.tsx", "app/x.tsx", "domain/x.ts", "lib/x.ts", "infrastructure/supabase/x.ts", "infrastructure/claude/x.ts"];
+
 describe("layer boundaries", () => {
+  test.each(PDF_PLACES)("C873: %s importing @react-pdf/renderer is a lint error naming it", async (file) => {
+    const messages = await restrictedImports(file, "@react-pdf/renderer");
+    expect(messages).toHaveLength(1);
+    expect(messages[0].message).toContain("infrastructure/documents");
+  });
+
+  test("C873: infrastructure/documents may import @react-pdf/renderer", async () => {
+    expect(await restrictedImports("infrastructure/documents/x.ts", "@react-pdf/renderer")).toHaveLength(0);
+  });
+
+  test("C873: @react-pdf/renderer is a runtime dependency pinned exact", () => {
+    const pkg = JSON.parse(readFileSync(path.join(webRoot, "package.json"), "utf8"));
+    expect(pkg.dependencies["@react-pdf/renderer"]).toBe("4.9.0");
+  });
+
+  test("C874: DocumentRenderer takes the plain AgreementDocument and answers bytes, and the document type imports no react", () => {
+    const ports = readFileSync(path.join(webRoot, "application", "ports", "index.ts"), "utf8");
+    const body = ports.match(/export interface DocumentRenderer \{([\s\S]*?)\r?\n\}/)?.[1] ?? "";
+    expect(body).toContain("renderAgreement(document: AgreementDocument): Promise<Uint8Array>;");
+    const document = readFileSync(path.join(webRoot, "domain", "agreement", "document.ts"), "utf8");
+    expect(document).not.toMatch(/from "(react|@react-pdf)/);
+    expect(document).not.toContain("ReactElement");
+  });
+
   test.each(SDK_PLACES)("C539: %s importing @anthropic-ai/sdk is a lint error naming it", async (file) => {
     const messages = await restrictedImports(file, "@anthropic-ai/sdk");
     expect(messages).toHaveLength(1);

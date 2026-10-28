@@ -1,4 +1,4 @@
-import type { AgreementStatus, ScopeType, ServiceLineValue } from "@/domain/agreement";
+import type { AgreementDocument, AgreementStatus, ScopeType, ServiceLineValue } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
@@ -442,4 +442,9 @@ export interface ServiceLineStore {
   add(agreementId: string, value: ServiceLineValue): Promise<AddServiceLineResult>;
   update(lineId: string, value: ServiceLineValue): Promise<ServiceLineWriteResult>;
   remove(lineId: string): Promise<ServiceLineWriteResult>;
+}
+
+/** Turns the content of one agreement into a PDF (agreement-pdf door 2). Rejects when it cannot render. */
+export interface DocumentRenderer {
+  renderAgreement(document: AgreementDocument): Promise<Uint8Array>;
 }
