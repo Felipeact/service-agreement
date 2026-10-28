@@ -2,8 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
-/** Reachable without a session (door 1). */
+/** Reachable without a session, exactly (door 1). */
 const PUBLIC_PATHS = ["/login", "/auth/confirm"];
+/** Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`. */
+const PUBLIC_PREFIXES = ["/review/"];
 const SIGN_IN_PATH = "/login";
 const HOME_PATH = "/pipeline";
 
@@ -14,7 +16,7 @@ function required(name: string, value: string | undefined): string {
 
 function redirectTarget(pathname: string, signedIn: boolean): string | null {
   if (signedIn) return pathname === SIGN_IN_PATH ? HOME_PATH : null;
-  return PUBLIC_PATHS.includes(pathname) ? null : SIGN_IN_PATH;
+  return PUBLIC_PATHS.includes(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ? null : SIGN_IN_PATH;
 }
 
 /**

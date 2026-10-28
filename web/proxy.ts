@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
+import { portalGate } from "@/infrastructure/supabase/portal-gate";
 import { updateSession } from "@/infrastructure/supabase/session";
 
 export async function proxy(request: NextRequest) {
-  return updateSession(request);
+  return (await portalGate(request)) ?? updateSession(request);
 }
 
 export const config = {

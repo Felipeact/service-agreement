@@ -36,3 +36,9 @@ describe("proxy matcher", () => {
     expect(typeof proxy).toBe("function");
   });
 });
+
+describe("proxy matcher on the customer review address", () => {
+  test.each(["/review/abc", "/review/abc/pdf", "/review", "/reviews/abc", "/review-x/abc"])("C944: runs for %s, so the session rule decides", (url) => {
+    expect(matches(url)).toBe(true);
+  });
+});

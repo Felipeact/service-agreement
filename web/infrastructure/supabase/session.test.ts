@@ -153,3 +153,37 @@ describe("updateSession on the record forms", () => {
     expect(locationPath(response)).toBe("/login");
   });
 });
+
+describe("updateSession on the customer review address", () => {
+  test.each(["/review/abc", "/review/abc/pdf"])("C944: signed out, %s passes through", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  test.each(["/review", "/reviews/abc", "/review-x/abc", "/agreements/00000000-0000-4000-8000-000000000001"])(
+    "C944: signed out, %s redirects to /login",
+    async (path) => {
+      scenario = { claims: null };
+      const response = await updateSession(request(path));
+
+      expect(response.status).toBe(307);
+      expect(locationPath(response)).toBe("/login");
+    },
+  );
+
+  test("C944: signed in, /review/abc is not redirected", async () => {
+    scenario = { claims: { sub: "u1" } };
+    const response = await updateSession(request("/review/abc"));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  test.each(["/login", "/auth/confirm"])("C944: %s stays public", async (path) => {
+    scenario = { claims: null };
+    expect((await updateSession(request(path))).headers.get("location")).toBeNull();
+  });
+});
