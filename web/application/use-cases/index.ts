@@ -58,3 +58,13 @@ export { makeRequestSignInLink, type SignInLinkResult } from "./sign-in";
 export { makeReadImport, outcomeOf, type ReadImportResult } from "./read-import";
 export { makeExtractImport, type ExtractImportResult } from "./extract-import";
 export { makeReissueLink, makeSendAgreement, type LinkIssueResult } from "./portal-links";
+export {
+  makeDecidePortal,
+  makeRecordPortalView,
+  makeViewPortal,
+  portalDocument,
+  portalScope,
+  portalViewState,
+  type DecidePortalResult,
+  type PortalDecision,
+} from "./portal";

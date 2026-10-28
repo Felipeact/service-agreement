@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { supabaseAgreementSender, supabasePortalLinkStore } from "./portal";
+import { supabaseAgreementSender, supabasePortalDecider, supabasePortalLinkStore, supabasePortalReader, supabasePortalViewRecorder } from "./portal";
 import { stubClient, type Reply } from "./stub-client";
 
 const AGR = "11111111-1111-4111-8111-111111111111";
@@ -65,5 +65,95 @@ describe("portal link store", () => {
       client.rpc.mockResolvedValue(fail(code));
       await expect(supabasePortalLinkStore(typed).reissue(AGR, HASH)).rejects.toThrow(code);
     }
+  });
+});
+
+const DOCUMENT = {
+  link: { versionNo: 2, current: true, revoked: false, revokedAt: null, firstViewedAt: "2026-10-21T10:00:00+00:00" },
+  agreement: { number: "AG-1052", status: "accepted" },
+  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: "604-555-0100", accent: "#1f6f8b" },
+  customer: { name: "Fernwood Dental" },
+  site: { name: "Fernwood Dental, Main" },
+  lines: [{ description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 }],
+  annualCents: 180000,
+  scope: { schema: 1, takenAt: "2026-10-20T15:00:00Z", types: [] },
+  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: null, governingProvince: "BC", taxNote: null },
+  decision: { status: "accepted", decidedAt: "2026-10-22T09:30:00+00:00", reason: null },
+};
+
+describe("portal reader", () => {
+  test("C925: view calls only portal_view with the hash", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });
+    await supabasePortalReader(typed).view(HASH);
+    expect(client.rpc.mock.calls).toEqual([["portal_view", { p_token_hash: HASH }]]);
+  });
+
+  test("C909: the document becomes a PortalView with dates, terms and the decision", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });
+    const view = await supabasePortalReader(typed).view(HASH);
+    expect(view).toMatchObject({
+      link: { versionNo: 2, current: true, revoked: false, revokedAt: null },
+      agreement: { number: "AG-1052", status: "accepted" },
+      tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: "604-555-0100", accent: "#1f6f8b" },
+      customer: { name: "Fernwood Dental" },
+      annualCents: 180000,
+      terms: { repairDiscountPct: 10, paymentDays: null, governingProvince: "BC" },
+      decision: { status: "accepted", reason: null },
+    });
+    expect(view?.link.firstViewedAt).toEqual(new Date("2026-10-21T10:00:00+00:00"));
+    expect(view?.decision?.decidedAt).toEqual(new Date("2026-10-22T09:30:00+00:00"));
+  });
+
+  test("C910: an unknown link (null) and a missing tenant or terms are values, not errors", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValueOnce({ data: null, error: null });
+    expect(await supabasePortalReader(typed).view(HASH)).toBeNull();
+    client.rpc.mockResolvedValueOnce({ data: { ...DOCUMENT, tenant: null, terms: null, scope: null, decision: null }, error: null });
+    expect(await supabasePortalReader(typed).view(HASH)).toMatchObject({ tenant: null, terms: null, scope: null, decision: null });
+  });
+
+  test("C932: a database error is thrown", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue(fail("XX000"));
+    await expect(supabasePortalReader(typed).view(HASH)).rejects.toThrow("XX000");
+  });
+});
+
+describe("portal decider and recorder", () => {
+  const ACCEPT = { type: "agreement.accepted", entityType: "agreement" as const, from: "sent" as const, to: "accepted" as const, data: {} };
+  const REFUSE = { type: "agreement.refused", entityType: "agreement" as const, from: "sent" as const, to: "refused" as const, data: { reason: "Too dear" } };
+
+  test("C919/C920: decide calls portal_decide with the status, the event type and the reason", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: "evt", error: null });
+    expect(await supabasePortalDecider(typed).decide(HASH, REFUSE)).toEqual({ ok: true });
+    expect(client.rpc).toHaveBeenCalledWith("portal_decide", {
+      p_token_hash: HASH,
+      p_to_status: "refused",
+      p_event_type: "agreement.refused",
+      p_payload: { reason: "Too dear" },
+    });
+  });
+
+  test.each(["40001", "P0002"])("C923: SQLSTATE %s is not_open", async (code) => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue(fail(code));
+    expect(await supabasePortalDecider(typed).decide(HASH, ACCEPT)).toEqual({ ok: false, code: "not_open" });
+  });
+
+  test.each(["42501", "23514", "XX000"])("C919: SQLSTATE %s is unexpected and thrown", async (code) => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue(fail(code));
+    await expect(supabasePortalDecider(typed).decide(HASH, ACCEPT)).rejects.toThrow(code);
+  });
+
+  test("C929: record calls portal_record_view with the hash, and throws on an error", async () => {
+    const { client, typed } = stubClient({});
+    await supabasePortalViewRecorder(typed).record(HASH);
+    expect(client.rpc).toHaveBeenCalledWith("portal_record_view", { p_token_hash: HASH });
+    client.rpc.mockResolvedValue(fail("XX000"));
+    await expect(supabasePortalViewRecorder(typed).record(HASH)).rejects.toThrow("XX000");
   });
 });

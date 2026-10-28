@@ -4,13 +4,16 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import {
+  makeDecidePortal,
   makeExtractImport,
   makeReadImport,
+  makeRecordPortalView,
   makeReissueLink,
   makeRequestSignInLink,
   makeSendAgreement,
   makeTransitionAgreement,
   makeTransitionContract,
+  makeViewPortal,
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
@@ -23,7 +26,13 @@ import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineSto
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
-import { supabaseAgreementSender, supabasePortalLinkStore } from "@/infrastructure/supabase/portal";
+import {
+  supabaseAgreementSender,
+  supabasePortalDecider,
+  supabasePortalLinkStore,
+  supabasePortalReader,
+  supabasePortalViewRecorder,
+} from "@/infrastructure/supabase/portal";
 import {
   supabaseAssetTypeCatalog,
   supabaseCustomerDirectory,
@@ -79,6 +88,7 @@ export async function getContainer() {
   const importJobs = supabaseImportJobStore(supabase, systemClock);
   const importRows = supabaseImportRowStore(supabase);
   const agreementRepository = supabaseAgreementRepository(supabase);
+  const portalReader = supabasePortalReader(supabase);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -125,6 +135,11 @@ export async function getContainer() {
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.
     sendAgreement: makeSendAgreement(agreementRepository, supabaseAgreementSender(supabase), portalTokens),
     reissueLink: makeReissueLink(supabasePortalLinkStore(supabase), portalTokens),
+    // The customer side reads and writes through the same cookie client: `anon` for a customer, `authenticated` for a
+    // member who opens a link, with identical answers; nothing here asks who the visitor is (customer-portal AC 36).
+    viewPortal: makeViewPortal(portalReader, portalTokens),
+    decidePortal: makeDecidePortal(portalReader, supabasePortalDecider(supabase), portalTokens),
+    recordPortalView: makeRecordPortalView(supabasePortalViewRecorder(supabase), portalTokens),
     documentRenderer: reactPdfDocumentRenderer,
     clock: systemClock,
   };

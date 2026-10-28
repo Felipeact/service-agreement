@@ -497,3 +497,16 @@ export type PortalView = {
 export interface PortalReader {
   view(tokenHash: string): Promise<PortalView | null>;
 }
+
+/** What `portal_decide` answered: done, or the link is no longer open for a decision (`40001`, `P0002`). */
+export type PortalDecideResult = { ok: true } | { ok: false; code: "not_open" };
+
+/** Records the customer's decision on a link (customer-portal door 2, 9). Rejects on anything unexpected. */
+export interface PortalDecider {
+  decide(tokenHash: string, event: DomainEvent<AgreementStatus>): Promise<PortalDecideResult>;
+}
+
+/** Stamps the link's first view and writes `agreement.viewed`; a later call writes nothing (door 2, 9). */
+export interface PortalViewRecorder {
+  record(tokenHash: string): Promise<void>;
+}
