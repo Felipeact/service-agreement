@@ -1,6 +1,6 @@
 import type { OrgSettingsValue } from "../org-settings";
 import { formatSettingNumber } from "../org-settings";
-import type { ScopeType } from "./index";
+import type { AgreementTerms, ScopeType } from "./index";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
 export const NEUTRAL_ACCENT = "#374151";
@@ -39,11 +39,13 @@ export type DocumentSource = {
   editable: boolean;
   shown: { versionNo: number; lines: (DocumentLine & { id?: string })[]; annualCents: number };
   serviceScope: { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
+  /** The terms frozen into the shown version; `null` while it is editable or when it recorded none (customer-portal door 3). */
+  terms: AgreementTerms | null;
 };
 
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 
-function termsOf(settings: OrgSettingsValue): AgreementDocument["terms"] {
+function termsOf(settings: AgreementTerms): AgreementDocument["terms"] {
   const terms: AgreementDocument["terms"] = [
     { label: "Repair discount", value: `${formatSettingNumber(settings.repairDiscountPct)}%` },
     { label: "CPI cap", value: `${formatSettingNumber(settings.cpiCapPct)}%` },
@@ -72,6 +74,8 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
     })),
     totalCents: source.shown.annualCents,
     scope: scope.source === "not_recorded" ? { kind: "not_recorded" } : { kind: "listed", recordedOn: scope.source === "frozen" ? scope.takenAt : null, types: scope.types },
-    terms: termsOf(settings),
+    // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
+    // settings of today (customer-portal AC 32, 33).
+    terms: source.editable ? termsOf(settings) : source.terms ? termsOf(source.terms) : [],
   };
 }

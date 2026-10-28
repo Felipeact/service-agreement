@@ -29,7 +29,19 @@ const SOURCE: DocumentSource = {
     annualCents: 387000,
   },
   serviceScope: { source: "live", takenAt: null, types: [] },
+  // The shown version is frozen, so these are the terms it was sent with (customer-portal door 3).
+  terms: {
+    repairDiscountPct: 10,
+    cpiCapPct: 5,
+    cancellationNoticeDays: 30,
+    paymentDays: 30,
+    governingProvince: "BC",
+    taxNote: "GST extra",
+  },
 };
+
+// The terms of a draft come from the org's settings (customer-portal AC 32); a frozen version prints its own.
+const DRAFT_SOURCE: DocumentSource = { ...SOURCE, editable: true, terms: null };
 
 describe("buildAgreementDocument", () => {
   test("C858: the header carries the tenant's name, address, phone and accent", () => {
@@ -49,7 +61,7 @@ describe("buildAgreementDocument", () => {
   });
 
   test("C864: all six terms print in order with their values", () => {
-    expect(buildAgreementDocument(SOURCE, SETTINGS).terms).toEqual([
+    expect(buildAgreementDocument(DRAFT_SOURCE, SETTINGS).terms).toEqual([
       { label: "Repair discount", value: "10%" },
       { label: "CPI cap", value: "5%" },
       { label: "Cancellation notice", value: "30 days" },
@@ -65,18 +77,18 @@ describe("buildAgreementDocument", () => {
     ["governing province", { governingProvince: null }, "Governing province"],
     ["tax note", { taxNote: null }, "Tax note"],
   ])("C864: with %s null only that term is absent", (_name, over, label) => {
-    const labels = buildAgreementDocument(SOURCE, { ...SETTINGS, ...over }).terms.map((term) => term.label);
+    const labels = buildAgreementDocument(DRAFT_SOURCE, { ...SETTINGS, ...over }).terms.map((term) => term.label);
     expect(labels).not.toContain(label);
     expect(labels).toHaveLength(5);
   });
 
   test("C864: with the four nullable terms null, the two numeric terms still print", () => {
     const bare = { ...SETTINGS, cancellationNoticeDays: null, paymentDays: null, governingProvince: null, taxNote: null };
-    expect(buildAgreementDocument(SOURCE, bare).terms.map((term) => term.label)).toEqual(["Repair discount", "CPI cap"]);
+    expect(buildAgreementDocument(DRAFT_SOURCE, bare).terms.map((term) => term.label)).toEqual(["Repair discount", "CPI cap"]);
   });
 
   test("C864: one day is singular and a fractional percent keeps its decimals", () => {
-    const { terms } = buildAgreementDocument(SOURCE, { ...SETTINGS, cancellationNoticeDays: 1, repairDiscountPct: 12.5 });
+    const { terms } = buildAgreementDocument(DRAFT_SOURCE, { ...SETTINGS, cancellationNoticeDays: 1, repairDiscountPct: 12.5 });
     expect(terms[0].value).toBe("12.5%");
     expect(terms[2].value).toBe("1 day");
   });
@@ -87,7 +99,7 @@ describe("buildAgreementDocument", () => {
   });
 
   test("C860: lines carry their cents and the total is the version's annualCents", () => {
-    const doc = buildAgreementDocument(SOURCE, SETTINGS);
+    const doc = buildAgreementDocument(DRAFT_SOURCE, SETTINGS);
     expect(doc.lines.map((line) => line.annualCents)).toEqual([180000, 189000]);
     expect(doc.lines[0]).toEqual({ description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 });
     expect(doc.totalCents).toBe(387000);
@@ -107,10 +119,52 @@ describe("buildAgreementDocument", () => {
       recordedOn: takenAt,
       types: [],
     });
-    expect(buildAgreementDocument(SOURCE, SETTINGS).scope).toEqual({ kind: "listed", recordedOn: null, types: [] });
+    expect(buildAgreementDocument(DRAFT_SOURCE, SETTINGS).scope).toEqual({ kind: "listed", recordedOn: null, types: [] });
   });
 
   test("C868: a scope nobody recorded stays not recorded", () => {
     expect(buildAgreementDocument({ ...SOURCE, serviceScope: { source: "not_recorded" } }, SETTINGS).scope).toEqual({ kind: "not_recorded" });
+  });
+});
+
+describe("which terms the document prints", () => {
+  const FROZEN_TERMS = {
+    repairDiscountPct: 10,
+    cpiCapPct: 5,
+    cancellationNoticeDays: 30,
+    paymentDays: 30,
+    governingProvince: "BC",
+    taxNote: "GST extra",
+  };
+  const LABELS = ["Repair discount", "CPI cap", "Cancellation notice", "Payment terms", "Governing province", "Tax note"];
+
+  test("C934: a frozen version prints its frozen terms, in the order and with the labels agreement-pdf set", () => {
+    const { terms } = buildAgreementDocument({ ...SOURCE, editable: false, terms: FROZEN_TERMS }, SETTINGS);
+    expect(terms.map((term) => term.label)).toEqual(LABELS);
+    expect(terms.map((term) => term.value)).toEqual(["10%", "5%", "30 days", "30 days", "BC", "GST extra"]);
+  });
+
+  test("C934: a frozen version keeps its terms after the settings differ", () => {
+    const changed = { ...SETTINGS, repairDiscountPct: 15, cpiCapPct: 7, paymentDays: 45, taxNote: "Changed" };
+    const { terms } = buildAgreementDocument({ ...SOURCE, editable: false, terms: FROZEN_TERMS }, changed);
+    expect(terms.map((term) => term.value)).toEqual(["10%", "5%", "30 days", "30 days", "BC", "GST extra"]);
+  });
+
+  test("C934: the current version of a draft prints the settings' terms, not a stored copy", () => {
+    const changed = { ...SETTINGS, repairDiscountPct: 15 };
+    const { terms } = buildAgreementDocument({ ...SOURCE, editable: true, terms: null }, changed);
+    expect(terms[0]).toEqual({ label: "Repair discount", value: "15%" });
+    expect(terms).toHaveLength(6);
+  });
+
+  test("C934: a past version of a draft is frozen and prints its own terms", () => {
+    const { terms } = buildAgreementDocument({ ...SOURCE, editable: false, terms: { ...FROZEN_TERMS, repairDiscountPct: 7 } }, { ...SETTINGS, repairDiscountPct: 15 });
+    expect(terms[0]).toEqual({ label: "Repair discount", value: "7%" });
+  });
+
+  test("C935: a frozen version with no terms prints none and does not fall back to the settings", () => {
+    const { terms } = buildAgreementDocument({ ...SOURCE, editable: false, terms: null }, { ...SETTINGS, repairDiscountPct: 99 });
+    expect(terms).toEqual([]);
+    expect(JSON.stringify(buildAgreementDocument({ ...SOURCE, editable: false, terms: null }, { ...SETTINGS, repairDiscountPct: 99 }))).not.toContain("99%");
   });
 });

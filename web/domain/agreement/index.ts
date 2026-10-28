@@ -176,4 +176,41 @@ export function parseServiceScope(document: unknown): ServiceScope | null {
   return { takenAt, types: ordered.sort((a, b) => compareText(a.name, b.name)) };
 }
 
+/** The six default terms a version carries once it has left draft (customer-portal door 3). */
+export type AgreementTerms = {
+  repairDiscountPct: number;
+  cpiCapPct: number;
+  cancellationNoticeDays: number | null;
+  paymentDays: number | null;
+  governingProvince: string | null;
+  taxNote: string | null;
+};
+
+const isPercent = (value: unknown): value is number => typeof value === "number" && value >= 0 && value <= 100;
+const isOptionalDays = (value: unknown): value is number | null => value === null || (typeof value === "number" && Number.isInteger(value) && value >= 0);
+
+/** The `terms` of a stored snapshot, or `null` when it has none or they are malformed. */
+export function parseTerms(snapshot: unknown): AgreementTerms | null {
+  if (!isRecord(snapshot) || !isRecord(snapshot.terms)) return null;
+  const terms = snapshot.terms;
+  if (
+    !isPercent(terms.repairDiscountPct) ||
+    !isPercent(terms.cpiCapPct) ||
+    !isOptionalDays(terms.cancellationNoticeDays) ||
+    !isOptionalDays(terms.paymentDays) ||
+    !isOptionalText(terms.governingProvince) ||
+    !isOptionalText(terms.taxNote)
+  ) {
+    return null;
+  }
+  return {
+    repairDiscountPct: terms.repairDiscountPct,
+    cpiCapPct: terms.cpiCapPct,
+    cancellationNoticeDays: terms.cancellationNoticeDays,
+    paymentDays: terms.paymentDays,
+    governingProvince: terms.governingProvince,
+    taxNote: terms.taxNote,
+  };
+}
+
 export * from "./document";
