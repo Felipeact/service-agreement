@@ -193,6 +193,14 @@ describe("the agreement PDF, rendered", () => {
     expect(plum.has("#1f6f8b")).toBe(false);
   });
 
+  test("C858: the accent is both the heading text colour and the title rule's stroke", async () => {
+    const bytes = await reactPdfDocumentRenderer.renderAgreement({ ...base, tenant: { ...base.tenant, accent: "#7a1f5c" } });
+    expect(pdfColours(bytes, "scn").has("#7a1f5c")).toBe(true);
+    expect(pdfColours(bytes, "SCN").has("#7a1f5c")).toBe(true);
+    const other = await reactPdfDocumentRenderer.renderAgreement({ ...base, tenant: { ...base.tenant, accent: "#1f6f8b" } });
+    expect(pdfColours(other, "SCN").has("#7a1f5c")).toBe(false);
+  });
+
   test("C860: each line prints its own visits per year between its description and its prices", async () => {
     const lines = [
       { description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 },

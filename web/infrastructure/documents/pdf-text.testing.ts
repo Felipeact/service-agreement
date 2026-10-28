@@ -29,7 +29,7 @@ export function pdfPages(bytes: Uint8Array): string[] {
 }
 
 /** The colour operators (`r g b scn` fill, `r g b SCN` stroke) of every page, as "#rrggbb" strings. */
-export function pdfColours(bytes: Uint8Array): Set<string> {
+export function pdfColours(bytes: Uint8Array, operator: "scn" | "SCN" | "any" = "any"): Set<string> {
   const raw = Buffer.from(bytes).toString("latin1");
   const colours = new Set<string>();
   for (const match of raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)) {
@@ -39,7 +39,8 @@ export function pdfColours(bytes: Uint8Array): Set<string> {
     } catch {
       continue;
     }
-    for (const op of content.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) (?:scn|SCN)\b/g)) {
+    for (const op of content.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) (scn|SCN)\b/g)) {
+      if (operator !== "any" && op[4] !== operator) continue;
       colours.add("#" + [op[1], op[2], op[3]].map((v) => Math.round(Number(v) * 255).toString(16).padStart(2, "0")).join(""));
     }
   }
