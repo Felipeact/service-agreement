@@ -38,7 +38,7 @@ The user confirmed three reasons, all of equal weight:
 
 ## Capabilities and Constraints
 
-- **Stack:** Next.js 16 (App Router), React 19, Tailwind 4 in `web/`. Supabase (Postgres with RLS, Auth, Storage), n8n Cloud, DocuSeal behind `SignatureProvider`, Claude API extraction behind `AssetExtractor`, `@react-pdf/renderer` behind `DocumentRenderer`, Resend or Postmark for email, Stripe for billing. See `ROADMAP.md` for module and phase detail.
+- **Stack:** Next.js 16 (App Router), React 19, Tailwind 4 in `web/`. Supabase (Postgres with RLS, Auth, Storage), n8n self-hosted on Railway, DocuSeal behind `SignatureProvider`, Claude API extraction behind `AssetExtractor`, `@react-pdf/renderer` behind `DocumentRenderer`, Resend for email (domain `felipeviana.com`), Stripe for billing. See `ROADMAP.md` for module and phase detail.
 - **Tenant branding is data, not code.** Legal name, address, phone, logo, accent colour and terms come from each tenant's settings. No company name is hard-coded. Customer-facing surfaces (the portal, PDFs, emails) must take on the tenant's identity, including an arbitrary accent colour.
 - **Seed and demo data** use a fictitious company.
 - **Customers never see or build workflows.** The app owns all status; n8n only automates.

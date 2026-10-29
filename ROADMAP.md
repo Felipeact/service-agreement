@@ -10,11 +10,11 @@ Tenant branding (legal name, address, phone, logo, terms) comes from each tenant
 |---|---|---|
 | Web app | Next.js 16 (App Router), React 19, Tailwind 4 | Already scaffolded in `web/` |
 | Data, auth, files | Supabase (Postgres + RLS, Auth, Storage) | Shared schema, `org_id` on every row, isolation enforced by RLS |
-| Automation | n8n Cloud | The app owns state; n8n owns emails, reminders and timing. Customers never see or build workflows |
+| Automation | n8n, self-hosted on Railway (Postgres-backed) | The app owns state; n8n owns emails, reminders and timing. Customers never see or build workflows |
 | E-signature | DocuSeal API, behind `SignatureProvider` | Free sandbox, about $0.20 per completed document, `form.completed` webhook, React embed |
 | Document extraction | Claude API (PDF input + structured outputs), behind `AssetExtractor` | Handles messy tables; JSON-schema output |
 | PDF generation | `@react-pdf/renderer`, behind `DocumentRenderer` | Serverless-friendly, no headless Chrome |
-| Email | Resend or Postmark | Transactional email |
+| Email | Resend, domain `felipeviana.com` | Transactional email |
 | SaaS billing | Stripe (subscriptions, Checkout, Customer Portal) | Idempotent webhook handling |
 | Design workflow | Impeccable skill (`/impeccable init`, `shape`, `document`) | Product context, variant directions, and a DESIGN.md generated from the chosen direction |
 
