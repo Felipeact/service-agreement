@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/outbox-dispatch/plan.md`
 
-51 checks in 7 slices plus doors and delivery · 8 one-way doors · 4 open (3 block go-live, none blocks the build)
+52 checks in 7 slices plus doors and delivery · 8 one-way doors · 4 open (3 block go-live, none blocks the build)
 
 ## How proofs run
 
@@ -200,8 +200,11 @@ Proof: `npm test -- n8n-workflows -t "C1033:"`
 
 Proof: `npm test -- n8n-workflows -t "C1034:"`
 
-**C1035** - `events.json` checks the signature before routing. A Crypto node computes HMAC SHA256 over `<X-SA-Timestamp>.<raw body>` with the credential secret. An IF node compares it with `X-SA-Signature` and the 300 s window, and its false branch connects to no workflow call (door 2)
+**C1035** - `events.json` checks the signature before routing. A Crypto node computes HMAC SHA256 over `<X-SA-Timestamp>.<raw body>` with the secret `__SA_HMAC_SECRET__`, a placeholder the operator replaces after import (plan Landing row 13). An IF node compares it with `X-SA-Signature` and the 300 s window, and its false branch connects to no workflow call. No export contains `$env`, and every notify URL starts with `__SA_APP_BASE_URL__` (door 2; reworded 2026-10-29, see Handoff)
 Proof: `npm test -- n8n-workflows -t "C1035:"`
+
+**C1052** - Each of the 6 notify calls (W1 `link`, `day3` and `day7`, W3, and W5) reads the response status without failing the run. On `409`, `503` or a network error, it takes a path through a 10-minute Wait back to the same call, carrying the same `idempotencyKey`, a fresh `X-SA-Timestamp` and a fresh signature. A retry counter stops the loop after 6 retries. After the last retry, W1 goes on to its next step, and W3 and W5 end. Statuses `200`, `400`, `401` and `404` never loop. (AC 16 end to end; added 2026-10-29 at the user's decision on the Verifier's F2, see Handoff)
+Proof: `npm test -- n8n-workflows -t "C1052:"`
 
 ### Doors and delivery · ~8 files · ~25k
 
@@ -324,6 +327,7 @@ Proof: shell `grep -c "outbox-dispatch\|automation_claim" ../CONTEXT.md` prints 
 | delivery line states (6) | sent C1032 · `no_recipient` C1032 · `no_link_secret` C1032 · `reserved_domain` C1032 · `failed` C1032 · none C1032 | - |
 | sealing failures (3) | wrong key C1026 · ciphertext changed C1026 · tag changed C1026 | - |
 | n8n exports (4) | `events.json` C1033, C1034, C1035 · W1 C1033 · W3 C1033 · W5 C1033 | - |
+| notify calls that retry (6) | W1 link C1052 · W1 day3 C1052 · W1 day7 C1052 · W3 C1052 · W5 C1052 · retry triggers `409`/`503`/network C1052 | - |
 | one-way doors (8) | door 1 C1042, C1006 · door 2 C1002, C1035 · door 3 C1040, C1011 · door 4 C1036 · door 5 C1037, C1026 · door 6 C1038 · door 7 C1039 · door 8 C1033 | - |
 | entities (Relations) (3) | Notification C1036 · SealedToken on PortalLink C1037 · Outbox `sending` C1042 | - |
 | startup config: `PORTAL_LINK_KEY` (3 places) | send action C1026 · reissue action C1026 · automation route assembly C1019 | - |
@@ -438,3 +442,9 @@ Expected follow-ons the build must report, not hide:
   1. Dispatch: store Vault `n8n_events_url` (an echo receiver first, then the n8n events webhook) and `automation_hmac_secret` on project `gnxebrtcpbujhvcamtoe`; make one demo transition; within 2 minutes check the outbox row is `sent` and the receiver's body and headers verify with the secret.
   2. Email: set `PORTAL_LINK_KEY`, `RESEND_API_KEY` (account holding `felipeviana.com`) and `EMAIL_FROM=agreements@felipeviana.com` in the app's environment; temporarily set one demo site contact's email to the Resend account owner's; send that agreement; post one signed `customer_link` callback; check 1 email arrives from `@felipeviana.com` and the notification is `sent` with a provider id; restore the contact.
   3. n8n: deploy n8n on Railway with `DB_TYPE=postgresdb`, `GENERIC_TIMEZONE=America/Vancouver`, `SA_AUTOMATION_HMAC_SECRET` (= the Vault secret), `SA_APP_BASE_URL`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`; import the four exports, pick W1 and W3 in the events workflow's two Execute Workflow nodes, activate events, W1, W3 and W5; point `n8n_events_url` at the events webhook; repeat step 2 with the callback coming from W1.
+
+### Changes after the Verifier's round 1 (2026-10-29, the user's decisions)
+
+- **F1:** the user chose placeholders set at import over `$env`. Plan Landing row 13 supersedes row 12, and C1035 is reworded to the placeholder form. The user approved this rewording. It replaces "the credential secret", which no shape of the Crypto node could meet.
+- **F2:** the user chose a retry loop in n8n. New check C1052 asserts it. The app and database are unchanged.
+- **Not changed:** every other check, and every assertion already written.
