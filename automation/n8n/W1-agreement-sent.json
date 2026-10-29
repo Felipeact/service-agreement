@@ -28,7 +28,7 @@
             {
               "id": "00467c04-3631-5c6a-b6a3-88ac8d7b9cba",
               "name": "body",
-              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').item.json.eventId + ':link', kind: 'customer_link', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').first().json.eventId + ':link', kind: 'customer_link', eventId: $('When called by events').first().json.eventId, agreementId: $('When called by events').first().json.agreementId, executionId: $execution.id }) }}",
               "type": "string"
             }
           ]
@@ -85,7 +85,13 @@
         "rawContentType": "application/json",
         "body": "={{ $json.body }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
         }
       },
       "id": "877b2181-9d1a-53ff-bed0-f3e610cf7353",
@@ -96,10 +102,7 @@
         660,
         0
       ],
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -131,7 +134,7 @@
             {
               "id": "cad34fce-514c-530e-88ea-54c069db87fe",
               "name": "body",
-              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').item.json.eventId + ':day3', kind: 'customer_reminder', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').first().json.eventId + ':day3', kind: 'customer_reminder', eventId: $('When called by events').first().json.eventId, agreementId: $('When called by events').first().json.agreementId, executionId: $execution.id }) }}",
               "type": "string"
             }
           ]
@@ -188,7 +191,13 @@
         "rawContentType": "application/json",
         "body": "={{ $json.body }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
         }
       },
       "id": "3a4bf3d3-cb92-52b0-abf2-ff82ad8726c0",
@@ -199,10 +208,7 @@
         1540,
         0
       ],
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -234,7 +240,7 @@
             {
               "id": "9fa53a7e-52b8-5e07-ba4e-08ed3c193365",
               "name": "body",
-              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').item.json.eventId + ':day7', kind: 'customer_reminder', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').first().json.eventId + ':day7', kind: 'customer_reminder', eventId: $('When called by events').first().json.eventId, agreementId: $('When called by events').first().json.agreementId, executionId: $execution.id }) }}",
               "type": "string"
             }
           ]
@@ -291,7 +297,13 @@
         "rawContentType": "application/json",
         "body": "={{ $json.body }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
         }
       },
       "id": "68ef86e6-9cf6-518d-a40b-f16ae8e22d4d",
@@ -302,10 +314,184 @@
         2420,
         0
       ],
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58ed0bfb-97a9-5cfa-854b-3e002b5f94db",
+              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "626c9236-688d-5b20-8104-d5cd7ff60d4f",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "22aa42df-94d0-5648-b6e3-2158dc76ec36",
+      "name": "Retry link?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "2aa48812-8676-5cc9-990f-1f9334e1ccc1",
+      "name": "Wait 10 minutes (link)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "769c322c-4cbf-59e8-8551-5a82b6b42737"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d7614689-ad5b-5cf1-b6b4-67c35af0144c",
+              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e946b043-c8c0-5ae3-b14c-31f7c31893d4",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "faab5bd1-98ab-5a63-81f8-46aaa5cc0547",
+      "name": "Retry day 3?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "c05885ed-6bd0-5d7a-bcee-b766dc5e3ba9",
+      "name": "Wait 10 minutes (day 3)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        400
+      ],
+      "webhookId": "26687f9d-a97f-5eae-bd47-1fd9cf572804"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c49babe6-7f50-5fe1-bf72-f8bb204dd3a0",
+              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "62848253-bfa5-516c-ad55-0292876beef8",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5e24bf15-ff1c-52ac-97be-4f55f4deb28d",
+      "name": "Retry day 7?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "e8481755-10bf-5a6e-a02d-881cfc0a65ab",
+      "name": "Wait 10 minutes (day 7)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        400
+      ],
+      "webhookId": "ce729355-2ddd-5271-9b68-54a38bb1b635"
     }
   ],
   "connections": {
@@ -346,7 +532,14 @@
       "main": [
         [
           {
-            "node": "Wait 3 days",
+            "node": "Retry link?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry link?",
             "type": "main",
             "index": 0
           }
@@ -390,7 +583,14 @@
       "main": [
         [
           {
-            "node": "Wait 4 days",
+            "node": "Retry day 3?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry day 3?",
             "type": "main",
             "index": 0
           }
@@ -424,6 +624,105 @@
         [
           {
             "node": "Notify day 7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry link?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (link)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 3 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10 minutes (link)": {
+      "main": [
+        [
+          {
+            "node": "Link body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry day 3?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (day 3)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 4 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10 minutes (day 3)": {
+      "main": [
+        [
+          {
+            "node": "Day 3 body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify day 7": {
+      "main": [
+        [
+          {
+            "node": "Retry day 7?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry day 7?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry day 7?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (day 7)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (day 7)": {
+      "main": [
+        [
+          {
+            "node": "Day 7 body",
             "type": "main",
             "index": 0
           }

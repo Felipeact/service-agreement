@@ -28,7 +28,7 @@
             {
               "id": "b9ac37a2-7d00-5163-b0b2-434df9f3ff7d",
               "name": "body",
-              "value": "={{ JSON.stringify({ idempotencyKey: 'w3:' + $('When called by events').item.json.eventId, kind: 'staff_decision', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w3:' + $('When called by events').first().json.eventId, kind: 'staff_decision', eventId: $('When called by events').first().json.eventId, agreementId: $('When called by events').first().json.agreementId, executionId: $execution.id }) }}",
               "type": "string"
             }
           ]
@@ -85,7 +85,13 @@
         "rawContentType": "application/json",
         "body": "={{ $json.body }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
         }
       },
       "id": "b2239c00-1225-50f8-ae2f-bd139b6fa8ac",
@@ -96,10 +102,66 @@
         660,
         0
       ],
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "190b629b-4cc5-51fb-b009-ce8a54354ddc",
+              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "eb4fb7c0-e4b0-5994-8670-2884b39561fb",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d2e93d50-edfc-5ae6-bb95-d7abc3d80965",
+      "name": "Retry decision?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "887d2ef9-d1a3-5407-9922-f0dfe3b8a380",
+      "name": "Wait 10 minutes (decision)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "f7781d16-dedc-5f69-a993-29dffb93da17"
     }
   ],
   "connections": {
@@ -130,6 +192,47 @@
         [
           {
             "node": "Notify decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify decision": {
+      "main": [
+        [
+          {
+            "node": "Retry decision?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry decision?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry decision?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (decision)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (decision)": {
+      "main": [
+        [
+          {
+            "node": "Decision body",
             "type": "main",
             "index": 0
           }

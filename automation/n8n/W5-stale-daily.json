@@ -94,7 +94,13 @@
         "rawContentType": "application/json",
         "body": "={{ $json.body }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
         }
       },
       "id": "05585eab-dfc8-55ad-934a-6482a9b25099",
@@ -105,10 +111,66 @@
         660,
         0
       ],
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "de998898-4e3f-5d94-8bc3-127171d16f5f",
+              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "26e1b5b6-b9d5-5056-a000-ceb3c0d9ac82",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8925dfd1-c669-5c87-9c46-7f07dd96f933",
+      "name": "Retry stale?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "83f00ee6-ff34-5912-875b-ea58aead6ef5",
+      "name": "Wait 10 minutes (stale)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "8b59f959-1e15-5790-a4ec-c02f119ef8bd"
     }
   ],
   "connections": {
@@ -139,6 +201,47 @@
         [
           {
             "node": "Notify stale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify stale": {
+      "main": [
+        [
+          {
+            "node": "Retry stale?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry stale?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry stale?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (stale)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (stale)": {
+      "main": [
+        [
+          {
+            "node": "Stale body",
             "type": "main",
             "index": 0
           }
