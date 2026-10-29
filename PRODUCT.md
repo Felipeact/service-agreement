@@ -43,7 +43,7 @@ The user confirmed three reasons, all of equal weight:
 - **Seed and demo data** use a fictitious company.
 - **Customers never see or build workflows.** The app owns all status; n8n only automates.
 - **Engineering:** SOLID, ports and adapters, money in integer cents. Every change to the web app must pass Playwright validation at 375, 768 and 1440 px wide, with touch targets of at least 44 px (see `AGENTS..md`).
-- **Undecided:** the product name and brand (the working name is "Service Agreement"), plans and pricing (Phase 5), and the choice between Resend and Postmark.
+- **Undecided:** the product name and brand (the working name is "Service Agreement"), and plans and pricing (Phase 5). Transactional email runs on Resend (outbox-dispatch, 2026-10-29).
 
 ## Brand Commitments
 
