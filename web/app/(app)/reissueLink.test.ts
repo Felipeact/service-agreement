@@ -11,6 +11,9 @@ const portalTokens = {
     return { token, hash: sha256(token) };
   },
   hash: sha256,
+  // Reversible stand-ins for sealing: the real AES-GCM is proven in infrastructure/portal-tokens.test.ts.
+  seal: (token: string) => `v1.${"A".repeat(16)}.${Buffer.from(token).toString("base64url")}`,
+  unseal: (sealed: string) => Buffer.from(sealed.split(".")[2], "base64url").toString(),
 };
 
 const AGR = "11111111-1111-4111-8111-111111111111";

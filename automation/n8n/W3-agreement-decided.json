@@ -1,0 +1,148 @@
+{
+  "name": "W3 agreement decided",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "74a1a574-7081-5670-8562-c4eb4d4acc9a",
+      "name": "When called by events",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "45eb611c-f3b7-5946-909d-b69b7704d374",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "b9ac37a2-7d00-5163-b0b2-434df9f3ff7d",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w3:' + $('When called by events').item.json.eventId, kind: 'staff_decision', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "0683feaa-940b-506c-bc63-a51bf6c44000",
+      "name": "Decision body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "encoding": "hex"
+      },
+      "id": "740d5c7c-0d0f-5e28-8342-6c1648dc4536",
+      "name": "Sign decision",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b2239c00-1225-50f8-ae2f-bd139b6fa8ac",
+      "name": "Notify decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "When called by events": {
+      "main": [
+        [
+          {
+            "node": "Decision body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision body": {
+      "main": [
+        [
+          {
+            "node": "Sign decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign decision": {
+      "main": [
+        [
+          {
+            "node": "Notify decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

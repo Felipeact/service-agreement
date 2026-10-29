@@ -1,11 +1,13 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import {
   makeDecidePortal,
   makeExtractImport,
+  makeNotify,
   makeReadImport,
   makeRecordPortalView,
   makeReissueLink,
@@ -14,12 +16,15 @@ import {
   makeTransitionAgreement,
   makeTransitionContract,
   makeViewPortal,
+  type NotifyResult,
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { reactPdfDocumentRenderer } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
-import { portalTokens } from "@/infrastructure/portal-tokens";
+import { makePortalTokens } from "@/infrastructure/portal-tokens";
+import { resendEmailSender } from "@/infrastructure/email";
+import { supabaseAutomationCallbacks } from "@/infrastructure/supabase/automation";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
 import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "@/infrastructure/supabase/agreements";
@@ -89,6 +94,8 @@ export async function getContainer() {
   const importRows = supabaseImportRowStore(supabase);
   const agreementRepository = supabaseAgreementRepository(supabase);
   const portalReader = supabasePortalReader(supabase);
+  // Sealing needs PORTAL_LINK_KEY: without it a send or a new link throws and answers unavailable (outbox-dispatch door 5).
+  const portalTokens = makePortalTokens(process.env.PORTAL_LINK_KEY);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -146,3 +153,36 @@ export async function getContainer() {
 }
 
 export type Container = Awaited<ReturnType<typeof getContainer>>;
+
+/**
+ * Wires n8n's signed callback (outbox-dispatch doors 3, 6, 7). No user session: the client is `anon` with the
+ * publishable key, and the database verifies the signature itself, so no service-role key and no shared secret here.
+ * Without `RESEND_API_KEY` or `EMAIL_FROM` every callback answers unavailable and nothing is claimed.
+ */
+export async function getAutomationContainer(requestOrigin: string) {
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+
+  if (!apiKey || !from) {
+    return {
+      notify: async (): Promise<NotifyResult> => {
+        console.error("Automation callback refused: email not configured (RESEND_API_KEY, EMAIL_FROM)");
+        return { ok: false, code: "unavailable" };
+      },
+    };
+  }
+
+  const supabase = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return {
+    notify: makeNotify(
+      supabaseAutomationCallbacks(supabase),
+      resendEmailSender({ apiKey, from }),
+      makePortalTokens(process.env.PORTAL_LINK_KEY),
+      process.env.APP_BASE_URL || requestOrigin,
+    ),
+  };
+}
+
+export type AutomationContainer = Awaited<ReturnType<typeof getAutomationContainer>>;

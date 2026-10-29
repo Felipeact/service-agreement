@@ -7,7 +7,16 @@ export const TOKEN = "U-FVzrQONnE0OeSkuG3mDhLni8aAqblTz4-KLseYCj4";
 const sha256 = (token: string) => createHash("sha256").update(token).digest("hex");
 
 /** Checked against node:crypto here, not against the adapter that makes the real ones. */
-export const testTokens: PortalTokens = { create: () => ({ token: TOKEN, hash: sha256(TOKEN) }), hash: sha256 };
+export const testTokens: PortalTokens = {
+  create: () => ({ token: TOKEN, hash: sha256(TOKEN) }),
+  hash: sha256,
+  seal: () => {
+    throw new Error("the customer side never seals");
+  },
+  unseal: () => {
+    throw new Error("the customer side never unseals");
+  },
+};
 
 /** A link to version 1 of AG-1052, sent, with two lines that total $3,870.00 and the six terms set. */
 export function portalView(over: Partial<PortalView> = {}): PortalView {

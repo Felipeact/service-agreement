@@ -1,7 +1,7 @@
 import { applyAgreementCommand } from "@/domain/agreement";
 import type { AgreementRepository, AgreementSender, PortalLinkStore, PortalTokens, PortalWriteFailure } from "@/application/ports";
 
-/** The new link's secret, handed back once; the database keeps only its hash (customer-portal door 1). */
+/** The new link's secret, handed back once; the database keeps its hash and a sealed copy (customer-portal door 1, outbox-dispatch door 5). */
 export type LinkIssueResult = { ok: true; token: string } | { ok: false; code: PortalWriteFailure | "no_lines" };
 
 /** A draft goes to `sent` with a new link. A refusal is a value; an infrastructure failure is thrown. */
@@ -13,7 +13,7 @@ export function makeSendAgreement(agreements: AgreementRepository, sender: Agree
     if (!decision.ok) return { ok: false, code: "conflict" };
 
     const { token, hash } = tokens.create();
-    const sent = await sender.send(agreementId, hash, decision.event);
+    const sent = await sender.send(agreementId, hash, decision.event, tokens.seal(token));
     return sent.ok ? { ok: true, token } : sent;
   };
 }
@@ -22,7 +22,7 @@ export function makeSendAgreement(agreements: AgreementRepository, sender: Agree
 export function makeReissueLink(links: PortalLinkStore, tokens: PortalTokens) {
   return async function reissueLink(agreementId: string): Promise<LinkIssueResult> {
     const { token, hash } = tokens.create();
-    const reissued = await links.reissue(agreementId, hash);
+    const reissued = await links.reissue(agreementId, hash, tokens.seal(token));
     return reissued.ok ? { ok: true, token } : reissued;
   };
 }

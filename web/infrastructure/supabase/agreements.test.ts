@@ -393,3 +393,48 @@ describe("agreement reader: terms and the customer link", () => {
     expect(past.calls.some((call) => call.table === "portal_links")).toBe(false);
   });
 });
+
+describe("the link email of a sent agreement (outbox-dispatch AC 30)", () => {
+  const sent = agreementRow([{ id: "v1", version_no: 1 }], "sent");
+  const base = { agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: { schema: 1, types: [], takenAt: "2026-10-27T18:00:00+00:00" } }) };
+
+  test("C1032: the reader asks for the customer_link notification of the latest agreement.sent event", async () => {
+    const stub = stubClient({
+      ...base,
+      events: ok({ id: "evt-1" }),
+      notifications: ok({ status: "sent", skip_reason: null, recipients: ["pat@customer.ca"], sent_at: "2026-10-29T17:00:00Z" }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.linkEmail).toEqual({ status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-10-29T17:00:00Z") });
+    const events = stub.calls.filter((call) => call.table === "events");
+    expect(events.filter((call) => call.method === "eq").map((call) => call.args)).toEqual([
+      ["entity_type", "agreement"],
+      ["entity_id", AGR],
+      ["type", "agreement.sent"],
+    ]);
+    expect(events.find((call) => call.method === "order")?.args).toEqual(["created_at", { ascending: false }]);
+    const notifications = stub.calls.filter((call) => call.table === "notifications" && call.method === "eq").map((call) => call.args);
+    expect(notifications).toEqual([
+      ["event_id", "evt-1"],
+      ["kind", "customer_link"],
+    ]);
+  });
+
+  test.each([
+    [{ status: "skipped", skip_reason: "no_recipient" }, { status: "not_sent", reason: "no_recipient" }],
+    [{ status: "skipped", skip_reason: "reserved_domain" }, { status: "not_sent", reason: "reserved_domain" }],
+    [{ status: "failed", skip_reason: null }, { status: "not_sent", reason: "failed" }],
+    [{ status: "claimed", skip_reason: null }, { status: "pending" }],
+    [null, { status: "pending" }],
+  ])("C1032: notification %j reads as %j", async (row, expected) => {
+    const stub = stubClient({ ...base, events: ok({ id: "evt-1" }), notifications: ok(row && { ...row, recipients: [], sent_at: null }) });
+    expect((await supabaseAgreementReader(stub.typed).get(AGR))?.linkEmail).toEqual(expected);
+  });
+
+  test("C1032: a draft reads no notification", async () => {
+    const draft = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    draft.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
+    expect((await supabaseAgreementReader(draft.typed).get(AGR))?.linkEmail).toBeNull();
+    expect(draft.calls.some((call) => call.table === "notifications" || call.table === "events")).toBe(false);
+  });
+});

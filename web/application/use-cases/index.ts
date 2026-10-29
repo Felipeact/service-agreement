@@ -68,3 +68,4 @@ export {
   type DecidePortalResult,
   type PortalDecision,
 } from "./portal";
+export { makeNotify, type NotifyResult } from "./notify";

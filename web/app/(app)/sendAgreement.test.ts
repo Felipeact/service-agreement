@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { AgreementRecord, AgreementRepository, AgreementSender, CurrentMember, MemberRole } from "@/application/ports";
-import { makeSendAgreement } from "@/application/use-cases";
+import type { AgreementRecord, AgreementRepository, AgreementSender, CurrentMember, MemberRole, PortalLinkStore } from "@/application/ports";
+import { makeReissueLink, makeSendAgreement } from "@/application/use-cases";
 
 // The tokens are checked against node:crypto here, not against the adapter that makes them.
 const sha256 = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -11,6 +11,9 @@ const portalTokens = {
     return { token, hash: sha256(token) };
   },
   hash: sha256,
+  // Reversible stand-ins for sealing: the real AES-GCM is proven in infrastructure/portal-tokens.test.ts.
+  seal: (token: string) => `v1.${"A".repeat(16)}.${Buffer.from(token).toString("base64url")}`,
+  unseal: (sealed: string) => Buffer.from(sealed.split(".")[2], "base64url").toString(),
 };
 
 const AGR = "11111111-1111-4111-8111-111111111111";
@@ -120,5 +123,27 @@ describe("sendAgreementAction", () => {
     const args = send.mock.calls[0];
     expect(args[1]).toMatch(/^[0-9a-f]{64}$/);
     expect(JSON.stringify(args)).not.toContain(token);
+  });
+});
+
+describe("the sealed token (outbox-dispatch door 5)", () => {
+  test("C1026: the send use case passes a sealed value whose unsealed token hashes to the hash argument", async () => {
+    const state = (await sendAgreementAction(AGR)) as { url: string };
+    const [, hash, , sealed] = send.mock.calls[0];
+    expect(sealed).toMatch(/^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$/);
+    const token = portalTokens.unseal(sealed as string);
+    expect(sha256(token)).toBe(hash);
+    expect(state.url.endsWith(`/review/${token}`)).toBe(true);
+  });
+
+  test("C1026: the reissue use case passes a sealed value whose unsealed token hashes to the hash argument", async () => {
+    const reissue = vi.fn<PortalLinkStore["reissue"]>(async () => ({ ok: true }));
+    const result = await makeReissueLink({ reissue }, portalTokens)(AGR);
+    const [id, hash, sealed] = reissue.mock.calls[0];
+    expect(id).toBe(AGR);
+    expect(sealed).toMatch(/^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$/);
+    const token = portalTokens.unseal(sealed as string);
+    expect(sha256(token)).toBe(hash);
+    expect(result).toEqual({ ok: true, token });
   });
 });

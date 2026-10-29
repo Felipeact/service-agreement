@@ -5,6 +5,7 @@ import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/do
 import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
+import type { NotEmailedReason, StaleAgreement, Tenant } from "@/domain/notifications";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -422,7 +423,18 @@ export type AgreementDetail = {
    * is never readable (customer-portal door 1).
    */
   portalLink: { firstViewedAt: Date | null } | null;
+  /**
+   * Whether the link email of the shown version went out, when the agreement is `sent` and the version is the current
+   * one: the `customer_link` notification of its `agreement.sent` event, or `{ status: "pending" }` while there is none
+   * (outbox-dispatch AC 30). `null` otherwise.
+   */
+  linkEmail: LinkEmailView | null;
 };
+
+export type LinkEmailView =
+  | { status: "sent"; to: string; sentAt: Date }
+  | { status: "not_sent"; reason: NotEmailedReason }
+  | { status: "pending" };
 
 export type AgreementServiceScope = { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
 
@@ -465,18 +477,23 @@ export type ReissueLinkResult = { ok: true } | { ok: false; code: PortalWriteFai
 
 /** Moves a draft to sent, freezes it and creates its customer link in one transaction (customer-portal door 2). */
 export interface AgreementSender {
-  send(agreementId: string, tokenHash: string, event: DomainEvent<AgreementStatus>): Promise<SendAgreementResult>;
+  /** `tokenSealed` is the same token sealed with `PORTAL_LINK_KEY` (outbox-dispatch door 5); without it the link stores none. */
+  send(agreementId: string, tokenHash: string, event: DomainEvent<AgreementStatus>, tokenSealed?: string): Promise<SendAgreementResult>;
 }
 
 /** Replaces the live link of a sent agreement's current version (customer-portal door 2). */
 export interface PortalLinkStore {
-  reissue(agreementId: string, tokenHash: string): Promise<ReissueLinkResult>;
+  reissue(agreementId: string, tokenHash: string, tokenSealed?: string): Promise<ReissueLinkResult>;
 }
 
 /** A new link's secret and the SHA-256 hex the database keeps instead of it (customer-portal door 1). */
 export interface PortalTokens {
   create(): { token: string; hash: string };
   hash(token: string): string;
+  /** The token encrypted with the app-only `PORTAL_LINK_KEY`, `v1.<iv>.<ciphertext+tag>` (outbox-dispatch door 5). Throws without the key. */
+  seal(token: string): string;
+  /** The token back from `seal`; throws for another key or a changed value. */
+  unseal(sealed: string): string;
 }
 
 /** Everything the review page and PDF read about one link, as `public.portal_view` returns it (door 2). `null` for an unknown link. */
@@ -509,4 +526,71 @@ export interface PortalDecider {
 /** Stamps the link's first view and writes `agreement.viewed`; a later call writes nothing (door 2, 9). */
 export interface PortalViewRecorder {
   record(tokenHash: string): Promise<void>;
+}
+
+/** A callback from n8n as it arrived: the raw body and its two signature headers (outbox-dispatch door 2). */
+export type SignedCallback = { body: string; timestamp: string; signature: string };
+
+type MessageBase = { notificationId: string; to: string[]; tenant: Tenant };
+
+/** One email `automation_claim` decided to send, with what it needs (outbox-dispatch Landing 11). */
+export type NotificationMessage =
+  | (MessageBase & {
+      kind: "customer_link" | "customer_reminder";
+      replyTo: string | null;
+      agreement: { id: string; number: string };
+      site: { name: string };
+      annualCents: number;
+      tokenSealed: string;
+      reminder: "day3" | "day7" | null;
+    })
+  | (MessageBase & {
+      kind: "staff_decision";
+      agreement: { id: string; number: string };
+      customer: { name: string };
+      decision: "refused" | "changes_requested";
+      reason: string | null;
+    })
+  | (MessageBase & { kind: "staff_stale"; orgId: string; agreements: StaleAgreement[] });
+
+export type ClaimDecision =
+  | { decision: "send"; messages: NotificationMessage[] }
+  | { decision: "skip"; reason: string }
+  | { decision: "duplicate" }
+  | { decision: "in_flight" };
+
+/** A refused callback: `42501` bad or stale signature, `22023` malformed body, `P0002` unknown event or agreement. */
+export type CallbackFailure = "unauthorized" | "malformed" | "not_found";
+
+export type ClaimResult = ({ ok: true } & ClaimDecision) | { ok: false; code: CallbackFailure };
+
+export type NotificationOutcome =
+  | { id: string; outcome: "sent"; providerMessageId: string }
+  | { id: string; outcome: "failed"; error: string }
+  | { id: string; outcome: "skipped"; reason: "reserved_domain" };
+
+/** The signed callbacks the database verifies itself (`automation_claim`, `automation_complete`, door 3). */
+export interface AutomationCallbacks {
+  /** Throws on anything other than the three refusals. */
+  claim(callback: SignedCallback): Promise<ClaimResult>;
+  /** Records what happened to the claimed notifications; throws on any error. */
+  complete(callback: SignedCallback, results: NotificationOutcome[]): Promise<void>;
+}
+
+/** One transactional email (outbox-dispatch door 7). `idempotencyKey` makes a resend after a crash a no-op. */
+export type EmailMessage = {
+  to: string[];
+  fromName: string;
+  replyTo?: string;
+  subject: string;
+  html: string;
+  text: string;
+  idempotencyKey: string;
+};
+
+/** `reserved_domain`: a recipient on a reserved domain, refused before any request (AC 22). */
+export type EmailSendResult = { ok: true; providerMessageId: string } | { ok: false; code: "rejected" | "unavailable" | "reserved_domain" };
+
+export interface EmailSender {
+  send(message: EmailMessage): Promise<EmailSendResult>;
 }

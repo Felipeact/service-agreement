@@ -4,8 +4,10 @@ import type { ContractStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { pipelineStage } from "@/domain/pipeline";
+import { isNotEmailedReason } from "@/domain/notifications";
 import type {
   AgreementReader,
+  LinkEmailView,
   AgreementServiceScope,
   AgreementStore,
   ServiceLineStore,
@@ -98,6 +100,36 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
     return { firstViewedAt: data.first_viewed_at === null ? null : new Date(data.first_viewed_at) };
   }
 
+  /**
+   * The `customer_link` notification of the agreement's latest `agreement.sent` event, which is the current version's
+   * (outbox-dispatch AC 30). A `claimed` one, or none, is still pending.
+   */
+  async function linkEmail(agreementId: string, status: AgreementStatus, current: boolean): Promise<LinkEmailView | null> {
+    if (status !== "sent" || !current) return null;
+    const { data: event, error } = await client
+      .from("events")
+      .select("id")
+      .eq("entity_type", "agreement")
+      .eq("entity_id", agreementId)
+      .eq("type", "agreement.sent")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    if (!event) return { status: "pending" };
+    const { data: row, error: rowError } = await client
+      .from("notifications")
+      .select("status, skip_reason, recipients, sent_at")
+      .eq("event_id", event.id)
+      .eq("kind", "customer_link")
+      .maybeSingle();
+    if (rowError) throw new Error(`Supabase error ${rowError.code}: ${rowError.message}`);
+    if (row?.status === "sent" && row.sent_at) return { status: "sent", to: row.recipients[0] ?? "", sentAt: new Date(row.sent_at) };
+    if (row?.status === "failed") return { status: "not_sent", reason: "failed" };
+    if (row?.status === "skipped" && row.skip_reason && isNotEmailedReason(row.skip_reason)) return { status: "not_sent", reason: row.skip_reason };
+    return { status: "pending" };
+  }
+
   return {
     async get(id, versionNo) {
       if (!isUuid(id)) return null;
@@ -157,6 +189,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         serviceScope,
         terms,
         portalLink: await portalLink(shownVersion?.id, status, current),
+        linkEmail: await linkEmail(row.id, status, current),
       };
     },
   };

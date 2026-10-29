@@ -21,7 +21,7 @@ const LINES: ServiceLineView[] = [
 ];
 
 function agreement(
-  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"] } = {},
+  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"] } = {},
 ): AgreementDetail {
   const status = over.status ?? "draft";
   const count = over.versions ?? 2;
@@ -40,6 +40,7 @@ function agreement(
     serviceScope: over.serviceScope ?? { source: "live", takenAt: null, types: [] },
     terms: null,
     portalLink: over.portalLink ?? null,
+    linkEmail: over.linkEmail ?? null,
   };
 }
 
@@ -369,5 +370,35 @@ describe("sending an agreement and its customer link", () => {
     const html = view(agreement({ status }), "viewer");
     expect(html).not.toContain("Send to customer");
     expect(html).not.toContain("Get a new link");
+  });
+
+  test("C1032: a sent agreement says who the link was emailed to and when", () => {
+    const out = text(view(agreement({ status: "sent", linkEmail: { status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-10-29T18:00:00Z") } })));
+    expect(out).toContain("Emailed to pat@customer.ca on Oct 29, 2026");
+    expect(out).not.toContain("Not emailed");
+    expect(out).not.toContain("Email pending");
+  });
+
+  test("C1032: each reason it was not emailed has its own words, with no underscore", () => {
+    const lines = (["no_recipient", "no_link_secret", "reserved_domain", "failed"] as const).map((reason) => {
+      const html = view(agreement({ status: "sent", linkEmail: { status: "not_sent", reason } }));
+      const out = text(html);
+      const line = /Not emailed: [^<]*/.exec(html)?.[0] ?? "";
+      expect(line.length).toBeGreaterThan("Not emailed: ".length);
+      expect(line).not.toContain("_");
+      expect(out).not.toContain("Emailed to");
+      return line;
+    });
+    expect(new Set(lines).size).toBe(4);
+  });
+
+  test("C1032: with no notification the line reads Email pending", () => {
+    expect(text(view(agreement({ status: "sent", linkEmail: { status: "pending" } })))).toContain("Email pending");
+    expect(text(view(agreement({ status: "sent", linkEmail: null })))).toContain("Email pending");
+  });
+
+  test("C1032: a draft shows none of the three", () => {
+    const out = text(view(agreement({ status: "draft", linkEmail: { status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-10-29T18:00:00Z") } })));
+    for (const phrase of ["Emailed to", "Not emailed", "Email pending"]) expect(out).not.toContain(phrase);
   });
 });

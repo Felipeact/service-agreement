@@ -1,0 +1,157 @@
+{
+  "name": "W5 stale daily",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "9a9a06fe-0bca-5694-80bf-3ae618911a8e",
+      "name": "Every day at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5cad3b26-1abf-5142-bc4c-753bf30c6c46",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "d081977c-a01f-5242-bb4e-6d224eef6b34",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w5:' + $now.setZone('America/Vancouver').toFormat('yyyy-MM-dd'), kind: 'staff_stale', executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "e04dae96-3f2d-50fc-8ed8-12f237188f32",
+      "name": "Stale body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "encoding": "hex"
+      },
+      "id": "4c29aa7a-57a3-5537-a29b-65efe0622934",
+      "name": "Sign stale",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "05585eab-dfc8-55ad-934a-6482a9b25099",
+      "name": "Notify stale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Every day at 08:00": {
+      "main": [
+        [
+          {
+            "node": "Stale body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stale body": {
+      "main": [
+        [
+          {
+            "node": "Sign stale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign stale": {
+      "main": [
+        [
+          {
+            "node": "Notify stale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

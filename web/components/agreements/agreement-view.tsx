@@ -1,9 +1,10 @@
 import Link from "next/link";
-import type { AgreementDetail, MemberRole } from "@/application/ports";
+import type { AgreementDetail, LinkEmailView, MemberRole } from "@/application/ports";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { labelFor } from "@/domain/agreement";
+import { notEmailedWords } from "@/domain/notifications";
 import { formatCadExact } from "@/lib/money";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
@@ -37,6 +38,13 @@ const NEXT_LINE = { description: "", visitsPerYear: "", costPerVisit: "" };
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
 const link = "inline-flex min-h-11 items-center font-medium text-action lg:min-h-0";
+
+/** Whether the link email went out (outbox-dispatch AC 30); no notification yet reads as pending. */
+function deliveryLine(email: LinkEmailView | null): string {
+  if (email?.status === "sent") return `Emailed to ${email.to} on ${date.format(email.sentAt)}`;
+  if (email?.status === "not_sent") return `Not emailed: ${notEmailedWords(email.reason)}`;
+  return "Email pending";
+}
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
 export function AgreementView({ agreement, role, actions }: AgreementViewProps) {
@@ -83,7 +91,10 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
           {shown.current && agreement.status !== "draft" && ` · ${label}, read-only`}
         </p>
         {agreement.status === "sent" && shown.current && (
-          <p className="text-[13px] text-ink-2">{firstViewed ? `Viewed by the customer on ${date.format(firstViewed)}` : "Not viewed yet"}</p>
+          <>
+            <p className="text-[13px] text-ink-2">{firstViewed ? `Viewed by the customer on ${date.format(firstViewed)}` : "Not viewed yet"}</p>
+            <p className="break-words text-[13px] text-ink-2">{deliveryLine(agreement.linkEmail)}</p>
+          </>
         )}
       </div>
 

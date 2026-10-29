@@ -29,13 +29,15 @@ function unexpected(error: Pick<PostgrestError, "code" | "message">): Error {
 
 export function supabaseAgreementSender(client: Client): AgreementSender {
   return {
-    async send(agreementId, tokenHash, event) {
-      const { error } = await client.rpc("send_agreement", {
+    async send(agreementId, tokenHash, event, tokenSealed) {
+      const args = {
         p_agreement_id: agreementId,
         p_token_hash: tokenHash,
         p_event_type: event.type,
         p_payload: { from: event.from, to: event.to, ...event.data },
-      });
+      };
+      // PostgREST picks the overload by the names sent: with the sealed token, the 5-argument one (outbox-dispatch Landing 10).
+      const { error } = await client.rpc("send_agreement", tokenSealed === undefined ? args : { ...args, p_token_sealed: tokenSealed });
       if (!error) return { ok: true };
       const code = FAILURES[error.code];
       if (!code) throw unexpected(error);
@@ -46,8 +48,9 @@ export function supabaseAgreementSender(client: Client): AgreementSender {
 
 export function supabasePortalLinkStore(client: Client): PortalLinkStore {
   return {
-    async reissue(agreementId, tokenHash) {
-      const { error } = await client.rpc("reissue_portal_link", { p_agreement_id: agreementId, p_token_hash: tokenHash });
+    async reissue(agreementId, tokenHash, tokenSealed) {
+      const args = { p_agreement_id: agreementId, p_token_hash: tokenHash };
+      const { error } = await client.rpc("reissue_portal_link", tokenSealed === undefined ? args : { ...args, p_token_sealed: tokenSealed });
       if (!error) return { ok: true };
       const code = FAILURES[error.code];
       // 23514 is the send's "no lines"; a reissue has no such refusal, so it is unexpected here.

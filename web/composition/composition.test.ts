@@ -255,6 +255,7 @@ describe("composition root", () => {
       serviceScope: { source: "live", takenAt: null, types: [] },
       terms: null,
       portalLink: null,
+      linkEmail: null,
     };
     const reader: AgreementReader = { get: async () => detail };
     const created: CreateAgreementResult[] = [

@@ -1,0 +1,442 @@
+{
+  "name": "W1 agreement sent",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "4dbdeb3c-3ab9-5a26-9ba3-ed61b18bf3ea",
+      "name": "When called by events",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2738a49b-95bb-5b1b-82ec-878730444aec",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "00467c04-3631-5c6a-b6a3-88ac8d7b9cba",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').item.json.eventId + ':link', kind: 'customer_link', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "faad4aee-b43e-56bf-a0dc-f7fdc778a320",
+      "name": "Link body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "encoding": "hex"
+      },
+      "id": "44bd3754-38d6-5d59-a330-4674296296a4",
+      "name": "Sign link",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "877b2181-9d1a-53ff-bed0-f3e610cf7353",
+      "name": "Notify link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "days"
+      },
+      "id": "adf78138-98da-542a-aef3-414c02768f9c",
+      "name": "Wait 3 days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ],
+      "webhookId": "17c98038-0ef1-5edf-84c9-9472fda202f9"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a633397c-ba23-536d-b8a3-27e15bd2c7d7",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "cad34fce-514c-530e-88ea-54c069db87fe",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').item.json.eventId + ':day3', kind: 'customer_reminder', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "29b7142a-ede1-580d-8610-29ac4afa4ef0",
+      "name": "Day 3 body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "encoding": "hex"
+      },
+      "id": "14c8c7c9-4e6c-5a69-af03-173dd2562663",
+      "name": "Sign day 3",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "3a4bf3d3-cb92-52b0-abf2-ff82ad8726c0",
+      "name": "Notify day 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 4,
+        "unit": "days"
+      },
+      "id": "2e840b6d-d764-559b-a1ae-3672fa6f4efe",
+      "name": "Wait 4 days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        0
+      ],
+      "webhookId": "432a0e42-cb08-59cf-b74d-137ceaaaea68"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a40a00f2-23be-586d-8642-48cd0c99edf7",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "9fa53a7e-52b8-5e07-ba4e-08ed3c193365",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w1:' + $('When called by events').item.json.eventId + ':day7', kind: 'customer_reminder', eventId: $('When called by events').item.json.eventId, agreementId: $('When called by events').item.json.agreementId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "fd82691e-cb56-5cea-9bc5-ebd0302a9db6",
+      "name": "Day 7 body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "encoding": "hex"
+      },
+      "id": "60df6326-bc66-50ef-b5fe-38a568d418f5",
+      "name": "Sign day 7",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "68ef86e6-9cf6-518d-a40b-f16ae8e22d4d",
+      "name": "Notify day 7",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "When called by events": {
+      "main": [
+        [
+          {
+            "node": "Link body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link body": {
+      "main": [
+        [
+          {
+            "node": "Sign link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign link": {
+      "main": [
+        [
+          {
+            "node": "Notify link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify link": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 days": {
+      "main": [
+        [
+          {
+            "node": "Day 3 body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Day 3 body": {
+      "main": [
+        [
+          {
+            "node": "Sign day 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign day 3": {
+      "main": [
+        [
+          {
+            "node": "Notify day 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify day 3": {
+      "main": [
+        [
+          {
+            "node": "Wait 4 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 4 days": {
+      "main": [
+        [
+          {
+            "node": "Day 7 body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Day 7 body": {
+      "main": [
+        [
+          {
+            "node": "Sign day 7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign day 7": {
+      "main": [
+        [
+          {
+            "node": "Notify day 7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

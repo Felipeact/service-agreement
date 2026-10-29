@@ -157,3 +157,24 @@ describe("portal decider and recorder", () => {
     await expect(supabasePortalViewRecorder(typed).record(HASH)).rejects.toThrow("XX000");
   });
 });
+
+describe("the sealed token reaches the new overloads (outbox-dispatch door 5)", () => {
+  const SEALED = `v1.${"A".repeat(16)}.${"B".repeat(70)}`;
+
+  test("C1026: send passes p_token_sealed to send_agreement", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: "evt", error: null });
+    await supabaseAgreementSender(typed).send(AGR, HASH, EVENT, SEALED);
+    expect(client.rpc.mock.calls[0]).toStrictEqual([
+      "send_agreement",
+      { p_agreement_id: AGR, p_token_hash: HASH, p_event_type: "agreement.sent", p_payload: { from: "draft", to: "sent" }, p_token_sealed: SEALED },
+    ]);
+  });
+
+  test("C1026: reissue passes p_token_sealed to reissue_portal_link", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: "link", error: null });
+    await supabasePortalLinkStore(typed).reissue(AGR, HASH, SEALED);
+    expect(client.rpc.mock.calls[0]).toStrictEqual(["reissue_portal_link", { p_agreement_id: AGR, p_token_hash: HASH, p_token_sealed: SEALED }]);
+  });
+});

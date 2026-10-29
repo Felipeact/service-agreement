@@ -1,0 +1,405 @@
+{
+  "name": "Service agreement events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "service-agreement-events",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "a810a563-e97b-54eb-a031-917235575f8c",
+      "name": "Events webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7bf7df88-e16d-5aa8-b63e-35c96cf68072"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "rawBody",
+        "options": {}
+      },
+      "id": "6f722da5-8d8c-504f-886e-cdf22b3250d6",
+      "name": "Raw body",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $('Events webhook').item.json.headers['x-sa-timestamp'] }}.{{ $json.rawBody }}",
+        "dataPropertyName": "expectedSignature",
+        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "encoding": "hex"
+      },
+      "id": "4dc6eeee-9ec7-5397-8583-6c020284e2e0",
+      "name": "Sign raw body",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "19e79643-9340-5c44-b86b-69d7e93634c7",
+              "leftValue": "={{ $('Events webhook').item.json.headers['x-sa-signature'] }}",
+              "rightValue": "=sha256={{ $json.expectedSignature }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "1def51c5-22ba-5705-b625-9af0ffe827e8",
+              "leftValue": "={{ Math.abs($now.toSeconds() - Number($('Events webhook').item.json.headers['x-sa-timestamp'])) }}",
+              "rightValue": 300,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5ebd89c2-d04a-55d0-8d93-dd28bd43742a",
+      "name": "Signature valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b4bf1a39-49ff-58d8-a4b2-3db5e2757bd7",
+              "name": "type",
+              "value": "={{ JSON.parse($('Raw body').item.json.rawBody).type }}",
+              "type": "string"
+            },
+            {
+              "id": "bd6b073a-b633-5697-b995-be7d1c6526f4",
+              "name": "eventId",
+              "value": "={{ JSON.parse($('Raw body').item.json.rawBody).eventId }}",
+              "type": "string"
+            },
+            {
+              "id": "17ad0e50-9c0c-5595-b26c-20d90f3e2e31",
+              "name": "agreementId",
+              "value": "={{ JSON.parse($('Raw body').item.json.rawBody).entityId }}",
+              "type": "string"
+            },
+            {
+              "id": "ba2fdefe-90c3-539f-8527-b3609f155aab",
+              "name": "orgId",
+              "value": "={{ JSON.parse($('Raw body').item.json.rawBody).orgId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "5b8b6f1c-f99b-5490-9b83-dce28c58c79a",
+      "name": "Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "24737f94-12b0-5b2d-aadb-ce6b6830461b",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "agreement.sent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "W1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e99c42db-0b0d-5ba5-b0ea-36b0c2c25816",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "agreement.refused",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "W3"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c4211751-be1e-5e56-bb18-9c7e0eb7c4fd",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "agreement.changes_requested",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "W3"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Ignored"
+        }
+      },
+      "id": "f3a33032-e357-5d6d-b496-656578019c60",
+      "name": "Route by type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "W1 agreement sent"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "0a4521d6-ced0-5931-b384-6f43fde29a4f",
+      "name": "Run W1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "W3 agreement decided"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "bd5f6402-a59a-5230-ac1a-6002a9833684",
+      "name": "Run W3",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        100
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2ac6ef97-364c-5533-bc93-07087dc77ffe",
+      "name": "Ignore other types",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3b4f6022-64e6-5db0-b61a-4fe86b94681e",
+      "name": "Ignore bad signature",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Events webhook": {
+      "main": [
+        [
+          {
+            "node": "Raw body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Raw body": {
+      "main": [
+        [
+          {
+            "node": "Sign raw body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign raw body": {
+      "main": [
+        [
+          {
+            "node": "Signature valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature valid": {
+      "main": [
+        [
+          {
+            "node": "Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore bad signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event": {
+      "main": [
+        [
+          {
+            "node": "Route by type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by type": {
+      "main": [
+        [
+          {
+            "node": "Run W1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run W3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run W3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore other types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

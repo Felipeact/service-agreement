@@ -4,8 +4,11 @@ import type { Database } from "./database.types";
 
 /** Reachable without a session, exactly (door 1). */
 const PUBLIC_PATHS = ["/login", "/auth/confirm"];
-/** Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`. */
-const PUBLIC_PREFIXES = ["/review/"];
+/**
+ * Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`,
+ * and n8n's signed callbacks post to `/api/automation/notify` (outbox-dispatch door 6).
+ */
+const PUBLIC_PREFIXES = ["/review/", "/api/automation/"];
 const SIGN_IN_PATH = "/login";
 const HOME_PATH = "/pipeline";
 
