@@ -586,6 +586,79 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          agreement_id: string | null
+          claimed_at: string
+          created_at: string
+          error: string | null
+          event_id: string | null
+          id: string
+          idempotency_key: string
+          kind: string
+          org_id: string
+          provider_message_id: string | null
+          recipients: string[]
+          sent_at: string | null
+          skip_reason: string | null
+          status: string
+        }
+        Insert: {
+          agreement_id?: string | null
+          claimed_at?: string
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          idempotency_key: string
+          kind: string
+          org_id: string
+          provider_message_id?: string | null
+          recipients?: string[]
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+        }
+        Update: {
+          agreement_id?: string | null
+          claimed_at?: string
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          org_id?: string
+          provider_message_id?: string | null
+          recipients?: string[]
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_agreement_id_org_id_fkey"
+            columns: ["agreement_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "agreements"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "notifications_event_id_org_id_fkey"
+            columns: ["event_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "notifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_settings: {
         Row: {
           accent_color: string | null
@@ -665,10 +738,12 @@ export type Database = {
           attempts: number
           available_at: string
           created_at: string
+          dispatched_at: string | null
           event_id: string
           id: string
           last_error: string | null
           org_id: string
+          request_id: number | null
           sent_at: string | null
           status: string
         }
@@ -676,10 +751,12 @@ export type Database = {
           attempts?: number
           available_at?: string
           created_at?: string
+          dispatched_at?: string | null
           event_id: string
           id?: string
           last_error?: string | null
           org_id: string
+          request_id?: number | null
           sent_at?: string | null
           status?: string
         }
@@ -687,10 +764,12 @@ export type Database = {
           attempts?: number
           available_at?: string
           created_at?: string
+          dispatched_at?: string | null
           event_id?: string
           id?: string
           last_error?: string | null
           org_id?: string
+          request_id?: number | null
           sent_at?: string | null
           status?: string
         }
@@ -720,6 +799,7 @@ export type Database = {
           org_id: string
           revoked_at: string | null
           token_hash: string
+          token_sealed: string | null
         }
         Insert: {
           agreement_version_id: string
@@ -729,6 +809,7 @@ export type Database = {
           org_id: string
           revoked_at?: string | null
           token_hash: string
+          token_sealed?: string | null
         }
         Update: {
           agreement_version_id?: string
@@ -738,6 +819,7 @@ export type Database = {
           org_id?: string
           revoked_at?: string | null
           token_hash?: string
+          token_sealed?: string | null
         }
         Relationships: [
           {
@@ -904,6 +986,19 @@ export type Database = {
         }
         Returns: string
       }
+      automation_claim: {
+        Args: { p_body: string; p_signature: string; p_timestamp: string }
+        Returns: Json
+      }
+      automation_complete: {
+        Args: {
+          p_body: string
+          p_results: Json
+          p_signature: string
+          p_timestamp: string
+        }
+        Returns: undefined
+      }
       commit_import: { Args: { p_job_id: string }; Returns: number }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
       portal_decide: {
@@ -926,19 +1021,39 @@ export type Database = {
         }
         Returns: number
       }
-      reissue_portal_link: {
-        Args: { p_agreement_id: string; p_token_hash: string }
-        Returns: string
-      }
-      send_agreement: {
-        Args: {
-          p_agreement_id: string
-          p_event_type: string
-          p_payload: Json
-          p_token_hash: string
-        }
-        Returns: string
-      }
+      reissue_portal_link:
+        | {
+            Args: { p_agreement_id: string; p_token_hash: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_agreement_id: string
+              p_token_hash: string
+              p_token_sealed: string
+            }
+            Returns: string
+          }
+      send_agreement:
+        | {
+            Args: {
+              p_agreement_id: string
+              p_event_type: string
+              p_payload: Json
+              p_token_hash: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_agreement_id: string
+              p_event_type: string
+              p_payload: Json
+              p_token_hash: string
+              p_token_sealed: string
+            }
+            Returns: string
+          }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
     }
     Enums: {
