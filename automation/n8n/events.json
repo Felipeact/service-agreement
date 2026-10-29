@@ -42,7 +42,7 @@
         "type": "SHA256",
         "value": "={{ $('Events webhook').item.json.headers['x-sa-timestamp'] }}.{{ $json.rawBody }}",
         "dataPropertyName": "expectedSignature",
-        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "secret": "__SA_HMAC_SECRET__",
         "encoding": "hex"
       },
       "id": "4dc6eeee-9ec7-5397-8583-6c020284e2e0",

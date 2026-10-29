@@ -74,6 +74,11 @@ describe("the Resend adapter", () => {
     expect(await sender.send(message())).toEqual({ ok: false, code: "unavailable" });
   });
 
+  test("C1039 (extra): a 409, a concurrent request with the same idempotency key, maps to unavailable", async () => {
+    fetchMock.mockResolvedValue(Response.json({ name: "concurrent_idempotent_requests" }, { status: 409 }));
+    expect(await sender.send(message())).toEqual({ ok: false, code: "unavailable" });
+  });
+
   test("C1039: a legal name containing a double quote is escaped in from", async () => {
     await sender.send(message({ fromName: 'The "Best" Heating' }));
     expect(sentBody().from).toBe('"The \\"Best\\" Heating" <agreements@felipeviana.com>');

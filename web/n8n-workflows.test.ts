@@ -153,7 +153,23 @@ describe("the n8n workflow exports", () => {
     expect(reachable(wf, router.name, 3).some((node) => node.type === "n8n-nodes-base.executeWorkflow")).toBe(false);
   });
 
-  test("C1035: the signature is checked before routing, over <X-SA-Timestamp>.<raw body>, with the 300 s window", () => {
+  test("C1035: no export contains $env, every notify URL starts with __SA_APP_BASE_URL__, every signer uses __SA_HMAC_SECRET__", () => {
+    let notifyCount = 0;
+    for (const file of FILES) {
+      expect(raw(file), file).not.toContain("$env");
+      const wf = load(file);
+      for (const call of notifyNodes(wf)) {
+        notifyCount += 1;
+        expect(String(call.parameters.url).startsWith("__SA_APP_BASE_URL__"), `${file} ${call.name}`).toBe(true);
+      }
+      for (const signer of wf.nodes.filter((node) => node.type === "n8n-nodes-base.crypto")) {
+        expect(signer.parameters.secret, `${file} ${signer.name}`).toBe("__SA_HMAC_SECRET__");
+      }
+    }
+    expect(notifyCount).toBe(5);
+  });
+
+  test("C1035: the signature is checked before routing, over <X-SA-Timestamp>.<raw body> with __SA_HMAC_SECRET__, with the 300 s window", () => {
     const wf = load("events.json");
     const webhook = wf.nodes.find((node) => node.type === "n8n-nodes-base.webhook") as N8nNode;
     expect(webhook.parameters.options).toMatchObject({ rawBody: true });
@@ -161,8 +177,8 @@ describe("the n8n workflow exports", () => {
     const crypto = wf.nodes.find((node) => node.type === "n8n-nodes-base.crypto") as N8nNode;
     expect(crypto.parameters).toMatchObject({ action: "hmac", type: "SHA256", encoding: "hex" });
     expect(crypto.parameters.value).toBe("={{ $('Events webhook').item.json.headers['x-sa-timestamp'] }}.{{ $json.rawBody }}");
-    // The secret comes from the instance, never from the export.
-    expect(String(crypto.parameters.secret)).toMatch(/^=\{\{ \$env\.[A-Z_]+ \}\}$/);
+    // A placeholder the operator replaces in n8n after import (plan Landing 13); the export never holds the secret.
+    expect(crypto.parameters.secret).toBe("__SA_HMAC_SECRET__");
 
     const gate = wf.nodes.find((node) => node.type === "n8n-nodes-base.if") as N8nNode;
     const conditions = (gate.parameters.conditions as { combinator: string; conditions: { leftValue: string; rightValue: unknown; operator: { operation: string } }[] });

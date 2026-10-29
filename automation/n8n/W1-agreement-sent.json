@@ -51,7 +51,7 @@
         "type": "SHA256",
         "value": "={{ $json.timestamp }}.{{ $json.body }}",
         "dataPropertyName": "signature",
-        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "secret": "__SA_HMAC_SECRET__",
         "encoding": "hex"
       },
       "id": "44bd3754-38d6-5d59-a330-4674296296a4",
@@ -66,7 +66,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -154,7 +154,7 @@
         "type": "SHA256",
         "value": "={{ $json.timestamp }}.{{ $json.body }}",
         "dataPropertyName": "signature",
-        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "secret": "__SA_HMAC_SECRET__",
         "encoding": "hex"
       },
       "id": "14c8c7c9-4e6c-5a69-af03-173dd2562663",
@@ -169,7 +169,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -257,7 +257,7 @@
         "type": "SHA256",
         "value": "={{ $json.timestamp }}.{{ $json.body }}",
         "dataPropertyName": "signature",
-        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "secret": "__SA_HMAC_SECRET__",
         "encoding": "hex"
       },
       "id": "60df6326-bc66-50ef-b5fe-38a568d418f5",
@@ -272,7 +272,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

@@ -60,7 +60,7 @@
         "type": "SHA256",
         "value": "={{ $json.timestamp }}.{{ $json.body }}",
         "dataPropertyName": "signature",
-        "secret": "={{ $env.SA_AUTOMATION_HMAC_SECRET }}",
+        "secret": "__SA_HMAC_SECRET__",
         "encoding": "hex"
       },
       "id": "4c29aa7a-57a3-5537-a29b-65efe0622934",
@@ -75,7 +75,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SA_APP_BASE_URL }}/api/automation/notify",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

@@ -431,6 +431,11 @@ describe("the link email of a sent agreement (outbox-dispatch AC 30)", () => {
     expect((await supabaseAgreementReader(stub.typed).get(AGR))?.linkEmail).toEqual(expected);
   });
 
+  test("C1032 (extra): a no_link_secret skip reads as not_sent with that reason", async () => {
+    const stub = stubClient({ ...base, events: ok({ id: "evt-1" }), notifications: ok({ status: "skipped", skip_reason: "no_link_secret", recipients: [], sent_at: null }) });
+    expect((await supabaseAgreementReader(stub.typed).get(AGR))?.linkEmail).toEqual({ status: "not_sent", reason: "no_link_secret" });
+  });
+
   test("C1032: a draft reads no notification", async () => {
     const draft = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
     draft.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
