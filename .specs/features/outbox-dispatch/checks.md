@@ -403,3 +403,19 @@ Expected follow-ons the build must report, not hide:
 - the C907 column list and the C830 pins (both named above)
 - the `CONTEXT.md` entries and the ROADMAP tick
 - the plan's AC 27 subject reads `<n> agreements …`, and C1029 also pins the singular `1 agreement …`, a wording refinement the user can overrule
+
+### Build record
+
+#### Batch 1 (database, 2026-10-29)
+
+- **Boundary:** closed C1001-C1009, the SQL halves of C1011-C1015, C1017, C1019-C1023, C1025-C1031, and C1036, C1037, C1040, C1041, C1042, C1043 (SQL half), C1045, in the two batch 1 commits: `7f42252` (migration, types, Landing rows, AD entries) and the `test(outbox)` commit that adds this record. Left for batch 2: C1010, C1016, C1018, C1024, C1032-C1035, C1038, C1039, C1044, C1046-C1051 and the vitest halves of C1002, C1011, C1012, C1014, C1015, C1017, C1019, C1020, C1025-C1027, C1029, C1043.
+- **Migration:** `apply_migration` recorded `20261029165430` / `outbox_dispatch`; the file is `supabase/migrations/20261029165430_outbox_dispatch.sql`. Applied with the user's go-ahead of 2026-10-29. No Vault secret was written on the live project, so the live `outbox-dispatch` job runs every minute as a no-op (5 runs checked, all `succeeded`, nothing queued).
+- **C1008 (live):** before applying, `outbox` held 8 rows, all `pending` (16:52:49 UTC). After: `select count(*) from outbox where status = 'pending' and created_at < '2026-10-29 16:54:30+00'` is 0, and all 8 rows are `failed` with `last_error = 'enqueued before dispatch existed'`.
+- **C1041 (live), `get_advisors` security after the migration:** 12 findings: `rls_enabled_no_policy` (`public.outbox`), `auth_leaked_password_protection`, and `anon_security_definer_function_executable` plus `authenticated_security_definer_function_executable` for exactly `automation_claim`, `automation_complete`, `portal_decide`, `portal_record_view`, `portal_view`. No `extension_in_public` (`pg_net` is in `extensions`, `pg_cron` in `pg_catalog`).
+- **Proofs:** `npm run test:db outbox_dispatch` and `customer_portal` pass; `npm run test:db` 18 passed, 0 failed; `npm test` 1600 passed (76 files); `npx tsc --noEmit` exit 0. Seven mutants of the migration (backoff value, 300 s window, `viewed` skip, owner/admin filter, batch size, 7-day rule, execution id overwrite) each failed the `outbox_dispatch` recipe.
+- **Settled mid-build:**
+  - Landing rows 9 (`outbox.dispatched_at`), 10 (the old RPC signatures kept as overloads; the new parameter has no default) and 11 (claim message shape, `to` as an array, extra `notifications` columns, complete's result shape) were appended to the plan before the code.
+  - Consequences of door 4 and the new recipe, edited and listed: `rls_isolation.sql` C35 (the public table list) now names `notifications` (19 tables), the same edit customer-portal made for `portal_links`; `runner.test.ts` counts 18 recipes and 20 files in C830, C203, C204, C205, C210, C211 and C212, and gains a `C1045:` test; customer-portal `C907 columns` lists `token_sealed`.
+  - A W1 event's version is the newest version created at or before the event (`agreement.sent` carries no `versionNo`); a reminder checks `superseded`, then `decided`, then `viewed`, then `no_recipient`, then `no_link_secret`. A W5 claim with no stale org returns `decision: skip`, `reason: none` and stores nothing.
+  - `web/node_modules` lacked the declared `@react-pdf/renderer`; `npm install` restored it from the lockfile (no lockfile change) so `tsc` could run.
+- **Abandoned:** dropping the old `send_agreement`/`reissue_portal_link`/`issue_portal_link` signatures (C943 looks them up); adding `versionNo` to the `agreement.sent` payload (changes an existing event shape that `transitions.sql` pins).

@@ -267,7 +267,7 @@ do $$ begin
   perform tests.ok('C907 columns',
     (select array_agg(column_name::text order by column_name) from information_schema.columns
      where table_schema = 'public' and table_name = 'portal_links')
-      = array['agreement_version_id', 'created_at', 'first_viewed_at', 'id', 'org_id', 'revoked_at', 'token_hash'],
+      = array['agreement_version_id', 'created_at', 'first_viewed_at', 'id', 'org_id', 'revoked_at', 'token_hash', 'token_sealed'],
     'portal_links has an unexpected column');
   perform tests.expect_error('C907 token refused',
     format('insert into public.portal_links (org_id, agreement_version_id, token_hash) values (%L, %L, %L)',
