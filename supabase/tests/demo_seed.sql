@@ -146,7 +146,7 @@ do $$ begin
     not exists (select 1 from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
                 where v.org_id = tests.demo()
                   and not (a.status = 'draft' and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id))
-                  and (v.snapshot ->> 'schema') is distinct from '1'),
+                  and coalesce(v.snapshot ->> 'schema', '') not in ('1', '2')),
     'a frozen demo version has no scope');
   perform tests.ok('C821 drafts live',
     (select count(*) from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
@@ -204,6 +204,23 @@ select l.id, l.visit_months::text as months,
        (select coalesce(array_agg(c.asset_type_id order by c.asset_type_id)::text, '{}')
         from public.service_line_asset_types c where c.service_line_id = l.id) as cover
 from public.service_lines l where l.org_id = tests.demo();
+
+-- C1104 (seasonal-tasks): the demo org's three seasonal tasks carry the catalog's months.
+do $$ begin
+  perform tests.ok('C1104 months',
+    (select array_agg(t.code || ':' || k.description || ':' || k.visit_months::text order by t.code, k.description)
+     from public.asset_type_tasks k join public.asset_types t on t.id = k.asset_type_id
+     where k.org_id = tests.demo() and k.visit_months is not null)
+      = array['ERV:Check heating operation:{1,2,3,10,11,12}',
+              'RTU:Check compressor operation during cooling operation:{4,5,6,7,8,9}',
+              'RTU:Inspect heat exchanger during heating season:{1,2,3,10,11,12}'],
+    'the demo org''s seasonal tasks differ from the catalog''s');
+end $$;
+
+-- Every demo task after the first run, for C1104 on the second.
+create table tests.demo_tasks as
+select md5(coalesce(string_agg(k.id::text || ':' || k.description || ':' || coalesce(k.visit_months::text, 'null'), ',' order by k.id), '')) as h
+from public.asset_type_tasks k where k.org_id = tests.demo();
 
 -- Counts after the first run, for C19.
 create table tests.demo_counts as

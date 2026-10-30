@@ -55,5 +55,13 @@ do $$ begin
     'the second run changed the number of demo coverage rows');
 end $$;
 
+-- C1104 (seasonal-tasks): the second run leaves every demo task as it was.
+do $$ begin
+  perform tests.ok('C1104 rerun',
+    (select md5(coalesce(string_agg(k.id::text || ':' || k.description || ':' || coalesce(k.visit_months::text, 'null'), ',' order by k.id), ''))
+     from public.asset_type_tasks k where k.org_id = tests.demo()) = (select h from tests.demo_tasks),
+    'the second run changed a demo task');
+end $$;
+
 rollback;
 select 'demo_seed: pass' as result;

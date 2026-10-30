@@ -1,4 +1,4 @@
--- service-included: C801, C802, C808, C810-C814, C817, C819, C823, C832. Run after fixture.sql in the same
+-- service-included: C801, C802, C808, C810-C814, C817, C819, C823, C832; seasonal-tasks: C1100-C1102, C1105, C1106. Run after fixture.sql in the same
 -- execute_sql call (npm run test:db service_included). Fixture: org A owner uA, estimator uE, viewer uV; siteA with
 -- RTU-1 of typeA (RTU, "Rooftop unit", task "Replace filters" at position 1); siteB in org B.
 -- Setup runs as the table owner with no signed-in user.
@@ -93,7 +93,7 @@ declare
 begin
   perform tests.ok('C801 top keys', (select array_agg(k order by k) from jsonb_object_keys(doc) k) = array['schema', 'types'],
     'top-level keys are not exactly schema and types: ' || doc::text);
-  perform tests.ok('C801 schema', doc -> 'schema' = '1'::jsonb, 'schema is not 1');
+  perform tests.ok('C801 schema', doc -> 'schema' = '2'::jsonb, 'schema is not 2');
   perform tests.ok('C801 no takenAt', not doc ? 'takenAt', 'a live scope carries takenAt');
   perform tests.ok('C801 two types', jsonb_array_length(doc -> 'types') = 2, 'not exactly 2 types: ' || doc::text);
   perform tests.ok('C801 type keys',
@@ -103,7 +103,7 @@ begin
   select t into rtu from jsonb_array_elements(doc -> 'types') t where t ->> 'code' = 'RTU';
   select t into boiler from jsonb_array_elements(doc -> 'types') t where t ->> 'code' = 'BOILER';
   perform tests.ok('C801 RTU name', rtu ->> 'name' = 'Rooftop unit', 'RTU name is wrong');
-  perform tests.ok('C801 RTU tasks', rtu -> 'tasks' = '["Replace filters", "Check belts"]'::jsonb,
+  perform tests.ok('C801 RTU tasks', rtu -> 'tasks' = '[{"description": "Replace filters", "visitMonths": null}, {"description": "Check belts", "visitMonths": null}]'::jsonb,
     'RTU tasks are not in position order: ' || (rtu -> 'tasks')::text);
   perform tests.ok('C801 BOILER tasks', boiler -> 'tasks' = '[]'::jsonb, 'a type without tasks does not give []');
   perform tests.ok('C801 asset counts', jsonb_array_length(rtu -> 'assets') = 2 and jsonb_array_length(boiler -> 'assets') = 1,
@@ -133,7 +133,8 @@ select tests.si_asset('s801order', 'orderA', 'O-1');
 select tests.act_as('uE');
 do $$ begin
   perform tests.ok('C801 position order',
-    (select t -> 'tasks' from jsonb_array_elements(public.site_service_scope(tests.id('s801order')) -> 'types') t) = '["First", "Second"]'::jsonb,
+    (select t -> 'tasks' from jsonb_array_elements(public.site_service_scope(tests.id('s801order')) -> 'types') t)
+      = '[{"description": "First", "visitMonths": null}, {"description": "Second", "visitMonths": null}]'::jsonb,
     'tasks are not in position order when creation and id order disagree');
 end $$;
 
@@ -143,9 +144,36 @@ do $$ begin
     (select array_agg(t ->> 'code' order by t ->> 'code') from jsonb_array_elements(public.site_service_scope(tests.id('s801')) -> 'types') t)
       = array['BOILER', 'RTU'],
     'the scope holds a type from another site or a type with no asset on the site');
-  perform tests.ok('C802 other org', public.site_service_scope(tests.id('siteB')) = '{"schema": 1, "types": []}'::jsonb,
+  perform tests.ok('C802 other org', public.site_service_scope(tests.id('siteB')) = '{"schema": 2, "types": []}'::jsonb,
     'org B''s site does not give an empty scope');
 end $$;
+
+-- C1105 (seasonal-tasks): schema 2, each task exactly {description, visitMonths}, months as set. Then back to null, so
+-- the C808 assertions below read the fixture as it was.
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.asset_type_tasks set visit_months = '{4,5,6,7,8,9}' where id = tests.id('rtuTask2');
+select tests.act_as('uE');
+do $$
+declare
+  doc jsonb := public.site_service_scope(tests.id('s801'));
+begin
+  perform tests.ok('C1105 schema', doc -> 'schema' = '2'::jsonb, 'schema is not 2: ' || doc::text);
+  perform tests.ok('C1105 task keys',
+    (select bool_and((select array_agg(k order by k) from jsonb_object_keys(task) k) = array['description', 'visitMonths'])
+     from jsonb_array_elements(doc -> 'types') t, jsonb_array_elements(t -> 'tasks') task),
+    'a task does not have exactly description and visitMonths');
+  perform tests.ok('C1105 RTU tasks',
+    (select t -> 'tasks' from jsonb_array_elements(doc -> 'types') t where t ->> 'code' = 'RTU')
+      = '[{"description": "Replace filters", "visitMonths": null}, {"description": "Check belts", "visitMonths": [4, 5, 6, 7, 8, 9]}]'::jsonb,
+    'RTU tasks do not carry their months: ' || doc::text);
+  perform tests.ok('C1105 other org', public.site_service_scope(tests.id('siteB')) = '{"schema": 2, "types": []}'::jsonb,
+    'org B''s site does not give an empty schema 2 scope');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.asset_type_tasks set visit_months = null where id = tests.id('rtuTask2');
+select tests.act_as('uE');
 
 -- C808: a live scope follows the site and the checklists on every call.
 do $$
@@ -155,7 +183,7 @@ begin
   values (tests.id('s808:CH-1'), tests.id('orgA'), tests.id('s808'), tests.id('chillerA'), 'CH-1');
   doc := public.site_service_scope(tests.id('s808'));
   perform tests.ok('C808 asset added',
-    exists (select 1 from jsonb_array_elements(doc -> 'types') t where t ->> 'code' = 'CHILLER' and t -> 'tasks' = '["Check oil"]'::jsonb),
+    exists (select 1 from jsonb_array_elements(doc -> 'types') t where t ->> 'code' = 'CHILLER' and t -> 'tasks' = '[{"description": "Check oil", "visitMonths": null}]'::jsonb),
     'the new type is not in the next scope: ' || doc::text);
 end $$;
 reset role;
@@ -167,7 +195,8 @@ declare doc jsonb := public.site_service_scope(tests.id('s808'));
 begin
   perform tests.ok('C808 task updated',
     exists (select 1 from jsonb_array_elements(doc -> 'types') t
-            where t ->> 'code' = 'RTU' and t -> 'tasks' = '["Replace filters", "Check and tension belts"]'::jsonb),
+            where t ->> 'code' = 'RTU'
+              and t -> 'tasks' = '[{"description": "Replace filters", "visitMonths": null}, {"description": "Check and tension belts", "visitMonths": null}]'::jsonb),
     'the task change is not in the next scope: ' || doc::text);
   delete from public.assets where id = tests.id('s808:CH-1');
   doc := public.site_service_scope(tests.id('s808'));
@@ -316,6 +345,86 @@ do $$ begin
   perform tests.expect_error('C823 anon transition', tests.si_transition('a819', 'draft', 'sent', 'agreement.sent'), '42501');
 end $$;
 reset role;
+
+
+-- C1100 (seasonal-tasks): door 1 on both task tables.
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$
+declare
+  bad text;
+  catalog_sql constant text := 'update private.catalog_asset_type_tasks set visit_months = %s where code = ''AHU'' and position = 1';
+  org_sql constant text := 'update public.asset_type_tasks set visit_months = %s where id = %L';
+begin
+  foreach bad in array array['''{}''', '''{6,3}''', '''{3,3}''', '''{0}''', '''{13}'''] loop
+    perform tests.expect_error('C1100 tasks ' || bad, format(org_sql, bad, tests.id('rtuTask2')), '23514');
+    perform tests.expect_error('C1100 catalog ' || bad, format(catalog_sql, bad), '23514');
+  end loop;
+  execute format(org_sql, 'null', tests.id('rtuTask2'));
+  execute format(org_sql, '''{4,5,6,7,8,9}''', tests.id('rtuTask2'));
+  perform tests.ok('C1100 tasks accepted',
+    (select visit_months from public.asset_type_tasks where id = tests.id('rtuTask2')) = '{4,5,6,7,8,9}'::smallint[],
+    'asset_type_tasks does not accept null and {4,5,6,7,8,9}');
+  execute format(catalog_sql, 'null');
+  execute format(catalog_sql, '''{4,5,6,7,8,9}''');
+  perform tests.ok('C1100 catalog accepted',
+    (select visit_months from private.catalog_asset_type_tasks where code = 'AHU' and position = 1) = '{4,5,6,7,8,9}'::smallint[],
+    'the catalog does not accept null and {4,5,6,7,8,9}');
+  execute format(catalog_sql, 'null');
+  execute format(org_sql, 'null', tests.id('rtuTask2'));
+end $$;
+
+-- C1101 (seasonal-tasks): exactly three seasonal catalog tasks, with their months.
+do $$ begin
+  perform tests.ok('C1101 count', (select count(*) from private.catalog_asset_type_tasks where visit_months is not null) = 3,
+    'the catalog does not hold exactly 3 seasonal tasks');
+  perform tests.ok('C1101 months',
+    (select array_agg(code || ':' || description || ':' || visit_months::text order by code, description)
+     from private.catalog_asset_type_tasks where visit_months is not null)
+      = array['ERV:Check heating operation:{1,2,3,10,11,12}',
+              'RTU:Check compressor operation during cooling operation:{4,5,6,7,8,9}',
+              'RTU:Inspect heat exchanger during heating season:{1,2,3,10,11,12}'],
+    'the seasonal catalog tasks or their months differ');
+end $$;
+
+-- C1102 (seasonal-tasks): seed_org_catalog copies the months into a new org.
+insert into public.orgs (id, name) values (tests.id('org1102'), 'Seasonal (test)');
+select private.seed_org_catalog(tests.id('org1102'));
+do $$ begin
+  perform tests.ok('C1102 copied',
+    (select array_agg(t.code || ':' || k.description || ':' || k.visit_months::text order by t.code, k.description)
+     from public.asset_type_tasks k join public.asset_types t on t.id = k.asset_type_id
+     where k.org_id = tests.id('org1102') and k.visit_months is not null)
+      = array['ERV:Check heating operation:{1,2,3,10,11,12}',
+              'RTU:Check compressor operation during cooling operation:{4,5,6,7,8,9}',
+              'RTU:Inspect heat exchanger during heating season:{1,2,3,10,11,12}'],
+    'the new org''s seasonal tasks differ from the catalog''s');
+end $$;
+
+-- C1106 (seasonal-tasks): sending freezes the months as they are, and a later change leaves the snapshot alone.
+select tests.si_agr('a1106', 'draft');
+update public.asset_type_tasks set visit_months = '{4,5,6,7,8,9}' where id = tests.id('rtuTask2');
+select tests.act_as('uE');
+do $$ begin execute tests.si_transition('a1106', 'draft', 'sent', 'agreement.sent'); end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+create temporary table c1106 as select tests.si_snapshot('a1106:v1') as snapshot;
+do $$
+declare v1 jsonb := (select snapshot from c1106);
+begin
+  perform tests.ok('C1106 schema', v1 -> 'schema' = '2'::jsonb, 'the frozen snapshot is not schema 2: ' || coalesce(v1::text, 'null'));
+  perform tests.ok('C1106 months',
+    exists (select 1 from jsonb_array_elements(v1 -> 'types') t, jsonb_array_elements(t -> 'tasks') task
+            where t ->> 'code' = 'RTU'
+              and task = jsonb_build_object('description', (select description from public.asset_type_tasks where id = tests.id('rtuTask2')),
+                                            'visitMonths', '[4, 5, 6, 7, 8, 9]'::jsonb)),
+    'the frozen RTU task does not carry its months: ' || coalesce(v1::text, 'null'));
+end $$;
+update public.asset_type_tasks set visit_months = '{6}' where id = tests.id('rtuTask2');
+do $$ begin
+  perform tests.ok('C1106 unchanged', tests.si_snapshot('a1106:v1')::text = (select snapshot from c1106)::text,
+    'changing the task''s months changed the frozen snapshot');
+end $$;
 
 rollback;
 select 'service_included: pass' as result;
