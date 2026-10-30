@@ -321,6 +321,17 @@ Proof: `npm run test:db cadence` (assertions `C1099`)
   gives `[4, 10]`, Quarterly gives `[3, 6, 9, 12]`; the grid is 6 columns at 375 and 12 at 1440, each month cell 44x44 at
   375. The 375 run found the month text clipped beside the box; fixed by stacking box over month below md (d737b13
   commit). Remaining for the user: an add-and-save on a draft, e.g. AG-1051, then removing the line.
+- **Live (C1097, add-and-save, 2026-10-30, after Verifier round 1 at `724d5f9`; the user approved one line on AG-1051):** on
+  `npm run dev` (a stale dev server on :3000 answering 500 "Jest worker encountered 2 child process exceptions" was stopped
+  and restarted first), Playwright MCP, the one signed-in demo-owner context, every control scoped to its region or row.
+  Before: AG-1051 `Version 1`, draft, no lines, `Total per year $0.00`, `No visits scheduled yet`. At 1440 px, in "Add a
+  line": description `C1097 live check`, RTU ticked, Quarterly pressed (checked `3, 6, 9, 12`), cost `250.00`, "Add line".
+  After save, at 1440 and again after a reload at 375: the row reads `C1097 live check | Mar, Jun, Sep, Dec · 4 visits/yr |
+  RTU | ... $250.00 | $1,000.00`, `Total per year $1,000.00`; `Visit schedule` lists March, June, September, December, each
+  `RTU`; `Download PDF` (`/pdf?version=1`) answers `200 application/pdf` (6,060 bytes) at both widths; no horizontal scroll
+  at either width; console 0 errors, 0 warnings since the restart. Then the row's "Remove", the prompt `Remove C1097 live
+  check?`, and "Remove": after a reload AG-1051 shows `No service lines yet.`, `Total per year $0.00` and `No visits
+  scheduled yet`, as before. C1097 passes; the only demo-data write was that one line, now deleted.
 - **Boundary (batch 2):** at `ec679e5` (on `237362f`, `d737b13`), C1061 vitest half, C1062, C1063, C1064, C1065, C1066, C1067,
   C1068, C1069, C1072, C1074, C1075, C1080, C1081, C1082 vitest half, C1083, C1084, C1085, C1086, C1089, C1095, C1096,
   C1098 closed; C1097 partly run (above). Proofs: each named `npx vitest run <dir> -t "<id>:"` passed; `npm test` 90 files,
