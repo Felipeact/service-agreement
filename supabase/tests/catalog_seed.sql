@@ -280,7 +280,7 @@ end $$;
 -- C25
 do $$ begin
   perform tests.expect_error('C25 type',
-    'insert into private.catalog_asset_types (code, name) values (''RTU'', ''x'')', '23505');
+    'insert into private.catalog_asset_types (code, name, default_visit_months) values (''RTU'', ''x'', ''{3,6,9,12}'')', '23505');
   perform tests.expect_error('C25 task',
     'insert into private.catalog_asset_type_tasks (code, position, description) values (''RTU'', 1, ''x'')', '23505');
 end $$;
@@ -300,7 +300,7 @@ begin
       format('insert into public.asset_types (org_id, code, name) values (%L, %L, ''x'')', a, v), 1);
   end loop;
   perform tests.expect_error('C6 template rtu',
-    'insert into private.catalog_asset_types (code, name) values (''rtu'', ''x'')', '23514');
+    'insert into private.catalog_asset_types (code, name, default_visit_months) values (''rtu'', ''x'', ''{3,6,9,12}'')', '23514');
 end $$;
 
 -- C26

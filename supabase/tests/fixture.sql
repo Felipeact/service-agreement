@@ -101,7 +101,7 @@ begin
     when 'agreements' then format('insert into public.agreements (org_id, site_id, status) values (%L, %L, ''withdrawn'')', o, tests.id('site' || p_org))
     when 'agreement_versions' then format('insert into public.agreement_versions (org_id, agreement_id, version_no) values (%L, %L, %s)', o, tests.id('agr' || p_org), 1000 + floor(random() * 900000)::int)
     -- The latest version of agr<org>: a member may write lines only there (agreement-builder door 4).
-    when 'service_lines' then format('insert into public.service_lines (org_id, agreement_version_id, description, visits_per_year, cost_per_visit_cents) values (%L, %L, %L, 4, 50000)', o, tests.latest_version(tests.id('agr' || p_org)), 'Line ' || r)
+    when 'service_lines' then format('insert into public.service_lines (org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents) values (%L, %L, %L, ''{3,6,9,12}'', 4, 50000)', o, tests.latest_version(tests.id('agr' || p_org)), 'Line ' || r)
     when 'contracts' then format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', o, tests.id('ver2' || p_org))
     when 'events' then format('insert into public.events (org_id, entity_type, entity_id, type) values (%L, ''agreement'', %L, ''agreement.sent'')', o, tests.id('agr' || p_org))
     when 'outbox' then format('insert into public.outbox (org_id, event_id) values (%L, %L)', o, tests.id('evt2' || p_org))
@@ -144,7 +144,7 @@ begin
     insert into public.agreements (id, org_id, site_id) values (tests.id('agr' || o), tests.id('org' || o), tests.id('site' || o));
     insert into public.agreement_versions (id, org_id, agreement_id, version_no) values (tests.id('ver' || o), tests.id('org' || o), tests.id('agr' || o), 1);
     insert into public.agreement_versions (id, org_id, agreement_id, version_no) values (tests.id('ver2' || o), tests.id('org' || o), tests.id('agr' || o), 2);
-    insert into public.service_lines (id, org_id, agreement_version_id, description, visits_per_year, cost_per_visit_cents) values (tests.id('line' || o), tests.id('org' || o), tests.id('ver2' || o), 'Quarterly PM', 4, 35700);
+    insert into public.service_lines (id, org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents) values (tests.id('line' || o), tests.id('org' || o), tests.id('ver2' || o), 'Quarterly PM', '{3,6,9,12}', 4, 35700);
     insert into public.contracts (id, org_id, agreement_version_id) values (tests.id('con' || o), tests.id('org' || o), tests.id('ver' || o));
     insert into public.events (id, org_id, entity_type, entity_id, type) values (tests.id('evt' || o), tests.id('org' || o), 'agreement', tests.id('agr' || o), 'agreement.sent');
     insert into public.events (id, org_id, entity_type, entity_id, type) values (tests.id('evt2' || o), tests.id('org' || o), 'agreement', tests.id('agr' || o), 'agreement.accepted');

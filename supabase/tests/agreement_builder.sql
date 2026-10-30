@@ -36,8 +36,9 @@ $$;
 create function tests.ab_line(p_version text, p_position integer, p_description text default 'Quarterly PM',
                               p_visits integer default 4, p_cost bigint default 89250) returns uuid
 language sql as $$
-  insert into public.service_lines (id, org_id, agreement_version_id, position, description, visits_per_year, cost_per_visit_cents)
-  select tests.id(p_version || ':l' || p_position), v.org_id, v.id, p_position, p_description, p_visits, p_cost
+  insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
+  select tests.id(p_version || ':l' || p_position), v.org_id, v.id, p_position, p_description,
+         (select array_agg(m::smallint order by m) from generate_series(1, p_visits) m), p_visits, p_cost
   from public.agreement_versions v where v.id = tests.id(p_version)
   returning id
 $$;
@@ -46,8 +47,8 @@ create function tests.ab_line_sql(p_op text, p_version text, p_line uuid) return
 language sql as $$
   select case p_op
     when 'insert' then format(
-      'insert into public.service_lines (org_id, agreement_version_id, description, visits_per_year, cost_per_visit_cents) '
-      || 'select org_id, id, ''New line'', 2, 15000 from public.agreement_versions where id = %L', tests.id(p_version))
+      'insert into public.service_lines (org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents) '
+      || 'select org_id, id, ''New line'', ''{4,10}'', 2, 15000 from public.agreement_versions where id = %L', tests.id(p_version))
     when 'update' then format('update public.service_lines set description = ''Changed'' where id = %L', p_line)
     when 'delete' then format('delete from public.service_lines where id = %L', p_line)
   end
@@ -184,8 +185,8 @@ declare v uuid := current_setting('tests.first')::uuid; ver uuid; line uuid;
 begin
   ver := (select id from public.agreement_versions where agreement_id = v and version_no = 1);
   perform tests.expect_rows('C717 insert',
-    format('insert into public.service_lines (org_id, agreement_version_id, description, visits_per_year, cost_per_visit_cents) '
-      || 'values (%L, %L, ''Filter changes'', 2, 15000)', tests.id('orgA'), ver), 1);
+    format('insert into public.service_lines (org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents) '
+      || 'values (%L, %L, ''Filter changes'', ''{4,10}'', 2, 15000)', tests.id('orgA'), ver), 1);
   line := (select id from public.service_lines where agreement_version_id = ver);
   perform tests.expect_rows('C717 update', format('update public.service_lines set description = ''Filters'' where id = %L', line), 1);
   perform tests.expect_rows('C717 delete', format('delete from public.service_lines where id = %L', line), 1);
@@ -314,8 +315,8 @@ do $$ begin
   perform tests.expect_rows('C742 update', format('update public.service_lines set description = ''A'' where id = %L', tests.id('lineB')), 0);
   perform tests.expect_rows('C742 delete', format('delete from public.service_lines where id = %L', tests.id('lineB')), 0);
   begin
-    execute format('insert into public.service_lines (org_id, agreement_version_id, description, visits_per_year, cost_per_visit_cents) '
-      || 'values (%L, %L, ''x'', 1, 0)', tests.id('orgB'), tests.id('ver2B'));
+    execute format('insert into public.service_lines (org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents) '
+      || 'values (%L, %L, ''x'', ''{1}'', 1, 0)', tests.id('orgB'), tests.id('ver2B'));
     raise exception 'C742 insert: statement succeeded';
   exception when others then
     if sqlstate not in ('42501', '23503') then

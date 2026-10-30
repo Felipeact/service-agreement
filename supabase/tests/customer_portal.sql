@@ -41,8 +41,8 @@ begin
   insert into public.agreement_versions (id, org_id, agreement_id, version_no)
   values (tests.id(p_name || ':v1'), tests.id('org' || p_org), tests.id(p_name), 1);
   for i in 1 .. p_lines loop
-    insert into public.service_lines (id, org_id, agreement_version_id, position, description, visits_per_year, cost_per_visit_cents)
-    values (tests.id(p_name || ':l' || i), tests.id('org' || p_org), tests.id(p_name || ':v1'), i, p_name || ' line ' || i, 4, 50000 * i);
+    insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
+    values (tests.id(p_name || ':l' || i), tests.id('org' || p_org), tests.id(p_name || ':v1'), i, p_name || ' line ' || i, '{3,6,9,12}', 4, 50000 * i);
   end loop;
   return tests.id(p_name);
 end $$;
@@ -560,8 +560,8 @@ select tests.cp_sent('a940');
 select tests.cp_sent('b940', 'B');
 select tests.cp_sent('a940v');
 insert into public.agreement_versions (id, org_id, agreement_id, version_no) values (tests.id('a940v:v2'), tests.id('orgA'), tests.id('a940v'), 2);
-insert into public.service_lines (id, org_id, agreement_version_id, position, description, visits_per_year, cost_per_visit_cents)
-values (tests.id('a940v:l9'), tests.id('orgA'), tests.id('a940v:v2'), 1, 'Only in version 2', 1, 100);
+insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
+values (tests.id('a940v:l9'), tests.id('orgA'), tests.id('a940v:v2'), 1, 'Only in version 2', '{10}', 1, 100);
 select tests.act_as_anon();
 do $$
 declare d jsonb := public.portal_view(tests.cp_hash('a940'));

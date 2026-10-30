@@ -13,8 +13,8 @@ do $$ begin
     (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public')
     = (select array_agg(t order by t) from unnest(array['orgs','memberships','org_settings','customers','contacts',
         'sites','asset_types','asset_type_tasks','assets','agreements','agreement_versions','service_lines',
-        'contracts','events','outbox','import_jobs','import_rows','portal_links','notifications']) as t),
-    'public tables differ from the 19 in the plans (supabase-init, import-upload, import-extract, customer-portal, outbox-dispatch)');
+        'contracts','events','outbox','import_jobs','import_rows','portal_links','notifications','service_line_asset_types']) as t),
+    'public tables differ from the 20 in the plans (supabase-init, import-upload, import-extract, customer-portal, outbox-dispatch, cadence)');
 end $$;
 
 -- C36
@@ -73,7 +73,7 @@ begin
   perform tests.expect_error('C5 agreement_versions->agreements',
     format('insert into public.agreement_versions (org_id, agreement_id, version_no) values (%L, %L, 99)', a, tests.id('agrB')), '23503');
   perform tests.expect_error('C5 service_lines->agreement_versions',
-    format('insert into public.service_lines (org_id, agreement_version_id, description, visits_per_year, cost_per_visit_cents) values (%L, %L, ''x'', 1, 0)', a, tests.id('verB')), '23503');
+    format('insert into public.service_lines (org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents) values (%L, %L, ''x'', ''{1}'', 1, 0)', a, tests.id('verB')), '23503');
   perform tests.expect_error('C5 contracts->agreement_versions',
     format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', a, tests.id('ver2B')), '23503');
   perform tests.expect_error('C5 outbox->events',

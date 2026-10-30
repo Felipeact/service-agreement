@@ -181,6 +181,30 @@ update public.org_settings set repair_discount_pct = 42 where org_id = tests.dem
 create table tests.demo_snapshots as
 select id, snapshot::text as snapshot from public.agreement_versions where org_id = tests.demo();
 
+-- C1094 (cadence): every demo line has months, and covers something when its site has assets.
+do $$ begin
+  perform tests.ok('C1094 lines', (select count(*) from public.service_lines where org_id = tests.demo()) > 0, 'no demo lines');
+  perform tests.ok('C1094 months',
+    not exists (select 1 from public.service_lines where org_id = tests.demo()
+                and (visit_months is null or cardinality(visit_months) = 0)),
+    'a demo line has no visit months');
+  perform tests.ok('C1094 coverage',
+    not exists (select 1 from public.service_lines l
+                join public.agreement_versions v on v.id = l.agreement_version_id
+                join public.agreements a on a.id = v.agreement_id
+                where l.org_id = tests.demo()
+                  and exists (select 1 from public.assets s where s.site_id = a.site_id)
+                  and not exists (select 1 from public.service_line_asset_types c where c.service_line_id = l.id)),
+    'a demo line on a site with assets covers nothing');
+end $$;
+
+-- Months and coverage after the first run, for C1094 on the second.
+create table tests.demo_cadence as
+select l.id, l.visit_months::text as months,
+       (select coalesce(array_agg(c.asset_type_id order by c.asset_type_id)::text, '{}')
+        from public.service_line_asset_types c where c.service_line_id = l.id) as cover
+from public.service_lines l where l.org_id = tests.demo();
+
 -- Counts after the first run, for C19.
 create table tests.demo_counts as
 select 'orgs' as t, (select count(*) from public.orgs where id = tests.demo()) as n

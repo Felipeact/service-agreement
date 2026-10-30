@@ -38,5 +38,22 @@ do $$ begin
     'a frozen demo version has no terms after the second run');
 end $$;
 
+-- C1094 (cadence): the second run changes no line's months or coverage, and adds no line.
+do $$ begin
+  perform tests.ok('C1094 rerun lines',
+    (select count(*) from public.service_lines where org_id = tests.demo()) = (select count(*) from tests.demo_cadence),
+    'the second run changed the number of demo lines');
+  perform tests.ok('C1094 rerun',
+    not exists (select 1 from tests.demo_cadence d join public.service_lines l on l.id = d.id
+                where l.visit_months::text <> d.months
+                   or (select coalesce(array_agg(c.asset_type_id order by c.asset_type_id)::text, '{}')
+                       from public.service_line_asset_types c where c.service_line_id = l.id) <> d.cover),
+    'the second run changed a demo line''s months or coverage');
+  perform tests.ok('C1094 rerun coverage rows',
+    (select count(*) from public.service_line_asset_types where org_id = tests.demo())
+    = (select coalesce(sum(cardinality(cover::uuid[])), 0) from tests.demo_cadence),
+    'the second run changed the number of demo coverage rows');
+end $$;
+
 rollback;
 select 'demo_seed: pass' as result;
