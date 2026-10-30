@@ -92,6 +92,6 @@
 **Next step**: ROADMAP Phase 3.5 item 2, cadence (service lines cover equipment types and hold visit months)
 **Open, non-failing**: Verifier notes on pipeline-site-cards: C1059 asserts the label text, not the `aria-label` attribute; C1055 proves no-truncation by class only. Carried from outbox-dispatch: plan open question 4 (rate limiting for `/api/automation/*`); the Railway app's URL is not yet in the Supabase Auth redirect list; `seed.sql` never resets statuses
 **Blockers**: none
-**Uncommitted**: ROADMAP.md - the user's Phase 3.5 additions plus this item's tick, left for the user to commit
+**Uncommitted**: none
 **Branch**: development (local commits, not pushed)
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migration `20261029165430_outbox_dispatch` applied; Vault holds `automation_hmac_secret` and `n8n_events_url`, so the `outbox-dispatch` job sends to n8n every minute. Demo data: AG-1046 and AG-1048 were sent by the live runs (AG-1048's contact restored to `@example.com`)
