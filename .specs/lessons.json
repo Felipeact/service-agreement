@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 18,
+  "next_id": 19,
   "lessons": [
     {
       "id": "L-001",
@@ -310,6 +310,24 @@
       ],
       "created": "2026-10-27T20:50:10Z",
       "last_seen": "2026-10-27T20:50:10Z"
+    },
+    {
+      "id": "L-018",
+      "key": "ac_gap::before naming a demo record in a live check that writes confirm its current status allows the write or name the write authorised record in the claim",
+      "text": "Before naming a demo record in a live check that writes, confirm its current status allows the write, or name the write-authorised record in the claim.",
+      "signal": "ac_gap",
+      "scope": "live validation",
+      "status": "candidate",
+      "features": [
+        "cadence"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md C1097 (checks.md Handoff Live: add/save not run, AG-1046 is sent) (live validation)"
+      ],
+      "created": "2026-10-30T20:55:00Z",
+      "last_seen": "2026-10-30T20:55:00Z"
     }
   ]
 }

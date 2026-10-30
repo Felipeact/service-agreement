@@ -116,6 +116,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C716 web/components/agreements/agreements.test.ts:36 (fault F2) (components)
 - last seen: 2026-10-27T20:50:10Z
 
+### L-018 - Before naming a demo record in a live check that writes, confirm its current status allows the write, or name the write-authorised record in the claim.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `live validation` · harmful: 0
+- features: cadence
+- evidence: verification.md C1097 (checks.md Handoff Live: add/save not run, AG-1046 is sent) (live validation)
+- last seen: 2026-10-30T20:55:00Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
