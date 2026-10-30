@@ -284,3 +284,30 @@ Proof: `npm run test:db cadence` (assertions `C1099`)
   batch 2 = the app (domain, adapters, form, views, PDF, portal, C1061-C1069, C1072, C1074, C1075, C1080-C1086,
   C1089, C1095-C1098).
 - Mechanism: handoff - chosen by the user 2026-10-30; batch 1 the database, batch 2 the app, sequential and only on green
+- Pre-apply (mcp `execute_sql`, 2026-10-30, project `gnxebrtcpbujhvcamtoe`): `select count(*) from public.service_lines where
+  visits_per_year > 12` = `0` (C1092). AG-1046 v1: 4 visits × 540000 = 2160000; AG-1048 v1 and v2: 4 visits × 357000 =
+  1428000 each (C1091 baseline). 14 service lines, 40 asset types, none outside the catalog.
+- Post-apply (mcp `execute_sql`, 2026-10-30): C1077 query = `0`. C1091: `0` lines with `visits_per_year <> cardinality(visit_months)`;
+  AG-1046 v1 4 visits `{3,6,9,12}` annual 2160000 (540000 × 4), AG-1048 v1 and v2 4 visits `{3,6,9,12}` annual 1428000
+  (357000 × 4), unchanged from the pre-apply baseline; `0` lines on a site with assets lack coverage (14 lines, 55
+  coverage rows). `get_advisors` security: no new finding (outbox `rls_enabled_no_policy`, the five AD-068 / outbox
+  definer RPCs, leaked-password protection - all pre-existing).
+- Migration history: the user applied `cadence_draft.sql` (md5 f25a6d5e5682da3d2f4dc4e7ca41dad2) in the SQL editor after
+  `apply_migration` was declined; it is committed unchanged as `20261030120000_cadence.sql`, and the row
+  `('20261030120000', 'cadence')` was inserted into `supabase_migrations.schema_migrations` (list_migrations shows it),
+  so `supabase db push` will not re-apply it (AD-006).
+- **Boundary (batch 1):** at `4f87593` (on `aaa8e6a`), C1060, C1061 SQL half, C1070, C1071, C1073, C1076, C1077, C1078,
+  C1079, C1082 SQL half, C1087, C1088, C1090, C1091, C1092, C1093, C1094, C1099 closed. Proofs: `npm run test:db cadence`
+  PASS, `npm run test:db demo_seed` PASS, `npm run test:db` 19 passed, 0 failed; C1077/C1091/C1092 by mcp above.
+  `database.types.ts` regenerated (C1096's vitest is batch 2's). Left for batch 2: `npx tsc --noEmit` fails at
+  `infrastructure/supabase/agreements.ts(255,19)` (the line insert lacks `visit_months`); the live app's add/update line
+  fails at the database until the adapter calls `save_service_line`. `npm test`: 1825 passed, 2 failed under full-suite
+  load (`boundaries.test.ts` C873, `domain/purity.test.ts` C32, lint-driven), both pass when run alone.
+- **Settled mid-build:** (1) Landing row 7: `asset_types.default_visit_months` defaults to `{3,6,9,12}`, the catalog column
+  has none, so `catalog_seed.sql` C25/C6 catalog inserts name `default_visit_months` (setup only). (2) The user approved
+  bumping the pins the new table and recipe break: `rls_isolation.sql` C35 lists `service_line_asset_types` (20 tables),
+  and `runner.test.ts` counts 19 recipes and 21 files (C830, C1045, C203-C205, C210-C212) with `cadence` in `ALL`.
+  (3) `apply_migration` was declined; the user applied the file in the SQL editor and the history row was inserted by
+  `execute_sql`. (4) "Frozen" for `backfill_line_coverage` means any version but the current version of a draft
+  (AD-062's rule) that holds `snapshot.types`; it fills only lines with no coverage, so a saved choice is never widened.
+- **Abandoned:** nothing.
