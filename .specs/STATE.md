@@ -94,12 +94,12 @@
 
 ## Handoff
 
-**Feature**: cadence (ROADMAP Phase 3.5 item 2), profile light, handoff in two batches
-**Where**: batch 1 (database, aaa8e6a, 4f87593, a6455ea) and batch 2 (app, 237362f, d737b13, ec679e5) committed locally; boundaries in `.specs/features/cadence/checks.md` ## Handoff
-**In progress**: nothing; the feature's Verifier has not run yet
-**Next step**: the orchestrator dispatches a fresh Verifier over `635a493..HEAD` with every check C1060-C1099. C1097's add-and-save half was not run live (AG-1046 is sent); a user run on a draft such as AG-1051 is still owed
-**Open, non-failing**: Verifier notes on pipeline-site-cards: C1059 asserts the label text, not the `aria-label` attribute; C1055 proves no-truncation by class only. Carried from outbox-dispatch: plan open question 4 (rate limiting for `/api/automation/*`); the Railway app's URL is not yet in the Supabase Auth redirect list; `seed.sql` never resets statuses
+**Feature**: seasonal-tasks (ROADMAP Phase 3.5 item 3), profile light, one builder
+**Where**: committed locally (2f65854 plan and checks, 8744a4c database, 45359fc app, 84ae1db docs). Verifier round 1 PASS over `a900cce..84ae1db`, 29/29 checks; `validate_verification.py` exits 0 (2026-10-30). Cadence (item 2) closed by its own round 3 PASS
+**In progress**: nothing
+**Next step**: ROADMAP Phase 3.5 item 4, term dates and tenant renewal settings
+**Open, non-failing**: Verifier notes on seasonal-tasks: C1119's position ordering is proven only through fixture order (lesson L-019), and C1103 and C1107 rest on author-recorded mcp results. Verifier notes on pipeline-site-cards: C1059 asserts the label text, not the `aria-label` attribute; C1055 proves no-truncation by class only. Carried from outbox-dispatch: plan open question 4 (rate limiting for `/api/automation/*`); the Railway app's URL is not yet in the Supabase Auth redirect list; `seed.sql` never resets statuses
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (local commits, not pushed)
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migration `20261029165430_outbox_dispatch` applied; Vault holds `automation_hmac_secret` and `n8n_events_url`, so the `outbox-dispatch` job sends to n8n every minute. Demo data: AG-1046 and AG-1048 were sent by the live runs (AG-1048's contact restored to `@example.com`)
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migrations through `20261030211710_seasonal_tasks` applied (cadence's history row inserted by hand, seasonal tasks by `apply_migration`); Vault holds `automation_hmac_secret` and `n8n_events_url`, so the `outbox-dispatch` job sends to n8n every minute. Demo data: AG-1046 and AG-1048 were sent by the live runs (AG-1048's contact restored to `@example.com`); frozen snapshots before 2026-10-30 21:17 UTC stay schema 1

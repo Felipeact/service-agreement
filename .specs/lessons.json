@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 19,
+  "next_id": 20,
   "lessons": [
     {
       "id": "L-001",
@@ -328,6 +328,24 @@
       ],
       "created": "2026-10-30T20:55:00Z",
       "last_seen": "2026-10-30T20:55:00Z"
+    },
+    {
+      "id": "L-019",
+      "key": "spec_precision_gap::when a check claims an order by a field the domain value does not carry name the field s real carrier array order in the claim and give the fixture input out of that order or the sort half cannot fail",
+      "text": "When a check claims an order by a field the domain value does not carry, name the field's real carrier (array order) in the claim and give the fixture input out of that order, or the sort half cannot fail.",
+      "signal": "spec_precision_gap",
+      "scope": "domain",
+      "status": "candidate",
+      "features": [
+        "seasonal-tasks"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md precision gap: C1119 web/domain/agreement/seasonal.test.ts:148-151 (domain)"
+      ],
+      "created": "2026-10-30T21:30:57Z",
+      "last_seen": "2026-10-30T21:30:57Z"
     }
   ]
 }

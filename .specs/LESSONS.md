@@ -122,6 +122,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md C1097 (checks.md Handoff Live: add/save not run, AG-1046 is sent) (live validation)
 - last seen: 2026-10-30T20:55:00Z
 
+### L-019 - When a check claims an order by a field the domain value does not carry, name the field's real carrier (array order) in the claim and give the fixture input out of that order, or the sort half cannot fail.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `domain` · harmful: 0
+- features: seasonal-tasks
+- evidence: verification.md precision gap: C1119 web/domain/agreement/seasonal.test.ts:148-151 (domain)
+- last seen: 2026-10-30T21:30:57Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

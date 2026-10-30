@@ -146,7 +146,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 3.5: Cadence, terms, renewals and missing pages
 - [x] Pipeline cards by site, with the customer underneath; search matches either. $ total per stage in the column header
 - [x] Cadence: service lines cover equipment types and hold visit months; month grid and presets in the builder; default months per equipment type; visit schedule on the PDF and the portal
-- [ ] Seasonal tasks: a checklist task can apply to selected visits only
+- [x] Seasonal tasks: a checklist task can apply to selected visits only
 - [ ] Term dates (start, term months, end) and tenant renewal settings (default term, notice days, CPI renegotiation threshold)
 - [ ] Renewal: auto-renew with CPI applied below the threshold; at or above it, a renewal draft linked to the agreement it renews. "Expiring soon" view and n8n W7
 - [ ] Proposal validity date and automatic expiry of sent agreements (n8n W8)
