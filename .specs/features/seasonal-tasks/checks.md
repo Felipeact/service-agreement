@@ -88,10 +88,11 @@ one with `null` to `visitMonths: null` (AC 10, door 2)
 Proof: `npx vitest run domain/agreement -t "C1109:"`
 
 **C1110** - The agreement reader, given a sent version whose `snapshot` is `{"schema": 3, "types": []}`, returns
-`serviceScope` `{ source: "not_recorded" }`. The portal adapter, given a `portal_view` `scope` with
-`"schema": 2` and a task with `visitMonths: [10]`, returns that task as `{ description, visitMonths: [10] }` (AC 10, Surface
-`portal_view`)
+`serviceScope` `{ source: "not_recorded" }`. The portal adapter passes a `portal_view` `scope` with `"schema": 2` and a task
+with `visitMonths: [10]` through unchanged, and `portalScope` reads that task as `{ description, visitMonths: [10] }` (AC 10,
+Surface `portal_view`)
 Proof: `npx vitest run infrastructure/supabase -t "C1110:"`
+Proof: `npx vitest run application/use-cases -t "C1110:"`
 
 ### S3 - the checklist marks seasonal tasks
 
@@ -248,8 +249,27 @@ Proof: `npm run test:db cadence` (assertions `C1082`)
 - Mechanism: one builder (under the budget, no ask)
 - Before code: the cadence Verifier over `635a493..HEAD` was dispatched on 2026-10-30. Per plan Assumptions, the build
   starts on that verdict.
+- **Corrected before its test existed (2026-10-30):** C1110's portal half named the portal adapter as the parser. The adapter
+  passes `scope` through as `unknown` (`portal.ts`), and `portalScope` in `application/use-cases/portal.ts` parses it. So
+  the claim now names both, with a second proof at the use case.
 - **Settled mid-build:** the user approved two things on 2026-10-30. (1) Applying the migration to `gnxebrtcpbujhvcamtoe`
   through mcp `apply_migration` once the code and SQL tests are written, with the C1103 and C1107 queries run before and
   after. (2) Superseding only the literal values of `service_included.sql` C801 (`schema`, `RTU tasks`, `position order`,
   `BOILER tasks` stays `[]`), C802 (`other org`) and C808 (`asset added`). Schema 1 becomes 2 and tasks become
   `{description, visitMonths}`; each assertion keeps its claim.
+- **Settled mid-build (2026-10-30, later):** the user also approved (3) moving vitest C803, C804, C1080, C1081 and C1086 and
+  the `ScopeType` fixtures to the new shapes, and (4) `demo_seed.sql` C821 `frozen` accepting schema `1` or `2`. C803's
+  `schema 2 is not a scope` row became `schema 3`: door 2 makes 2 a valid schema, and the row's claim is "an unknown schema
+  is not a scope".
+- Remote (mcp `execute_sql`, project `gnxebrtcpbujhvcamtoe`, 2026-10-30):
+  - Pre-apply: snapshots md5 `c6d6b7609af06cda32c5be9abd5badb6` over 18 versions; 174 org tasks; no `visit_months`
+    column; 3 demo tasks match the seasonal catalog tasks by code and description.
+  - Applied by `apply_migration` as `20261030211710_seasonal_tasks` (the local file is named to match that history row).
+  - Post-apply: snapshots md5 `c6d6b7609af06cda32c5be9abd5badb6` over 18 versions, unchanged (C1107). C1103: `0` tasks
+    differ from their catalog task, `0` tasks have months with no catalog task, and the demo org has `3` seasonal tasks.
+- `node_modules` was found broken mid-build: `.bin` gone and `@anthropic-ai/sdk` half-written, from an interrupted npm
+  run outside this build. With no npm process running, `npm ci` restored it from the unchanged lockfile.
+- **Boundary:** C1100-C1128 closed at the feature commit. Proofs: `npm run test:db` 19 passed, 0 failed, with
+  `service_included`, `demo_seed` and `cadence` each PASS. `npm test`: 96 files, 1914 passed. `npx tsc --noEmit` exit 0,
+  `npm run lint` exit 0. Each of C1108-C1125 ran by name.
+- **Abandoned:** nothing.
