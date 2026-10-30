@@ -311,6 +311,21 @@ Proof: `npm run test:db cadence` (assertions `C1099`)
   `execute_sql`. (4) "Frozen" for `backfill_line_coverage` means any version but the current version of a draft
   (AD-062's rule) that holds `snapshot.types`; it fills only lines with no coverage, so a saved choice is never widened.
 - **Abandoned:** nothing.
+- **Live (C1097, 2026-10-30, `npm run dev`, Playwright MCP, the one signed-in demo-owner context):** AG-1046 is `sent`
+  (version 1, read-only), not a draft, so no line can be added to it and the add/save half was **not run**; no other
+  agreement was authorised for a write, so no demo data changed. Run instead, at 1440 and 375 px: AG-1046's row reads
+  `Mar, Jun, Sep, Dec · 4 visits/yr` (backfilled line, equipment `Backflow preventer, Chiller, Exhaust fan, RTU`), the
+  `Visit schedule` section shows March, June, September and December, and `Download PDF` (`/pdf?version=1`) answers 200
+  `application/pdf`; no horizontal scroll; console 0 errors, 0 warnings. On the draft AG-1051 without submitting: Equipment
+  covered lists `Backflow preventer, MUA, RTU, Walk-in cooler`; checking Backflow preventer prefills `[10]`, Semi-annual
+  gives `[4, 10]`, Quarterly gives `[3, 6, 9, 12]`; the grid is 6 columns at 375 and 12 at 1440, each month cell 44x44 at
+  375. The 375 run found the month text clipped beside the box; fixed by stacking box over month below md (in the docs
+  commit). Remaining for the user: an add-and-save on a draft, e.g. AG-1051, then removing the line.
+- **Boundary (batch 2):** at the docs commit (on `237362f`), C1061 vitest half, C1062, C1063, C1064, C1065, C1066, C1067,
+  C1068, C1069, C1072, C1074, C1075, C1080, C1081, C1082 vitest half, C1083, C1084, C1085, C1086, C1089, C1095, C1096,
+  C1098 closed; C1097 partly run (above). Proofs: each named `npx vitest run <dir> -t "<id>:"` passed; `npm test` 90 files,
+  1864 passed (C873 and C32 passed in the full run this time); `npm run lint`, `npx tsc --noEmit`, `npm run build` clean;
+  `npm run test:db` 19 passed, 0 failed; `grep -c "visit_months" .specs/STATE.md CONTEXT.md` = 5, 3.
 - **Settled mid-build (batch 2):** the user approved superseding the existing vitest assertions that pinned the typed visits
   input and the direct table writes, keeping each claim's outcome (2026-10-30):
   - `domain/agreement/service-line.test.ts` C720 `visits %j are refused...`, `visits %j give %i` and `...returns all three
