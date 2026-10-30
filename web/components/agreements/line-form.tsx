@@ -123,7 +123,8 @@ export function LineForm({
           {MONTH_SHORT.map((label, index) => {
             const month = index + 1;
             return (
-              <label key={label} className={`${choice} justify-center`}>
+              // Below md a cell is about 44px wide, so the box sits above its month instead of beside it.
+              <label key={label} className={`${choice} flex-col justify-center gap-0.5 md:flex-row md:gap-1.5`}>
                 <input
                   type="checkbox"
                   name="visitMonths"
