@@ -203,7 +203,7 @@ Proof: `npm test -- n8n-workflows -t "C1034:"`
 **C1035** - `events.json` checks the signature before routing. A Crypto node computes HMAC SHA256 over `<X-SA-Timestamp>.<raw body>` with the secret `__SA_HMAC_SECRET__`, a placeholder the operator replaces after import (plan Landing row 13). An IF node compares it with `X-SA-Signature` and the 300 s window, and its false branch connects to no workflow call. No export contains `$env`, and every notify URL starts with `__SA_APP_BASE_URL__` (door 2; reworded 2026-10-29, see Handoff)
 Proof: `npm test -- n8n-workflows -t "C1035:"`
 
-**C1052** - Each of the 5 notify calls (W1 `link`, `day3` and `day7`, W3, and W5) reads the response status without failing the run. On `409`, `500`, `502`, `503`, `504` or a network error, it takes a path through a 10-minute Wait back to the same call, carrying the same `idempotencyKey`, a fresh `X-SA-Timestamp` and a fresh signature. A retry counter stops the loop after 6 retries. After the last retry, W1 goes on to its next step, and W3 and W5 end. Statuses `200`, `400`, `401` and `404` never loop. (AC 16 end to end; added 2026-10-29 at the user's decision on the Verifier's F2, see Handoff)
+**C1052** - Each of the 5 notify calls (W1 `link`, `day3` and `day7`, W3, and W5) reads the response status without failing the run. On `409`, `500`, `502`, `503`, `504` or a network error, it takes a path through a 10-minute Wait back to the same call, carrying the same `idempotencyKey`, a fresh `X-SA-Timestamp` and a fresh signature. A retry counter stops the loop after 6 retries. After the last retry, W1 goes on to its next step, and W3 and W5 end. Every status outside those six triggers never loops, asserted with `200`, `400`, `401`, `404`, `422`, `429` and `501`. (AC 16 end to end; added 2026-10-29 at the user's decision on the Verifier's F2, see Handoff)
 Proof: `npm test -- n8n-workflows -t "C1052:"`
 
 ### Doors and delivery · ~8 files · ~25k
@@ -496,3 +496,7 @@ Expected follow-ons the build must report, not hide:
   The line stayed inside the viewport at every size, and the screenshots were reviewed. The console had 0 errors and 0 warnings over the whole session.
 - **Not shown live:** the `Emailed to …` and `Not emailed: …` states, because no notification exists until C1049. C1032 proves them in unit tests.
 - **Data left behind:** AG-1046 is now `sent`, with 1 live link, 1 `agreement.sent` event and 1 `pending` outbox row. `seed.sql` cannot undo this: every insert is `on conflict do nothing`, so it never resets a status. That also means STATE's earlier "seed.sql restores them" was wrong. Once dispatch is configured, that row's W1 email to the demo contact `@example.com` is skipped as `reserved_domain`.
+
+### Round 3, F17 (2026-10-30, the user's decision)
+
+C1052 is reworded so that every status outside the six retry triggers never loops. It is asserted with `200`, `400`, `401`, `404`, `422`, `429` and `501`, so a condition widened to `>= 409` now fails a test. The exports are unchanged.

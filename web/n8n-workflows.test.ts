@@ -304,7 +304,7 @@ describe("the n8n workflow exports", () => {
     const call = notifyNodes(wf)[index];
     const expectedExit = nextStep(wf)?.name ?? null;
 
-    test.each([200, 400, 401, 404])("C1052: a %i is read without failing the run and never loops", (status) => {
+    test.each([200, 400, 401, 404, 422, 429, 501])("C1052: a %i is read without failing the run and never loops", (status) => {
       const run = runCall(wf, call, [status]);
       expect(run.failed).toBe(false);
       expect(run.calls).toBe(1);
