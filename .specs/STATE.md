@@ -89,7 +89,7 @@
 **Feature**: outbox-dispatch (ROADMAP Phase 3 item 5), profile standard, handoff in two batches
 **Where**: built and committed locally (2 batches, then fix rounds after Verifier rounds 1 to 3). C1050 and C1049 were run live on 2026-10-30. n8n and the app run on Railway, the Vault secrets are set, a real email went out through Resend, and ROADMAP is ticked
 **In progress**: nothing
-**Next step**: the scoped Verifier round 4 over C1049 to C1052, then `validate_verification.py`
+**Next step**: outbox-dispatch is done: Verifier round 5 passed, `validate_verification.py` exits 0 (2026-10-30). Next is ROADMAP Phase 4 item 1, the contract generated from the accepted agreement version
 **Open, non-failing**: plan open question 4 (rate limiting for `/api/automation/*`); the Railway app's URL is not yet in the Supabase Auth redirect list, so staff sign-in there does not work; `seed.sql` never resets statuses (every insert is `on conflict do nothing`), so live runs leave agreements moved
 **Blockers**: none. `PORTAL_LINK_KEY` is set in `web/.env.local` and on Railway, with the same value
 **Uncommitted**: none after the next commit
