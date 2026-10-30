@@ -332,6 +332,18 @@ Proof: `npm run test:db cadence` (assertions `C1099`)
   at either width; console 0 errors, 0 warnings since the restart. Then the row's "Remove", the prompt `Remove C1097 live
   check?`, and "Remove": after a reload AG-1051 shows `No service lines yet.`, `Total per year $0.00` and `No visits
   scheduled yet`, as before. C1097 passes; the only demo-data write was that one line, now deleted.
+- **Live (C1097, save at 375, 2026-10-30, after Verifier round 2 at `04ec278`; the user approved one more line on
+  AG-1051):** fresh `npm run dev`, the one signed-in demo-owner context, controls scoped to "Add a line" and the row. The
+  viewport was set to 375x812 before AG-1051 was opened. Before: `Version 1`, no lines, `Total per year $0.00`, `No visits
+  scheduled yet`. At 375: description `C1097 live check 375`, RTU ticked, Quarterly pressed (checked `3, 6, 9, 12`), cost
+  `250.00`, "Add line" pressed at width 375. Right after the save and again after a reload, both at 375: the row reads
+  `C1097 live check 375 | Mar, Jun, Sep, Dec · 4 visits/yr | RTU | Visits per year: 4 | Per visit: $250.00 | Per year:
+  $1,000.00`, `Total per year $1,000.00`; `Visit schedule` lists March, June, September, December, each `RTU`;
+  `Download PDF` (`/pdf?version=1`) answers `200 application/pdf` (6,063 bytes); `scrollWidth - innerWidth` = 0; console 0
+  errors, 0 warnings. Then the row's "Remove", the prompt `Remove C1097 live check 375?`, and "Remove", still at 375: after
+  a reload AG-1051 shows `No service lines yet.`, `Total per year $0.00` and `No visits scheduled yet`. With the 1440 run
+  above, the add, Quarterly and save now pass at both widths; the only demo-data write was that one line, now deleted. The
+  dev server and its child process were stopped afterwards (port 3000 free).
 - **Boundary (batch 2):** at `ec679e5` (on `237362f`, `d737b13`), C1061 vitest half, C1062, C1063, C1064, C1065, C1066, C1067,
   C1068, C1069, C1072, C1074, C1075, C1080, C1081, C1082 vitest half, C1083, C1084, C1085, C1086, C1089, C1095, C1096,
   C1098 closed; C1097 partly run (above). Proofs: each named `npx vitest run <dir> -t "<id>:"` passed; `npm test` 90 files,
