@@ -531,3 +531,7 @@ C1052 is reworded so that every status outside the six retry triggers never loop
 - **Email, AG-1048:** the demo contact Dana Whitfield was pointed at the user's address. AG-1048 was sent from the staff page (local dev server, one signed-in context). The chain ran: dispatcher, then n8n W1 (execution `6`), then the Railway app, then Resend. The notification `w1:22b6eb12-…:link` is `sent` at 15:55:01 UTC, with provider message id `01a18d85-8881-79bd-b6f0-1553eb085817` and recipients `[the user's address]`. The staff page then read "Emailed to … on Oct 30, 2026". The contact was restored to `dana.whitfield@example.com` and checked by a read-back.
 - **Still pending:** AG-1048's W1 run waits for its day-3 and day-7 reminders. They will go to the restored `@example.com` contact and be skipped as `reserved_domain`. The user confirms whether the email arrived in their inbox.
 - **C1051:** ROADMAP Phase 3 item 5 is ticked in this commit, per the user's 2026-10-29 decision to tick once C1049 and C1050 pass.
+
+### C1049 inbox confirmation (2026-10-30, the user)
+
+The user confirmed that the AG-1048 email, from `agreements@felipeviana.com` with subject "Service agreement AG-1048 from Kettle Ridge Mechanical Ltd.", sent at about 15:55 UTC, arrived in their inbox (not spam). That settles the "delivers 1 email" clause the Verifier's round 4 left unproven.
