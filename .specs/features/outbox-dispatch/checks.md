@@ -466,3 +466,13 @@ Expected follow-ons the build must report, not hide:
 - **Not changed:** every other check, and every assertion already written.
 - **C1033 / C1052 conflict (found by the fix builder):** as written, C1033 counted every Wait node in W1, which the C1052 retry Waits would break. The user approved rewording C1033 to count only the day-scale Waits (unit `days`): still exactly 2, 3 then 4 days, in order. C1052's own miscount ("6 notify calls" while naming 5) is corrected to 5.
 - **Round 2, F13 (2026-10-29, the user's decision):** C1052 now also retries on `500`, `502` and `504`, because the host's gateway answers these while the app restarts. `200`, `400`, `401` and `404` still never loop. **F11:** C1051 is unchanged. The user chose to tick ROADMAP Phase 3 item 5 only once C1049 and C1050 pass, so C1051 stays failing until then.
+
+#### Fix round 2 (2026-10-30, the orchestrator built it inline after the fix builder hit the usage limit with nothing changed)
+
+- **Boundary:** C1052 as widened in `e4e1970`, closed in this commit. All 5 retry IF nodes now read `[409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined`. In `web/n8n-workflows.test.ts`, the two retry `test.each` lists gained `500`, `502` and `504`. Before the export change they failed (30 failed, 55 passed); after it they pass (96 of 96). The 200/400/401/404 never-loop test is unchanged. CONTEXT.md gets the full stop (verifier F16), and CONTEXT.md and STATE.md AD-079 list the new statuses.
+- **Proofs:**
+  - `npx vitest run n8n-workflows`: 96 passed.
+  - `npm test`: 1803 passed, 84 files. The first full run had 2 failures, which match the lint-driven timeouts of the verifier's F15. Both passed alone (`domain/purity`, `boundaries`: 62 passed) and on the clean rerun.
+  - `npm run lint`, `npx tsc --noEmit` and `npm run build` all exit 0.
+  - `npm run test:db` was not run, because no SQL was touched.
+- **Author note:** the orchestrator wrote this round, so the Verifier of round 3 must be a fresh agent.

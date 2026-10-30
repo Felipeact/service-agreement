@@ -125,7 +125,7 @@
           "conditions": [
             {
               "id": "de998898-4e3f-5d94-8bc3-127171d16f5f",
-              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",

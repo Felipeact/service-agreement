@@ -312,7 +312,7 @@ describe("the n8n workflow exports", () => {
       expect(run.exit?.name ?? null).toBe(expectedExit);
     });
 
-    test.each([[409], [503], ["network" as const]])("C1052: a %s retries through a 10-minute Wait with the same key, freshly signed, until a 200", (answer) => {
+    test.each([[409], [500], [502], [503], [504], ["network" as const]])("C1052: a %s retries through a 10-minute Wait with the same key, freshly signed, until a 200", (answer) => {
       const run = runCall(wf, call, [answer, answer, 200]);
       expect(run.failed).toBe(false);
       expect(run.calls).toBe(3);
@@ -323,7 +323,7 @@ describe("the n8n workflow exports", () => {
       expect(run.exit?.name ?? null).toBe(expectedExit);
     });
 
-    test.each([[409], [503], ["network" as const]])("C1052: a %s on every attempt stops after 6 retries, then W1 goes on and W3, W5 end", (answer) => {
+    test.each([[409], [500], [502], [503], [504], ["network" as const]])("C1052: a %s on every attempt stops after 6 retries, then W1 goes on and W3, W5 end", (answer) => {
       const run = runCall(wf, call, [answer]);
       expect(run.failed).toBe(false);
       expect(run.calls).toBe(7);

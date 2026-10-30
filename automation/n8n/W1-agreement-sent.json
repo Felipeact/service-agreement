@@ -328,7 +328,7 @@
           "conditions": [
             {
               "id": "58ed0bfb-97a9-5cfa-854b-3e002b5f94db",
-              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -387,7 +387,7 @@
           "conditions": [
             {
               "id": "d7614689-ad5b-5cf1-b6b4-67c35af0144c",
-              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -446,7 +446,7 @@
           "conditions": [
             {
               "id": "c49babe6-7f50-5fe1-bf72-f8bb204dd3a0",
-              "leftValue": "={{ $json.statusCode === 409 || $json.statusCode === 503 || $json.statusCode === undefined }}",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
