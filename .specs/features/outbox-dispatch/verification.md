@@ -2,42 +2,59 @@
 
 **Verdict**: FAIL
 **Profile**: standard
-**Diff range**: aae1901..5c4237b
-**Round**: 2 - full (all 52 checks, C1001-C1052), verified at `5c4237b`. Round 1 (at `1b6ca07`) is in git history at `46490af`.
-**Verifier**: independent sub-agent (author != verifier). Other agents wrote batches 1 and 2 and the fix round. This Verifier wrote no code and changed only this file.
+**Diff range**: aae1901..aec4fb0 (this round's scope: the fix diff `e4e1970..aec4fb0`)
+**Round**: 3 - scoped, verified at `aec4fb0`. Scope: the fix diff `e4e1970..aec4fb0` (C1052 widened to retry on `409`, `500`, `502`, `503`, `504` and network errors) and every round 2 verdict that was not PASS (C1049, C1050, C1051). Everything else is carried from `5c4237b` (round 2, kept at `a03cab1`). This is the last allowed round, so the remaining gaps go back to the user.
+**Verifier**: independent sub-agent (author != verifier). The orchestrator session wrote this fix round. This Verifier wrote no code and changed only this file.
 
 What blocks PASS:
 
-1. **C1049 is unproven.** It covers the live dispatch, the email and n8n. It has not run, and it waits on the user's go-ahead for each action. Read-only live state: 0 Vault secrets named `n8n_events_url` or `automation_hmac_secret`, 0 `notifications` rows.
-2. **C1050 is unproven.** It covers browser validation of the delivery line at 3 sizes. It has not run and waits on the user's go-ahead. The live project has 0 `sent` agreements, so the line cannot render there without changing data.
-3. **C1051 fails at HEAD (F11, new).** Its shell proof `grep -n "\[x\] Outbox dispatcher" ../ROADMAP.md` now prints 0 lines (grep exit 1). The fix round unticked `ROADMAP.md:117` to resolve round 1's F6. C1051 was not reworded, and it still says "`ROADMAP.md` ticks Phase 3 item 5".
+1. **C1049 is unproven.** It is the live check (dispatch, email from `@felipeviana.com`, n8n W1 on Railway). It waits on the user's go-ahead for each action, and this Verifier did not run it.
+2. **C1050 is unproven.** It is the browser validation of the delivery line at 375, 768 and 1440. It waits on the user's go-ahead, and this Verifier did not run it.
+3. **C1051 fails at HEAD.** `grep -n "\[x\] Outbox dispatcher" ../ROADMAP.md` prints nothing (exit 1), and `ROADMAP.md:117` is still `- [ ] Outbox dispatcher ...`. This is the user's choice of 2026-10-29: tick ROADMAP Phase 3 item 5 only once C1049 and C1050 pass (`.specs/features/outbox-dispatch/checks.md:468`). So C1051 stays failing until then.
 
-Every other check (49 of 52) is proven at `5c4237b` with located evidence. All 5 injected faults were killed. Round 1's blockers F1 (C1035) and F2 (AC 16 retry) are resolved.
+The fix itself holds. C1052, as reworded in `e4e1970`, passes at `aec4fb0`: 85 named `C1052:` tests, 0 failed. Each of 500, 502 and 504 ran 10 times (5 calls x 2 tests). Round 2's F13 is resolved.
+
+Of the 5 faults injected on the retry statuses, 4 were killed. The survivor (`statusCode >= 409`) is a wider predicate that C1052's wording does not forbid, see F17. 49 of 52 checks are proven.
 
 ## Binding sources
 
-The profile is `standard`, so step 1 is not owed. The binding sources were still opened for the narrow comparison.
+Carried from `5c4237b`, except the STATE row. The fix touched `.specs/STATE.md` (AD-079) and `CONTEXT.md`, so that row is refreshed at `aec4fb0`. `ROADMAP.md`, `PRODUCT.md` and `plan.md` are unchanged since `5c4237b` (`git diff --stat 5c4237b..HEAD` is empty for them).
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| ROADMAP.md Phase 3 item 5, M12, M13, n8n table (W1, W3, W5) | yes - `ROADMAP.md:117` now reads `- [ ] Outbox dispatcher (the database dispatches the outbox to n8n, HMAC-signed) ... (code done; awaiting verification and the live run)` | - (the source is now correct; C1051 is the one that disagrees with it, see F11) | - |
-| STATE.md AD-015, AD-016, AD-068 to AD-079 | yes - `.specs/STATE.md:73-88` | - (AD-074 and AD-079 now name the placeholders and Landing 13. The AD-070 row has 5 cells) | - |
-| Plan Landing rows 1-13 (row 13 supersedes row 12) | yes - `.specs/features/outbox-dispatch/plan.md:86-99` | - (door 2 at `plan.md:87` and open question 1 at `plan.md:205` still say "n8n credential". Row 13 supersedes them, but the rows were not edited, see F12) | - |
+| ROADMAP.md Phase 3 item 5, M12, M13, n8n table (W1, W3, W5) | carried from `5c4237b`, re-read at `aec4fb0`: `ROADMAP.md:117` reads `- [ ] Outbox dispatcher ... (code done; awaiting verification and the live run)` | - (C1051 disagrees with it, by the user's choice, see C1051) | - |
+| STATE.md AD-015, AD-016, AD-068 to AD-079 | refreshed at `aec4fb0`: `.specs/STATE.md:85` AD-079 now reads "a `409`, `500`, `502`, `503`, `504` or network error goes through an IF (`$runIndex < 6`)" | - | - |
+| Plan Landing rows 1-13 (row 13 supersedes row 12) | carried from `5c4237b` (`.specs/features/outbox-dispatch/plan.md:86-99`, unchanged) | - (F12 carried) | - |
 
 ## Checks
 
-Proof runs at `5c4237b`, all from `web/`:
+### Proof runs at `aec4fb0` (all from `web/`)
 
-- **`npm run test:db`** (all recipes): 18 passed, 0 failed, exit 0. The output includes `PASS outbox_dispatch` and `PASS customer_portal`. The SQL test file is unchanged since `1b6ca07` (`git diff --stat 1b6ca07..HEAD -- supabase` is empty), and every label cited below was re-located with `grep -no "'C10..."` at HEAD.
-- **vitest:** `npx vitest run --reporter=verbose`, one invocation over the whole suite. 1773 passed (84 files), exit 0. Every named `C10xx:` test appears individually as `✓`: 171 lines, 0 `×`. Counts per check: C1002 1, C1010 5, C1011 3, C1012 2, C1014 4, C1015 4, C1016 5, C1017 4, C1018 1, C1019 5, C1020 2, C1024 25, C1025 1, C1026 9, C1027 2, C1029 2, C1032 13, C1033 7, C1034 1, C1035 2, C1038 5, C1039 9, C1043 2, C1044 3, C1045 1, C1046 1, C1052 55.
-  - A first run made concurrently with `test:db` had 2 timeouts. Both were pre-existing tests (C32 `domain/purity.test.ts:28`, C873 `boundaries.test.ts:56`, each over its 5000 ms limit). The clean rerun above passed them, see F15.
-- **`npm run lint`**: exit 0.
-- **`npx tsc --noEmit`**: exit 0.
-- **`npm run build`**: exit 0, listing `ƒ /api/automation/notify`.
+- **`npx vitest run n8n-workflows --reporter=verbose`**: 96 passed (1 file), exit 0.
+  - 85 `✓ ... C1052:` lines and 0 `×`.
+  - Per retry answer, 10 `✓` each for `409`, `500`, `502`, `503`, `504` and `network`. For example: `✓ ... C1052: notify call W1-agreement-sent.json #0 (link) > C1052: a 502 retries through a 10-minute Wait with the same key, freshly signed, until a 200`.
+  - C1033 7 ✓, C1034 1 ✓, C1035 2 ✓, C1002 1 ✓.
+- **`npm test`** (`vitest run`):
+  - First run: 1801 passed and 2 failed (84 files), exit 1. Both failures are the pre-existing lint-driven timeouts of round 2's F15: C32 (`domain/purity.test.ts`, 5400 ms) and C873 (`boundaries.test.ts`, 5414 ms), each `Test timed out in 5000ms`. Nothing else ran at the same time.
+  - Immediate rerun: 1803 passed (84 files), exit 0.
+  - A third run, `npx vitest run --reporter=verbose`: 1803 passed, exit 0, 0 `×`. The named `✓` lines per check match round 2: C1002 1, C1010 5, C1011 3, C1012 2, C1014 4, C1015 4, C1016 5, C1017 4, C1018 1, C1019 5, C1020 2, C1024 25, C1025 1, C1026 9, C1027 2, C1029 2, C1032 13, C1033 7, C1034 1, C1035 2, C1038 5, C1039 9, C1043 2, C1044 3, C1045 1, C1046 1. Only C1052 changed, from 55 to 85 (1773 + 30 = 1803).
+- **`npm run lint`**: exit 0. **`npx tsc --noEmit`**: exit 0.
+- `npm run test:db` and `npm run build` were not re-run, so those results are carried. Since `5c4237b` the fix touched only `automation/n8n/W1-agreement-sent.json`, `W3-agreement-decided.json`, `W5-stale-daily.json` and `web/n8n-workflows.test.ts` (`git diff --stat 5c4237b..HEAD -- web supabase automation`). No SQL or app code changed.
 
-SQL assertions raise on failure (`tests.ok` / `tests.expect_error`). The recipe passes only when its last row is `outbox_dispatch: pass` (`supabase/tests/outbox_dispatch.sql` ends with `rollback; select 'outbox_dispatch: pass'`). So a green recipe means every labelled assertion ran and held.
+### Re-verified at `aec4fb0` (in scope)
 
-Citations in files the fix did not touch are re-confirmed at HEAD: those files are byte-identical to `1b6ca07`. Citations in `n8n-workflows.test.ts`, `resend.test.ts` and `agreements.test.ts` are refreshed.
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C1052 (reworded in `e4e1970`) | 5 notify calls read the status without failing; `409`/`500`/`502`/`503`/`504`/network loop through a 10-minute Wait back to the same Set (same key, fresh timestamp and signature); stop after 6 retries; W1 goes on, W3 and W5 end; 200/400/401/404 never loop | vitest 85 ✓ (17 per call x 5) | exports: `automation/n8n/W1-agreement-sent.json:331,390,449`, `automation/n8n/W3-agreement-decided.json:119`, `automation/n8n/W5-stale-daily.json:128`, each `[409, 500, 502, 503, 504].includes($json.statusCode) \|\| $json.statusCode === undefined`; tests: `web/n8n-workflows.test.ts:307-312` 200/400/401/404 `calls` `toBe(1)`, `tenMinuteWaits` `toBe(0)`; `:315-323` over `[[409], [500], [502], [503], [504], ["network"]]`: `calls` `toBe(3)`, `tenMinuteWaits` `toBe(2)`, `new Set(run.keys).size` `toBe(1)`, `signedBeforeEachCall` `toBe(true)`; `:326-331` same list: `calls` `toBe(7)`, `tenMinuteWaits` `toBe(6)`, exit `toBe(expectedExit)`; `:338-339` fresh timestamp and signer value. The walker evaluates each IF expression itself (`:56-74`, `evaluate(leftValue, scope)`) | PASS |
+| C1049 | live dispatch, email from `@felipeviana.com`, n8n W1 on Railway | not run. It waits on the user's go-ahead for each action, and this Verifier was told not to run it | no evidence. The steps are at `.specs/features/outbox-dispatch/checks.md:442-445` | UNPROVEN |
+| C1050 | Playwright at 375/768/1440; line readable; no scroll; console clean | not run. It waits on the user's go-ahead | no evidence. The builder's note is at `.specs/features/outbox-dispatch/checks.md:441` | UNPROVEN |
+| C1051 | CONTEXT entry and build log; STATE AD entries and AD-070 amended; ROADMAP ticks Phase 3 item 5; PRODUCT drops Postmark | shell at `aec4fb0`: `grep -c "outbox-dispatch\|automation_claim" ../CONTEXT.md` prints `6` (passes). `grep -n "\[x\] Outbox dispatcher" ../ROADMAP.md` prints nothing, exit 1 (fails) | `ROADMAP.md:117` `- [ ] Outbox dispatcher ...`; `.specs/STATE.md:76` AD-070 amended; `grep -c Postmark ../PRODUCT.md` prints 0. The user's choice to leave the item unticked is at `.specs/features/outbox-dispatch/checks.md:468` | FAIL - ROADMAP half, held until C1049 and C1050 pass |
+
+### Carried from `5c4237b` (round 2, at `a03cab1`)
+
+These verdicts and their evidence are carried, not re-derived. Their vitest proofs re-ran green at `aec4fb0` in the full suite above.
+
+The citations in `web/n8n-workflows.test.ts` (C1002, C1033-C1035) still hold, because the fix edited lines 315 and 326 in place and moved no line. Every other cited file is byte-identical to `5c4237b`.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
@@ -89,16 +106,14 @@ Citations in files the fix did not touch are re-confirmed at HEAD: those files a
 | C1046 | 3 env names read only in `composition/`; no `NEXT_PUBLIC_`; `.env.example` names them | vitest ✓ | `web/boundaries.test.ts:170-177` outside readers `toEqual([])`, exposed `toEqual([])`, `.env.example` `toMatch(^NAME=[ \t]*$)`; `web/.env.example:21,23,25` | PASS |
 | C1047 | types regenerated; lint, tsc, build | lint exit 0; tsc exit 0; build exit 0 | `web/infrastructure/supabase/database.types.ts:589` `notifications: {`; `:802` `token_sealed: string \| null`; `:989` `automation_claim: {` | PASS |
 | C1048 | `npm test` exit 0; test:db 18/0 | vitest 1773 passed, exit 0; test:db 18 passed, 0 failed | runner pass condition `web/scripts/test-db/runner.mts:134`. See F15 for the concurrent-run timeouts | PASS |
-| C1049 | live dispatch, email from `@felipeviana.com`, n8n W1 on Railway | not run. It waits on the user's go-ahead for each action, and this Verifier was told not to run it | no evidence. Live read-only: 0 Vault secrets with either name, 0 notifications. Steps listed at `.specs/features/outbox-dispatch/checks.md:442-445` | UNPROVEN |
-| C1050 | Playwright at 375/768/1440; line readable; no scroll; console clean | not run. It waits on the user's go-ahead, and the live project has 0 `sent` agreements | no evidence. The builder's note is at `.specs/features/outbox-dispatch/checks.md:441` | UNPROVEN |
-| C1051 | CONTEXT entry and build log; STATE AD entries and AD-070 amended; ROADMAP ticks Phase 3 item 5; PRODUCT drops Postmark | shell: `grep -c "outbox-dispatch\|automation_claim" ../CONTEXT.md` prints `6` (passes). `grep -n "\[x\] Outbox dispatcher" ../ROADMAP.md` prints nothing, exit 1 (fails) | `ROADMAP.md:117` `- [ ] Outbox dispatcher ...`, which is not ticked; `.specs/STATE.md:76` AD-070 `active, amended by AD-077` (5 cells); `PRODUCT.md` has no `Postmark` | FAIL - ROADMAP half (F11) |
-| C1052 (new) | 5 notify calls read the status without failing; 409/503/network loop through a 10-minute Wait to the same Set, so the same key is sent with a fresh timestamp and signature; stop after 6 retries; W1 goes on, W3 and W5 end; 200/400/401/404 never loop | vitest 55 ✓ (11 per call x 5) | `web/n8n-workflows.test.ts:294-300` the 5 calls and their next steps (`Wait 3 days`, `Wait 4 days`, end x3); `:309-312` per 200/400/401/404: `failed` false, `calls` `toBe(1)`, `tenMinuteWaits` `toBe(0)`, exit `toBe(expectedExit)`; `:317-323` per 409/503/network: `calls` `toBe(3)`, `tenMinuteWaits` `toBe(2)`, `new Set(run.keys).size` `toBe(1)`, `signedBeforeEachCall` `toBe(true)`; `:327-331` always failing: `calls` `toBe(7)`, `tenMinuteWaits` `toBe(6)`, exit `toBe(expectedExit)`; `:338-339` timestamp from `Date.now()`/`$now`, signer value `={{ $json.timestamp }}.{{ $json.body }}`. The walker's n8n semantics are at `:85-131` (Never Error, error output, IF with `$runIndex`) | PASS |
 
-**Count:** 49 PASS, 1 FAIL (C1051), 2 UNPROVEN (C1049, C1050). 49 of 52 are proven with located evidence.
+**Count:** 49 PASS (48 carried, C1052 re-verified), 1 FAIL (C1051), 2 UNPROVEN (C1049, C1050). 49 of 52 checks are proven.
 
 ## Coverage
 
-Recomputed at `5c4237b`. The SQL sets come from the migration (unchanged since round 1). The route sets come from `route.ts`. The n8n sets come from the exports themselves: node graphs dumped with `node -e` over `automation/n8n/*.json`.
+The rows whose authority the fix touched were recomputed at `aec4fb0`. Those authorities are the 5 retry IF nodes in the exports and C1052's text. They were read with `grep -n "includes(\$json.statusCode)" automation/n8n/*.json`, which gives 5 hits, all with the same predicate.
+
+The other rows are carried from `5c4237b`. Their authorities (migration, `route.ts`, domain, adapters) are unchanged.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
@@ -126,9 +141,9 @@ Recomputed at `5c4237b`. The SQL sets come from the migration (unchanged since r
 | delivery line states (6) | `web/components/agreements/agreement-view.tsx` | sent, 4 reasons, none C1032 (view); the reader's `no_link_secret` mapping is now asserted at `agreements.test.ts:434` | - |
 | sealing failures (3) | `web/infrastructure/portal-tokens.ts` | wrong key, ciphertext, tag C1026 | - |
 | n8n exports (4) | `automation/n8n/` listing | events C1033-C1035 · W1, W3, W5 C1033, C1052 | - |
-| notify calls that retry (5) | exports: 5 `httpRequest` nodes to `/api/automation/notify` (W1 `Notify link`, `Notify day 3`, `Notify day 7`; W3 `Notify decision`; W5 `Notify stale`), each `onError: continueErrorOutput` with `fullResponse` and `neverError` | all 5 C1052 (`describe.each(CALLS)`), and C1035's `notifyCount` 5 | - |
-| retry triggers (3) | the 5 `Retry <call>?` IF nodes: `statusCode === 409 \|\| === 503 \|\| === undefined` and `$runIndex < 6` | 409, 503, network C1052 | - |
-| statuses that never loop (4) | C1052 text | 200, 400, 401, 404 C1052 | - (other non-2xx such as 500/502 also do not loop and are named by no check, F13) |
+| notify calls that retry (5) | recomputed at `aec4fb0`: 5 `httpRequest` nodes to `/api/automation/notify`, each followed by a `Retry <call>?` IF | all 5 C1052 (`describe.each(CALLS)`, `web/n8n-workflows.test.ts:294-300`), and C1035's `notifyCount` 5 (`:255`) | - |
+| retry triggers (6) | recomputed at `aec4fb0`: `automation/n8n/W1-agreement-sent.json:331,390,449`, `W3-agreement-decided.json:119`, `W5-stale-daily.json:128`: `[409, 500, 502, 503, 504].includes($json.statusCode) \|\| $json.statusCode === undefined`, with `$runIndex < 6` | 409, 500, 502, 503, 504 and network C1052 (`web/n8n-workflows.test.ts:315,326`), each over 5 calls and 2 tests | - |
+| statuses that never loop (4) | recomputed from C1052's text (`e4e1970`) | 200, 400, 401, 404 C1052 (`web/n8n-workflows.test.ts:307`) | - (no check pins, either way, the statuses C1052 does not name, such as 408, 422, 429 or 501. See F17) |
 | exit after the last retry (5) | IF false outputs: link -> `Wait 3 days`, day 3 -> `Wait 4 days`, day 7 / W3 / W5 -> none | all 5 C1052 (`expectedExit`) | - |
 | one-way doors (13 Landing rows) | plan Landing | 1 C1042, C1006 · 2 C1002, C1035 · 3 C1040, C1011 · 4 C1036 · 5 C1037, C1026 · 6 C1038 · 7 C1039 · 8 C1033, C1052 · 9 C1004 · 10 C1037 · 11 C1019, C1029, C1043 · 12 superseded · 13 C1035 | - |
 | proxy paths (4) | `web/infrastructure/supabase/session.ts` | 4 C1038 | - |
@@ -137,68 +152,66 @@ Recomputed at `5c4237b`. The SQL sets come from the migration (unchanged since r
 
 ## Test policy rows
 
+The Instrumentation row was re-judged, because it classifies `automation/n8n/*.json`, which the fix touched. The other two rows are carried from `5c4237b`.
+
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides, reached across a boundary | migration (dispatcher, claim, complete), `web/app/api/automation/notify/route.ts`, `web/infrastructure/email/index.ts` | boundary: SQL recipe over the queue table and RPCs, route via `POST`, adapter via stubbed `fetch`. Own layer: one labelled case per decision-table row | yes |
-| Decides, not reached across a boundary | `web/domain/notifications/index.ts`, `web/infrastructure/portal-tokens.ts`, `web/application/use-cases/notify.ts` | own layer: C1019, C1020, C1024, C1027, C1029, C1032, C1026, C1044, C1016, C1025 | yes |
-| Instrumentation | `web/composition/index.ts`, `web/infrastructure/supabase/automation.ts`, `automation/n8n/*.json` | none of its own. The exports are asserted structurally by C1033-C1035 and behaviourally by C1052's walker | yes |
+| Decides, reached across a boundary | migration (dispatcher, claim, complete), `web/app/api/automation/notify/route.ts`, `web/infrastructure/email/index.ts` | boundary: SQL recipe over the queue table and RPCs, route via `POST`, adapter via stubbed `fetch`. Own layer: one labelled case per decision-table row | yes (carried) |
+| Decides, not reached across a boundary | `web/domain/notifications/index.ts`, `web/infrastructure/portal-tokens.ts`, `web/application/use-cases/notify.ts` | own layer: C1019, C1020, C1024, C1027, C1029, C1032, C1026, C1044, C1016, C1025 | yes (carried) |
+| Instrumentation | `web/composition/index.ts`, `web/infrastructure/supabase/automation.ts`, `automation/n8n/*.json` | none of its own. The exports are asserted structurally by C1033-C1035 and behaviourally by C1052's walker, which now covers all 6 retry triggers | yes (re-judged at `aec4fb0`) |
 
 ## Faults injected
 
-Isolation: `git worktree add <scratchpad>/wt HEAD`, with `web/node_modules` junctioned to the real tree's copy and `web/.env.local` copied in. Each fault was applied alone, run, then reverted with `git checkout -- .` (porcelain empty after each).
+Isolation: `git worktree add --detach <scratchpad>/wt3 HEAD` at `aec4fb0`, with `web/node_modules` junctioned to the real tree's copy. `git stash` was not used. For each fault:
 
-The SQL fault was a `create or replace function private.dispatch_outbox()` prepended to the worktree's `supabase/tests/outbox_dispatch.sql`. That file runs inside `fixture.sql`'s transaction and ends in `rollback`. Afterwards, a read-only `execute_sql` confirmed the live `private.dispatch_outbox()` still contains `between 200 and 299`. No migration was applied.
+- apply it alone with `sed`;
+- run `npx vitest run n8n-workflows --reporter=verbose`;
+- revert with `git checkout -- .`. Porcelain was empty after each revert.
 
-Baseline `git status --porcelain` of the real tree was empty. It was still empty after `git worktree remove --force`, before this report was written.
+The real tree's `git status --porcelain` was empty before the worktree was made. It was still empty after the junction and the worktree were removed (`git worktree remove --force`), before this report was written. The real `web/node_modules` was intact afterwards, with 383 entries.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| C1052: W1 `Wait 10 minutes (link)` loops back to `Sign link` instead of `Link body`, so the retry reuses the old timestamp | `automation/n8n/W1-agreement-sent.json` connections | yes - 3 x `× C1052: a 409/503/network retries through a 10-minute Wait with the same key, freshly signed, until a 200` |
-| C1052: W5 `Retry stale?` drops `\|\| $json.statusCode === undefined`, so a network error is not retried | `automation/n8n/W5-stale-daily.json` IF condition | yes - `× C1052: a network retries ...` and `× C1052: a network on every attempt stops after 6 retries ...` |
-| C1035: the `Signature valid` false branch goes to `Event`, so an unsigned event is routed | `automation/n8n/events.json` connections | yes - `× C1035: the signature is checked before routing ...` (`expected true to be false`) |
-| C1004: the dispatcher treats status `300` as delivered (`between 200 and 300`) | `supabase/migrations/20261029165430_outbox_dispatch.sql:52`, via `create or replace` in the test file | yes - `FAIL outbox_dispatch: C1004 300: 300 was not retried with an error` |
-| C1029: the stale subject plural is inverted (`count === 1 ? "agreements" : "agreement"`) | `web/domain/notifications/index.ts:152` | yes - `× C1029: the stale digest counts, lists each agreement ...` |
+| C1052: drop `502` from W1 `Retry link?` (`[409, 500, 503, 504]`) | `automation/n8n/W1-agreement-sent.json:331` | yes - 2 failed: `× C1052: notify call W1-agreement-sent.json #0 (link) > C1052: a 502 retries ...` and `× ... a 502 on every attempt stops after 6 retries ...` |
+| C1052: drop `504` from W5 `Retry stale?` (`[409, 500, 502, 503]`) | `automation/n8n/W5-stale-daily.json:128` | yes - 2 failed: `× ... W5-stale-daily.json #0 (W5) > C1052: a 504 retries ...` and `× ... a 504 on every attempt ...` |
+| C1052: `500` mistyped as `501` in W3 (`[409, 501, 502, 503, 504]`) | `automation/n8n/W3-agreement-decided.json:119` | yes - 2 failed: `× ... W3-agreement-decided.json #0 (W3) > C1052: a 500 retries ...` and `× ... a 500 on every attempt ...` |
+| C1052: `404` added to the W1 day 7 retry list (`[404, 409, 500, 502, 503, 504]`) | `automation/n8n/W1-agreement-sent.json:449` | yes - 1 failed: `× ... W1-agreement-sent.json #2 (day7) > C1052: a 404 is read without failing the run and never loops` |
+| C1052: W1 day 3 predicate widened to `$json.statusCode >= 409 \|\| $json.statusCode === undefined` | `automation/n8n/W1-agreement-sent.json:390` | no - survived, 96 passed. Every status C1052 names still behaves as the check says, but 410-499 and 501+ would now loop too. See F17 |
 
-5 injected, 5 killed. Together with round 1's 5 (dispatcher backoff, in-flight window, route 409, use-case reserved filter, Resend 429), every assertion surface the fix touched (exports, C1035, C1052) has now been made to fail at least once.
+5 injected, 4 killed, 1 survived. The survivor is equivalent under C1052's wording, so it is not a failed check. It is a precision gap for the user to rule on (F17).
 
-## Round 1 findings - status at `5c4237b`
+Rounds 1 and 2 injected 10 faults and killed all 10. With this round, each new retry status (`500`, `502`, `504`) has now been made to fail at least once.
+
+## Earlier findings - status at `aec4fb0`
 
 | Finding | Status | Evidence |
 | --- | --- | --- |
-| F1 - C1035 credential vs `$env` | resolved | The user chose placeholders (Landing 13, `plan.md:99`), and C1035 was reworded and approved. No export contains `$env` (`web/n8n-workflows.test.ts:245`), and every signer is `__SA_HMAC_SECRET__` (`:252`, `:267`). AD-074 and AD-079 were updated. Leftover wording in plan door 2 and open question 1, see F12 |
-| F2 - AC 16 n8n retry unasserted | resolved | C1052 was added and approved. It covers 5 calls x 11 cases, and two faults were killed |
-| F3 - door 6 `runtime` nodejs not exported | unchanged, accepted (wording only) | the route is unchanged |
-| F4 - Landing 9-11 and test-pin edits added mid-build | unchanged, observation | no change since round 1 |
-| F5 - STATE AD-070 row malformed | resolved | `.specs/STATE.md:76` has 5 cells, status `active, amended by AD-077` |
-| F6 - ROADMAP ticked with stale `EventPublisher` text | resolved in ROADMAP, but it created F11 | `ROADMAP.md:117` was reworded and unticked. C1051 was not reworded to match |
-| F7 - precision gaps | partly resolved | Resend 409 is now asserted (`resend.test.ts:77-79`), and the reader's `no_link_secret` is asserted (`agreements.test.ts:434`). The C1019 `[^<\n]*` between total and `before tax` is unchanged |
-| F8 - complete's 401/400/404 all answer 503 at the route | unchanged, observation | `web/infrastructure/supabase/automation.ts` is unchanged |
-| F9 - non-constant-time signature compare | unchanged, observation | migration unchanged |
-| F10 - Webhook `rawBody` -> `extractFromFile` byte fidelity is live-only | unchanged, waits on C1049 | `events.json` changed only the secret |
+| F1, F2, F5 | resolved in round 2, carried | round 2 report at `a03cab1` |
+| F3, F4, F8, F9 | observations, unchanged, carried | no file they cite was touched |
+| F6 / F11 - C1051 vs the unticked ROADMAP item | open, by the user's choice: the item is ticked only after C1049 and C1050 pass | `ROADMAP.md:117`; `.specs/features/outbox-dispatch/checks.md:468` |
+| F7 - precision gaps | carried (the C1019 `[^<\n]*` is unchanged) | no file it cites was touched |
+| F10 - byte fidelity of the Webhook `rawBody` can only be shown live | carried, waits on C1049 | `events.json` unchanged |
+| F12 - stale wording in door 2 and open question 1 | carried, not blocking | `plan.md` unchanged since `5c4237b` |
+| F13 - 500, 502 and 504 ended the call without a retry | resolved | C1052 reworded in `e4e1970` (the user's decision); exports and tests changed in `aec4fb0`; 30 new `✓`; 3 faults killed |
+| F14 - C1052 is proven by a simulator | carried. The live residue under C1049 is an error-output item with no `statusCode`, `$runIndex` across a persisted Wait, and now also whether the platform's gateway really answers 500, 502 or 504 (the user's stated reason) | `web/n8n-workflows.test.ts:79-131` |
+| F15 - lint-driven test timeouts under load | recurred. The first `npm test` this round had C32 and C873 time out at 5000 ms with nothing else running, and the reruns were green. The fix round's own record shows the same (`.specs/features/outbox-dispatch/checks.md:475`) | see Proof runs |
+| F16 - missing full stop in `CONTEXT.md` | resolved | `CONTEXT.md` now reads "survive a redeploy). The exports carry" |
 
-## Findings (new in round 2)
+## Findings (new in round 3)
 
-- **F11 - C1051 fails (blocks PASS).**
-  - C1051's literal claim and its shell proof require `ROADMAP.md` to tick Phase 3 item 5. The fix round unticked it (`ROADMAP.md:117`, `- [ ] ... (code done; awaiting verification and the live run)`), which resolved F6. C1051 was not reworded, and the Handoff says "Not changed: every other check".
-  - Two ways out, and the user decides which: tick the item once C1049 passes, or reword C1051.
-- **F12 - stale approved wording (C1035 / door 2, not blocking).**
-  - Plan door 2 (`plan.md:87`, "also held as an n8n credential") and open question 1 (`plan.md:205`, "in the n8n credential") still describe the credential that Landing 13 replaced. Row 12 (`plan.md:97`) is left in place but marked as superseded by row 13.
-  - The builder recorded this as deliberate (`checks.md:451`). The live operator steps in `checks.md:445` and `CONTEXT.md` correctly say to replace the placeholders.
-- **F13 - C1052 precision gap.**
-  - The retry predicate loops only on `409`, `503` and "no status" (`statusCode === undefined`). A `500`, `502` or `504` answered by the hosting platform's gateway, rather than the app, ends the call without a retry. For W1 that means the link email is lost.
-  - C1052 names only 200/400/401/404 as non-looping and says nothing about other statuses, so this is not a contradiction. It is a gap in the check.
-- **F14 - C1052 is proven by a simulator (live-only residue).**
-  - The proof walks the export under the n8n semantics the builder took from n8n's docs and source (`web/n8n-workflows.test.ts:79-131`). Two behaviours are only exercised live, under C1049:
-    - an error-output item carrying no `statusCode`
-    - `$runIndex` surviving a persisted 10-minute Wait
-- **F15 - suite flakiness under load (observation, not a feature check).**
-  - Run concurrently with `test:db`, the pre-existing ESLint-driven tests C32 (`web/domain/purity.test.ts:28`) and C873 (`web/boundaries.test.ts:56`) timed out at 5000 ms. The first case of C873 took 3668 ms even in the clean run.
-- **F16 - cosmetic.** `CONTEXT.md` (the n8n workflows bullet) is missing a full stop: "...so waits survive a redeploy) The exports carry...".
+- **F17 - C1052 does not pin the statuses it does not name (precision gap, not blocking).**
+  - The mutant `$json.statusCode >= 409 || $json.statusCode === undefined` survives all 96 tests. Under it, 410-499 (for example 422 or 429) and 501+ would also loop up to 6 times.
+  - C1052 names only `200`, `400`, `401` and `404` as never looping, so the mutant is consistent with the check as written. It is not a contradiction.
+  - The route itself answers only 200, 400, 401, 404, 409 and 503 (Coverage, route statuses), so in practice only what a gateway or proxy might answer is left open.
+  - To pin the exact list, C1052 would have to name one more status that never loops, for example `429` or `501`.
+- **F18 - doc consistency (observation).**
+  - The fix updated `CONTEXT.md:174` and `.specs/STATE.md:85` (AD-079) to the 6 retry triggers.
+  - `plan.md:40` ("Failure answers `503`, so n8n retries") describes the route, is still true, and needs no change.
+  - No retry wording that lists only `409` and `503` remains in `CONTEXT.md`, `STATE.md`, `plan.md`, `ROADMAP.md` or the exports.
 
 ## Gate
 
-- `npm run test:db` - 18 passed, 0 failed
-- `npx vitest run --reporter=verbose` - 1773 passed, 0 failed (84 files)
-- `npm run lint`, `npx tsc --noEmit`, `npm run build` - exit 0
-- mcp `get_advisors` security - 12 lints, as C1041 expects
-- mcp `execute_sql` (select only) - C1008 state, the live dispatcher definition unchanged, 0 Vault secrets, 0 notifications, 0 sent agreements
+- `npx vitest run n8n-workflows --reporter=verbose` - 96 passed, 85 `C1052:` ✓, 0 failed
+- `npm test` - first run: 1801 passed, 2 failed (the F15 timeouts, C32 and C873). Rerun: 1803 passed, exit 0. Verbose run: 1803 passed, exit 0
+- `npm run lint`, `npx tsc --noEmit` - exit 0
+- carried from `5c4237b`: `npm run test:db` 18 passed, 0 failed; `npm run build` exit 0; mcp `get_advisors` 12 lints; mcp `execute_sql` live reads (C1008, C1041, C1042). This round touched no live project or external service.

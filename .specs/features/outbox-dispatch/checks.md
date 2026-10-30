@@ -476,3 +476,23 @@ Expected follow-ons the build must report, not hide:
   - `npm run lint`, `npx tsc --noEmit` and `npm run build` all exit 0.
   - `npm run test:db` was not run, because no SQL was touched.
 - **Author note:** the orchestrator wrote this round, so the Verifier of round 3 must be a fresh agent.
+
+### Live record, C1050 (2026-10-30, run by the orchestrator, not the Verifier; the user's go-ahead "go ahead")
+
+- **Setup:** `PORTAL_LINK_KEY` was generated into `web/.env.local` (gitignored). The run used `npm run dev` and one signed-in Playwright context.
+- **Send:** draft AG-1046 (`c89ea0aa-…`, 1 line, $21,600.00) went through "Send to customer", then the confirm "Send". The page then read "Sent to customer", "Not viewed yet" and **"Email pending"**, and showed the link once with "Copy link".
+- **Database** (`execute_sql`, read-only):
+  - the live link's `token_sealed` matches the door 5 format
+  - its `token_hash` equals the SHA-256 of the shown token
+  - the `agreement.sent` outbox row is `pending` (Vault is empty, so dispatch does nothing)
+- **Sizes**, with the delivery line found by its text each time:
+
+  | Size | Line box | Horizontal scroll |
+  | --- | --- | --- |
+  | 375×812 | `[16,317,328,19]`, 13px | none |
+  | 768×1024 | `[20,234,713,19]` | none |
+  | 1440×900 | `[260,143,1137,19]` | none |
+
+  The line stayed inside the viewport at every size, and the screenshots were reviewed. The console had 0 errors and 0 warnings over the whole session.
+- **Not shown live:** the `Emailed to …` and `Not emailed: …` states, because no notification exists until C1049. C1032 proves them in unit tests.
+- **Data left behind:** AG-1046 is now `sent`, with 1 live link, 1 `agreement.sent` event and 1 `pending` outbox row. `seed.sql` cannot undo this: every insert is `on conflict do nothing`, so it never resets a status. That also means STATE's earlier "seed.sql restores them" was wrong. Once dispatch is configured, that row's W1 email to the demo contact `@example.com` is skipped as `reserved_domain`.
