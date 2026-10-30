@@ -63,6 +63,21 @@ export function supabasePortalLinkStore(client: Client): PortalLinkStore {
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const orNull = (value: unknown): Date | null => (typeof value === "string" ? new Date(value) : null);
 
+/** One of `portal_view`'s lines; `visitMonths` and `equipment` are cadence door 6's keys. */
+function toLine(value: unknown): PortalView["lines"][number] {
+  const line = isRecord(value) ? value : {};
+  return {
+    description: line.description as string,
+    visitsPerYear: line.visitsPerYear as number,
+    costPerVisitCents: line.costPerVisitCents as number,
+    annualCents: line.annualCents as number,
+    visitMonths: Array.isArray(line.visitMonths) ? line.visitMonths.map(Number) : [],
+    equipment: Array.isArray(line.equipment)
+      ? line.equipment.filter(isRecord).map((type) => ({ code: type.code as string, name: type.name as string }))
+      : [],
+  };
+}
+
 /** `portal_view`'s document (customer-portal door 2, 8) as the app's `PortalView`; `null` for an unknown link. */
 function toView(json: unknown): PortalView | null {
   if (!isRecord(json) || !isRecord(json.link) || !isRecord(json.agreement)) return null;
@@ -82,7 +97,7 @@ function toView(json: unknown): PortalView | null {
       : null,
     customer: { name: customer.name as string },
     site: { name: site.name as string },
-    lines: (json.lines as PortalView["lines"]) ?? [],
+    lines: (Array.isArray(json.lines) ? json.lines : []).map(toLine),
     annualCents: json.annualCents as number,
     scope: json.scope ?? null,
     terms: parseTerms({ terms: json.terms }),

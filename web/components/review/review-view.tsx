@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import type { PortalView } from "@/application/ports";
 import { portalScope, type PortalDecision } from "@/application/use-cases";
 import { ServiceScopeSections } from "@/components/agreements/service-scope";
+import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
-import { NEUTRAL_ACCENT, termsOf } from "@/domain/agreement";
+import { NEUTRAL_ACCENT, termsOf, visitSchedule } from "@/domain/agreement";
 import { contrastText, isAccent, type PortalState } from "@/domain/portal";
 import { formatCadExact } from "@/lib/money";
 import { DecisionControls } from "./decision-controls";
@@ -88,6 +89,8 @@ function Content({ view }: { view: PortalView }) {
           <p className="text-[12px] text-ink-2">before tax</p>
         </div>
       </section>
+
+      <VisitScheduleSection schedule={visitSchedule(view.lines)} />
 
       <ServiceScopeSections scope={portalScope(view)} siteId="" canAddEquipment={false} />
 

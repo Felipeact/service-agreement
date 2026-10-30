@@ -1,4 +1,4 @@
-import type { AgreementDocument, AgreementStatus, AgreementTerms, ScopeType, ServiceLineValue } from "@/domain/agreement";
+import type { AgreementDocument, AgreementStatus, AgreementTerms, EquipmentChoice, ScopeType, ServiceLineValue } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
@@ -396,6 +396,10 @@ export type ServiceLineView = {
   visitsPerYear: number;
   costPerVisitCents: number;
   annualCents: number;
+  /** Ascending, 1 = January; their number is `visitsPerYear` (cadence door 1). */
+  visitMonths: number[];
+  /** The equipment types the line covers, by name (cadence door 2). */
+  equipment: { id: string; code: string; name: string }[];
 };
 
 /** An agreement as its page shows it: the version asked for, or the current one. */
@@ -412,6 +416,11 @@ export type AgreementDetail = {
   shown: { versionNo: number; current: boolean; lines: ServiceLineView[]; annualCents: number };
   /** The agreement is `draft` and the shown version is the current one. */
   editable: boolean;
+  /**
+   * What a line of the editable version can cover: the site's types with an asset, plus any type a line already
+   * covers, by name (cadence AC 8). Empty when the shown version is not editable.
+   */
+  equipmentChoices: EquipmentChoice[];
   /**
    * What the shown version covers: live from the site while it is editable, else what the version recorded when the
    * agreement left draft (service-included door 4).
@@ -505,7 +514,14 @@ export type PortalView = {
   tenant: { name: string; address: string | null; phone: string | null; accent: string | null } | null;
   customer: { name: string };
   site: { name: string };
-  lines: { description: string; visitsPerYear: number; costPerVisitCents: number; annualCents: number }[];
+  lines: {
+    description: string;
+    visitsPerYear: number;
+    costPerVisitCents: number;
+    annualCents: number;
+    visitMonths: number[];
+    equipment: { code: string; name: string }[];
+  }[];
   annualCents: number;
   scope: unknown;
   terms: AgreementTerms | null;

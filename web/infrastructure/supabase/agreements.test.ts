@@ -5,7 +5,8 @@ import { stubClient, type Reply } from "./stub-client";
 const AGR = "11111111-1111-4111-8111-111111111111";
 const SITE = "33333333-3333-4333-8333-333333333333";
 const LINE = "44444444-4444-4444-8444-444444444444";
-const VALUE = { description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250 };
+const TYPE = "55555555-5555-4555-8555-555555555555";
+const VALUE = { description: "Preventive maintenance visit", visitMonths: [3, 6, 9, 12], costPerVisitCents: 89250, assetTypeIds: [TYPE] };
 
 const ok = (data: unknown): Reply => ({ data, error: null });
 const fail = (code: string): Reply => ({ data: null, error: { code, message: `boom ${code}` } });
@@ -22,13 +23,17 @@ const agreementRow = (versions: { id: string; version_no: number; created_at?: s
   agreement_versions: versions.map((version) => ({ created_at: "2026-10-27T17:00:00Z", contracts: [], ...version })),
 });
 
+const MONTHS_FOR: Record<number, number[]> = { 2: [4, 10], 4: [3, 6, 9, 12] };
+
 const line = (id: string, position: number, created_at: string, visits = 4, cost = 89250) => ({
   id,
   position,
   description: `Line ${id}`,
   visits_per_year: visits,
+  visit_months: MONTHS_FOR[visits],
   cost_per_visit_cents: cost,
   created_at,
+  service_line_asset_types: [{ asset_types: { id: TYPE, code: "RTU", name: "Rooftop unit" } }],
 });
 
 describe("agreement reader", () => {
@@ -62,6 +67,8 @@ describe("agreement reader", () => {
       visitsPerYear: 4,
       costPerVisitCents: 89250,
       annualCents: 357000,
+      visitMonths: [3, 6, 9, 12],
+      equipment: [{ id: TYPE, code: "RTU", name: "Rooftop unit" }],
     });
   });
 
@@ -170,64 +177,46 @@ describe("agreement store", () => {
 });
 
 describe("service line store", () => {
-  const VERSION = { id: "v3", org_id: "org-from-row" };
+  /** The update reads the line's agreement first (the RPC takes it); RLS hides other orgs' lines. */
+  const LINE_ROW = ok([{ id: LINE, agreement_versions: { agreement_id: AGR } }]);
+  const ARGS = {
+    p_agreement_id: AGR,
+    p_description: "Preventive maintenance visit",
+    p_visit_months: [3, 6, 9, 12],
+    p_cost_per_visit_cents: 89250,
+    p_asset_type_ids: [TYPE],
+  };
 
-  test("C719: add inserts after the highest position of the current version, with org_id from the version row", async () => {
-    const { typed, calls } = stubClient({
-      agreement_versions: ok([VERSION]),
-      service_lines: { sequence: [ok([{ position: 0 }, { position: 4 }, { position: 2 }]), ok([{ id: "new-line" }])] },
-    });
-    expect(await supabaseServiceLineStore(typed).add(AGR, VALUE)).toEqual({ ok: true, id: "new-line" });
-    expect(calls).toContainEqual({ table: "agreement_versions", method: "eq", args: ["agreement_id", AGR] });
-    expect(calls).toContainEqual({ table: "agreement_versions", method: "order", args: ["version_no", { ascending: false }] });
-    expect(calls).toContainEqual({ table: "agreement_versions", method: "limit", args: [1] });
-    expect(calls).toContainEqual({ table: "service_lines", method: "eq", args: ["agreement_version_id", "v3"] });
-    const insert = calls.find((call) => call.table === "service_lines" && call.method === "insert");
-    expect(insert?.args[0]).toEqual({
-      org_id: "org-from-row",
-      agreement_version_id: "v3",
-      position: 5,
-      description: "Preventive maintenance visit",
-      visits_per_year: 4,
-      cost_per_visit_cents: 89250,
-    });
-    expect(Object.keys(insert?.args[0] as object).sort()).toEqual(
-      ["agreement_version_id", "cost_per_visit_cents", "description", "org_id", "position", "visits_per_year"],
-    );
-  });
+  function storeWith(rpcReply: Reply, tables: Record<string, Reply> = {}) {
+    const stub = stubClient(tables);
+    stub.client.rpc.mockResolvedValue(rpcReply);
+    return { ...stub, store: supabaseServiceLineStore(stub.typed) };
+  }
 
-  test("C719: the first line of an empty version is at position 0", async () => {
-    const { typed, calls } = stubClient({
-      agreement_versions: ok([VERSION]),
-      service_lines: { sequence: [ok([]), ok([{ id: "first" }])] },
-    });
-    expect(await supabaseServiceLineStore(typed).add(AGR, VALUE)).toEqual({ ok: true, id: "first" });
-    expect((calls.find((call) => call.method === "insert")?.args[0] as { position: number }).position).toBe(0);
-  });
-
-  test("C722: a version holding 50 lines is too_many and nothing is inserted", async () => {
-    const fifty = Array.from({ length: 50 }, (_, position) => ({ position }));
-    const { typed, calls } = stubClient({ agreement_versions: ok([VERSION]), service_lines: ok(fifty) });
-    expect(await supabaseServiceLineStore(typed).add(AGR, VALUE)).toEqual({ ok: false, code: "too_many" });
+  test("C719: add calls save_service_line with a null line id and answers the id it returns", async () => {
+    const { store, client, calls } = storeWith(ok("new-line"));
+    expect(await store.add(AGR, VALUE)).toEqual({ ok: true, id: "new-line" });
+    expect(client.rpc.mock.calls).toEqual([["save_service_line", { ...ARGS, p_line_id: null }]]);
     expect(calls.filter((call) => call.method === "insert")).toHaveLength(0);
   });
 
+  test("C722: a 54000 from the add is too_many", async () => {
+    const { store } = storeWith(fail("54000"));
+    expect(await store.add(AGR, VALUE)).toEqual({ ok: false, code: "too_many" });
+  });
+
   test("C737: add, update and remove map 55000 to locked", async () => {
-    const add = stubClient({ agreement_versions: ok([VERSION]), service_lines: { sequence: [ok([]), fail("55000")] } });
-    expect(await supabaseServiceLineStore(add.typed).add(AGR, VALUE)).toEqual({ ok: false, code: "locked" });
+    expect(await storeWith(fail("55000")).store.add(AGR, VALUE)).toEqual({ ok: false, code: "locked" });
+    expect(await storeWith(fail("55000"), { service_lines: LINE_ROW }).store.update(LINE, VALUE)).toEqual({ ok: false, code: "locked" });
     const write = stubClient({ service_lines: fail("55000") });
-    expect(await supabaseServiceLineStore(write.typed).update(LINE, VALUE)).toEqual({ ok: false, code: "locked" });
     expect(await supabaseServiceLineStore(write.typed).remove(LINE)).toEqual({ ok: false, code: "locked" });
   });
 
-  test("C724: update and remove write the one line by id and answer ok", async () => {
-    const { typed, calls } = stubClient({ service_lines: ok([{ id: LINE }]) });
+  test("C724: update calls save_service_line with the line's id, and update and remove answer ok", async () => {
+    const { typed, client, calls } = stubClient({ service_lines: LINE_ROW });
+    client.rpc.mockResolvedValue(ok(LINE));
     expect(await supabaseServiceLineStore(typed).update(LINE, VALUE)).toEqual({ ok: true });
-    expect(calls).toContainEqual({
-      table: "service_lines",
-      method: "update",
-      args: [{ description: "Preventive maintenance visit", visits_per_year: 4, cost_per_visit_cents: 89250 }],
-    });
+    expect(client.rpc.mock.calls).toEqual([["save_service_line", { ...ARGS, p_line_id: LINE }]]);
     expect(await supabaseServiceLineStore(typed).remove(LINE)).toEqual({ ok: true });
     expect(calls).toContainEqual({ table: "service_lines", method: "delete", args: [] });
     expect(calls.filter((call) => call.method === "eq")).toEqual([
@@ -236,36 +225,34 @@ describe("service line store", () => {
     ]);
   });
 
-  test("C741: update and remove of a well-formed id matching no row are not_found; add with no version is not_found", async () => {
+  test("C741: a P0002 from add or update is not_found; update and remove of an id matching no row are not_found", async () => {
+    expect(await storeWith(fail("P0002")).store.add(AGR, VALUE)).toEqual({ ok: false, code: "not_found" });
+    expect(await storeWith(fail("P0002"), { service_lines: LINE_ROW }).store.update(LINE, VALUE)).toEqual({ ok: false, code: "not_found" });
     const none = stubClient({ service_lines: ok([]) });
     expect(await supabaseServiceLineStore(none.typed).update(LINE, VALUE)).toEqual({ ok: false, code: "not_found" });
+    expect(none.client.rpc).not.toHaveBeenCalled();
     expect(await supabaseServiceLineStore(none.typed).remove(LINE)).toEqual({ ok: false, code: "not_found" });
-    const noVersion = stubClient({ agreement_versions: ok([]) });
-    expect(await supabaseServiceLineStore(noVersion.typed).add(AGR, VALUE)).toEqual({ ok: false, code: "not_found" });
   });
 
   test("a 42501 is forbidden", async () => {
-    const { typed } = stubClient({ service_lines: fail("42501") });
-    expect(await supabaseServiceLineStore(typed).update(LINE, VALUE)).toEqual({ ok: false, code: "forbidden" });
+    const { store } = storeWith(fail("42501"), { service_lines: LINE_ROW });
+    expect(await store.update(LINE, VALUE)).toEqual({ ok: false, code: "forbidden" });
   });
 
   test.each<[string, () => Promise<unknown>]>([
-    ["add, on the version read", () =>
-      supabaseServiceLineStore(stubClient({ agreement_versions: fail("XX000") }).typed).add(AGR, VALUE)],
-    ["add, on the positions read", () =>
-      supabaseServiceLineStore(stubClient({ agreement_versions: ok([VERSION]), service_lines: fail("XX000") }).typed).add(AGR, VALUE)],
-    ["add, on the insert", () =>
-      supabaseServiceLineStore(
-        stubClient({ agreement_versions: ok([VERSION]), service_lines: { sequence: [ok([]), fail("XX000")] } }).typed,
-      ).add(AGR, VALUE)],
-    ["update", () => supabaseServiceLineStore(stubClient({ service_lines: fail("XX000") }).typed).update(LINE, VALUE)],
+    ["add, on an rpc error", () => storeWith(fail("XX000")).store.add(AGR, VALUE)],
+    ["update, on an rpc error", () => storeWith(fail("XX000"), { service_lines: LINE_ROW }).store.update(LINE, VALUE)],
+    ["update, on the line read", () => storeWith(ok(LINE), { service_lines: fail("XX000") }).store.update(LINE, VALUE)],
     ["remove", () => supabaseServiceLineStore(stubClient({ service_lines: fail("XX000") }).typed).remove(LINE)],
     ["a thrown add", () => {
-      const stub = stubClient({});
-      stub.client.from = (() => {
-        throw new Error("network down");
-      }) as never;
-      return supabaseServiceLineStore(stub.typed).add(AGR, VALUE);
+      const stub = storeWith(ok(null));
+      stub.client.rpc.mockRejectedValue(new Error("network down"));
+      return stub.store.add(AGR, VALUE);
+    }],
+    ["a thrown update", () => {
+      const stub = storeWith(ok(null), { service_lines: LINE_ROW });
+      stub.client.rpc.mockRejectedValue(new Error("network down"));
+      return stub.store.update(LINE, VALUE);
     }],
   ])("C744: %s fails as unavailable with exactly one console.error", async (_, run) => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});

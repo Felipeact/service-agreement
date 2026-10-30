@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import { validateServiceLine } from "@/domain/agreement";
+import { validateServiceLine, type ServiceLineInput } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
@@ -22,10 +22,14 @@ async function writer() {
   return canWriteRecords(member.role) ? container : null;
 }
 
-/** Only the three line fields are read: the org comes from the member, the version from the agreement (AC 29). */
-function lineFields(formData: FormData) {
+/**
+ * Only the line fields are read: the org comes from the member, the version from the agreement (AC 29). Months and
+ * equipment are every checked box (cadence door 1, 2).
+ */
+function lineFields(formData: FormData): ServiceLineInput {
   const text = (name: string) => String(formData.get(name) ?? "");
-  return { description: text("description"), visitsPerYear: text("visitsPerYear"), costPerVisit: text("costPerVisit") };
+  const all = (name: string) => formData.getAll(name).map(String);
+  return { description: text("description"), visitMonths: all("visitMonths"), costPerVisit: text("costPerVisit"), assetTypeIds: all("assetTypeIds") };
 }
 
 /** Creates a draft with version 1 on the site, then opens it; a site with a live agreement names that one. */

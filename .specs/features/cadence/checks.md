@@ -311,3 +311,18 @@ Proof: `npm run test:db cadence` (assertions `C1099`)
   `execute_sql`. (4) "Frozen" for `backfill_line_coverage` means any version but the current version of a draft
   (AD-062's rule) that holds `snapshot.types`; it fills only lines with no coverage, so a saved choice is never widened.
 - **Abandoned:** nothing.
+- **Settled mid-build (batch 2):** the user approved superseding the existing vitest assertions that pinned the typed visits
+  input and the direct table writes, keeping each claim's outcome (2026-10-30):
+  - `domain/agreement/service-line.test.ts` C720 `visits %j are refused...`, `visits %j give %i` and `...returns all three
+    messages` retired; C1064 and C1068 replace them. The `accepted and returned trimmed` case's value takes the new shape.
+  - `components/agreements/agreements.test.ts` C715: the `new-line-visitsPerYear` value assertion is now twelve
+    `visitMonths` boxes, none checked (C1062, C1065); the rest of C715 is unchanged.
+  - `infrastructure/supabase/agreements.test.ts`, moved to `rpc("save_service_line")` (C1072): C719 (`p_line_id: null`, the
+    id comes back), C722 (`54000` -> `too_many`), C724 (update calls the RPC with the line's id; the remove asserts
+    unchanged), C737 (`55000` -> `locked`), C741 (`P0002` -> `not_found`), the `42501 is forbidden` case, and C744 (an RPC
+    error and a thrown RPC -> `unavailable` with one `console.error`). Remove-path assertions are untouched.
+  - The C725 reader case's expected line gains `visitMonths` and `equipment` (the line shape, as its fixture row now
+    carries them); its amounts are unchanged.
+  - Port signatures unchanged: `update(lineId, value)` reads the line's agreement id before the RPC (plan Flow hop 3).
+    The printed `DocumentLine` keeps its four fields, so the C858-area `doc.lines[0]` assertion is untouched; the
+    schedule rides on `AgreementDocument.schedule` (plan Impact, ports row).

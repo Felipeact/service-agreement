@@ -1,5 +1,6 @@
 import type { OrgSettingsValue } from "../org-settings";
 import { formatSettingNumber } from "../org-settings";
+import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
@@ -8,6 +9,9 @@ export const NEUTRAL_ACCENT = "#374151";
 export const DRAFT_MARK = "DRAFT - not yet sent to the customer";
 
 export type DocumentLine = { description: string; visitsPerYear: number; costPerVisitCents: number; annualCents: number };
+
+/** A line as a document source holds it: its printed figures, plus the months and equipment the schedule reads. */
+export type DocumentSourceLine = DocumentLine & { id?: string; visitMonths: number[]; equipment: { name: string }[] };
 
 /** The scope part of a document: what the version covers, or that nobody recorded it. */
 export type DocumentScope = { kind: "listed"; recordedOn: Date | null; types: ScopeType[] } | { kind: "not_recorded" };
@@ -26,6 +30,8 @@ export type AgreementDocument = {
   mark: string | null;
   lines: DocumentLine[];
   totalCents: number;
+  /** Which equipment is visited in which month, from the lines (cadence AC 19); empty when there are none. */
+  schedule: ScheduleRow[];
   scope: DocumentScope;
   /** Only the terms that are set, in print order. */
   terms: { label: string; value: string }[];
@@ -37,7 +43,7 @@ export type DocumentSource = {
   customer: { name: string };
   site: { name: string };
   editable: boolean;
-  shown: { versionNo: number; lines: (DocumentLine & { id?: string })[]; annualCents: number };
+  shown: { versionNo: number; lines: DocumentSourceLine[]; annualCents: number };
   serviceScope: { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
   /** The terms frozen into the shown version; `null` while it is editable or when it recorded none (customer-portal door 3). */
   terms: AgreementTerms | null;
@@ -73,6 +79,7 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
       annualCents,
     })),
     totalCents: source.shown.annualCents,
+    schedule: visitSchedule(source.shown.lines),
     scope: scope.source === "not_recorded" ? { kind: "not_recorded" } : { kind: "listed", recordedOn: scope.source === "frozen" ? scope.takenAt : null, types: scope.types },
     // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
     // settings of today (customer-portal AC 32, 33).

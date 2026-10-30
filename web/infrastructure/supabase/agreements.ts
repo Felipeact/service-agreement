@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { LIVE_STATUSES, MAX_SERVICE_LINES, parseServiceScope, parseTerms, type AgreementStatus, type AgreementTerms } from "@/domain/agreement";
+import { LIVE_STATUSES, parseServiceScope, parseTerms, type AgreementStatus, type AgreementTerms, type EquipmentChoice } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
@@ -15,6 +15,7 @@ import type {
   ServiceLineWriteResult,
   WriteFailure,
 } from "@/application/ports";
+import type { ServiceLineValue } from "@/domain/agreement";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -45,7 +46,20 @@ type AgreementRow = {
   agreement_versions: VersionRow[];
 };
 
-type LineRow = { id: string; position: number; description: string; visits_per_year: number; cost_per_visit_cents: number; created_at: string };
+type CoveredType = { id: string; code: string; name: string };
+
+type LineRow = {
+  id: string;
+  position: number;
+  description: string;
+  visits_per_year: number;
+  visit_months: number[];
+  cost_per_visit_cents: number;
+  created_at: string;
+  service_line_asset_types: { asset_types: CoveredType | null }[] | null;
+};
+
+const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" });
 
 /** An empty object is the placeholder of a version that never recorded a scope. */
 const isPlaceholder = (value: unknown) =>
@@ -130,6 +144,26 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
     return { status: "pending" };
   }
 
+  /**
+   * The types a line of the editable version can cover: those with an asset on the site, plus those its lines already
+   * cover, by name (cadence AC 8).
+   */
+  async function equipmentChoices(siteId: string, covered: string[]): Promise<EquipmentChoice[]> {
+    const { data: assets, error } = await client.from("assets").select("asset_type_id").eq("site_id", siteId);
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    const ids = [...new Set([...(assets ?? []).map((asset) => asset.asset_type_id), ...covered])];
+    if (ids.length === 0) return [];
+    const { data: types, error: typesError } = await client
+      .from("asset_types")
+      .select("id, code, name, default_visit_months")
+      .in("id", ids)
+      .order("name", { ascending: true });
+    if (typesError) throw new Error(`Supabase error ${typesError.code}: ${typesError.message}`);
+    return (types ?? [])
+      .map((type) => ({ id: type.id, code: type.code, name: type.name, defaultVisitMonths: [...type.default_visit_months] }))
+      .sort(byName);
+  }
+
   return {
     async get(id, versionNo) {
       if (!isUuid(id)) return null;
@@ -150,7 +184,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       if (shownVersion) {
         const { data: lineRows, error: lineError } = await client
           .from("service_lines")
-          .select("id, position, description, visits_per_year, cost_per_visit_cents, created_at")
+          .select("id, position, description, visits_per_year, visit_months, cost_per_visit_cents, created_at, service_line_asset_types(asset_types(id, code, name))")
           .eq("agreement_version_id", shownVersion.id)
           .order("position", { ascending: true })
           .order("created_at", { ascending: true });
@@ -164,6 +198,11 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
             visitsPerYear: line.visits_per_year,
             costPerVisitCents: line.cost_per_visit_cents,
             annualCents: lineAnnualCents(line.visits_per_year, cents(line.cost_per_visit_cents)),
+            visitMonths: [...(line.visit_months ?? [])],
+            equipment: (line.service_line_asset_types ?? [])
+              .flatMap((cover) => (cover.asset_types ? [cover.asset_types] : []))
+              .map((type) => ({ id: type.id, code: type.code, name: type.name }))
+              .sort(byName),
           }));
       }
 
@@ -186,6 +225,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
           annualCents: sumCents(lines.map((line) => cents(line.annualCents))),
         },
         editable,
+        equipmentChoices: editable ? await equipmentChoices(row.sites.id, lines.flatMap((line) => line.equipment.map((type) => type.id))) : [],
         serviceScope,
         terms,
         portalLink: await portalLink(shownVersion?.id, status, current),
@@ -222,6 +262,15 @@ export function supabaseAgreementStore(client: Client): AgreementStore {
   };
 }
 
+/** SQLSTATEs `save_service_line` raises on purpose (cadence door 4); anything else is unavailable. */
+const LINE_FAILURES: Record<string, "locked" | "forbidden" | "not_found" | "too_many"> = {
+  [FROZEN]: "locked",
+  "42501": "forbidden",
+  P0002: "not_found",
+  "23503": "not_found",
+  "54000": "too_many",
+};
+
 export function supabaseServiceLineStore(client: Client): ServiceLineStore {
   /** One line's write as the member; RLS hides other orgs' lines, so no row back is `not_found`. */
   async function written(what: string, query: PromiseLike<{ data: { id: string }[] | null; error: PostgrestError | null }>): Promise<ServiceLineWriteResult> {
@@ -230,40 +279,29 @@ export function supabaseServiceLineStore(client: Client): ServiceLineStore {
     return (data ?? []).length > 0 ? { ok: true } : { ok: false, code: "not_found" };
   }
 
+  /** The line and its coverage in one transaction (cadence door 4); a null line id adds one. */
+  async function save(what: string, agreementId: string, lineId: string | null, value: ServiceLineValue) {
+    const { data, error } = await client.rpc("save_service_line", {
+      p_agreement_id: agreementId,
+      p_line_id: lineId as string,
+      p_description: value.description,
+      p_visit_months: value.visitMonths,
+      p_cost_per_visit_cents: value.costPerVisitCents,
+      p_asset_type_ids: value.assetTypeIds,
+    });
+    if (!error) return { ok: true as const, id: data };
+    const code = LINE_FAILURES[error.code];
+    // Only an add can find the version full; on a save of a line, 54000 is as unexpected as any other code.
+    if (code === "too_many" && lineId !== null) return unavailable(what, `${error.code} ${error.message}`);
+    return code ? { ok: false as const, code } : unavailable(what, `${error.code} ${error.message}`);
+  }
+
   return {
     async add(agreementId, value) {
       try {
-        const { data: version, error } = await client
-          .from("agreement_versions")
-          .select("id, org_id")
-          .eq("agreement_id", agreementId)
-          .order("version_no", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (error) return failure("Adding a service line", error);
-        if (!version) return { ok: false, code: "not_found" };
-
-        const { data: positions, error: positionsError } = await client
-          .from("service_lines")
-          .select("position")
-          .eq("agreement_version_id", version.id);
-        if (positionsError) return failure("Adding a service line", positionsError);
-        if ((positions ?? []).length >= MAX_SERVICE_LINES) return { ok: false, code: "too_many" };
-
-        const { data, error: insertError } = await client
-          .from("service_lines")
-          .insert({
-            org_id: version.org_id,
-            agreement_version_id: version.id,
-            position: Math.max(-1, ...(positions ?? []).map((line) => line.position)) + 1,
-            description: value.description,
-            visits_per_year: value.visitsPerYear,
-            cost_per_visit_cents: value.costPerVisitCents,
-          })
-          .select("id");
-        if (insertError) return failure("Adding a service line", insertError);
-        const id = data?.[0]?.id;
-        return id ? { ok: true, id } : unavailable("Adding a service line", "the insert returned no row");
+        const saved = await save("Adding a service line", agreementId, null, value);
+        if (!saved.ok) return saved;
+        return saved.id ? { ok: true, id: saved.id } : unavailable("Adding a service line", "save_service_line returned no id");
       } catch (cause) {
         return unavailable("Adding a service line", cause);
       }
@@ -271,14 +309,14 @@ export function supabaseServiceLineStore(client: Client): ServiceLineStore {
 
     async update(lineId, value) {
       try {
-        return await written(
-          "Saving a service line",
-          client
-            .from("service_lines")
-            .update({ description: value.description, visits_per_year: value.visitsPerYear, cost_per_visit_cents: value.costPerVisitCents })
-            .eq("id", lineId)
-            .select("id"),
-        );
+        // The RPC takes the agreement; the line names it through its version. RLS hides other orgs' lines.
+        const { data: line, error } = await client.from("service_lines").select("agreement_versions(agreement_id)").eq("id", lineId).maybeSingle();
+        if (error) return failure("Saving a service line", error);
+        const agreementId = (line as { agreement_versions: { agreement_id: string } | null } | null)?.agreement_versions?.agreement_id;
+        if (!agreementId) return { ok: false, code: "not_found" };
+        const saved = await save("Saving a service line", agreementId, lineId, value);
+        if (saved.ok) return { ok: true };
+        return saved.code === "too_many" ? unavailable("Saving a service line", "54000 on a saved line") : { ok: false, code: saved.code };
       } catch (cause) {
         return unavailable("Saving a service line", cause);
       }

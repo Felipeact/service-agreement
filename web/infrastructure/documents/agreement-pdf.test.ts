@@ -17,6 +17,7 @@ const base: AgreementDocument = {
     { description: "Filter change", visitsPerYear: 2, costPerVisitCents: 94500, annualCents: 189000 },
   ],
   totalCents: 387000,
+  schedule: [],
   scope: { kind: "listed", recordedOn: null, types: [] },
   terms: [
     { label: "Repair discount", value: "10%" },

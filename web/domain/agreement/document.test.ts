@@ -23,8 +23,8 @@ const SOURCE: DocumentSource = {
   shown: {
     versionNo: 1,
     lines: [
-      { id: "l1", description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 },
-      { id: "l2", description: "Filter change", visitsPerYear: 2, costPerVisitCents: 94500, annualCents: 189000 },
+      { id: "l1", description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000, visitMonths: [3, 6, 9, 12], equipment: [{ name: "Rooftop unit" }] },
+      { id: "l2", description: "Filter change", visitsPerYear: 2, costPerVisitCents: 94500, annualCents: 189000, visitMonths: [4, 10], equipment: [{ name: "Rooftop unit" }] },
     ],
     annualCents: 387000,
   },

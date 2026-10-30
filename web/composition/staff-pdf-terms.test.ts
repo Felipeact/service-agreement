@@ -32,10 +32,11 @@ let detail: AgreementDetail = {
   shown: {
     versionNo: 1,
     current: true,
-    lines: [{ id: "l1", position: 0, description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 }],
+    lines: [{ id: "l1", position: 0, description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000, visitMonths: [3, 6, 9, 12], equipment: [{ id: "t-rtu", code: "RTU", name: "Rooftop unit" }] }],
     annualCents: 180000,
   },
   editable: false,
+  equipmentChoices: [],
   serviceScope: { source: "not_recorded" },
   terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
   portalLink: null,

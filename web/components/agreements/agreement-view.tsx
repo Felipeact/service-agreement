@@ -3,7 +3,7 @@ import type { AgreementDetail, LinkEmailView, MemberRole } from "@/application/p
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { labelFor } from "@/domain/agreement";
+import { labelFor, visitSchedule } from "@/domain/agreement";
 import { notEmailedWords } from "@/domain/notifications";
 import { formatCadExact } from "@/lib/money";
 import { LineFormControl } from "./line-form";
@@ -11,6 +11,7 @@ import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
 import { ServiceScopeSections } from "./service-scope";
 import { LinkControls } from "./link-controls";
+import { VisitScheduleSection } from "./visit-schedule";
 import type { LineState, LinkState, MoveState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
@@ -32,8 +33,8 @@ type AgreementViewProps = {
 };
 
 /** The empty add form suggests the usual first line; a stored $0 line would look like a real price. */
-const FIRST_LINE = { description: "Preventive maintenance visit", visitsPerYear: "4", costPerVisit: "" };
-const NEXT_LINE = { description: "", visitsPerYear: "", costPerVisit: "" };
+const FIRST_LINE = { description: "Preventive maintenance visit", visitMonths: [], costPerVisit: "", assetTypeIds: [] };
+const NEXT_LINE = { description: "", visitMonths: [], costPerVisit: "", assetTypeIds: [] };
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
@@ -122,6 +123,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
                 <LineRow
                   key={line.id}
                   line={line}
+                  choices={agreement.equipmentChoices}
                   actions={lineActions && { update: lineActions.update(line.id), remove: lineActions.remove(line.id) }}
                 />
               ))}
@@ -138,14 +140,26 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
 
       {lineActions && (
         <section aria-label="Add a line" className="rounded-panel border border-hairline bg-surface px-4 py-3">
-          <LineFormControl
-            idPrefix="new-line"
-            initial={shown.lines.length === 0 ? FIRST_LINE : NEXT_LINE}
-            submitLabel="Add line"
-            action={lineActions.add}
-          />
+          {agreement.equipmentChoices.length === 0 ? (
+            // A line covers at least one equipment type (cadence AC 13), so the site needs some first.
+            <p className="text-[13px] text-ink-2">
+              <Link href={`/sites/${agreement.site.id}`} className={link}>
+                Add equipment to this site before adding a service line
+              </Link>
+            </p>
+          ) : (
+            <LineFormControl
+              idPrefix="new-line"
+              initial={shown.lines.length === 0 ? FIRST_LINE : NEXT_LINE}
+              choices={agreement.equipmentChoices}
+              submitLabel="Add line"
+              action={lineActions.add}
+            />
+          )}
         </section>
       )}
+
+      <VisitScheduleSection schedule={visitSchedule(shown.lines)} />
 
       <ServiceScopeSections scope={agreement.serviceScope} siteId={agreement.site.id} canAddEquipment={canWriteRecords(role)} />
 

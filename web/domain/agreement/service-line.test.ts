@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 import type { ContractStatus } from "../contract";
 import { statusLabel, validateServiceLine, type AgreementStatus } from "./index";
 
-const valid = { description: "Preventive maintenance visit", visitsPerYear: "4", costPerVisit: "892.50" };
+const TYPE = "55555555-5555-4555-8555-555555555555";
+const valid = { description: "Preventive maintenance visit", visitMonths: ["3", "6", "9", "12"], costPerVisit: "892.50", assetTypeIds: [TYPE] };
 
 describe("validateServiceLine", () => {
   test.each<[string, string]>([
@@ -23,21 +24,7 @@ describe("validateServiceLine", () => {
     ["200 characters after trimming", `  ${"d".repeat(200)}  `, "d".repeat(200)],
   ])("C720: a description of %s is accepted and returned trimmed", (_, description, expected) => {
     const result = validateServiceLine({ ...valid, description });
-    expect(result).toEqual({ ok: true, value: { description: expected, visitsPerYear: 4, costPerVisitCents: 89250 } });
-  });
-
-  test.each(["", "0", "366", "4.5", "abc"])("C720: visits %j are refused with a visits message", (visitsPerYear) => {
-    const result = validateServiceLine({ ...valid, visitsPerYear });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(Object.keys(result.errors)).toEqual(["visitsPerYear"]);
-  });
-
-  test.each<[string, number]>([
-    ["1", 1],
-    ["365", 365],
-  ])("C720: visits %j give %i", (visitsPerYear, expected) => {
-    const result = validateServiceLine({ ...valid, visitsPerYear });
-    expect(result.ok && result.value.visitsPerYear).toBe(expected);
+    expect(result).toEqual({ ok: true, value: { description: expected, visitMonths: [3, 6, 9, 12], costPerVisitCents: 89250, assetTypeIds: [TYPE] } });
   });
 
   test.each(["", "-5", "abc", "1.234", "1,23", "1,000,000"])("C720: cost %j is refused with a cost message", (costPerVisit) => {
@@ -56,14 +43,6 @@ describe("validateServiceLine", () => {
     expect(result.ok && result.value.costPerVisitCents).toBe(expected);
   });
 
-  test("C720: an input bad in all three fields returns all three messages", () => {
-    const result = validateServiceLine({ description: " ", visitsPerYear: "0", costPerVisit: "abc" });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(Object.keys(result.errors).sort()).toEqual(["costPerVisit", "description", "visitsPerYear"]);
-      for (const message of Object.values(result.errors)) expect(message).toEqual(expect.any(String));
-    }
-  });
 });
 
 describe("statusLabel", () => {

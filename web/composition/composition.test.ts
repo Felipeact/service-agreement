@@ -248,10 +248,11 @@ describe("composition root", () => {
       shown: {
         versionNo: 1,
         current: true,
-        lines: [{ id: "l1", position: 0, description: "PM", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000 }],
+        lines: [{ id: "l1", position: 0, description: "PM", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000, visitMonths: [3, 6, 9, 12], equipment: [{ id: "t-rtu", code: "RTU", name: "Rooftop unit" }] }],
         annualCents: 357000,
       },
       editable: true,
+      equipmentChoices: [],
       serviceScope: { source: "live", takenAt: null, types: [] },
       terms: null,
       portalLink: null,
@@ -272,7 +273,7 @@ describe("composition root", () => {
     const live: SiteView["liveAgreement"][] = [{ id: "g1", number: "AG-1048", status: "sent" }, null];
     expect(await reader.get("g1")).toBe(detail);
     expect(await store.create("s1")).toEqual({ ok: true, id: "g1" });
-    expect(await lines.add("g1", { description: "PM", visitsPerYear: 4, costPerVisitCents: 0 })).toEqual({ ok: true, id: "l1" });
+    expect(await lines.add("g1", { description: "PM", visitMonths: [3, 6, 9, 12], costPerVisitCents: 0, assetTypeIds: ["t-rtu"] })).toEqual({ ok: true, id: "l1" });
     expect(live).toHaveLength(2);
 
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");

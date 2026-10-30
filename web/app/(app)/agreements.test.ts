@@ -41,13 +41,15 @@ const SITE = "33333333-3333-4333-8333-333333333333";
 const LINE = "44444444-4444-4444-8444-444444444444";
 
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "e@example.com", orgId: "org-1", orgName: "Org", role });
-const form = (fields: Record<string, string>) => {
+/** A list value is one entry per checked box, as a browser sends a checkbox group. */
+const form = (fields: Record<string, string | string[]>) => {
   const data = new FormData();
-  for (const [key, value] of Object.entries(fields)) data.set(key, value);
+  for (const [key, value] of Object.entries(fields)) for (const item of [value].flat()) data.append(key, item);
   return data;
 };
-const LINE_FORM = { description: "  Preventive maintenance visit ", visitsPerYear: "4", costPerVisit: "$892.50" };
-const VALUE = { description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250 };
+const TYPE = "55555555-5555-4555-8555-555555555555";
+const LINE_FORM = { description: "  Preventive maintenance visit ", visitMonths: ["3", "6", "9", "12"], costPerVisit: "$892.50", assetTypeIds: [TYPE] };
+const VALUE = { description: "Preventive maintenance visit", visitMonths: [3, 6, 9, 12], costPerVisitCents: 89250, assetTypeIds: [TYPE] };
 
 const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
   id: AGR,
@@ -60,10 +62,11 @@ const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
   shown: {
     versionNo: 1,
     current: true,
-    lines: [{ id: LINE, position: 0, description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000 }],
+    lines: [{ id: LINE, position: 0, description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000, visitMonths: [3, 6, 9, 12], equipment: [{ id: "t-rtu", code: "RTU", name: "Rooftop unit" }] }],
     annualCents: 357000,
   },
   editable: true,
+  equipmentChoices: [{ id: TYPE, code: "RTU", name: "Rooftop unit", defaultVisitMonths: [3, 6, 9, 12] }],
   serviceScope: { source: "live", takenAt: null, types: [] },
   terms: null,
   portalLink: null,
@@ -178,6 +181,30 @@ describe("the line actions", () => {
     container.serviceLineStore.add.mockResolvedValue({ ok: true, id: LINE });
     await actions.addServiceLineAction(AGR, form({ ...LINE_FORM, orgId: "other-org", org_id: "other-org" }));
     expect(container.serviceLineStore.add.mock.calls).toEqual([[AGR, VALUE]]);
+  });
+});
+
+describe("the line actions, months and equipment (cadence)", () => {
+  test("C1064: add with no visitMonths is invalid with the month message and calls no store method", async () => {
+    const answer = await actions.addServiceLineAction(AGR, form({ ...LINE_FORM, visitMonths: [] }));
+    expect(answer).toMatchObject({ status: "invalid", errors: { visitMonths: "Choose at least one visit month" } });
+    for (const write of [container.serviceLineStore.add, container.serviceLineStore.update, container.serviceLineStore.remove]) {
+      expect(write).not.toHaveBeenCalled();
+    }
+  });
+
+  test("C1068: update without types is invalid with the equipment message and calls no store method", async () => {
+    const answer = await actions.updateServiceLineAction(LINE, form({ ...LINE_FORM, assetTypeIds: [] }));
+    expect(answer).toMatchObject({ status: "invalid", errors: { assetTypeIds: "Choose at least one equipment type" } });
+    for (const write of [container.serviceLineStore.add, container.serviceLineStore.update, container.serviceLineStore.remove]) {
+      expect(write).not.toHaveBeenCalled();
+    }
+  });
+
+  test("C1064 (extra): every checked month and type reaches the store", async () => {
+    container.serviceLineStore.add.mockResolvedValue({ ok: true, id: LINE });
+    await actions.addServiceLineAction(AGR, form({ ...LINE_FORM, visitMonths: ["10", "4"] }));
+    expect(container.serviceLineStore.add).toHaveBeenCalledWith(AGR, { ...VALUE, visitMonths: [4, 10] });
   });
 });
 

@@ -27,8 +27,8 @@ export function portalView(over: Partial<PortalView> = {}): PortalView {
     customer: { name: "Fernwood Dental" },
     site: { name: "Fernwood Dental, Main" },
     lines: [
-      { description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000 },
-      { description: "Filter changes", visitsPerYear: 2, costPerVisitCents: 15000, annualCents: 30000 },
+      { description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000, visitMonths: [3, 6, 9, 12], equipment: [{ code: "RTU", name: "Rooftop unit" }] },
+      { description: "Filter changes", visitsPerYear: 2, costPerVisitCents: 15000, annualCents: 30000, visitMonths: [4, 10], equipment: [{ code: "RTU", name: "Rooftop unit" }] },
     ],
     annualCents: 387000,
     scope: {

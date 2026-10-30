@@ -1,4 +1,5 @@
 import type { ContractStatus } from "../contract";
+import { isUuid } from "../imports";
 import { pipelineStage, STAGE_LABELS, type PipelineStage } from "../pipeline";
 import type { DomainEvent, TransitionErrorCode, TransitionResult } from "../transition";
 
@@ -82,8 +83,10 @@ export const LIVE_STATUSES: readonly AgreementStatus[] = ["draft", "sent", "chan
 /** The most lines one version holds (app-side; a race can reach one more). */
 export const MAX_SERVICE_LINES = 50;
 
-export type ServiceLineInput = { description: string; visitsPerYear: string; costPerVisit: string };
-export type ServiceLineValue = { description: string; visitsPerYear: number; costPerVisitCents: number };
+/** As the form sends it: `visitMonths` and `assetTypeIds` are every checked box's value (cadence door 1, 2). */
+export type ServiceLineInput = { description: string; visitMonths: string[]; costPerVisit: string; assetTypeIds: string[] };
+/** Visits per year is not typed: it is the number of `visitMonths` (cadence AC 2). */
+export type ServiceLineValue = { description: string; visitMonths: number[]; costPerVisitCents: number; assetTypeIds: string[] };
 export type ServiceLineErrors = Partial<Record<keyof ServiceLineInput, string>>;
 
 const MAX_DESCRIPTION = 200;
@@ -107,15 +110,18 @@ export function validateServiceLine(
   if (description === "" || description.length > MAX_DESCRIPTION) {
     errors.description = `Enter a description of 1 to ${MAX_DESCRIPTION} characters`;
   }
-  const visitsText = input.visitsPerYear.trim();
-  const visitsPerYear = /^\d+$/.test(visitsText) ? Number(visitsText) : NaN;
-  if (!(visitsPerYear >= 1 && visitsPerYear <= 365)) errors.visitsPerYear = "Enter visits per year as a whole number from 1 to 365";
+  const visitMonths = [...new Set(input.visitMonths.map((month) => (/^\d{1,2}$/.test(month) ? Number(month) : NaN)))].sort((a, b) => a - b);
+  if (visitMonths.length === 0 || visitMonths.some((month) => !(month >= 1 && month <= 12))) {
+    errors.visitMonths = "Choose at least one visit month";
+  }
   const costPerVisitCents = parseCents(input.costPerVisit);
   if (costPerVisitCents === null || costPerVisitCents > MAX_COST_CENTS) {
     errors.costPerVisit = "Enter a cost per visit from $0 to $999,999.99";
   }
+  const assetTypeIds = [...new Set(input.assetTypeIds)];
+  if (assetTypeIds.length === 0 || !assetTypeIds.every(isUuid)) errors.assetTypeIds = "Choose at least one equipment type";
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { description, visitsPerYear, costPerVisitCents: costPerVisitCents as number } };
+  return { ok: true, value: { description, visitMonths, costPerVisitCents: costPerVisitCents as number, assetTypeIds } };
 }
 
 /** The stage label, or why an agreement has no stage: withdrawn, or its contract voided. */
@@ -213,4 +219,5 @@ export function parseTerms(snapshot: unknown): AgreementTerms | null {
   };
 }
 
+export * from "./cadence";
 export * from "./document";

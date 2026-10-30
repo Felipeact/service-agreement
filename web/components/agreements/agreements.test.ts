@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, AgreementServiceScope, MemberRole, ServiceLineView } from "@/application/ports";
-import type { AgreementStatus } from "@/domain/agreement";
+import type { AgreementStatus, EquipmentChoice } from "@/domain/agreement";
 import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./agreement-view";
 import { LineForm } from "./line-form";
@@ -15,13 +15,19 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), use
 
 const STATUSES: AgreementStatus[] = ["draft", "sent", "accepted", "refused", "changes_requested", "expired", "withdrawn"];
 
+/** The site's equipment a line can cover (cadence AC 8). */
+const CHOICES: EquipmentChoice[] = [
+  { id: "t-ahu", code: "AHU", name: "Air handling unit", defaultVisitMonths: [3, 6, 9, 12] },
+  { id: "t-rtu", code: "RTU", name: "Rooftop unit", defaultVisitMonths: [3, 6, 9, 12] },
+];
+
 const LINES: ServiceLineView[] = [
-  { id: "l1", position: 0, description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000 },
-  { id: "l2", position: 1, description: "Filter changes", visitsPerYear: 2, costPerVisitCents: 15000, annualCents: 30000 },
+  { id: "l1", position: 0, description: "Preventive maintenance visit", visitsPerYear: 4, costPerVisitCents: 89250, annualCents: 357000, visitMonths: [3, 6, 9, 12], equipment: [{ id: "t-rtu", code: "RTU", name: "Rooftop unit" }] },
+  { id: "l2", position: 1, description: "Filter changes", visitsPerYear: 2, costPerVisitCents: 15000, annualCents: 30000, visitMonths: [4, 10], equipment: [{ id: "t-rtu", code: "RTU", name: "Rooftop unit" }] },
 ];
 
 function agreement(
-  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"] } = {},
+  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"]; equipmentChoices?: EquipmentChoice[] } = {},
 ): AgreementDetail {
   const status = over.status ?? "draft";
   const count = over.versions ?? 2;
@@ -37,6 +43,7 @@ function agreement(
     versions: Array.from({ length: count }, (_, i) => ({ versionNo: count - i, createdAt: new Date(Date.UTC(2026, 9, 20 + count - i, 18)) })),
     shown: { versionNo: shownNo, current: shownNo === count, lines, annualCents: lines.reduce((t, l) => t + l.annualCents, 0) },
     editable: status === "draft" && shownNo === count,
+    equipmentChoices: over.equipmentChoices ?? CHOICES,
     serviceScope: over.serviceScope ?? { source: "live", takenAt: null, types: [] },
     terms: null,
     portalLink: over.portalLink ?? null,
@@ -87,7 +94,9 @@ describe("the agreement view", () => {
     const writer = view(empty);
     expect(text(writer)).toContain("No service lines yet.");
     expect(writer).toMatch(/id="new-line-description"[^>]*value="Preventive maintenance visit"/);
-    expect(writer).toMatch(/id="new-line-visitsPerYear"[^>]*value="4"/);
+    const months = writer.match(/<input[^>]*name="visitMonths"[^>]*>/g) ?? [];
+    expect(months).toHaveLength(12);
+    for (const box of months) expect(box).not.toContain("checked");
     expect(writer).toMatch(/id="new-line-costPerVisit"[^>]*value=""/);
     const viewer = view(empty, "viewer");
     expect(text(viewer)).toContain("No service lines yet.");
@@ -171,7 +180,7 @@ describe("the line form and prompts", () => {
     renderToStaticMarkup(
       createElement(LineForm, {
         idPrefix: "new-line",
-        initial: { description: "", visitsPerYear: "", costPerVisit: "" },
+        initial: { description: "", visitMonths: [], costPerVisit: "", assetTypeIds: [] },
         state,
         pending: false,
         submitLabel: "Add line",
@@ -182,7 +191,7 @@ describe("the line form and prompts", () => {
     const html = form({
       status: "invalid",
       errors: { costPerVisit: "Enter a cost per visit from $0 to $999,999.99" },
-      values: { description: "PM", visitsPerYear: "4", costPerVisit: "abc" },
+      values: { description: "PM", visitMonths: ["3", "6", "9", "12"], costPerVisit: "abc", assetTypeIds: ["t-rtu"] },
     });
     expect(html).toMatch(/<input id="new-line-costPerVisit"[^>]*aria-describedby="new-line-costPerVisit-error"/);
     expect(html).toMatch(/<p id="new-line-costPerVisit-error"[^>]*>Enter a cost per visit from \$0 to \$999,999\.99<\/p>/);

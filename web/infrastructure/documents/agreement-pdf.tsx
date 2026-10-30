@@ -1,5 +1,5 @@
 import { Document, Font, Page, renderToBuffer, StyleSheet, Text, View } from "@react-pdf/renderer";
-import type { AgreementDocument } from "@/domain/agreement";
+import { MONTH_NAMES, type AgreementDocument } from "@/domain/agreement";
 import { formatCadExact } from "@/lib/money";
 
 /** Ordinary words stay whole; a word longer than a column can hold is cut every 12 characters, so it wraps instead of running off the page. */
@@ -95,6 +95,20 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
             </View>
             <Text style={[styles.muted, right]}>before tax</Text>
           </>
+        )}
+
+        <Text style={[styles.h2, accent]} minPresenceAhead={40}>
+          Visit schedule
+        </Text>
+        {document.schedule.length === 0 ? (
+          <Text style={styles.muted}>No visits scheduled yet</Text>
+        ) : (
+          document.schedule.map((row) => (
+            <View key={row.month} style={styles.row} wrap={false}>
+              <Text style={cell(1.4)}>{MONTH_NAMES[row.month - 1]}</Text>
+              <Text style={cell(6)}>{row.equipment.join(", ")}</Text>
+            </View>
+          ))
         )}
 
         {scope.kind === "not_recorded" ? (
