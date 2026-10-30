@@ -87,11 +87,11 @@
 ## Handoff
 
 **Feature**: outbox-dispatch (ROADMAP Phase 3 item 5), profile standard, handoff in two batches
-**Where**: batch 1 (database, `7f42252`, `d2069d7`) and batch 2 (app, email, n8n exports, docs) built and committed locally. `npm test` 1715 passed, `npm run test:db` 18 passed, lint, tsc and build clean. The Verifier has not run yet; it is the orchestrator's next step over all 51 checks
+**Where**: built and committed locally (2 batches, then fix rounds after Verifier rounds 1 to 3). C1050 and C1049 were run live on 2026-10-30. n8n and the app run on Railway, the Vault secrets are set, a real email went out through Resend, and ROADMAP is ticked
 **In progress**: nothing
-**Next step**: dispatch the Verifier over `.specs/features/outbox-dispatch/checks.md`
-**Open, non-failing**: C1049 (live dispatch, email and n8n on Railway) waits for the user's go-ahead, steps in the checks.md batch 2 record; C1050 could not run because the live project has no `sent` agreement and making one changes live data (needs `PORTAL_LINK_KEY` and a go-ahead to send a demo draft); plan open questions 1-4 (n8n deploy, Resend key, `PORTAL_LINK_KEY`, rate limiting)
-**Blockers**: none for the build. Until `PORTAL_LINK_KEY` is set in an environment, Send and "Get a new link" answer `unavailable` there
+**Next step**: the scoped Verifier round 4 over C1049 to C1052, then `validate_verification.py`
+**Open, non-failing**: plan open question 4 (rate limiting for `/api/automation/*`); the Railway app's URL is not yet in the Supabase Auth redirect list, so staff sign-in there does not work; `seed.sql` never resets statuses (every insert is `on conflict do nothing`), so live runs leave agreements moved
+**Blockers**: none. `PORTAL_LINK_KEY` is set in `web/.env.local` and on Railway, with the same value
 **Uncommitted**: none after the next commit
 **Branch**: development (local commits, not pushed)
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migration `20261029165430_outbox_dispatch` applied; no Vault secret set, so the `outbox-dispatch` job is a no-op. Demo data: no agreement is `sent` (4 draft, 6 accepted, 3 refused, 1 changes_requested, 2 withdrawn)
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migration `20261029165430_outbox_dispatch` applied; Vault holds `automation_hmac_secret` and `n8n_events_url`, so the `outbox-dispatch` job sends to n8n every minute. Demo data: AG-1046 and AG-1048 were sent by the live runs (AG-1048's contact restored to `@example.com`)

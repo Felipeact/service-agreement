@@ -519,3 +519,15 @@ C1052 is reworded so that every status outside the six retry triggers never loop
   - the four imported exports, with the two placeholders replaced;
   - step 1: the Vault `n8n_events_url` and `automation_hmac_secret`, where the HMAC secret must equal the one put into the n8n Crypto nodes;
   - step 2 (`RESEND_API_KEY`) and a public address for the app, because n8n's callbacks cannot reach `localhost`.
+
+### Live record, C1049 (2026-10-30, run by the orchestrator, not the Verifier; the user said "run 2 to 4")
+
+- **App on Railway:** service `web` (`a87c7558-…`) in project `service-agreement-automation`, at `https://web-production-bde48d.up.railway.app`. It was deployed with `railway up` from `web/` (deployment `df29cd54-…`, status `SUCCESS`). Its variables are `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `PORTAL_LINK_KEY` (the same value as `web/.env.local`, so links sealed locally unseal there), `RESEND_API_KEY`, `EMAIL_FROM=agreements@felipeviana.com`, `ANTHROPIC_API_KEY` and `APP_BASE_URL` set to that domain. Each was set over stdin and none was printed. Smoke results:
+  - `GET /login` answered `200`
+  - signed-out `/pipeline` answered `307` to `/login`
+  - `POST /api/automation/notify` answered `401` both unsigned and with a wrong signature
+- **Secret and wiring:** one script generated one 32-byte secret, never printed. It wrote Vault `automation_hmac_secret` and `n8n_events_url` (`https://n8n-production-297b.up.railway.app/webhook/service-agreement-events`) on `gnxebrtcpbujhvcamtoe`. It imported the four exports through the n8n API with both placeholders replaced, wired "Run W1" and "Run W3" to the new workflow ids, and activated W1, W3, events and W5. n8n 2.x requires sub-workflows to be published before the workflow that calls them. Afterwards, 0 placeholders were left in n8n.
+- **Dispatch, AG-1046:** its `pending` row was queued, n8n answered `200`, and the row is now `sent` with `sent_at`. W1 ran (`events.n8n_execution_id = 4`). The callback reached the Railway app, and the claim stored `w1:<event>:link` as `skipped` / `reserved_domain` for `marcus.ilunga@example.com`. The n8n signature gate had to pass for W1 to run, so the database's signature verified in n8n.
+- **Email, AG-1048:** the demo contact Dana Whitfield was pointed at the user's address. AG-1048 was sent from the staff page (local dev server, one signed-in context). The chain ran: dispatcher, then n8n W1 (execution `6`), then the Railway app, then Resend. The notification `w1:22b6eb12-…:link` is `sent` at 15:55:01 UTC, with provider message id `01a18d85-8881-79bd-b6f0-1553eb085817` and recipients `[the user's address]`. The staff page then read "Emailed to … on Oct 30, 2026". The contact was restored to `dana.whitfield@example.com` and checked by a read-back.
+- **Still pending:** AG-1048's W1 run waits for its day-3 and day-7 reminders. They will go to the restored `@example.com` contact and be skipped as `reserved_domain`. The user confirms whether the email arrived in their inbox.
+- **C1051:** ROADMAP Phase 3 item 5 is ticked in this commit, per the user's 2026-10-29 decision to tick once C1049 and C1050 pass.
