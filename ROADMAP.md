@@ -114,7 +114,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] "Service included" generated from the asset types on site
 - [x] Agreement PDF
 - [x] Customer review portal (Accept, Refuse, Request changes), with the staff Send action and the terms frozen at send. Live halves of four checks accepted as an author-side run (2026-10-28)
-- [x] Outbox dispatcher (the database dispatches the outbox to n8n, HMAC-signed), n8n W1, W3 and W5, plus transactional email. Live run 2026-10-30: n8n and the app on Railway, link email delivered through Resend
+- [x] Outbox dispatcher (the database dispatches the outbox to n8n, HMAC-signed), n8n W1, W3 and W5, plus transactional email. Live run 2026-10-30: n8n and the app on Railway, link email accepted by Resend
 
 ### Phase 4: Contract & e-signature
 - [ ] Contract generated from the accepted agreement version
