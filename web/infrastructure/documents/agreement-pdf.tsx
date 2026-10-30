@@ -1,5 +1,5 @@
 import { Document, Font, Page, renderToBuffer, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { MONTH_NAMES, type AgreementDocument } from "@/domain/agreement";
+import { MONTH_NAMES, taskLabel, type AgreementDocument } from "@/domain/agreement";
 import { formatCadExact } from "@/lib/money";
 
 /** Ordinary words stay whole; a word longer than a column can hold is cut every 12 characters, so it wraps instead of running off the page. */
@@ -106,7 +106,12 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
           document.schedule.map((row) => (
             <View key={row.month} style={styles.row} wrap={false}>
               <Text style={cell(1.4)}>{MONTH_NAMES[row.month - 1]}</Text>
-              <Text style={cell(6)}>{row.equipment.join(", ")}</Text>
+              <View style={cell(6)}>
+                <Text>{row.equipment.join(", ")}</Text>
+                {row.tasks.map((task) => (
+                  <Text key={`${task.type}:${task.description}`}>{`${task.type}: ${task.description}`}</Text>
+                ))}
+              </View>
             </View>
           ))
         )}
@@ -124,7 +129,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
                 <Text style={styles.type} minPresenceAhead={40}>{`${type.name}, ${units(type.assets.length)}`}</Text>
                 {type.tasks.map((task, index) => (
                   <Text key={index} style={styles.task}>
-                    {`- ${task}`}
+                    {`- ${taskLabel(task)}`}
                   </Text>
                 ))}
               </View>

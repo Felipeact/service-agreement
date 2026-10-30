@@ -59,6 +59,7 @@ function Phone({ phone }: { phone: string | null }) {
 /** What the customer reads: the version's lines, scope and frozen terms. Every state with content shows this. */
 function Content({ view }: { view: PortalView }) {
   const terms = view.terms ? termsOf(view.terms) : [];
+  const scope = portalScope(view);
   return (
     <>
       <section aria-label="Service lines" className={panel}>
@@ -90,9 +91,9 @@ function Content({ view }: { view: PortalView }) {
         </div>
       </section>
 
-      <VisitScheduleSection schedule={visitSchedule(view.lines)} />
+      <VisitScheduleSection schedule={visitSchedule(view.lines, scope.source === "not_recorded" ? [] : scope.types)} />
 
-      <ServiceScopeSections scope={portalScope(view)} siteId="" canAddEquipment={false} />
+      <ServiceScopeSections scope={scope} siteId="" canAddEquipment={false} />
 
       {terms.length > 0 && (
         <section aria-label="Terms" className={panel}>

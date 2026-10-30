@@ -1,13 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AgreementServiceScope } from "@/application/ports";
-import type { ScopeType } from "@/domain/agreement";
+import { isUnreached, taskLabel, type ScheduleLine, type ScopeType } from "@/domain/agreement";
 
 type ServiceScopeSectionsProps = {
   scope: AgreementServiceScope;
   siteId: string;
   /** Writers get a way to the site when a live scope has no equipment. */
   canAddEquipment: boolean;
+  /** The shown version's lines, on the staff page only: a seasonal task none of them visits is flagged (seasonal-tasks AC 14). */
+  lines?: readonly ScheduleLine[];
 };
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
@@ -19,7 +21,7 @@ const note = "px-4 py-6 text-center text-[13px] text-ink-2";
 const units = (count: number) => `${count} ${count === 1 ? "unit" : "units"}`;
 
 /** "Service included" and "Equipment": what the shown version covers, one entry per equipment type. */
-export function ServiceScopeSections({ scope, siteId, canAddEquipment }: ServiceScopeSectionsProps) {
+export function ServiceScopeSections({ scope, siteId, canAddEquipment, lines }: ServiceScopeSectionsProps) {
   const types: ScopeType[] = scope.source === "not_recorded" ? [] : scope.types;
   const recorded = scope.source === "frozen" && scope.takenAt ? `As recorded on ${date.format(scope.takenAt)}` : null;
 
@@ -58,7 +60,12 @@ export function ServiceScopeSections({ scope, siteId, canAddEquipment }: Service
                 ) : (
                   <ul className="list-disc pl-5 text-[13px]">
                     {type.tasks.map((task, index) => (
-                      <li key={index}>{task}</li>
+                      <li key={index}>
+                        {taskLabel(task)}
+                        {lines && isUnreached(task, type.code, lines) && (
+                          <span className="ml-2 rounded-sm bg-attention-bg px-1.5 py-0.5 text-[12px] font-medium text-attention-fg">No visit in these months</span>
+                        )}
+                      </li>
                     ))}
                   </ul>
                 )}

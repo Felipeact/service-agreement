@@ -109,6 +109,7 @@ export type Database = {
           id: string
           org_id: string
           position: number
+          visit_months: number[] | null
         }
         Insert: {
           asset_type_id: string
@@ -117,6 +118,7 @@ export type Database = {
           id?: string
           org_id: string
           position?: number
+          visit_months?: number[] | null
         }
         Update: {
           asset_type_id?: string
@@ -125,6 +127,7 @@ export type Database = {
           id?: string
           org_id?: string
           position?: number
+          visit_months?: number[] | null
         }
         Relationships: [
           {

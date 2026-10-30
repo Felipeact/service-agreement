@@ -16,7 +16,10 @@ describe("parseServiceScope", () => {
     });
     expect(scope?.types.map((t) => t.name)).toEqual(["AHU", "boiler", "Unit heater (gas)"]);
     expect(scope?.types[0].assets.map((a) => a.unitNo)).toEqual(["rtu-1", "RTU-2", "RTU-10", null]);
-    expect(scope?.types[0].tasks).toEqual(["Replace filters", "Check belts"]);
+    expect(scope?.types[0].tasks).toEqual([
+      { description: "Replace filters", visitMonths: null },
+      { description: "Check belts", visitMonths: null },
+    ]);
     expect(scope?.takenAt).toBeNull();
   });
 
@@ -27,7 +30,7 @@ describe("parseServiceScope", () => {
 
   test.each<[string, unknown]>([
     ["{}", {}],
-    ["schema 2", { schema: 2, types: [] }],
+    ["schema 3", { schema: 3, types: [] }],
     ["no types", { schema: 1 }],
     ["types not an array", { schema: 1, types: 3 }],
     ["a type with no name", { schema: 1, types: [{ code: "RTU", tasks: [], assets: [] }] }],

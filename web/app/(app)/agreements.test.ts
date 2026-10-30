@@ -294,7 +294,7 @@ describe("the agreement page", () => {
         serviceScope: {
           source: "frozen",
           takenAt,
-          types: [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: null }] }],
+          types: [{ code: "RTU", name: "Rooftop unit", tasks: [{ description: "Replace filters", visitMonths: null }], assets: [{ unitNo: "RTU-1", typeModel: null, location: null }] }],
         },
       }),
     );

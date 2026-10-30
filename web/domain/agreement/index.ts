@@ -2,6 +2,7 @@ import type { ContractStatus } from "../contract";
 import { isUuid } from "../imports";
 import { pipelineStage, STAGE_LABELS, type PipelineStage } from "../pipeline";
 import type { DomainEvent, TransitionErrorCode, TransitionResult } from "../transition";
+import { isVisitMonths } from "./cadence";
 
 /** Same values as the `agreements.status` check in the init migration. */
 export const AGREEMENT_STATUSES = [
@@ -136,7 +137,9 @@ export function statusLabel(status: AgreementStatus, contract?: ContractStatus |
 
 /** One equipment type of a service scope: its checklist and its assets on the site (service-included door 1). */
 export type ScopeAsset = { unitNo: string | null; typeModel: string | null; location: string | null };
-export type ScopeType = { code: string; name: string; tasks: string[]; assets: ScopeAsset[] };
+/** A checklist task: `visitMonths` are the months of the visits it applies at, `null` for every visit (seasonal-tasks door 1). */
+export type ScopeTask = { description: string; visitMonths: number[] | null };
+export type ScopeType = { code: string; name: string; tasks: ScopeTask[]; assets: ScopeAsset[] };
 /** What an agreement covers; `takenAt` (ISO timestamp) is when a frozen version recorded it, `null` for a live scope. */
 export type ServiceScope = { takenAt: string | null; types: ScopeType[] };
 
@@ -150,27 +153,38 @@ function parseAsset(value: unknown): ScopeAsset | null {
   return { unitNo: value.unitNo, typeModel: value.typeModel, location: value.location };
 }
 
-function parseType(value: unknown): ScopeType | null {
+/** Schema 1 holds tasks as text, for every visit; schema 2 as `{description, visitMonths}` (seasonal-tasks door 2). */
+function parseTask(value: unknown, schema: 1 | 2): ScopeTask | null {
+  if (schema === 1) return isText(value) ? { description: value, visitMonths: null } : null;
+  if (!isRecord(value) || !isText(value.description) || !("visitMonths" in value)) return null;
+  if (value.visitMonths !== null && !isVisitMonths(value.visitMonths)) return null;
+  return { description: value.description, visitMonths: value.visitMonths === null ? null : [...value.visitMonths] };
+}
+
+function parseType(value: unknown, schema: 1 | 2): ScopeType | null {
   if (!isRecord(value) || !isText(value.code) || !isText(value.name)) return null;
-  if (!Array.isArray(value.tasks) || !value.tasks.every(isText)) return null;
+  if (!Array.isArray(value.tasks)) return null;
+  const tasks = value.tasks.map((task) => parseTask(task, schema));
+  if (tasks.some((task) => task === null)) return null;
   if (!Array.isArray(value.assets)) return null;
   const assets = value.assets.map(parseAsset);
   if (assets.some((asset) => asset === null)) return null;
-  return { code: value.code, name: value.name, tasks: [...value.tasks], assets: assets as ScopeAsset[] };
+  return { code: value.code, name: value.name, tasks: tasks as ScopeTask[], assets: assets as ScopeAsset[] };
 }
 
 /**
- * A stored or live scope document (`schema` 1) as types by name and units compared as numbers, no unit last, the
+ * A stored or live scope document (`schema` 1 or 2) as types by name and units compared as numbers, no unit last, the
  * order of the site register. `null` for anything else, `{}` included.
  */
 export function parseServiceScope(document: unknown): ServiceScope | null {
-  if (!isRecord(document) || document.schema !== 1 || !Array.isArray(document.types)) return null;
+  if (!isRecord(document) || (document.schema !== 1 && document.schema !== 2) || !Array.isArray(document.types)) return null;
+  const schema = document.schema;
   let takenAt: string | null = null;
   if (document.takenAt !== undefined) {
     if (!isText(document.takenAt) || Number.isNaN(Date.parse(document.takenAt))) return null;
     takenAt = document.takenAt;
   }
-  const types = document.types.map(parseType);
+  const types = document.types.map((type) => parseType(type, schema));
   if (types.some((type) => type === null)) return null;
   const ordered = (types as ScopeType[]).map((type) => ({
     ...type,

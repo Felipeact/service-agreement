@@ -82,6 +82,17 @@ const DOCUMENT = {
 };
 
 describe("portal reader", () => {
+  test("C1110: a schema 2 scope passes through unchanged", async () => {
+    const scope = {
+      schema: 2,
+      takenAt: "2026-10-20T15:00:00Z",
+      types: [{ code: "BOILER", name: "Boiler", tasks: [{ description: "Fall test", visitMonths: [10] }], assets: [] }],
+    };
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, scope }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.scope).toEqual(scope);
+  });
+
   test("C925: view calls only portal_view with the hash", async () => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });

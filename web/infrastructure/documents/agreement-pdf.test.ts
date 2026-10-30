@@ -30,7 +30,7 @@ const base: AgreementDocument = {
 };
 
 const asset = (unitNo: string | null, typeModel: string | null = null, location: string | null = null) => ({ unitNo, typeModel, location });
-const type = (name: string, tasks: string[], assets: ReturnType<typeof asset>[]) => ({ code: name.toUpperCase(), name, tasks, assets });
+const type = (name: string, tasks: string[], assets: ReturnType<typeof asset>[]) => ({ code: name.toUpperCase(), name, tasks: tasks.map((description) => ({ description, visitMonths: null })), assets });
 
 async function render(over: Partial<AgreementDocument>) {
   return pdfPages(await reactPdfDocumentRenderer.renderAgreement({ ...base, ...over }));

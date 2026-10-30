@@ -54,11 +54,11 @@ describe("the portal PDF's schedule", () => {
     const staff = buildAgreementDocument(detail, settings).schedule;
     expect(portalDocument(view)?.schedule).toEqual(staff);
     expect(staff).toEqual([
-      { month: 3, equipment: ["AHU", "RTU"] },
-      { month: 6, equipment: ["AHU", "RTU"] },
-      { month: 9, equipment: ["AHU", "RTU"] },
-      { month: 10, equipment: ["Boiler"] },
-      { month: 12, equipment: ["AHU", "RTU"] },
+      { month: 3, equipment: ["AHU", "RTU"], tasks: [] },
+      { month: 6, equipment: ["AHU", "RTU"], tasks: [] },
+      { month: 9, equipment: ["AHU", "RTU"], tasks: [] },
+      { month: 10, equipment: ["Boiler"], tasks: [] },
+      { month: 12, equipment: ["AHU", "RTU"], tasks: [] },
     ]);
   });
 });

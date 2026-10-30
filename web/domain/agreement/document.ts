@@ -11,7 +11,7 @@ export const DRAFT_MARK = "DRAFT - not yet sent to the customer";
 export type DocumentLine = { description: string; visitsPerYear: number; costPerVisitCents: number; annualCents: number };
 
 /** A line as a document source holds it: its printed figures, plus the months and equipment the schedule reads. */
-export type DocumentSourceLine = DocumentLine & { id?: string; visitMonths: number[]; equipment: { name: string }[] };
+export type DocumentSourceLine = DocumentLine & { id?: string; visitMonths: number[]; equipment: { code?: string; name: string }[] };
 
 /** The scope part of a document: what the version covers, or that nobody recorded it. */
 export type DocumentScope = { kind: "listed"; recordedOn: Date | null; types: ScopeType[] } | { kind: "not_recorded" };
@@ -30,7 +30,10 @@ export type AgreementDocument = {
   mark: string | null;
   lines: DocumentLine[];
   totalCents: number;
-  /** Which equipment is visited in which month, from the lines (cadence AC 19); empty when there are none. */
+  /**
+   * Which equipment is visited in which month, from the lines (cadence AC 19), with the seasonal tasks due in it
+   * (seasonal-tasks AC 16); empty when there are none.
+   */
   schedule: ScheduleRow[];
   scope: DocumentScope;
   /** Only the terms that are set, in print order. */
@@ -79,7 +82,7 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
       annualCents,
     })),
     totalCents: source.shown.annualCents,
-    schedule: visitSchedule(source.shown.lines),
+    schedule: visitSchedule(source.shown.lines, scope.source === "not_recorded" ? [] : scope.types),
     scope: scope.source === "not_recorded" ? { kind: "not_recorded" } : { kind: "listed", recordedOn: scope.source === "frozen" ? scope.takenAt : null, types: scope.types },
     // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
     // settings of today (customer-portal AC 32, 33).

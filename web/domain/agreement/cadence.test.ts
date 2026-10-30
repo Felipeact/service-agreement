@@ -57,11 +57,11 @@ const MARCH_RTU = { visitMonths: [3], equipment: [{ name: "RTU" }] };
 describe("visitSchedule", () => {
   test("C1080: one row per visited month, names once each by name; none for no lines", () => {
     expect(visitSchedule([HVAC, BOILER, MARCH_RTU])).toEqual([
-      { month: 3, equipment: ["AHU", "RTU"] },
-      { month: 6, equipment: ["AHU", "RTU"] },
-      { month: 9, equipment: ["AHU", "RTU"] },
-      { month: 10, equipment: ["Boiler"] },
-      { month: 12, equipment: ["AHU", "RTU"] },
+      { month: 3, equipment: ["AHU", "RTU"], tasks: [] },
+      { month: 6, equipment: ["AHU", "RTU"], tasks: [] },
+      { month: 9, equipment: ["AHU", "RTU"], tasks: [] },
+      { month: 10, equipment: ["Boiler"], tasks: [] },
+      { month: 12, equipment: ["AHU", "RTU"], tasks: [] },
     ]);
     expect(visitSchedule([])).toEqual([]);
   });
@@ -93,7 +93,7 @@ describe("buildAgreementDocument, schedule", () => {
 
   test("C1081: the document carries the schedule of its lines", () => {
     expect(buildAgreementDocument(source, SETTINGS).schedule).toEqual(visitSchedule([HVAC, BOILER, MARCH_RTU]));
-    expect(buildAgreementDocument(source, SETTINGS).schedule[0]).toEqual({ month: 3, equipment: ["AHU", "RTU"] });
+    expect(buildAgreementDocument(source, SETTINGS).schedule[0]).toEqual({ month: 3, equipment: ["AHU", "RTU"], tasks: [] });
     expect(buildAgreementDocument({ ...source, shown: { ...source.shown, lines: [] } }, SETTINGS).schedule).toEqual([]);
   });
 });

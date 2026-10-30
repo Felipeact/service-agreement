@@ -239,13 +239,16 @@ describe("the agreement view: service included and equipment", () => {
   const RTU = {
     code: "RTU",
     name: "Rooftop unit",
-    tasks: ["Replace filters", "Check belts"],
+    tasks: [
+      { description: "Replace filters", visitMonths: null },
+      { description: "Check belts", visitMonths: null },
+    ],
     assets: [
       { unitNo: "RTU-1", typeModel: "Carrier 48TC", location: "Roof" },
       { unitNo: "RTU-2", typeModel: null, location: null },
     ],
   };
-  const BOILER = { code: "BOILER", name: "Boiler", tasks: ["Flow switch test"], assets: [{ unitNo: "B-1", typeModel: "Condensing", location: "P1" }] };
+  const BOILER = { code: "BOILER", name: "Boiler", tasks: [{ description: "Flow switch test", visitMonths: null }], assets: [{ unitNo: "B-1", typeModel: "Condensing", location: "P1" }] };
   const live = (types: unknown[]): AgreementServiceScope => ({ source: "live", takenAt: null, types } as AgreementServiceScope);
   const TAKEN = new Date("2026-10-27T18:00:00Z");
   const frozen = (types: unknown[]): AgreementServiceScope => ({ source: "frozen", takenAt: TAKEN, types } as AgreementServiceScope);

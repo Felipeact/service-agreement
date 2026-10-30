@@ -47,5 +47,5 @@ export function pdfColours(bytes: Uint8Array, operator: "scn" | "SCN" | "any" = 
   return colours;
 }
 
-/** WinAnsi bytes read as latin1 differ from Unicode only for 0x80-0x9F: the typographic apostrophe is 0x92. */
-export const winAnsi = (text: string) => text.replace(/’/g, "\x92");
+/** WinAnsi bytes read as latin1 differ from Unicode only for 0x80-0x9F: the typographic apostrophe is 0x92, the en dash 0x96. */
+export const winAnsi = (text: string) => text.replace(/’/g, "\x92").replace(/–/g, "\x96");

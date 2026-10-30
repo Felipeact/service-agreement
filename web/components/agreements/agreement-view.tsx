@@ -159,9 +159,14 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         </section>
       )}
 
-      <VisitScheduleSection schedule={visitSchedule(shown.lines)} />
+      <VisitScheduleSection schedule={visitSchedule(shown.lines, agreement.serviceScope.source === "not_recorded" ? [] : agreement.serviceScope.types)} />
 
-      <ServiceScopeSections scope={agreement.serviceScope} siteId={agreement.site.id} canAddEquipment={canWriteRecords(role)} />
+      <ServiceScopeSections
+        scope={agreement.serviceScope}
+        siteId={agreement.site.id}
+        canAddEquipment={canWriteRecords(role)}
+        lines={shown.lines}
+      />
 
       {agreement.versions.length > 1 && (
         <section aria-label="Versions" className="flex flex-col gap-1">

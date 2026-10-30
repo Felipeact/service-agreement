@@ -266,7 +266,7 @@ describe("agreement reader: the service scope", () => {
     schema: 1,
     types: [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }],
   };
-  const TYPES = [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }];
+  const TYPES = [{ code: "RTU", name: "Rooftop unit", tasks: [{ description: "Replace filters", visitMonths: null }], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }];
   const TAKEN = "2026-10-27T18:00:00+00:00";
   const versions = [
     { id: "v1", version_no: 1 },
@@ -316,6 +316,17 @@ describe("agreement reader: the service scope", () => {
     const detail = await supabaseAgreementReader(stub.typed).get(AGR);
     expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
     expect(error).toHaveBeenCalledTimes(1);
+  });
+
+  test("C1110: a snapshot of schema 3 was not recorded", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, "sent")),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { schema: 3, types: [] } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
   });
 
   test("C804: an error from the live scope rejects", async () => {
