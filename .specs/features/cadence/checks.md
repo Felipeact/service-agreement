@@ -319,9 +319,9 @@ Proof: `npm run test:db cadence` (assertions `C1099`)
   `application/pdf`; no horizontal scroll; console 0 errors, 0 warnings. On the draft AG-1051 without submitting: Equipment
   covered lists `Backflow preventer, MUA, RTU, Walk-in cooler`; checking Backflow preventer prefills `[10]`, Semi-annual
   gives `[4, 10]`, Quarterly gives `[3, 6, 9, 12]`; the grid is 6 columns at 375 and 12 at 1440, each month cell 44x44 at
-  375. The 375 run found the month text clipped beside the box; fixed by stacking box over month below md (in the docs
+  375. The 375 run found the month text clipped beside the box; fixed by stacking box over month below md (d737b13
   commit). Remaining for the user: an add-and-save on a draft, e.g. AG-1051, then removing the line.
-- **Boundary (batch 2):** at the docs commit (on `237362f`), C1061 vitest half, C1062, C1063, C1064, C1065, C1066, C1067,
+- **Boundary (batch 2):** at `ec679e5` (on `237362f`, `d737b13`), C1061 vitest half, C1062, C1063, C1064, C1065, C1066, C1067,
   C1068, C1069, C1072, C1074, C1075, C1080, C1081, C1082 vitest half, C1083, C1084, C1085, C1086, C1089, C1095, C1096,
   C1098 closed; C1097 partly run (above). Proofs: each named `npx vitest run <dir> -t "<id>:"` passed; `npm test` 90 files,
   1864 passed (C873 and C32 passed in the full run this time); `npm run lint`, `npx tsc --noEmit`, `npm run build` clean;

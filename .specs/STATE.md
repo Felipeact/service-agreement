@@ -92,7 +92,7 @@
 ## Handoff
 
 **Feature**: cadence (ROADMAP Phase 3.5 item 2), profile light, handoff in two batches
-**Where**: batch 1 (database, aaa8e6a, 4f87593, a6455ea) and batch 2 (app, 237362f and the docs commit) committed locally; boundaries in `.specs/features/cadence/checks.md` ## Handoff
+**Where**: batch 1 (database, aaa8e6a, 4f87593, a6455ea) and batch 2 (app, 237362f, d737b13, ec679e5) committed locally; boundaries in `.specs/features/cadence/checks.md` ## Handoff
 **In progress**: nothing; the feature's Verifier has not run yet
 **Next step**: the orchestrator dispatches a fresh Verifier over `635a493..HEAD` with every check C1060-C1099. C1097's add-and-save half was not run live (AG-1046 is sent); a user run on a draft such as AG-1051 is still owed
 **Open, non-failing**: Verifier notes on pipeline-site-cards: C1059 asserts the label text, not the `aria-label` attribute; C1055 proves no-truncation by class only. Carried from outbox-dispatch: plan open question 4 (rate limiting for `/api/automation/*`); the Railway app's URL is not yet in the Supabase Auth redirect list; `seed.sql` never resets statuses
