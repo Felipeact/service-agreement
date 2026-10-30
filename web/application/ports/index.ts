@@ -65,6 +65,8 @@ export interface MemberDirectory {
 export type PipelineCard = {
   id: string;
   stage: PipelineStage;
+  /** The agreement's site, the card's heading. */
+  site: string;
   customer: string;
   number: string | null;
   versionNo: number;

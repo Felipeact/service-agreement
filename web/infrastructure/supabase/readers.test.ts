@@ -118,6 +118,17 @@ describe("pipeline reader", () => {
     expect(card.number).toBeNull();
   });
 
+  test("C1053: each card carries its site's name and that site's customer", async () => {
+    const row = { ...agreement("a", "draft"), sites: { name: "Harbourview Tower A", customers: { name: "Harbourview Towers Strata" } } };
+    const { typed, calls } = stubClient({ agreements: ok([row]) });
+    const [card] = await supabasePipelineReader(typed, fixedClock(NOW)).board();
+
+    const select = calls.find((call) => call.table === "agreements" && call.method === "select");
+    expect(String(select?.args[0])).toContain("sites(name, customers(name))");
+    expect(card.site).toBe("Harbourview Tower A");
+    expect(card.customer).toBe("Harbourview Towers Strata");
+  });
+
   test("C155: the agreements query is capped at 500 rows", async () => {
     const { typed, calls } = stubClient({ agreements: ok([]) });
     await supabasePipelineReader(typed, fixedClock(NOW)).board();

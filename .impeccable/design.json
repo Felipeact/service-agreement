@@ -268,7 +268,7 @@
       },
       "title": {
         "displayName": "Card title",
-        "purpose": "Customer or site name on a kanban card."
+        "purpose": "The site name on a kanban card, wrapped, never truncated."
       },
       "body": {
         "displayName": "Body",

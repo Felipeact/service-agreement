@@ -12,7 +12,8 @@ export function KanbanCard({ card }: { card: PipelineCard }) {
       data-amount-cents={card.annualCents ?? 0}
       className="block rounded-control bg-surface px-3 py-2.5 text-ink shadow-card hover:ring-1 hover:ring-action"
     >
-      <h3 className="text-[13.5px] leading-snug font-semibold">{card.customer}</h3>
+      <h3 className="text-[13.5px] leading-snug font-semibold">{card.site}</h3>
+      <p className="text-[12px] text-ink-2">{card.customer}</p>
       <p className="mt-0.5 text-[12px] text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</p>
       <p className="text-[12px] text-ink-2">{ageLabel(card.ageDays)}</p>
       {card.attention && (

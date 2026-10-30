@@ -76,14 +76,14 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
     async board() {
       const { data, error } = await client
         .from("agreements")
-        .select(`${AGREEMENT_COLUMNS}, sites(customers(name))`)
+        .select(`${AGREEMENT_COLUMNS}, sites(name, customers(name))`)
         .order("updated_at", { ascending: false })
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
 
       const now = clock.now().getTime();
       const cards: PipelineCard[] = [];
-      for (const row of data as unknown as (AgreementRow & { sites: { customers: { name: string } } })[]) {
+      for (const row of data as unknown as (AgreementRow & { sites: { name: string; customers: { name: string } } })[]) {
         const { contract, stage } = stageOf(row);
         if (!stage) continue;
         const version = latestVersion(row);
@@ -96,6 +96,7 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
         cards.push({
           id: row.id,
           stage,
+          site: row.sites.name,
           customer: row.sites.customers.name,
           number: row.number,
           versionNo: version?.version_no ?? 1,

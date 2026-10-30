@@ -9,6 +9,7 @@ import { PipelineView } from "./pipeline-view";
 const card = (patch: Partial<PipelineCard> = {}): PipelineCard => ({
   id: "a1",
   stage: "in_progress",
+  site: "Harbourview Tower A",
   customer: "Harbourview Towers Strata",
   number: "AG-1048",
   versionNo: 3,
@@ -79,6 +80,74 @@ describe("PipelineView", () => {
     const cards = [...html.matchAll(/<a\b[^>]*\bdata-card\b[^>]*>/g)].map((m) => m[0]);
     expect(cards).toHaveLength(3);
     expect(cards.map((tag) => /\bhref="([^"]*)"/.exec(tag)?.[1])).toEqual(["/agreements/a1", "/agreements/a2", "/agreements/a3"]);
+  });
+
+  test("C1054: the card heading is the site, with the customer on the next line before number and version", () => {
+    const html = render([card({ site: "Harbourview Tower A", customer: "Harbourview Towers Strata", number: "AG-1048", versionNo: 3 })]);
+    const heading = /<h3\b[^>]*>([^<]*)<\/h3>/.exec(html);
+    expect(heading?.[1]).toBe("Harbourview Tower A");
+    const afterHeading = html.slice((heading?.index ?? 0) + (heading?.[0].length ?? 0));
+    expect(afterHeading).toMatch(/^<[^>]+>Harbourview Towers Strata</);
+    expect(afterHeading.indexOf("Harbourview Towers Strata")).toBeLessThan(afterHeading.indexOf("AG-1048 · v3"));
+  });
+
+  test("C1055: a long site name is never truncated", () => {
+    const longSite = "North Shore Regional Health Authority Administrative Campus Building C Mechanical Penthouse and Parkade Level";
+    const site = `${longSite}${"x".repeat(120 - longSite.length)}`;
+    expect(site).toHaveLength(120);
+    const html = render([card({ site })]);
+    const heading = /<h3\b([^>]*)>([^<]*)<\/h3>/.exec(html);
+    expect(heading?.[2]).toBe(site);
+    const classes = /class="([^"]*)"/.exec(heading?.[1] ?? "")?.[1].split(/\s+/) ?? [];
+    expect(classes.filter((name) => /^(truncate|line-clamp-.*|whitespace-nowrap|overflow-hidden)$/.test(name))).toEqual([]);
+  });
+
+  const searchBoard = () => [
+    card({ id: "a", site: "Harbourview Tower A", customer: "Harbourview Towers Strata" }),
+    card({ id: "b", site: "Fernwood Clinic", customer: "Fernwood Dental" }),
+    card({ id: "c", site: "Main office", customer: "Kestrel Logistics" }),
+  ];
+  const shownIds = (html: string) => [...html.matchAll(/<a\b[^>]*\bhref="\/agreements\/([^"]*)"/g)].map((m) => m[1]);
+  const renderQuery = (cards: PipelineCard[], initialQuery: string) =>
+    renderToStaticMarkup(createElement(PipelineView, { cards, initialQuery })).replace(/&#x27;/g, "'");
+
+  test.each([
+    ["  CLINIC ", ["b"]],
+    ["kestrel", ["c"]],
+    ["harbourview", ["a"]],
+  ])("C1056: the query %j matches site or customer and shows %j", (query, ids) => {
+    expect(shownIds(renderQuery(searchBoard(), query))).toEqual(ids);
+  });
+
+  test("C1057: a query matching no site or customer shows the no-match state and no card", () => {
+    const html = renderQuery(searchBoard(), "zzz");
+    expect(html).toContain("No agreements match &quot;zzz&quot;");
+    expect(html).toMatch(/<button[^>]*>Clear search</);
+    expect(shownIds(html)).toEqual([]);
+  });
+
+  test("C1058: under a query each column header counts and totals only its matching cards", () => {
+    const html = renderQuery(
+      [
+        card({ id: "a", site: "Fernwood Clinic", customer: "Fernwood Dental", annualCents: 400000 }),
+        card({ id: "b", site: "Main office", customer: "Kestrel Logistics", annualCents: 1000000 }),
+        card({ id: "c", stage: "sent", site: "Fernwood Annex", customer: "Fernwood Dental", annualCents: 250000 }),
+      ],
+      "fernwood",
+    );
+    const inProgress = column(html, "in_progress");
+    expect(inProgress).toMatch(/data-column-count[^>]*>1</);
+    expect(inProgress).toMatch(/data-column-total[^>]*>\$4,000\/yr</);
+    const sent = column(html, "sent");
+    expect(sent).toMatch(/data-column-count[^>]*>1</);
+    expect(sent).toMatch(/data-column-total[^>]*>\$2,500\/yr</);
+  });
+
+  test("C1059: the search input invites sites or customers and keeps its label", () => {
+    const html = render([card()]);
+    expect(html).toMatch(/<input[^>]*placeholder="Search sites or customers…"/);
+    expect(html).toContain("Search agreements");
+    expect(html).not.toContain("Search customers…");
   });
 
   test("C119: there is no Sample data badge and no sample data module", () => {

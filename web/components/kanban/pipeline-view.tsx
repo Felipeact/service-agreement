@@ -9,14 +9,16 @@ import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-
 import { KanbanColumn } from "./kanban-column";
 
 /** The Pipeline page body: header with search, then the board (tabs on mobile, scroll on tablet, grid on desktop). */
-export function PipelineView({ cards }: { cards: PipelineCard[] }) {
-  const [query, setQuery] = useState("");
+export function PipelineView({ cards, initialQuery = "" }: { cards: PipelineCard[]; initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery);
   const [selected, setSelected] = useState<PipelineStage>("in_progress");
   const searchRef = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<Partial<Record<PipelineStage, HTMLButtonElement | null>>>({});
 
   const needle = query.trim().toLowerCase();
-  const shown = needle ? cards.filter((card) => card.customer.toLowerCase().includes(needle)) : cards;
+  const shown = needle
+    ? cards.filter((card) => card.site.toLowerCase().includes(needle) || card.customer.toLowerCase().includes(needle))
+    : cards;
   const byStage = (stage: PipelineStage) => shown.filter((card) => card.stage === stage);
 
   function clearSearch() {
@@ -41,7 +43,7 @@ export function PipelineView({ cards }: { cards: PipelineCard[] }) {
           <SearchInput
             ref={searchRef}
             label="Search agreements"
-            placeholder="Search customers…"
+            placeholder="Search sites or customers…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="w-full md:w-60"

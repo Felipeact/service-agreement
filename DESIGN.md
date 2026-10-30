@@ -185,7 +185,7 @@ Stage colours appear only as an 8px dot beside the stage label (column headers, 
 ### Hierarchy
 - **Page title** (700, 22px, 1.25): one per page ("Pipeline"). The product name in the sidebar and top bar is 700 at 15px.
 - **Empty-state title** (600, 14px): e.g. `No agreements match "…"`.
-- **Card title** (600, 13.5px, 1.375): customer or site name on a kanban card.
+- **Card title** (600, 13.5px, 1.375): the site name on a kanban card, wrapped, never truncated.
 - **Body** (400, 13px, 1.45): the base size for the whole app; buttons (600), nav items (500), stage tabs and column headers (600) all sit at 13px.
 - **Meta** (400 or 500, 12px): card metadata, visits per year, column totals, "No agreements".
 - **Pill label** (600, 11px, 16px line): attention and neutral pills.
@@ -252,7 +252,7 @@ Quiet, familiar, and exact. Every control is a native element styled with role t
 - **Tone pills:** fully rounded, 2px 8px padding, 600 at 11px. Attention (#fef3c7 / #92400e) for states needing action; neutral (Board Grey / Slate Secondary) for informational badges such as "Sample data".
 
 ### Cards / Containers
-- **Kanban card:** white, 6px radius, 10px 12px padding, Card shadow, no border. Customer name (card title), meta line in Slate Secondary, an optional attention pill, then a footer row with visits per year on the left and the annual amount (600 Ink, `/yr`) on the right.
+- **Kanban card:** white, 6px radius, 10px 12px padding, Card shadow, no border. Site name (card title), the customer beneath it and the meta line in Slate Secondary, an optional attention pill, then a footer row with visits per year on the left and the annual amount (600 Ink, `/yr`) on the right.
 - **Kanban column:** Board Grey well, 8px radius, 10px padding; header with dot and label, count and right-aligned annual total; "No agreements" when empty.
 - **Empty-state panel:** white, 8px radius, 1px Hairline border, centred, 48px vertical padding, with a secondary button to recover (e.g. "Clear search").
 
