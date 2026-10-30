@@ -147,6 +147,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          default_visit_months: number[]
           id: string
           name: string
           org_id: string
@@ -154,6 +155,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          default_visit_months?: number[]
           id?: string
           name: string
           org_id: string
@@ -161,6 +163,7 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          default_visit_months?: number[]
           id?: string
           name?: string
           org_id?: string
@@ -838,6 +841,46 @@ export type Database = {
           },
         ]
       }
+      service_line_asset_types: {
+        Row: {
+          asset_type_id: string
+          org_id: string
+          service_line_id: string
+        }
+        Insert: {
+          asset_type_id: string
+          org_id: string
+          service_line_id: string
+        }
+        Update: {
+          asset_type_id?: string
+          org_id?: string
+          service_line_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_line_asset_types_asset_type_id_org_id_fkey"
+            columns: ["asset_type_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "asset_types"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "service_line_asset_types_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_line_asset_types_service_line_id_org_id_fkey"
+            columns: ["service_line_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "service_lines"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
       service_lines: {
         Row: {
           agreement_version_id: string
@@ -847,6 +890,7 @@ export type Database = {
           id: string
           org_id: string
           position: number
+          visit_months: number[]
           visits_per_year: number
         }
         Insert: {
@@ -857,6 +901,7 @@ export type Database = {
           id?: string
           org_id: string
           position?: number
+          visit_months: number[]
           visits_per_year: number
         }
         Update: {
@@ -867,6 +912,7 @@ export type Database = {
           id?: string
           org_id?: string
           position?: number
+          visit_months?: number[]
           visits_per_year?: number
         }
         Relationships: [
@@ -1034,6 +1080,17 @@ export type Database = {
             }
             Returns: string
           }
+      save_service_line: {
+        Args: {
+          p_agreement_id: string
+          p_asset_type_ids: string[]
+          p_cost_per_visit_cents: number
+          p_description: string
+          p_line_id: string
+          p_visit_months: number[]
+        }
+        Returns: string
+      }
       send_agreement:
         | {
             Args: {

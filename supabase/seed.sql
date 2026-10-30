@@ -146,9 +146,10 @@ select md5('demo:version:' || n)::uuid, '00000000-0000-4000-8000-00000000de30', 
 from demo_agreements
 on conflict (id) do nothing;
 
-insert into public.service_lines (id, org_id, agreement_version_id, position, description, visits_per_year, cost_per_visit_cents)
+insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year,
+                                  cost_per_visit_cents)
 select md5('demo:line:' || n)::uuid, '00000000-0000-4000-8000-00000000de30', md5('demo:version:' || n)::uuid, 0,
-       'Preventive maintenance visit', visits, cost_cents
+       'Preventive maintenance visit', private.months_for_visits(visits), visits, cost_cents
 from demo_agreements
 where visits is not null
 on conflict (id) do nothing;
@@ -181,6 +182,10 @@ where a.id = v.agreement_id
   and private.org_terms(v.org_id) is not null
   and not (a.status = 'draft'
            and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id));
+
+-- Cadence (.specs/features/cadence, door 5): a demo line that covers nothing yet covers its frozen version's types, or
+-- its site's for the current version of a draft. A line that already covers something keeps it.
+select private.backfill_line_coverage();
 
 -- Demo owner (.specs/features/auth-magic-link/plan.md, door 4): invite the user in the Supabase dashboard first,
 -- then run this file after `select set_config('app.demo_owner_email', '<email>', false);`. Unset, nothing is inserted.
