@@ -1,26 +1,36 @@
 # Cadence verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: light
-**Diff range**: 635a493..a900cce
-**Round**: 2 - scoped
+**Diff range**: 635a493..93e0337
+**Round**: 3 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
 Steps not run: the profile is `light`, so there was no fault injection, no `Coverage` recompute and no `Test policy` verdicts (checks.md has no `Test policy` section). A test that would still pass under a wrong implementation, or a set member nobody proved, is therefore not caught here. `standard` covers those.
 
-## Round 2 scope (verified at a900cce)
+## Round 3 scope (verified at 93e0337)
 
-- **The fix:** `a900cce` "docs(cadence): record c1097 live run". `git show --stat a900cce` and `git diff --stat 724d5f9..HEAD` both give only `.specs/features/cadence/checks.md | 11 +++++++++++`: eleven added Handoff lines, `checks.md:324-334`. It is docs-only. No source, test, migration or SQL suite changed since round 1, so every round 1 citation below still points at the same lines.
-- **Re-judged:** C1097, the only verdict that was not PASS. Everything else carries forward from `724d5f9` and says so.
-- **Proofs re-run in full at HEAD `a900cce`**, on a clean tree. The only untracked path, `.specs/features/seasonal-tasks/`, belongs to another feature.
+- **The fix:** `93e0337` "docs(cadence): record c1097 save at 375". `git diff --stat 04ec278..93e0337` gives only `.specs/features/cadence/checks.md | 12 ++++++++++++`: twelve added Handoff lines, `checks.md:335-346`. It is docs-only. No source, test, migration or SQL suite changed since round 1 (`724d5f9`), so every carried citation below still points at the same lines.
+- **Re-judged:** C1097, the only verdict that was not PASS in round 2. Everything else carries forward and says where from.
+- **Isolation:**
+  - The main tree holds uncommitted edits from another feature (seasonal-tasks) that is in progress. They are not in HEAD and were not touched.
+  - Every proof ran in a detached worktree at `93e0337` in the session scratchpad. It had `web/node_modules` as a junction to the main tree's and a copy of `web/.env.local`, and its own `git status --porcelain` stayed empty throughout.
+- **Proofs re-run in full at `93e0337`** (worktree):
   - **vitest:** one invocation from `web/`: `npx vitest run domain/agreement components/agreements "app/(app)" infrastructure/supabase infrastructure/documents components/review application/use-cases -t "C10[6-9][0-9]:" --reporter=verbose`. Result: 7 files and 44 tests passed, 905 skipped, exit 0. Each named test for C1061-C1069, C1072, C1074, C1075, C1080-C1086, C1089 and C1096 appears individually as passed. The two `stderr` lines (C1061, C1067) are logged output from passing tests.
-  - **test:db:** `npm run test:db` ran all recipes on the remote, rolled back: every recipe printed `PASS`, including `cadence` and `demo_seed`; `19 passed, 0 failed`, exit 0.
-  - **npm test:** run alone: `Test Files 90 passed (90)`, `Tests 1864 passed (1864)`, exit 0.
-  - **tsc:** `npx tsc --noEmit` exit 0.
+  - **test:db:** `npm run test:db` ran all recipes on the remote, rolled back. Every recipe printed `PASS`, including `cadence` and `demo_seed`: `19 passed, 0 failed`, exit 0.
+  - **npm test:**
+    - The first run (alone, cold worktree) gave `Tests 2 failed | 1862 passed (1864)`, exit 1. The two failures are the known lint-driven timeouts: C32 (`domain/purity.test.ts`, 5514 ms) and C873 (`boundaries.test.ts`, 5568 ms), both over the 5000 ms default.
+    - The second run gave `Test Files 90 passed (90)`, `Tests 1864 passed (1864)`, exit 0.
+    - The two files alone gave `62 passed`, exit 0.
+    - Neither file is in the diff (finding 2).
+  - **tsc:**
+    - The first `npx tsc --noEmit` exited 2, only with `TS2304 Cannot find name 'PageProps'` / `'LayoutProps'` and two knock-on `TS7006`.
+    - Those names are Next.js's generated route globals. `web/tsconfig.json:30` includes them from `.next/types/**/*.ts`, and a fresh worktree has no `.next`.
+    - After `npx next typegen` in the worktree (output in the gitignored `.next`, porcelain still empty), `npx tsc --noEmit` exited 0. The cause is the environment, not the code.
   - **lint:** `npm run lint` exit 0.
-- **MCP:** not re-run. The SELECT-only `execute_sql` results for C1077, C1091 and C1092 are carried from `724d5f9`. The fix touched no data path that could change them.
+- **MCP:** not re-run. The SELECT-only `execute_sql` results for C1077, C1091 and C1092 are carried from `04ec278`, which carried them from `724d5f9`. The fix touched no data path that could change them.
 
-## Binding sources (carried from 724d5f9)
+## Binding sources (carried from 04ec278, originally 724d5f9)
 
 Step 1 runs only under `ui`, and this feature is `light`. ROADMAP.md (Phase 3.5 item 2, `## Cadence`) and the STATE.md decisions were read only as context for C1098. No contradiction search or per-screen enumeration was done.
 
@@ -29,11 +39,11 @@ Step 1 runs only under `ui`, and this feature is `light`. ROADMAP.md (Phase 3.5 
 | ROADMAP.md Phase 3.5 item 2 / `## Cadence` | yes (C1098 tick at `ROADMAP.md:148`); not compared, step 1 is `ui` only | - | - |
 | `.specs/STATE.md` AD-003, AD-008, AD-053-055, AD-058, AD-064, AD-068 | yes (AD-008 and AD-055 amended, AD-080-084 added); not compared, step 1 is `ui` only | - | - |
 
-## Checks (proofs verified at a900cce; evidence carried from 724d5f9 except C1097)
+## Checks (proofs verified at 93e0337; evidence carried from 04ec278, originally 724d5f9, except C1095 and C1097, re-judged at 93e0337)
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C1060 | door 1 refuses `{}`, `{6,3}`, `{3,3}`, `{0}`, `{13}` and a count of 5 with `23514`; `{3,6,9,12}` with 4 is accepted | `npm run test:db cadence` PASS | `supabase/tests/cadence.sql:92-95` - loop over the five arrays, `tests.expect_error('C1060 ' \|\| v, ...update ... set visit_months = %L..., '23514')`; `:97` `expect_error('C1060 count', ...visits_per_year = 5..., '23514')`; `:99` `expect_rows('C1060 accepted', ...visits_per_year = 4..., 1)` | PASS |
+| C1060 | door 1 refuses `{}`, `{6,3}`, `{3,3}`, `{0}`, `{13}` and a count of 5 with `23514`; `{3,6,9,12}` with 4 is accepted | `npm run test:db cadence` PASS | `supabase/tests/cadence.sql:92-95` - loop over the five arrays, `tests.expect_error('C1060 ' concatenated with v, ...update ... set visit_months = %L..., '23514')`; `:97` `expect_error('C1060 count', ...visits_per_year = 5..., '23514')`; `:99` `expect_rows('C1060 accepted', ...visits_per_year = 4..., 1)` | PASS |
 | C1061 | the RPC stores 4 visits; the reader gives `visitsPerYear: 4`, `annualCents: 100000` | test:db cadence PASS; vitest `infrastructure/supabase` `C1061:` passed | `supabase/tests/cadence.sql:110` - `(select visits_per_year ...) = 4`; `:112` - `visits_per_year * cost_per_visit_cents = 100000`; `web/infrastructure/supabase/cadence.test.ts:45` - `toMatchObject({ visitsPerYear: 4, annualCents: 100000, visitMonths: [3, 6, 9, 12] })` | PASS |
 | C1062 | `Visit months` fieldset, twelve `visitMonths` checkboxes 1..12 labelled Jan..Dec, `grid-cols-6` and `md:grid-cols-12`, three presets | vitest `components/agreements` `C1062:` passed | `web/components/agreements/cadence.test.ts:93` `toHaveLength(12)`; `:95` values `["1",...,"12"]`; `:97` labels `["Jan",...,"Dec"]`; `:98` `toMatch(/<div class="...\bgrid-cols-6\b...\bmd:grid-cols-12\b...">/)`; `:99` the three `<button type="button">` presets | PASS |
 | C1063 | presets give `[3,6,9,12]`, `[4,10]`, `[1..12]`; `checked=[4,10]` checks exactly 4 and 10 | vitest `domain/agreement` and `components/agreements` `C1063:` passed | `web/domain/agreement/cadence.test.ts:11-13` - `MONTH_PRESETS.quarterly toEqual([3,6,9,12])`, `.semiAnnual toEqual([4,10])`, `.monthly toEqual([1..12])`; `web/components/agreements/cadence.test.ts:104` - `checked.map(value) toEqual(["4", "10"])` | PASS |
@@ -68,13 +78,13 @@ Step 1 runs only under `ui`, and this feature is `light`. ROADMAP.md (Phase 3.5 
 | C1092 | backfill runs through `months_for_visits` (raises n > 12) in the migration; pre-apply count recorded as 0 | Handoff record (pre-apply cannot be re-run) + test:db cadence C1090 PASS; MCP re-run: `visits_per_year > 12` now `0` | `supabase/migrations/20261030120000_cadence.sql:45` - `update public.service_lines set visit_months = private.months_for_visits(visits_per_year);`; `:31` - `raise exception ... using errcode = '22023'`; raise proven at `supabase/tests/cadence.sql:334-342`; Handoff Pre-apply: `visits_per_year > 12` = `0` | PASS |
 | C1093 | backfill: frozen version from snapshot, unfrozen from site; second run adds nothing | test:db cadence PASS | `supabase/tests/cadence.sql:358` frozen `cd_cover = cd_ids('{cd:boiler}')`; `:360` draft `cd_cover = cd_ids('{typeA,cd:ahu}')`; `:364` `count(*) = n` after the second run | PASS |
 | C1094 | after seed twice: every demo line has months, covered when its site has assets; rerun changes nothing | `npm run test:db demo_seed` PASS | `supabase/tests/demo_seed.sql:187-190` no line with empty `visit_months`; `:191` no uncovered line on a site with assets; `supabase/tests/demo_seed_rerun.sql:46-51` no changed months/coverage; `:52-54` coverage-row count unchanged | PASS |
-| C1095 | `npm run test:db`, `npm test`, `npm run lint`, `npx tsc --noEmit` exit 0 | `npm run test:db` `19 passed, 0 failed` exit 0; `npm test` alone 90 files, 1864 passed, exit 0; lint exit 0; tsc exit 0 | runner output `19 passed, 0 failed`; `Test Files 90 passed (90)`, `Tests 1864 passed (1864)`. First `npm test` run, made in parallel with lint/tsc, timed out on C873 (`boundaries.test.ts:56`) and C32 (`domain/purity.test.ts`) at 5000ms; neither file is in the diff (see finding 2) | PASS |
+| C1095 | `npm run test:db`, `npm test`, `npm run lint`, `npx tsc --noEmit` exit 0 | at 93e0337 in the worktree: `npm run test:db` `19 passed, 0 failed` exit 0; `npm test` 90 files, 1864 passed, exit 0 (second run); lint exit 0; tsc exit 0 after `next typegen` | Runner output `19 passed, 0 failed`; `Test Files 90 passed (90)`, `Tests 1864 passed (1864)`. The first `npm test` run timed out on C873 (`web/boundaries.test.ts:56`) and C32 (`web/domain/purity.test.ts`) at 5000 ms. Both pass alone (`62 passed`), and neither file is in the diff (finding 2). The first tsc run lacked the generated `.next/types` globals (`web/tsconfig.json:30`) in the fresh worktree; with them generated, it exits 0 | PASS |
 | C1096 | `database.types.ts` lists the column, column, table and function | vitest `infrastructure/supabase` `C1096:` passed | `web/infrastructure/supabase/cadence.test.ts:184-188` - `block("service_lines") toContain("visit_months: number[]")`, `asset_types` `default_visit_months: number[]`, `service_line_asset_types` `service_line_id: string`, `save_service_line` `p_visit_months: number[]` and `p_asset_type_ids: string[]` | PASS |
-| C1097 | live at 1440 and 375: add a line on AG-1046 covering one type, Quarterly, save; row reads `Mar, Jun, Sep, Dec · 4 visits/yr`, `Visit schedule` shown, PDF 200, no console error | not re-run (live check, settled by its recorded run); judged from the Handoff record at `a900cce` | `.specs/features/cadence/checks.md:324-334`, on draft AG-1051. **Shown at 1440:** add a line covering one type (`RTU ticked`, `checks.md:327-328`), Quarterly pressed, checked `3, 6, 9, 12` (`:328`), "Add line" saved (`:328`); row `C1097 live check \| Mar, Jun, Sep, Dec · 4 visits/yr \| RTU` (`:329-330`); `Visit schedule` March/June/September/December (`:330-331`); `Download PDF` `200 application/pdf` (`:331`); console 0 errors (`:332`). **Shown at 375:** only "after a reload at 375" (`:329`): the saved row, `Visit schedule`, PDF 200 and 0 console errors. Quarterly at 375 appears only in the earlier unsaved run (`:320-321`). **Not shown at 375:** adding a line and saving it; the one add-and-save ran at 1440 only. **AG-1046 to AG-1051:** acceptable. AG-1046 is `sent` and read-only (`:314-316`), so the claim as written cannot be run. AG-1051 is a draft, the line covers one type, and the user approved the write (`:324`). The substitution keeps the claim's intent; naming a sent agreement is a precision gap in the check, not in the run | FAIL - add and save not run at 375 |
+| C1097 | live at 1440 and 375 (`checks.md:220-222`): add a line on AG-1046 covering one type, Quarterly, save; row reads `Mar, Jun, Sep, Dec · 4 visits/yr`, `Visit schedule` shown, PDF 200, no console error | not re-run (live check, settled by its recorded runs); judged from the Handoff record at `93e0337` | Both runs are on draft AG-1051. **At 1440** (`.specs/features/cadence/checks.md:324-334`): one type (`RTU ticked`) and Quarterly pressed, checked `3, 6, 9, 12`, then "Add line" (`:328`). Row `C1097 live check / Mar, Jun, Sep, Dec · 4 visits/yr / RTU` (`:329-330`). `Visit schedule` March/June/September/December (`:330-331`). `Download PDF` `200 application/pdf` (`:331`). Console 0 errors (`:332`). **At 375** (`.specs/features/cadence/checks.md:335-346`, new in `93e0337`): viewport set to 375x812 before AG-1051 was opened (`:337`). `RTU ticked`, Quarterly pressed, checked `3, 6, 9, 12` (`:338`), then "Add line" pressed at width 375 (`:339`). Right after the save and after a reload, both at 375: row `C1097 live check 375 / Mar, Jun, Sep, Dec · 4 visits/yr / RTU` (`:340`); `Visit schedule` March, June, September, December, each `RTU` (`:341`); `Download PDF` `200 application/pdf` (`:342`); console 0 errors, 0 warnings (`:342-343`). The line was then removed and AG-1051 is back to `No service lines yet.` (`:343-345`). **AG-1046 to AG-1051:** carried from round 2 and approved by the user. AG-1046 is `sent` and read-only (`:314-316`); AG-1051 is a draft and the user approved each write (`:324`, `:335-336`). The check text naming AG-1046 remains a precision gap (finding 1) | PASS |
 | C1098 | STATE AD rows for doors 1-4 and 6, AD-008 amended, CONTEXT/DESIGN/ROADMAP updated | `grep -c "visit_months" .specs/STATE.md CONTEXT.md` -> `5`, `3` | `.specs/STATE.md:86-90` AD-080 (door 1), AD-081 (door 2), AD-082 (door 3), AD-083 (door 4), AD-084 (door 6); `.specs/STATE.md:14` AD-008 "amended by AD-082"; `CONTEXT.md:101`, `:120`; `DESIGN.md:264` Checkbox control; `ROADMAP.md:148` `- [x] Cadence` | PASS |
 | C1099 | `send_agreement` raises `23514` with no lines, sends a version with months and coverage | test:db cadence PASS | `supabase/tests/cadence.sql:239-241` `expect_error('C1099 no lines', ...send_agreement..., '23514')`; `:244` `status = 'sent'` | PASS |
 
-## Level and sampling (carried from 724d5f9)
+## Level and sampling (carried from 04ec278, originally 724d5f9)
 
 - **C1062 "two rows of six below md".** After `d737b13` the grid is still `grid grid-cols-6 gap-1.5 md:grid-cols-12` (`web/components/agreements/line-form.tsx:122`). The change only switches each cell's `<label>` to `flex-col` below md (`:127`), so the box sits above its month. Twelve cells in six columns still make two rows of six, so AC 3 and the check as written hold. The C1062 regex at `cadence.test.ts:96` still matches `<label><input/>Jan</label>`, because the stacking is done with classes and not markup.
 - **AC 19 and AC 23 with a four-field `DocumentLine`.** The schedule does not need to be on `DocumentLine`. It travels on `AgreementDocument.schedule`.
@@ -87,7 +97,7 @@ Step 1 runs only under `ui`, and this feature is `light`. ROADMAP.md (Phase 3.5 
 - **C1092.** The backfill expression and the raise are both proven. The transaction guarantee depends on how the file was applied: the SQL editor, per Handoff item 3, which runs a multi-statement script as one implicit transaction. The pre-apply count was `0`, so the abort path never ran on the remote. The claim only asks for the count to be recorded, and it was.
 - **Sampling:** no check claims more cases than its proof runs. C1072 is table-driven over every code it names, plus `23514` and `XX000` for "anything else". C1076 is table-driven over all 40 codes.
 
-## Superseded tests (batch 2, "Settled mid-build") (carried from 724d5f9)
+## Superseded tests (batch 2, "Settled mid-build") (carried from 04ec278, originally 724d5f9)
 
 I checked every hunk of `git diff 635a493..HEAD -- '*.test.ts' 'supabase/tests/*.sql'` against the approved list.
 
@@ -113,17 +123,24 @@ I checked every hunk of `git diff 635a493..HEAD -- '*.test.ts' 'supabase/tests/*
   - No expected state or value changed.
 - No `.skip`, `.only` or `todo` was added. I found no other weakened, deleted or skipped assertion.
 
-## Swept (carried from 724d5f9)
+## Swept (carried from 04ec278, originally 724d5f9)
 
 - **concurrency (existing).** The cited constraint is there: `service_lines_frozen` reads the agreement `for share of a` (`supabase/migrations/20261027202354_agreement_builder.sql:81`, AD-054), and the new coverage trigger copies it (`supabase/migrations/20261030120000_cadence.sql:171`).
 - The `n/a` rows (dependency failure, observability) are user-approved policy and were not re-read.
 
 ## Findings
 
-1. **C1097 is still not fully proven: the add-and-save never ran at 375 px.** The round 2 record (`.specs/features/cadence/checks.md:324-334`) closes most of round 1's gap. At 1440 a line covering one type was added on draft AG-1051, Quarterly was pressed and the line saved, and the row, `Visit schedule`, PDF 200 and clean console all held. At 375 the record shows only the saved row after a reload (`checks.md:329`) plus the PDF and console. The claim reads "Live at 1440 and 375 px: ... add a line ..., press Quarterly, save" (`checks.md:220-222`), and the phone width is where the form layout differs (6-column grid, stacked month cells after `d737b13`). No submit has been recorded at that width. To close it: one add (one type) -> Quarterly -> save at 375 on AG-1051, read the row, then remove the line, with the user's go-ahead for the write. If 375 was meant as a read-only width, the check text has to say so and be re-approved; the verifier cannot reinterpret it.
-   - The substitution of AG-1051 for AG-1046 does not count against the claim. AG-1046 is sent and cannot be written (`checks.md:314-316`), and the user approved AG-1051 (`checks.md:324`). The check naming an unwritable agreement is a precision gap in `checks.md:220`.
-2. **Not blocking: the C873 and C32 lint-driven tests time out under load.** `web/boundaries.test.ts:56` and `web/domain/purity.test.ts` hit the 5000 ms default when `npm test` runs alongside other work. Batch 1 recorded the same. Both pass when the suite runs alone, and neither file is in this diff.
+1. **Precision gap, not failing: C1097 names AG-1046** (`.specs/features/cadence/checks.md:220`). AG-1046 is `sent` and read-only (`checks.md:314-316`), so the claim as written cannot be run. Both recorded runs used draft AG-1051 with the user's approval (`checks.md:324`, `:335-336`). This keeps the claim's intent: a draft, one type, Quarterly, save. Round 2 accepted it and the user approved it; this round carries that judgment. Round 2's blocking gap is closed: the add-and-save at 375 px is now recorded at `checks.md:335-346`, with the viewport set before the page was opened and "Add line" pressed at width 375.
+2. **Not blocking: the C873 and C32 lint-driven tests time out under load.** `web/boundaries.test.ts:56` and `web/domain/purity.test.ts` hit the 5000 ms default on this round's first cold `npm test`, as in batch 1 and round 2. They pass on a re-run of the full suite and alone, and neither file is in this diff.
+3. **Environment note, not a finding about the code:** in a fresh worktree `npx tsc --noEmit` needs Next.js's generated route types (`web/tsconfig.json:30`, `.next/types/**/*.ts`). With `npx next typegen` run first, it exits 0.
 
-## Gate (verified at a900cce)
+## Gate (verified at 93e0337)
 
-`npx vitest run <7 dirs> -t "C10[6-9][0-9]:"` - 44 passed, 0 failed (exit 0); `npm run test:db` - 19 passed, 0 failed (exit 0); `npm test` - 1864 passed, 0 failed, 90 files (exit 0, isolated run); `npx tsc --noEmit` exit 0; `npm run lint` exit 0. 39 of 40 checks proven; C1097 is proven at 1440 but its add-and-save has no record at 375, so the verdict stays FAIL.
+All runs were in a worktree at `93e0337`:
+- `npx vitest run <7 dirs> -t "C10[6-9][0-9]:"`: 44 passed, 0 failed (exit 0)
+- `npm run test:db`: 19 passed, 0 failed (exit 0)
+- `npm test`: 1864 passed, 0 failed, 90 files (exit 0 on the re-run; the first run had 2 known lint-test timeouts)
+- `npx tsc --noEmit`: exit 0 (after `next typegen`)
+- `npm run lint`: exit 0
+
+40 of 40 checks are proven with located evidence. C1097 now has a recorded add, Quarterly and save at both 1440 and 375.
