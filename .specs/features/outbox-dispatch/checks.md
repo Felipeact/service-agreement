@@ -500,3 +500,22 @@ Expected follow-ons the build must report, not hide:
 ### Round 3, F17 (2026-10-30, the user's decision)
 
 C1052 is reworded so that every status outside the six retry triggers never loops. It is asserted with `200`, `400`, `401`, `404`, `422`, `429` and `501`, so a condition widened to `>= 409` now fails a test. The exports are unchanged.
+
+### Live record, C1049 step 3 (2026-10-30, run by the orchestrator; the user approved creating a new Railway project)
+
+- **Project:** Railway project `service-agreement-automation` (`d058b012-7a9f-410d-9afb-1e41c852d05f`) in the workspace "Felipe Viana's Projects". It has 2 services:
+  - `Postgres`, from Railway's PostgreSQL template;
+  - `n8n` (`20e2305b-…`), image `n8nio/n8n:2.45.7`, npm's `stable` tag on 2026-10-30, confirmed on Docker Hub.
+- **n8n variables:**
+  - `DB_TYPE=postgresdb`, with `DB_POSTGRESDB_*` referencing `${{Postgres.PG*}}`;
+  - `GENERIC_TIMEZONE` and `TZ` set to `America/Vancouver`;
+  - `N8N_PORT=5678`, `N8N_PROXY_HOPS=1`;
+  - `WEBHOOK_URL=https://n8n-production-297b.up.railway.app/`;
+  - `N8N_ENCRYPTION_KEY`, 32 random bytes generated in the shell and never printed;
+  - `N8N_BLOCK_ENV_ACCESS_IN_NODE` not set, so n8n's default applies (plan Landing row 13).
+- **Deployment:** `8b0e4af6-…` reached `SUCCESS`, and Postgres reached `SUCCESS`. The log shows `Version: 2.45.7`, the migration lock taken and `n8n ready on ::, port 5678`. `GET /healthz` and `GET /` both answer `200`.
+- **C1049 is still unproven.** Four things are missing:
+  - the n8n owner account, which the user creates;
+  - the four imported exports, with the two placeholders replaced;
+  - step 1: the Vault `n8n_events_url` and `automation_hmac_secret`, where the HMAC secret must equal the one put into the n8n Crypto nodes;
+  - step 2 (`RESEND_API_KEY`) and a public address for the app, because n8n's callbacks cannot reach `localhost`.
