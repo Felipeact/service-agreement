@@ -111,8 +111,8 @@
 
 **Feature**: renewal (ROADMAP Phase 3.5 item 5), profile light, one builder (a second session started it; this one adopted it on 2026-11-02, see the feature's Settled mid-build)
 **Where**: committed on `development`, feature base `102bb12`: `84ac75e` database, `c567790` settings, `7246368` renewal message types and emails (mislabelled as settings), `2668bac` notify and W7, `040e0b8` links and board, `5d70b37` Expiring soon, `b644b2d` and `6e752a8` docs, `86ab1dc` 60 s test timeout. Migration `20261102180706_renewal` applied to the project. Verifier round 1 FAIL on C1216 only (`npm test` timeouts), fixed by `86ab1dc`; round 2 PASS over `102bb12..86ab1dc`, 54/54 checks, `validate_verification.py` exits 0 (2026-11-02). Lessons L-020 to L-022
-**In progress**: nothing
-**Next step**: ROADMAP Phase 3.5 item 6, proposal validity date and automatic expiry (n8n W8)
+**In progress**: proposal-expiry (ROADMAP Phase 3.5 item 6), `plan.md` written and passing `validate_plan.py`, awaiting the user's review; no checks, no code
+**Next step**: on approval, write `.specs/features/proposal-expiry/checks.md`
 **Open, non-failing**: Verifier notes on renewal: C1202 does not assert the retry IF's operator, C1215 accepts any version rather than the latest, C1166 and C1217 have no recorded before run, C1218 and C1219 ran on a local build of HEAD (user's choice). The Railway `web` service runs `5b40205` (deployment `a15fe4cd`, `railway up` from `web/`, user-approved 2026-11-02, SUCCESS); W7 is not imported into the n8n instance yet. Carried: the term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
 **Blockers**: none
 **Uncommitted**: none
