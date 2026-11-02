@@ -53,8 +53,9 @@ begin
   end loop;
   insert into public.agreements (id, org_id, site_id, number, status)
   values (tests.id(p_name), tests.id('orgA'), tests.id(p_name || ':site'), p_name, p_status);
-  insert into public.agreement_versions (id, org_id, agreement_id, version_no)
-  values (tests.id(p_name || ':v1'), tests.id('orgA'), tests.id(p_name), 1);
+  -- term-dates door 4: a draft needs a start date to be sent.
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start)
+  values (tests.id(p_name || ':v1'), tests.id('orgA'), tests.id(p_name), 1, '2027-01-01');
   return tests.id(p_name);
 end $$;
 

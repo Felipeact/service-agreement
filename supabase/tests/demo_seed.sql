@@ -228,3 +228,16 @@ select 'orgs' as t, (select count(*) from public.orgs where id = tests.demo()) a
 union all
 select t, tests.count(format('select count(*) from public.%I where org_id = %L', t, tests.demo()))
 from unnest(tests.tenant_tables()) as t;
+
+-- C1158 (term-dates): every demo version starts on the first of the month after it was created.
+do $$ begin
+  perform tests.ok('C1158 start',
+    not exists (select 1 from public.agreement_versions v where v.org_id = tests.demo()
+                and v.term_start is distinct from (date_trunc('month', v.created_at) + interval '1 month')::date),
+    'a demo version has no start date, or not the first of the month after it was created');
+end $$;
+
+-- Every demo version after the first run, for C1158 on the second.
+create table tests.demo_versions as
+select md5(coalesce(string_agg(v::text, ',' order by v.id), '')) as h
+from public.agreement_versions v where v.org_id = tests.demo();

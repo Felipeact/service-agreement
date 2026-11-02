@@ -1,4 +1,4 @@
--- customer-portal, database side: C901-C907, C910, C911, C919-C928, C933, C939-C943, C945, C946. Run after fixture.sql in
+-- customer-portal, database side: C901-C907, C910, C911, C919-C928, C933, C939-C943, C945, C946; term-dates C1149, C1151, C1157, C1164. Run after fixture.sql in
 -- the same execute_sql call (npm run test:db customer_portal). Fixture: org A owner uA, estimator uE, viewer uV;
 -- org B owner uB; uX in no org (made an admin of org A below). Setup runs as the table owner with no signed-in user.
 
@@ -38,8 +38,9 @@ begin
   values (tests.id(p_name || ':site'), tests.id('org' || p_org), tests.id('cust' || p_org), 'Site ' || p_name);
   insert into public.agreements (id, org_id, site_id, status, number)
   values (tests.id(p_name), tests.id('org' || p_org), tests.id(p_name || ':site'), p_status, p_name);
-  insert into public.agreement_versions (id, org_id, agreement_id, version_no)
-  values (tests.id(p_name || ':v1'), tests.id('org' || p_org), tests.id(p_name), 1);
+  -- term-dates door 4: a draft needs a start date to be sent.
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start)
+  values (tests.id(p_name || ':v1'), tests.id('org' || p_org), tests.id(p_name), 1, '2027-01-01');
   for i in 1 .. p_lines loop
     insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
     values (tests.id(p_name || ':l' || i), tests.id('org' || p_org), tests.id(p_name || ':v1'), i, p_name || ' line ' || i, '{3,6,9,12}', 4, 50000 * i);
@@ -113,10 +114,10 @@ select set_config('request.jwt.claims', '', true);
 -- C933 (null terms): with the four nullable settings null each key is present with JSON null.
 do $$ begin
   perform tests.ok('C933 nulls',
-    tests.cp_snapshot('a933null') -> 'terms' = '{"repairDiscountPct": 0, "cpiCapPct": 0, "cancellationNoticeDays": null, "paymentDays": null, "governingProvince": null, "taxNote": null}'::jsonb,
-    'bare settings do not freeze as six keys with nulls: ' || tests.cp_snapshot('a933null')::text);
+    tests.cp_snapshot('a933null') -> 'terms' = '{"repairDiscountPct": 0, "cpiCapPct": 0, "cancellationNoticeDays": null, "paymentDays": null, "governingProvince": null, "taxNote": null, "renewalNoticeDays": 30, "cpiRenegotiationThresholdPct": 5}'::jsonb,
+    'bare settings do not freeze as eight keys with nulls: ' || tests.cp_snapshot('a933null')::text);
   perform tests.ok('C933 null keys present',
-    (select count(*) from jsonb_object_keys(tests.cp_snapshot('a933null') -> 'terms')) = 6, 'not exactly 6 keys');
+    (select count(*) from jsonb_object_keys(tests.cp_snapshot('a933null') -> 'terms')) = 8, 'not exactly 8 keys');
 end $$;
 
 update public.org_settings
@@ -293,8 +294,8 @@ do $$ begin
   perform tests.ok('C911 frozen', (public.portal_view(tests.cp_hash('a901')) -> 'terms' ->> 'repairDiscountPct')::numeric = 10,
     'portal_view does not return the frozen repair discount');
   perform tests.ok('C933 terms', tests.cp_snapshot('a901') -> 'terms'
-    = '{"repairDiscountPct": 10, "cpiCapPct": 5, "cancellationNoticeDays": 30, "paymentDays": 30, "governingProvince": "BC", "taxNote": "GST extra"}'::jsonb,
-    'the frozen terms are not the six settings: ' || (tests.cp_snapshot('a901') -> 'terms')::text);
+    = '{"repairDiscountPct": 10, "cpiCapPct": 5, "cancellationNoticeDays": 30, "paymentDays": 30, "governingProvince": "BC", "taxNote": "GST extra", "renewalNoticeDays": 30, "cpiRenegotiationThresholdPct": 5}'::jsonb,
+    'the frozen terms are not the eight settings: ' || (tests.cp_snapshot('a901') -> 'terms')::text);
 end $$;
 update public.org_settings set repair_discount_pct = 10 where org_id = tests.id('orgA');
 
@@ -308,8 +309,9 @@ reset role;
 select set_config('request.jwt.claims', '', true);
 do $$ begin
   perform tests.ok('C933 withdraw', (select array_agg(k order by k) from jsonb_object_keys(tests.cp_snapshot('a933w') -> 'terms') k)
-    = array['cancellationNoticeDays', 'cpiCapPct', 'governingProvince', 'paymentDays', 'repairDiscountPct', 'taxNote'],
-    'a withdrawn draft did not freeze the six terms');
+    = array['cancellationNoticeDays', 'cpiCapPct', 'cpiRenegotiationThresholdPct', 'governingProvince', 'paymentDays',
+            'renewalNoticeDays', 'repairDiscountPct', 'taxNote'],
+    'a withdrawn draft did not freeze the eight terms');
 end $$;
 
 -- portal_view carries what the page and the PDF need.
@@ -704,6 +706,117 @@ do $$ begin
       = array['from', 'reason', 'to', 'versionNo', 'via']
     and (select array_agg(k order by k) from jsonb_object_keys((select payload from public.events where entity_id = tests.id('a920c') and type = 'agreement.changes_requested')) k)
       = array['from', 'reason', 'to', 'versionNo', 'via'], 'payload keys differ from the plan');
+end $$;
+
+-- term-dates C1149, C1151, C1157, C1164 (doors 4, 5 and 7).
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.org_settings set renewal_notice_days = 45, cpi_renegotiation_threshold_pct = 4.50 where org_id = tests.id('orgA');
+
+-- C1149: no start date, no send, and nothing changes; with one, the same call sends.
+select tests.cp_agr('a1149');
+update public.agreement_versions set term_start = null where id = tests.id('a1149:v1');
+create table tests.t1149 as select
+  (select count(*) from public.events where entity_id = tests.id('a1149')) as events,
+  (select count(*) from public.outbox o join public.events e on e.id = o.event_id where e.entity_id = tests.id('a1149')) as outbox,
+  (select count(*) from public.portal_links where agreement_version_id = tests.id('a1149:v1')) as links;
+create table tests.t1149hint (hint text);
+grant all on tests.t1149hint to authenticated;
+select tests.act_as('uE');
+do $$
+declare
+  v_state text;
+  v_hint text;
+begin
+  begin
+    perform public.send_agreement(tests.id('a1149'), tests.cp_hash('a1149'), 'agreement.sent', '{}');
+  exception when others then
+    get stacked diagnostics v_state = returned_sqlstate, v_hint = pg_exception_hint;
+  end;
+  perform tests.ok('C1149 refused', v_state = '23514', format('expected 23514, got %s', coalesce(v_state, 'success')));
+  insert into tests.t1149hint values (v_hint);
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1149 hint', (select hint from tests.t1149hint) = 'no_term_start', 'the refusal carries no no_term_start hint');
+  perform tests.ok('C1149 status', (select status from public.agreements where id = tests.id('a1149')) = 'draft', 'the status changed');
+  perform tests.ok('C1149 unchanged', (select t.events = (select count(*) from public.events where entity_id = tests.id('a1149'))
+    and t.outbox = (select count(*) from public.outbox o join public.events e on e.id = o.event_id where e.entity_id = tests.id('a1149'))
+    and t.links = (select count(*) from public.portal_links where agreement_version_id = tests.id('a1149:v1')) from tests.t1149 t),
+    'a refused send wrote an event, an outbox row or a link');
+end $$;
+update public.agreement_versions set term_start = '2027-01-01' where id = tests.id('a1149:v1');
+select tests.act_as('uE');
+select public.send_agreement(tests.id('a1149'), tests.cp_hash('a1149'), 'agreement.sent', '{}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1149 sends with a start', (select status from public.agreements where id = tests.id('a1149')) = 'sent',
+    'the send with a start date did not send');
+end $$;
+
+-- C1151: the send froze the two renewal settings beside the six terms, and a settings change leaves them.
+create table tests.t1151 as select snapshot::text as s from public.agreement_versions where id = tests.id('a1149:v1');
+update public.org_settings set renewal_notice_days = 60, cpi_renegotiation_threshold_pct = 7 where org_id = tests.id('orgA');
+do $$
+declare t jsonb := (select snapshot -> 'terms' from public.agreement_versions where id = tests.id('a1149:v1'));
+begin
+  perform tests.ok('C1151 keys', t ?& array['repairDiscountPct', 'cpiCapPct', 'cancellationNoticeDays', 'paymentDays',
+    'governingProvince', 'taxNote', 'renewalNoticeDays', 'cpiRenegotiationThresholdPct'], 'the frozen terms lack a key');
+  perform tests.ok('C1151 values', (t ->> 'renewalNoticeDays')::int = 45 and (t ->> 'cpiRenegotiationThresholdPct')::numeric = 4.50,
+    'the frozen renewal values are not the settings at send');
+  perform tests.ok('C1151 frozen', (select snapshot::text from public.agreement_versions where id = tests.id('a1149:v1'))
+    = (select s from tests.t1151), 'a settings change altered the frozen snapshot');
+end $$;
+
+-- C1157: portal_view carries the term, with nulls for a version with no start.
+select tests.cp_sent('a1157');
+update public.agreement_versions set term_start = null where id = tests.id('a1157:v1');
+create table tests.t1157 (set_view jsonb, null_view jsonb);
+grant all on tests.t1157 to anon;
+select tests.act_as_anon();
+insert into tests.t1157 select public.portal_view(tests.cp_hash('a1149')), public.portal_view(tests.cp_hash('a1157'));
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1157 term', (select set_view -> 'term' from tests.t1157) = '{"start": "2027-01-01", "months": 12, "end": "2027-12-31"}'::jsonb,
+    'portal_view term is not {start 2027-01-01, months 12, end 2027-12-31}');
+  perform tests.ok('C1157 renewal keys', (select set_view -> 'terms' ?& array['renewalNoticeDays', 'cpiRenegotiationThresholdPct'] from tests.t1157),
+    'portal_view terms lack the renewal keys');
+  perform tests.ok('C1157 no start', (select null_view -> 'term' from tests.t1157) = '{"start": null, "months": 12, "end": null}'::jsonb,
+    'portal_view term for a version with no start is not {start null, months 12, end null}');
+end $$;
+
+-- C1164: no service line still refuses with no hint, with or without a start date.
+select tests.cp_agr('a1164', 'draft', 'A', 0);
+select tests.cp_agr('a1164none', 'draft', 'A', 0);
+update public.agreement_versions set term_start = null where id = tests.id('a1164none:v1');
+create table tests.t1164 (name text, state text, hint text);
+grant all on tests.t1164 to authenticated;
+select tests.act_as('uE');
+do $$
+declare
+  n text;
+  v_state text;
+  v_hint text;
+begin
+  foreach n in array array['a1164', 'a1164none'] loop
+    v_state := null;
+    v_hint := null;
+    begin
+      perform public.send_agreement(tests.id(n), tests.cp_hash(n), 'agreement.sent', '{}');
+    exception when others then
+      get stacked diagnostics v_state = returned_sqlstate, v_hint = pg_exception_hint;
+    end;
+    insert into tests.t1164 values (n, v_state, v_hint);
+  end loop;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1164 no lines', (select count(*) = 2 from tests.t1164 where state = '23514' and coalesce(hint, '') = ''),
+    'a send with no line did not refuse 23514 with no hint');
 end $$;
 
 rollback;

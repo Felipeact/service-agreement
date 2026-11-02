@@ -1,4 +1,4 @@
--- S3 domain shape: C16-C27, C37-C40, C42. Runs as table owner, after fixture.sql in the same execute_sql call.
+-- S3 domain shape: C16-C27, C37-C40, C42; term-dates C1131. Runs as table owner, after fixture.sql in the same execute_sql call.
 
 -- C16
 do $$
@@ -201,6 +201,31 @@ begin
       'rows left after org delete');
   end loop;
   perform tests.ok('C27 orgs', not exists (select 1 from public.orgs where id = a), 'org row left');
+end $$;
+
+-- C1131 (term-dates, door 2): the renewal settings' bounds and defaults.
+do $$
+declare
+  c record;
+begin
+  -- A row of its own: an earlier test here deletes the fixture orgs.
+  insert into public.orgs (id, name) values (tests.id('org1131'), 'Defaults (test)');
+  insert into public.org_settings (org_id, legal_name) values (tests.id('org1131'), 'Defaults');
+  perform tests.ok('C1131 defaults', (select default_term_months = 12 and renewal_notice_days = 30
+    and cpi_renegotiation_threshold_pct = 5.00 from public.org_settings where org_id = tests.id('org1131')),
+    'a new settings row did not get 12, 30 and 5.00');
+  for c in select * from (values ('default_term_months', '0'), ('default_term_months', '61'), ('renewal_notice_days', '-1'),
+                                 ('renewal_notice_days', '366'), ('cpi_renegotiation_threshold_pct', '-0.01'),
+                                 ('cpi_renegotiation_threshold_pct', '100.01')) as x(col, val) loop
+    perform tests.expect_error('C1131 refuses ' || c.col || ' ' || c.val,
+      format('update public.org_settings set %I = %L where org_id = %L', c.col, c.val, tests.id('org1131')), '23514');
+  end loop;
+  for c in select * from (values ('default_term_months', '1'), ('default_term_months', '60'), ('renewal_notice_days', '0'),
+                                 ('renewal_notice_days', '365'), ('cpi_renegotiation_threshold_pct', '0'),
+                                 ('cpi_renegotiation_threshold_pct', '100')) as x(col, val) loop
+    perform tests.expect_rows('C1131 accepts ' || c.col || ' ' || c.val,
+      format('update public.org_settings set %I = %L where org_id = %L', c.col, c.val, tests.id('org1131')), 1);
+  end loop;
 end $$;
 
 rollback;

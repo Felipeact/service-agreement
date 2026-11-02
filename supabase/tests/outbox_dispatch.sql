@@ -119,8 +119,9 @@ begin
           case when p_contact then tests.id(p_name || ':ct') end, 'Harbour Plant ' || p_name);
   insert into public.agreements (id, org_id, site_id, number)
   values (tests.id(p_name), tests.id('org' || p_org), tests.id(p_name || ':site'), 'AG-' || p_name);
-  insert into public.agreement_versions (id, org_id, agreement_id, version_no)
-  values (tests.id(p_name || ':v1'), tests.id('org' || p_org), tests.id(p_name), 1);
+  -- term-dates door 4: a draft needs a start date to be sent.
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start)
+  values (tests.id(p_name || ':v1'), tests.id('org' || p_org), tests.id(p_name), 1, '2027-01-01');
   insert into public.service_lines (org_id, agreement_version_id, description, visit_months, visits_per_year, cost_per_visit_cents)
   values (tests.id('org' || p_org), tests.id(p_name || ':v1'), 'Preventive maintenance', '{1,3,5,7,9,11}', 6, 64500);
   perform tests.act_as(p_sender);

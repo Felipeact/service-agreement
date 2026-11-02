@@ -183,6 +183,13 @@ where a.id = v.agreement_id
   and not (a.status = 'draft'
            and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id));
 
+-- Term dates (.specs/features/term-dates, Assumptions): a demo version with no start date starts on the first of the
+-- month after it was created. A version that already has one keeps it.
+update public.agreement_versions v
+set term_start = (date_trunc('month', v.created_at) + interval '1 month')::date
+where v.org_id = '00000000-0000-4000-8000-00000000de30'
+  and v.term_start is null;
+
 -- Cadence (.specs/features/cadence, door 5): a demo line that covers nothing yet covers its frozen version's types, or
 -- its site's for the current version of a draft. A line that already covers something keeps it.
 select private.backfill_line_coverage();

@@ -38,7 +38,7 @@ end $$;
 -- The terms a freeze adds (customer-portal door 3): org A's fixture settings, which are the column defaults.
 create function tests.si_terms() returns jsonb
 language sql immutable as $$
-  select jsonb_build_object('terms', '{"repairDiscountPct": 0, "cpiCapPct": 0, "cancellationNoticeDays": null, "paymentDays": null, "governingProvince": null, "taxNote": null}'::jsonb)
+  select jsonb_build_object('terms', '{"repairDiscountPct": 0, "cpiCapPct": 0, "cancellationNoticeDays": null, "paymentDays": null, "governingProvince": null, "taxNote": null, "renewalNoticeDays": 30, "cpiRenegotiationThresholdPct": 5}'::jsonb)
 $$;
 
 create function tests.si_snapshot(p_version text) returns jsonb

@@ -1,4 +1,4 @@
--- agreement-builder: C704, C706-C709, C712, C717, C730, C735, C736, C738, C742, C751. Run after fixture.sql in the same
+-- agreement-builder: C704, C706-C709, C712, C717, C730, C735, C736, C738, C742, C751; term-dates C1136-C1140, C1144. Run after fixture.sql in the same
 -- execute_sql call (npm run test:db agreement_builder). Fixture: agrA (draft, versions 1 and 2) on siteA, agrB on siteB.
 -- Setup runs as the table owner with no signed-in user, so the line trigger stands aside (door 4).
 
@@ -352,6 +352,135 @@ begin
     'authenticated cannot execute apply_agreement_transition');
   perform tests.ok('C751 invoker', not (select prosecdef from pg_proc where oid = f), 'create_agreement is security definer');
   perform tests.ok('C751 search_path', (select proconfig @> array['search_path=""'] from pg_proc where oid = f), 'search_path is not empty');
+end $$;
+
+-- term-dates C1136-C1140, C1144: the term on a version (doors 1, 3 and 6).
+-- C1136: version 1 takes the org's default term months; an org with no settings row gets 12.
+update public.org_settings set default_term_months = 24 where org_id = tests.id('orgA');
+insert into public.orgs (id, name) values (tests.id('orgC'), 'No settings (test)');
+insert into public.memberships (org_id, user_id, role) values (tests.id('orgC'), tests.id('uE'), 'estimator');
+insert into public.customers (id, org_id, name) values (tests.id('custC'), tests.id('orgC'), 'Customer C');
+insert into public.sites (id, org_id, customer_id, name) values (tests.id('siteC1136'), tests.id('orgC'), tests.id('custC'), 'Site C');
+select tests.ab_site('s1136');
+create table tests.t1136 (a uuid, c uuid);
+grant all on tests.t1136 to authenticated;
+select tests.act_as('uE');
+insert into tests.t1136 select public.create_agreement(tests.id('s1136')), public.create_agreement(tests.id('siteC1136'));
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1136 default term', (select v.term_months = 24 and v.term_start is null from public.agreement_versions v
+    where v.agreement_id = (select a from tests.t1136) and v.version_no = 1), 'version 1 did not take the org default of 24');
+  perform tests.ok('C1136 no settings row', (select v.term_months = 12 and v.term_start is null from public.agreement_versions v
+    where v.agreement_id = (select c from tests.t1136) and v.version_no = 1), 'version 1 without a settings row is not 12 months');
+end $$;
+update public.org_settings set default_term_months = 12 where org_id = tests.id('orgA');
+
+-- C1137: term_end is start + months - 1 day, null without a start, and cannot be written.
+select tests.ab_agr('a1137', 'draft');
+create table tests.t1137 (s date, e date);
+grant all on tests.t1137 to authenticated;
+select tests.act_as('uE');
+do $$
+declare
+  c record;
+begin
+  for c in select * from (values ('2027-01-01'::date, 12::smallint, '2027-12-31'::date), ('2027-03-15', 6, '2027-09-14'),
+                                 ('2027-01-31', 1, '2027-02-27'), ('2028-02-29', 12, '2029-02-27')) as x(s, m, e) loop
+    perform public.save_agreement_term(tests.id('a1137'), c.s, c.m::smallint);
+    insert into tests.t1137 select c.e, v.term_end from public.agreement_versions v where v.id = tests.id('a1137:v1');
+  end loop;
+  perform public.save_agreement_term(tests.id('a1137'), null, 12::smallint);
+  insert into tests.t1137 select null, v.term_end from public.agreement_versions v where v.id = tests.id('a1137:v1');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1137 ends', (select count(*) = 4 from tests.t1137 where s is not null and e = s),
+    'a term did not end on start + months - 1 day');
+  perform tests.ok('C1137 null start', (select count(*) = 1 from tests.t1137 where s is null and e is null),
+    'term_end is not null without a start');
+  perform tests.expect_error('C1137 generated', format('update public.agreement_versions set term_end = ''2030-01-01'' where id = %L',
+    tests.id('a1137:v1')), '428C9');
+end $$;
+
+-- C1138: the term writer stores the term on the highest version of a draft only and returns its id.
+select tests.ab_agr('a1138', 'draft');
+select tests.ab_version('a1138', 2);
+create table tests.t1138 (id uuid);
+grant all on tests.t1138 to authenticated;
+select tests.act_as('uE');
+insert into tests.t1138 select public.save_agreement_term(tests.id('a1138'), '2027-01-01', 18::smallint);
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1138 returns v2', (select id from tests.t1138) = tests.id('a1138:v2'), 'did not return the highest version id');
+  perform tests.ok('C1138 v2 stored', (select term_start = '2027-01-01' and term_months = 18 from public.agreement_versions
+    where id = tests.id('a1138:v2')), 'version 2 does not hold the term');
+  perform tests.ok('C1138 v1 kept', (select term_start is null and term_months = 12 from public.agreement_versions
+    where id = tests.id('a1138:v1')), 'version 1 changed');
+end $$;
+
+-- C1139: the term writer's refusals change nothing.
+select tests.ab_agr('a1139sent', 'sent');
+select tests.ab_agr('a1139', 'draft');
+select tests.ab_agr('a1139b', 'draft', null, 'B');
+update public.agreement_versions set term_start = '2026-06-01', term_months = 6
+where id in (tests.id('a1139sent:v1'), tests.id('a1139:v1'), tests.id('a1139b:v1'));
+create table tests.t1139 as select id, term_start, term_months, snapshot from public.agreement_versions
+where id in (tests.id('a1139sent:v1'), tests.id('a1139:v1'), tests.id('a1139b:v1'));
+select tests.act_as('uE');
+do $$ begin
+  perform tests.expect_error('C1139 sent', format('select public.save_agreement_term(%L, ''2027-01-01'', 12::smallint)',
+    tests.id('a1139sent')), '55000');
+  perform tests.expect_error('C1139 unknown', format('select public.save_agreement_term(%L, ''2027-01-01'', 12::smallint)',
+    tests.id('a1139nothing')), 'P0002');
+  perform tests.expect_error('C1139 other org', format('select public.save_agreement_term(%L, ''2027-01-01'', 12::smallint)',
+    tests.id('a1139b')), 'P0002');
+  perform tests.expect_error('C1139 months 0', format('select public.save_agreement_term(%L, ''2027-01-01'', 0::smallint)',
+    tests.id('a1139')), '23514');
+  perform tests.expect_error('C1139 months 61', format('select public.save_agreement_term(%L, ''2027-01-01'', 61::smallint)',
+    tests.id('a1139')), '23514');
+  perform tests.expect_error('C1139 start 1999', format('select public.save_agreement_term(%L, ''1999-12-31'', 12::smallint)',
+    tests.id('a1139')), '23514');
+  perform tests.expect_error('C1139 start 2100', format('select public.save_agreement_term(%L, ''2100-01-01'', 12::smallint)',
+    tests.id('a1139')), '23514');
+end $$;
+select tests.act_as('uV');
+do $$ begin
+  perform tests.expect_error('C1139 viewer', format('select public.save_agreement_term(%L, ''2027-01-01'', 12::smallint)',
+    tests.id('a1139')), '42501');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1139 unchanged', (select count(*) = 3 from tests.t1139 t join public.agreement_versions v on v.id = t.id
+    where v.term_start is not distinct from t.term_start and v.term_months = t.term_months and v.snapshot = t.snapshot),
+    'a refused term write changed a version');
+end $$;
+
+-- C1140: members still cannot update agreement_versions, not even one column.
+do $$ begin
+  perform tests.ok('C1140 table', not has_table_privilege('authenticated', 'public.agreement_versions', 'UPDATE'),
+    'authenticated can update agreement_versions');
+  perform tests.ok('C1140 columns', not exists (select 1 from information_schema.columns c
+    where c.table_schema = 'public' and c.table_name = 'agreement_versions'
+      and has_column_privilege('authenticated', 'public.agreement_versions', c.column_name, 'UPDATE')),
+    'authenticated can update a column of agreement_versions');
+end $$;
+
+-- C1144: a revision carries version n's term, and version n keeps it.
+select tests.ab_agr('a1144', 'changes_requested');
+update public.agreement_versions set term_start = '2027-01-01', term_months = 24 where id = tests.id('a1144:v1');
+select tests.act_as('uE');
+select public.apply_agreement_transition(tests.id('a1144'), 'changes_requested', 'draft', 'agreement.revised', '{}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1144 copied', (select term_start = '2027-01-01' and term_months = 24 from public.agreement_versions
+    where agreement_id = tests.id('a1144') and version_no = 2), 'version 2 did not carry the term');
+  perform tests.ok('C1144 kept', (select term_start = '2027-01-01' and term_months = 24 from public.agreement_versions
+    where id = tests.id('a1144:v1')), 'version 1 changed');
 end $$;
 
 rollback;

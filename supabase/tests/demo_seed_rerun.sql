@@ -63,5 +63,13 @@ do $$ begin
     'the second run changed a demo task');
 end $$;
 
+-- C1158 (term-dates): the second run changes no demo version.
+do $$ begin
+  perform tests.ok('C1158 rerun',
+    (select h from tests.demo_versions) = (select md5(coalesce(string_agg(v::text, ',' order by v.id), ''))
+                                           from public.agreement_versions v where v.org_id = tests.demo()),
+    'the second run changed a demo version');
+end $$;
+
 rollback;
 select 'demo_seed: pass' as result;
