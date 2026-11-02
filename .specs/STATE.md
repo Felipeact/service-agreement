@@ -102,7 +102,7 @@
 ## Handoff
 
 **Feature**: term-dates (ROADMAP Phase 3.5 item 4), profile light, one builder
-**Where**: committed locally on `development`. Migration `20261102164904_term_dates` applied to the project by mcp `apply_migration` (user-approved). Verifier pending at the time of writing; see `.specs/features/term-dates/verification.md`
+**Where**: committed locally on `development`. Migration `20261102164904_term_dates` applied to the project by mcp `apply_migration` (user-approved). Verifier round 1 PASS over `0125fb6..7c15974`, 36/36 checks; `validate_verification.py` exits 0 (2026-11-02). Its notes: C1155 pins only part of the renewal sentence in the PDF; C1161's plain `npm test` still shows the pre-existing load timeouts
 **In progress**: nothing
 **Next step**: ROADMAP Phase 3.5 item 5, renewal (auto-renew below the threshold, renewal draft at or above it, "Expiring soon", n8n W7)
 **Open, non-failing**: `npm test` shows 5 tests timing out at 5 s under full-suite load on this machine (C930, C22, C27, C32, C873, C1018, C10 rotate); the same happens at `5fa2794` before this feature, and all 2003 pass with `--testTimeout=60000`. The live Railway app runs code from before this feature: until it is redeployed, its Send on a draft with no start date shows "Add at least one service line before sending." AG-1051's version 1 now holds `term_start` 2027-01-01 from the live validation. Untracked `.specs/features/renewal/` files exist that this session did not write. Carried: the Verifier notes on seasonal-tasks and pipeline-site-cards, plan open question 4 of outbox-dispatch, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
