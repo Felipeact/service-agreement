@@ -21,6 +21,8 @@ function readInput(formData: FormData): OrgSettingsInput {
     defaultTermMonths: text("defaultTermMonths"),
     renewalNoticeDays: text("renewalNoticeDays"),
     cpiRenegotiationThresholdPct: text("cpiRenegotiationThresholdPct"),
+    renewalCpiPct: text("renewalCpiPct"),
+    renewalCpiAsOf: text("renewalCpiAsOf"),
   };
 }
 

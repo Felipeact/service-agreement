@@ -82,6 +82,8 @@ describe("buildAgreementDocument, schedule", () => {
     defaultTermMonths: 12,
     renewalNoticeDays: 30,
     cpiRenegotiationThresholdPct: 5,
+    renewalCpiPct: null,
+    renewalCpiAsOf: null,
   };
   const line = (description: string, l: typeof HVAC) => ({ description, visitsPerYear: l.visitMonths.length, costPerVisitCents: 100, annualCents: 100 * l.visitMonths.length, ...l });
   const source: DocumentSource = {

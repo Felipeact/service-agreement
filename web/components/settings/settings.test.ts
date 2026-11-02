@@ -21,6 +21,8 @@ const settings: OrgSettings = {
   defaultTermMonths: 12,
   renewalNoticeDays: 30,
   cpiRenegotiationThresholdPct: 5,
+  renewalCpiPct: null,
+  renewalCpiAsOf: null,
 };
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'");
@@ -159,5 +161,27 @@ describe("the renewal settings", () => {
       expect(tag, id).toContain(`value="${value}"`);
       expect(hasAttr(tag, "readOnly"), id).toBe(true);
     }
+  });
+});
+
+describe("renewal CPI fields", () => {
+  const withCpi: OrgSettings = { ...settings, renewalCpiPct: 3.2, renewalCpiAsOf: "2027-10-15" };
+
+  test.each(["owner", "admin"] as const)("C1171: an %s gets both inputs", (role) => {
+    const out = view(role, withCpi);
+    expect(out).toMatch(/<label[^>]*for="renewalCpiPct"[^>]*>CPI for renewals</);
+    expect(out).toMatch(/<label[^>]*for="renewalCpiAsOf"[^>]*>As of</);
+    expect(control(out, "renewalCpiPct")).toContain('value="3.2"');
+    expect(control(out, "renewalCpiAsOf")).toContain('value="2027-10-15"');
+  });
+
+  test.each(["estimator", "viewer"] as const)("C1171: a %s reads them as text", (role) => {
+    const out = view(role, withCpi);
+    expect(control(out, "renewalCpiPct")).toBe("");
+    expect(control(out, "renewalCpiAsOf")).toBe("");
+    expect(out).toContain("CPI for renewals");
+    expect(out).toContain("3.2%");
+    expect(out).toContain("Oct 15, 2027");
+    expect(view(role)).toMatch(/CPI for renewals<\/dt><dd[^>]*>Not set</);
   });
 });

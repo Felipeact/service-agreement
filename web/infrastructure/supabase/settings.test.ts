@@ -21,6 +21,8 @@ const value: OrgSettingsValue = {
   defaultTermMonths: 12,
   renewalNoticeDays: 30,
   cpiRenegotiationThresholdPct: 5,
+  renewalCpiPct: null,
+  renewalCpiAsOf: null,
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -70,5 +72,26 @@ describe("org settings store", () => {
     };
     expect(await supabaseOrgSettingsStore(typed).save(ORG, value, AT)).toEqual({ ok: false, code: "unavailable" });
     expect(spy.mock.calls[0][0]).toContain("fetch failed");
+  });
+
+  test("C1169: save sends the CPI and its date, or both null", async () => {
+    for (const [pct, asOf] of [[3.2, "2027-10-15"], [null, null]] as const) {
+      const { typed, calls } = stubClient({ org_settings: { data: [{ org_id: ORG }], error: null } });
+      await supabaseOrgSettingsStore(typed).save(ORG, { ...value, renewalCpiPct: pct, renewalCpiAsOf: asOf }, AT);
+      expect(calls.find((call) => call.method === "update")?.args[0]).toMatchObject({ renewal_cpi_pct: pct, renewal_cpi_as_of: asOf });
+    }
+  });
+
+  test("C1169: get maps the CPI to a number and the date as YYYY-MM-DD, or null", async () => {
+    const row = (pct: string | number | null, asOf: string | null) => ({
+      org_id: ORG, legal_name: "Acme Ltd.", address: null, phone: null, logo_path: null, accent_color: null,
+      repair_discount_pct: 10, cpi_cap_pct: 5, cancellation_notice_days: null, payment_days: null, governing_province: null,
+      tax_note: null, default_term_months: 12, renewal_notice_days: 30, cpi_renegotiation_threshold_pct: 5,
+      renewal_cpi_pct: pct, renewal_cpi_as_of: asOf, updated_at: "2026-10-24T12:00:00Z",
+    });
+    const set = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row("3.20", "2027-10-15"), error: null } }).typed).get(ORG);
+    expect(set).toMatchObject({ renewalCpiPct: 3.2, renewalCpiAsOf: "2027-10-15" });
+    const unset = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row(null, null), error: null } }).typed).get(ORG);
+    expect(unset).toMatchObject({ renewalCpiPct: null, renewalCpiAsOf: null });
   });
 });

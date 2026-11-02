@@ -82,6 +82,8 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       defaultTermMonths: view.term.months,
       renewalNoticeDays: terms?.renewalNoticeDays ?? 0,
       cpiRenegotiationThresholdPct: terms?.cpiRenegotiationThresholdPct ?? 0,
+      renewalCpiPct: null,
+      renewalCpiAsOf: null,
     },
   );
 }

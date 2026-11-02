@@ -32,6 +32,8 @@ const SETTINGS: OrgSettingsValue = {
   defaultTermMonths: 24,
   renewalNoticeDays: 45,
   cpiRenegotiationThresholdPct: 4.75,
+  renewalCpiPct: null,
+  renewalCpiAsOf: null,
 };
 
 describe("renewal settings in the settings store", () => {
@@ -63,6 +65,8 @@ describe("renewal settings in the settings store", () => {
       defaultTermMonths: 24,
       renewalNoticeDays: 45,
       cpiRenegotiationThresholdPct: 4.75,
+      renewalCpiPct: null,
+      renewalCpiAsOf: null,
     });
   });
 });

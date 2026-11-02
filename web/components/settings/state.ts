@@ -24,6 +24,8 @@ export function toInput(settings: OrgSettings): OrgSettingsInput {
     defaultTermMonths: String(settings.defaultTermMonths),
     renewalNoticeDays: String(settings.renewalNoticeDays),
     cpiRenegotiationThresholdPct: formatSettingNumber(settings.cpiRenegotiationThresholdPct),
+    renewalCpiPct: formatSettingNumber(settings.renewalCpiPct),
+    renewalCpiAsOf: settings.renewalCpiAsOf ?? "",
   };
 }
 

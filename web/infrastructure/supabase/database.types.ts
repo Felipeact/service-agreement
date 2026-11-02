@@ -71,6 +71,7 @@ export type Database = {
           id: string
           number: string | null
           org_id: string
+          renews_agreement_id: string | null
           site_id: string
           status: string
           updated_at: string
@@ -80,6 +81,7 @@ export type Database = {
           id?: string
           number?: string | null
           org_id: string
+          renews_agreement_id?: string | null
           site_id: string
           status?: string
           updated_at?: string
@@ -89,6 +91,7 @@ export type Database = {
           id?: string
           number?: string | null
           org_id?: string
+          renews_agreement_id?: string | null
           site_id?: string
           status?: string
           updated_at?: string
@@ -100,6 +103,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orgs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_renews_agreement_fkey"
+            columns: ["renews_agreement_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "agreements"
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "agreements_site_id_org_id_fkey"
@@ -688,6 +698,8 @@ export type Database = {
           org_id: string
           payment_days: number | null
           phone: string | null
+          renewal_cpi_as_of: string | null
+          renewal_cpi_pct: number | null
           renewal_notice_days: number
           repair_discount_pct: number
           tax_note: string | null
@@ -706,6 +718,8 @@ export type Database = {
           org_id: string
           payment_days?: number | null
           phone?: string | null
+          renewal_cpi_as_of?: string | null
+          renewal_cpi_pct?: number | null
           renewal_notice_days?: number
           repair_discount_pct?: number
           tax_note?: string | null
@@ -724,6 +738,8 @@ export type Database = {
           org_id?: string
           payment_days?: number | null
           phone?: string | null
+          renewal_cpi_as_of?: string | null
+          renewal_cpi_pct?: number | null
           renewal_notice_days?: number
           repair_discount_pct?: number
           tax_note?: string | null

@@ -15,6 +15,8 @@ const valid: OrgSettingsInput = {
   defaultTermMonths: "12",
   renewalNoticeDays: "30",
   cpiRenegotiationThresholdPct: "5",
+  renewalCpiPct: "",
+  renewalCpiAsOf: "",
 };
 
 const run = (patch: Partial<OrgSettingsInput>) => validateOrgSettings({ ...valid, ...patch });
@@ -139,5 +141,34 @@ describe("the renewal settings", () => {
     ["cpiRenegotiationThresholdPct", "-1", THRESHOLD],
   ] as const)("C1132: %s %j gives its error", (field, raw, message) => {
     expect(run({ [field]: raw })).toEqual({ ok: false, errors: { [field]: message } });
+  });
+});
+
+describe("renewal CPI (renewal S1)", () => {
+  const cpi = (renewalCpiPct: string, renewalCpiAsOf: string) => run({ renewalCpiPct, renewalCpiAsOf });
+
+  test.each(["3.2", "-20", "0", "100", "4.75"])("C1168: accepts CPI %s with a date", (pct) => {
+    const result = cpi(pct, "2027-10-15");
+    expect(result).toMatchObject({ ok: true, value: { renewalCpiPct: Number(pct), renewalCpiAsOf: "2027-10-15" } });
+  });
+
+  test("C1168: both empty is both null", () => {
+    expect(cpi("", "")).toMatchObject({ ok: true, value: { renewalCpiPct: null, renewalCpiAsOf: null } });
+  });
+
+  test.each(["-20.01", "100.01", "3.123", "abc"])("C1168: CPI %s is refused", (pct) => {
+    expect(cpi(pct, "2027-10-15")).toEqual({
+      ok: false,
+      errors: { renewalCpiPct: "CPI must be a number from -20 to 100 with at most two decimals" },
+    });
+  });
+
+  test.each(["2027-02-30", "1999-12-31", "2100-01-01", "15/10/2027"])("C1168: date %s is refused", (date) => {
+    expect(cpi("3.2", date)).toEqual({ ok: false, errors: { renewalCpiAsOf: "Enter the date this CPI was published" } });
+  });
+
+  test("C1168: one without the other is refused", () => {
+    expect(cpi("3.2", "")).toEqual({ ok: false, errors: { renewalCpiAsOf: "Set both CPI and its date, or neither" } });
+    expect(cpi("", "2027-10-15")).toEqual({ ok: false, errors: { renewalCpiPct: "Set both CPI and its date, or neither" } });
   });
 });

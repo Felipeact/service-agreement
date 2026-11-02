@@ -1,5 +1,6 @@
 import type { OrgSettingsErrors, OrgSettingsInput } from "@/domain/org-settings";
 import { PROVINCES } from "@/domain/org-settings";
+import { formatTermDate } from "@/domain/agreement/term";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
@@ -79,6 +80,30 @@ export function SettingsFields({ values, state, pending, readOnly, action }: Set
           {text("renewalNoticeDays", "Renewal notice (days)", { inputMode: "numeric" })}
           {text("cpiRenegotiationThresholdPct", "CPI renegotiation threshold (%)", { inputMode: "decimal" })}
         </div>
+        {readOnly ? (
+          <dl className="grid gap-3 text-[13px] sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <dt className="font-medium text-ink">CPI for renewals</dt>
+              <dd className="text-ink-2">{values.renewalCpiPct === "" ? "Not set" : `${values.renewalCpiPct}%`}</dd>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <dt className="font-medium text-ink">As of</dt>
+              <dd className="text-ink-2">{values.renewalCpiAsOf === "" ? "Not set" : formatTermDate(values.renewalCpiAsOf)}</dd>
+            </div>
+          </dl>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {text("renewalCpiPct", "CPI for renewals", { inputMode: "decimal" })}
+            <TextInput
+              id="renewalCpiAsOf"
+              name="renewalCpiAsOf"
+              label="As of"
+              type="date"
+              defaultValue={values.renewalCpiAsOf}
+              error={errors.renewalCpiAsOf}
+            />
+          </div>
+        )}
       </section>
 
       {readOnly ? (

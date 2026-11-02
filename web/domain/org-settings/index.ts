@@ -1,3 +1,5 @@
+import { isTermStart } from "@/domain/agreement/term";
+
 /** Canadian province and territory codes; `org_settings.governing_province` stores one of these (door 4). */
 export const PROVINCES = ["AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"] as const;
 
@@ -16,6 +18,8 @@ export type OrgSettingsInput = {
   defaultTermMonths: string;
   renewalNoticeDays: string;
   cpiRenegotiationThresholdPct: string;
+  renewalCpiPct: string;
+  renewalCpiAsOf: string;
 };
 
 export type OrgSettingsField = keyof OrgSettingsInput;
@@ -35,6 +39,9 @@ export type OrgSettingsValue = {
   defaultTermMonths: number;
   renewalNoticeDays: number;
   cpiRenegotiationThresholdPct: number;
+  /** The CPI W7 renews with and the date it was published (renewal door 2): both set or both `null`. */
+  renewalCpiPct: number | null;
+  renewalCpiAsOf: string | null;
 };
 
 export type OrgSettingsErrors = Partial<Record<OrgSettingsField, string>>;
@@ -43,6 +50,10 @@ export type OrgSettingsValidation = { ok: true; value: OrgSettingsValue } | { ok
 
 const MAX_DAYS = 365;
 const MAX_TERM_MONTHS = 60;
+
+export const RENEWAL_CPI_ERROR = "CPI must be a number from -20 to 100 with at most two decimals";
+export const RENEWAL_CPI_AS_OF_ERROR = "Enter the date this CPI was published";
+export const RENEWAL_CPI_PAIR_ERROR = "Set both CPI and its date, or neither";
 
 function optionalText(raw: string, max: number, label: string, errors: OrgSettingsErrors, field: OrgSettingsField) {
   const text = raw.trim();
@@ -107,6 +118,18 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
   const cpiRenegotiationThresholdPct = percent(input.cpiRenegotiationThresholdPct, "CPI renegotiation threshold", errors,
     "cpiRenegotiationThresholdPct");
 
+  // The renewal CPI and its date go together, so W7 always knows how old the figure is (renewal door 2).
+  const cpiRaw = input.renewalCpiPct.trim();
+  const asOfRaw = input.renewalCpiAsOf.trim();
+  let renewalCpiPct: number | null = null;
+  if (cpiRaw !== "") {
+    if (!/^-?\d{1,3}(\.\d{1,2})?$/.test(cpiRaw) || Number(cpiRaw) < -20 || Number(cpiRaw) > 100) errors.renewalCpiPct = RENEWAL_CPI_ERROR;
+    else renewalCpiPct = Number(cpiRaw);
+  }
+  if (asOfRaw !== "" && !isTermStart(asOfRaw)) errors.renewalCpiAsOf = RENEWAL_CPI_AS_OF_ERROR;
+  if (cpiRaw === "" && asOfRaw !== "") errors.renewalCpiPct = RENEWAL_CPI_PAIR_ERROR;
+  if (cpiRaw !== "" && asOfRaw === "") errors.renewalCpiAsOf = RENEWAL_CPI_PAIR_ERROR;
+
   const provinceRaw = input.governingProvince.trim();
   if (provinceRaw !== "" && !(PROVINCES as readonly string[]).includes(provinceRaw)) {
     errors.governingProvince = "Choose a province or territory from the list";
@@ -129,6 +152,8 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
       defaultTermMonths,
       renewalNoticeDays,
       cpiRenegotiationThresholdPct,
+      renewalCpiPct,
+      renewalCpiAsOf: asOfRaw === "" ? null : asOfRaw,
     },
   };
 }

@@ -25,7 +25,7 @@ const daysIn = (year: number, month: number) =>
   month === 2 ? (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28) : [4, 6, 9, 11].includes(month) ? 30 : 31;
 
 /** A real calendar date `YYYY-MM-DD` from 2000 to 2099, the database's bound on `term_start`. */
-function isTermStart(text: string): boolean {
+export function isTermStart(text: string): boolean {
   const match = ISO_DATE.exec(text);
   if (!match) return false;
   const [year, month, day] = match.slice(1).map(Number);

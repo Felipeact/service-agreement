@@ -16,6 +16,8 @@ const SETTINGS: OrgSettingsValue = {
   defaultTermMonths: 12,
   renewalNoticeDays: 30,
   cpiRenegotiationThresholdPct: 5,
+  renewalCpiPct: null,
+  renewalCpiAsOf: null,
 };
 
 const SOURCE: DocumentSource = {
