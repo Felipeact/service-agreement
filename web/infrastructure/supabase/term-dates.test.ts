@@ -59,6 +59,8 @@ describe("renewal settings in the settings store", () => {
       default_term_months: 24,
       renewal_notice_days: 45,
       cpi_renegotiation_threshold_pct: "4.75",
+      renewal_cpi_pct: null,
+      renewal_cpi_as_of: null,
     };
     const { typed } = stubClient({ org_settings: ok(row) });
     expect(await supabaseOrgSettingsStore(typed).get(ORG)).toMatchObject({

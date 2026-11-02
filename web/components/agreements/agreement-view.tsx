@@ -72,6 +72,16 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
           <Link href={`/sites/${agreement.site.id}`} className={link}>
             {agreement.site.name}
           </Link>
+          {agreement.renews && (
+            <Link href={`/agreements/${agreement.renews.id}`} className={link}>
+              Renewal of {agreement.renews.number}
+            </Link>
+          )}
+          {agreement.renewedBy && (
+            <Link href={`/agreements/${agreement.renewedBy.id}`} className={link}>
+              Renewed by {agreement.renewedBy.number}
+            </Link>
+          )}
           {/* A file download, not a page: a plain anchor so the browser saves it. */}
           <a href={`/agreements/${agreement.id}/pdf?version=${shown.versionNo}`} className={link}>
             Download PDF

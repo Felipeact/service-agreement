@@ -35,6 +35,8 @@ describe("the customer PDF's term", () => {
       term: view.term,
       portalLink: null,
       linkEmail: null,
+      renews: null,
+      renewedBy: null,
     };
     // The staff side's settings differ, and a frozen version must ignore them.
     const settings = { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accentColor: null, renewalNoticeDays: 90, cpiRenegotiationThresholdPct: 9 } as OrgSettingsValue;

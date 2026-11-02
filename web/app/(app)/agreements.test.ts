@@ -73,6 +73,8 @@ const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
   term: { start: null, months: 12, end: null },
   portalLink: null,
     linkEmail: null,
+    renews: null,
+    renewedBy: null,
   ...over,
 });
 

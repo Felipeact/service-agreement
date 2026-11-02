@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import type { PipelineCard } from "@/application/ports";
 import { PipelineView } from "./pipeline-view";
+import { KanbanCard } from "./kanban-card";
 
 const card = (patch: Partial<PipelineCard> = {}): PipelineCard => ({
   id: "a1",
@@ -14,6 +15,7 @@ const card = (patch: Partial<PipelineCard> = {}): PipelineCard => ({
   number: "AG-1048",
   versionNo: 3,
   ageDays: 9,
+  isRenewal: false,
   ...patch,
 });
 
@@ -164,5 +166,17 @@ describe("PipelineView", () => {
     const needle = ["sample", "pipeline"].join("-");
     const importers = walk(webRoot).filter((file) => readFileSync(file, "utf8").includes(`lib/${needle}`));
     expect(importers).toEqual([]);
+  });
+});
+
+describe("KanbanCard: the renewal marker", () => {
+  const html = (isRenewal: boolean) => renderToStaticMarkup(createElement(KanbanCard, { card: card({ isRenewal }) }));
+
+  test("C1207: a renewal's card shows the marker Renewal", () => {
+    expect(html(true)).toMatch(/>Renewal</);
+  });
+
+  test("C1207: any other card shows no such text", () => {
+    expect(html(false)).not.toContain("Renewal");
   });
 });

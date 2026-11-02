@@ -52,6 +52,8 @@ function agreement(lines: ServiceLineView[]): AgreementDetail {
     terms: null,
     portalLink: null,
     linkEmail: null,
+    renews: null,
+    renewedBy: null,
     term: { start: null, months: 12, end: null },
   };
 }

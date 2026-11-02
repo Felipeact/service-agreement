@@ -25,6 +25,8 @@ function agreement(term: AgreementTerm, editable = true): AgreementDetail {
     term,
     portalLink: null,
     linkEmail: null,
+    renews: null,
+    renewedBy: null,
   };
 }
 

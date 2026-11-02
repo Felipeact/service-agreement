@@ -353,3 +353,26 @@ describe("record reads for the edit forms", () => {
     expect(calls).toContainEqual({ table: "asset_types", method: "order", args: ["name"] });
   });
 });
+
+describe("pipeline reader: the board rule for renewals (renewal door 7)", () => {
+  const linked = (id: string, status: string, renews: string | null) => ({ ...agreement(id, status), renews_agreement_id: renews });
+
+  test("C1206: an accepted agreement with an accepted or a draft renewal has no card", async () => {
+    for (const renewal of ["accepted", "draft"]) {
+      const cards = await board([linked("new", renewal, "old"), linked("old", "accepted", null)]);
+      expect(cards.map((card) => card.id)).toEqual(["new"]);
+    }
+  });
+
+  test("C1206: an accepted agreement whose only renewal is withdrawn keeps its card", async () => {
+    const cards = await board([linked("new", "withdrawn", "old"), linked("old", "accepted", null)]);
+    expect(cards.map((card) => card.id)).toEqual(["old"]);
+    expect(cards[0].isRenewal).toBe(false);
+  });
+
+  test("C1206: a renewal's card has isRenewal true, an unlinked one false", async () => {
+    const cards = await board([linked("new", "draft", "old"), linked("solo", "sent", null)]);
+    expect(cards.find((card) => card.id === "new")?.isRenewal).toBe(true);
+    expect(cards.find((card) => card.id === "solo")?.isRenewal).toBe(false);
+  });
+});

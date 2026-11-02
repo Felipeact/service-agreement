@@ -47,6 +47,8 @@ const detail: AgreementDetail = {
   term: { start: null, months: 12, end: null },
   portalLink: null,
   linkEmail: null,
+  renews: null,
+  renewedBy: null,
 };
 
 const member: CurrentMember = { status: "member", userId: "u1", email: "u@example.com", orgId: "o1", orgName: "Kettle Ridge", role: "viewer" };

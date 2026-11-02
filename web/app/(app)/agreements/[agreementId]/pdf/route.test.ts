@@ -46,6 +46,8 @@ function detail(over: Partial<AgreementDetail> = {}, versionNo = 1): AgreementDe
     term: { start: null, months: 12, end: null },
     portalLink: null,
     linkEmail: null,
+    renews: null,
+    renewedBy: null,
     ...over,
   };
 }

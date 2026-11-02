@@ -83,6 +83,8 @@ export type PipelineCard = {
   attention?: string;
   visitsPerYear?: number;
   annualCents?: number;
+  /** The agreement renews another one (renewal AC 34). */
+  isRenewal: boolean;
 };
 
 export interface PipelineReader {
@@ -450,6 +452,9 @@ export type AgreementDetail = {
    * (outbox-dispatch AC 30). `null` otherwise.
    */
   linkEmail: LinkEmailView | null;
+  /** The agreement this one renews, and the one that renews it (renewal door 1), or `null`. */
+  renews: { id: string; number: string } | null;
+  renewedBy: { id: string; number: string } | null;
 };
 
 export type LinkEmailView =

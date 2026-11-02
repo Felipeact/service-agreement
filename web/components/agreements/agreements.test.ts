@@ -48,6 +48,8 @@ function agreement(
     terms: null,
     portalLink: over.portalLink ?? null,
     linkEmail: over.linkEmail ?? null,
+    renews: null,
+    renewedBy: null,
     term: { start: null, months: 12, end: null },
   };
 }
@@ -414,5 +416,26 @@ describe("sending an agreement and its customer link", () => {
   test("C1032: a draft shows none of the three", () => {
     const out = text(view(agreement({ status: "draft", linkEmail: { status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-10-29T18:00:00Z") } })));
     for (const phrase of ["Emailed to", "Not emailed", "Email pending"]) expect(out).not.toContain(phrase);
+  });
+});
+
+describe("AgreementView: renewal links", () => {
+  const render = (patch: Partial<AgreementDetail>) =>
+    renderToStaticMarkup(createElement(AgreementView, { agreement: { ...agreement({ status: "accepted" }), ...patch }, role: "owner" }));
+
+  test("C1205: renews reads 'Renewal of AG-1004' and links to it", () => {
+    const html = render({ renews: { id: "old-id", number: "AG-1004" } });
+    expect(html).toMatch(/<a[^>]*href="\/agreements\/old-id"[^>]*>Renewal of <!-- -->AG-1004<\/a>|<a[^>]*href="\/agreements\/old-id"[^>]*>Renewal of AG-1004<\/a>/);
+  });
+
+  test("C1205: renewedBy reads 'Renewed by AG-1013' and links to it", () => {
+    const html = render({ renewedBy: { id: "new-id", number: "AG-1013" } });
+    expect(html).toMatch(/<a[^>]*href="\/agreements\/new-id"[^>]*>Renewed by <!-- -->AG-1013<\/a>|<a[^>]*href="\/agreements\/new-id"[^>]*>Renewed by AG-1013<\/a>/);
+  });
+
+  test("C1205: neither text shows when both are null", () => {
+    const html = render({ renews: null, renewedBy: null });
+    expect(html).not.toContain("Renewal of");
+    expect(html).not.toContain("Renewed by");
   });
 });

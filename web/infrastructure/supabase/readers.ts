@@ -76,16 +76,21 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
     async board() {
       const { data, error } = await client
         .from("agreements")
-        .select(`${AGREEMENT_COLUMNS}, sites(name, customers(name))`)
+        .select(`${AGREEMENT_COLUMNS}, renews_agreement_id, sites(name, customers(name))`)
         .order("updated_at", { ascending: false })
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
 
       const now = clock.now().getTime();
+      const rows = data as unknown as (AgreementRow & { renews_agreement_id: string | null; sites: { name: string; customers: { name: string } } })[];
+      // A renewal is created after the agreement it renews, so it is in this newest-first read whenever that one is.
+      const renewed = new Set(rows.filter((row) => row.renews_agreement_id && row.status !== "withdrawn").map((row) => row.renews_agreement_id));
       const cards: PipelineCard[] = [];
-      for (const row of data as unknown as (AgreementRow & { sites: { name: string; customers: { name: string } } })[]) {
+      for (const row of rows) {
         const { contract, stage } = stageOf(row);
         if (!stage) continue;
+        // An accepted agreement with a live renewal leaves the board; the renewal stands for it (renewal door 7).
+        if (row.status === "accepted" && renewed.has(row.id)) continue;
         const version = latestVersion(row);
         const attention =
           row.status === "changes_requested"
@@ -103,6 +108,7 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
           ageDays: Math.max(0, Math.floor((now - new Date(row.updated_at).getTime()) / DAY_MS)),
           ...(attention && { attention }),
           ...amounts(version),
+          isRenewal: Boolean(row.renews_agreement_id),
         });
       }
       return cards;

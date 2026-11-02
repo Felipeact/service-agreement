@@ -51,9 +51,12 @@ type AgreementRow = {
   id: string;
   number: string | null;
   status: string;
+  renews_agreement_id?: string | null;
   sites: { id: string; name: string; customers: { id: string; name: string } };
   agreement_versions: VersionRow[];
 };
+
+type LinkRow = { id: string; number: string | null; renews_agreement_id: string | null };
 
 type CoveredType = { id: string; code: string; name: string };
 
@@ -173,12 +176,26 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       .sort(byName);
   }
 
+  /** The agreement this one renews, and the one that renews it (renewal door 1); each row is checked against the id asked for. */
+  async function renewalLinks(id: string, renewsId: string | null) {
+    const link = async (column: "id" | "renews_agreement_id", value: string) => {
+      const { data, error } = await client.from("agreements").select("id, number, renews_agreement_id").eq(column, value).maybeSingle();
+      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+      const row = data as LinkRow | null;
+      return row && row[column] === value ? { id: row.id, number: row.number ?? "" } : null;
+    };
+    return {
+      renews: renewsId ? await link("id", renewsId) : null,
+      renewedBy: await link("renews_agreement_id", id),
+    };
+  }
+
   return {
     async get(id, versionNo) {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("agreements")
-        .select("id, number, status, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, contracts(status))")
+        .select("id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, contracts(status))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -240,6 +257,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         term: { start: shownVersion?.term_start ?? null, months: shownVersion?.term_months ?? 12, end: shownVersion?.term_end ?? null },
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
+        ...(await renewalLinks(row.id, row.renews_agreement_id ?? null)),
       };
     },
   };

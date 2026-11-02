@@ -72,6 +72,8 @@ describe("the portal's seasonal tasks", () => {
       terms: view.terms,
       portalLink: null,
       linkEmail: null,
+      renews: null,
+      renewedBy: null,
       term: { start: null, months: 12, end: null },
     };
     const settings = { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accentColor: null } as OrgSettingsValue;

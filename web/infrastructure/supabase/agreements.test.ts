@@ -441,3 +441,38 @@ describe("the link email of a sent agreement (outbox-dispatch AC 30)", () => {
     expect(draft.calls.some((call) => call.table === "notifications" || call.table === "events")).toBe(false);
   });
 });
+
+describe("agreement reader: renewal links (renewal door 1)", () => {
+  const OLD = "66666666-6666-4666-8666-666666666666";
+  const NEW = "77777777-7777-4777-8777-777777777777";
+  const main = (renews: string | null) => ({ ...agreementRow([{ id: "v1", version_no: 1 }], "accepted"), renews_agreement_id: renews });
+
+  test("C1204: renews comes from renews_agreement_id, renewedBy from the agreement that renews this one", async () => {
+    const { typed, calls } = stubClient({
+      agreements: {
+        sequence: [
+          ok(main(OLD)),
+          ok({ id: OLD, number: "AG-1004", renews_agreement_id: null }),
+          ok({ id: NEW, number: "AG-1013", renews_agreement_id: AGR }),
+        ],
+      },
+      service_lines: ok([]),
+    });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.renews).toEqual({ id: OLD, number: "AG-1004" });
+    expect(detail?.renewedBy).toEqual({ id: NEW, number: "AG-1013" });
+    const eqs = calls.filter((call) => call.table === "agreements" && call.method === "eq").map((call) => call.args);
+    expect(eqs).toContainEqual(["id", OLD]);
+    expect(eqs).toContainEqual(["renews_agreement_id", AGR]);
+  });
+
+  test("C1204: both are null when nothing links", async () => {
+    const { typed } = stubClient({
+      agreements: { sequence: [ok(main(null)), ok(null)] },
+      service_lines: ok([]),
+    });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.renews).toBeNull();
+    expect(detail?.renewedBy).toBeNull();
+  });
+});
