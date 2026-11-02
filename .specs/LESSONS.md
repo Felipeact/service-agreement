@@ -146,6 +146,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: supabase/tests/demo_seed.sql:247 (supabase/tests)
 - last seen: 2026-11-02T22:18:03Z
 
+### L-023 - When a check names a pill's tone, assert the tone attribute on the pill element itself, not only its label text.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `components` · harmful: 0
+- features: proposal-expiry
+- evidence: C1261 - web/components/kanban/pipeline-view.test.ts:189 (components)
+- last seen: 2026-11-02T22:58:05Z
+
+### L-024 - State a date window in the same calendar the code compares with, and build the test's dates from that same expression.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `supabase/tests` · harmful: 0
+- features: proposal-expiry
+- evidence: C1249 - supabase/tests/outbox_dispatch.sql:1201 vs migration 20261102222043_proposal_expiry.sql:417 (supabase/tests)
+- last seen: 2026-11-02T22:58:05Z
+
+### L-025 - When a check names an error hint as well as a SQLSTATE, assert the hint too, since expect_error compares the SQLSTATE only.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `supabase/tests` · harmful: 0
+- features: proposal-expiry
+- evidence: C1231 - supabase/tests/customer_portal.sql:937 (supabase/tests)
+- last seen: 2026-11-02T22:58:05Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

@@ -120,9 +120,9 @@
 
 **Feature**: proposal-expiry (ROADMAP Phase 3.5 item 6), profile light, one builder
 **Where**: committed on `development`, feature base `c2f23eb`: `c33ba8c` plan and checks, `66c02b3` database, `75066fd` settings, `b600f55` display and portal, `c439d04` email and W8, `88a4c0b` board, then the docs commit. Migration `20261102222043_proposal_expiry` applied to the project (user-approved). Live runs C1266-C1268 done against a local build of `88a4c0b` on port 3200
-**In progress**: Verifier dispatched over `c2f23eb..HEAD`, all 50 checks
-**Next step**: on a Verifier PASS, ROADMAP Phase 3.5 item 7 (deactivate sites, customers and assets)
-**Open, non-failing**: W8 is not imported into the n8n instance yet (nor is W7). Nothing is pushed or deployed for this feature; the Railway `web` service still runs `5b40205`. The plan's assumption that an expired link's PDF still downloads was wrong: it answers `404`, as for withdrawn (unchanged). Demo data: AG-1046 is now `expired` (valid until 2026-11-01). Carried: the renewal, term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
+**In progress**: nothing. Verifier round 1 PASS over `c2f23eb..51c87c1`, 50/50 checks, `validate_verification.py` exits 0 (2026-11-02). Lessons L-023 to L-025
+**Next step**: ROADMAP Phase 3.5 item 7 (deactivate sites, customers and assets)
+**Open, non-failing**: Verifier notes on proposal-expiry: C1249/C1254/C1258 word the key window in Vancouver dates while door 5 and the tests use `current_date`; C1231 does not assert the `no_term_start` hint (C1149 does); C1261 does not assert the pill's tone; the plan's AC 32 still says `22023` (corrected in Surface and C1259); C1248 proves the lock by `pg_locks`, not a two-session race. W8 is not imported into the n8n instance yet (nor is W7). Nothing is pushed or deployed for this feature; the Railway `web` service still runs `5b40205`. The plan's assumption that an expired link's PDF still downloads was wrong: it answers `404`, as for withdrawn (unchanged). Demo data: AG-1046 is now `expired` (valid until 2026-11-01). Carried: the renewal, term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development, not pushed

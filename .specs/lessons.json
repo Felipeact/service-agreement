@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 23,
+  "next_id": 26,
   "lessons": [
     {
       "id": "L-001",
@@ -400,6 +400,60 @@
       ],
       "created": "2026-11-02T22:18:03Z",
       "last_seen": "2026-11-02T22:18:03Z"
+    },
+    {
+      "id": "L-023",
+      "key": "spec_precision_gap::when a check names a pill s tone assert the tone attribute on the pill element itself not only its label text",
+      "text": "When a check names a pill's tone, assert the tone attribute on the pill element itself, not only its label text.",
+      "signal": "spec_precision_gap",
+      "scope": "components",
+      "status": "candidate",
+      "features": [
+        "proposal-expiry"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1261 - web/components/kanban/pipeline-view.test.ts:189 (components)"
+      ],
+      "created": "2026-11-02T22:58:05Z",
+      "last_seen": "2026-11-02T22:58:05Z"
+    },
+    {
+      "id": "L-024",
+      "key": "spec_precision_gap::state a date window in the same calendar the code compares with and build the test s dates from that same expression",
+      "text": "State a date window in the same calendar the code compares with, and build the test's dates from that same expression.",
+      "signal": "spec_precision_gap",
+      "scope": "supabase/tests",
+      "status": "candidate",
+      "features": [
+        "proposal-expiry"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1249 - supabase/tests/outbox_dispatch.sql:1201 vs migration 20261102222043_proposal_expiry.sql:417 (supabase/tests)"
+      ],
+      "created": "2026-11-02T22:58:05Z",
+      "last_seen": "2026-11-02T22:58:05Z"
+    },
+    {
+      "id": "L-025",
+      "key": "spec_precision_gap::when a check names an error hint as well as a sqlstate assert the hint too since expect error compares the sqlstate only",
+      "text": "When a check names an error hint as well as a SQLSTATE, assert the hint too, since expect_error compares the SQLSTATE only.",
+      "signal": "spec_precision_gap",
+      "scope": "supabase/tests",
+      "status": "candidate",
+      "features": [
+        "proposal-expiry"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1231 - supabase/tests/customer_portal.sql:937 (supabase/tests)"
+      ],
+      "created": "2026-11-02T22:58:05Z",
+      "last_seen": "2026-11-02T22:58:05Z"
     }
   ]
 }
