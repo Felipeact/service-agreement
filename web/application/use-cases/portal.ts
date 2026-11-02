@@ -84,6 +84,7 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       cpiRenegotiationThresholdPct: terms?.cpiRenegotiationThresholdPct ?? 0,
       renewalCpiPct: null,
       renewalCpiAsOf: null,
+      proposalValidityDays: 30,
     },
   );
 }

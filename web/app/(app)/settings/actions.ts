@@ -23,6 +23,7 @@ function readInput(formData: FormData): OrgSettingsInput {
     cpiRenegotiationThresholdPct: text("cpiRenegotiationThresholdPct"),
     renewalCpiPct: text("renewalCpiPct"),
     renewalCpiAsOf: text("renewalCpiAsOf"),
+    proposalValidityDays: text("proposalValidityDays"),
   };
 }
 

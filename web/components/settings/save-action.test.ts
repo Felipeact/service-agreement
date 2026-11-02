@@ -12,7 +12,7 @@ const { saveSettingsAction } = await import("@/app/(app)/settings/actions");
 const FIELDS = {
   legalName: "Kettle Ridge Mechanical Ltd.", address: "", phone: "", accentColor: "", repairDiscountPct: "10", cpiCapPct: "5",
   cancellationNoticeDays: "30", paymentDays: "30", governingProvince: "BC", taxNote: "", defaultTermMonths: "12",
-  renewalNoticeDays: "30", cpiRenegotiationThresholdPct: "5",
+  renewalNoticeDays: "30", cpiRenegotiationThresholdPct: "5", proposalValidityDays: "30",
 };
 
 function form(renewalCpiPct: string, renewalCpiAsOf: string) {
@@ -35,5 +35,17 @@ describe("saveSettingsAction with the renewal CPI", () => {
     const state = await saveSettingsAction({ status: "idle" }, form(pct, asOf));
     expect(saveOrgSettings).not.toHaveBeenCalled();
     expect(state.status === "invalid" ? state.errors : {}).toEqual({ [field]: message });
+  });
+});
+
+describe("saveSettingsAction with the proposal validity", () => {
+  test("C1224: 0 days returns the field error and never saves", async () => {
+    const data = form("", "");
+    data.set("proposalValidityDays", "0");
+    const state = await saveSettingsAction({ status: "idle" }, data);
+    expect(saveOrgSettings).not.toHaveBeenCalled();
+    expect(state.status === "invalid" ? state.errors : {}).toEqual({
+      proposalValidityDays: "Proposal validity must be a whole number of days from 1 to 365",
+    });
   });
 });

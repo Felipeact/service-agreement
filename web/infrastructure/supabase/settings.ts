@@ -26,6 +26,7 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
         cpiRenegotiationThresholdPct: Number(data.cpi_renegotiation_threshold_pct),
         renewalCpiPct: data.renewal_cpi_pct === null ? null : Number(data.renewal_cpi_pct),
         renewalCpiAsOf: data.renewal_cpi_as_of,
+        proposalValidityDays: data.proposal_validity_days,
       };
     },
 
@@ -49,6 +50,7 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
             cpi_renegotiation_threshold_pct: value.cpiRenegotiationThresholdPct,
             renewal_cpi_pct: value.renewalCpiPct,
             renewal_cpi_as_of: value.renewalCpiAsOf,
+            proposal_validity_days: value.proposalValidityDays,
             updated_at: at.toISOString(),
           })
           .eq("org_id", orgId)

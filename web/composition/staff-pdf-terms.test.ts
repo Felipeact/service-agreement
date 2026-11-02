@@ -24,6 +24,7 @@ let SETTINGS: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
+  proposalValidityDays: 30,
 };
 
 let detail: AgreementDetail = {

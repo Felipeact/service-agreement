@@ -31,6 +31,7 @@ const SETTINGS: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
+  proposalValidityDays: 30,
 };
 const source = (visitMonths: number[]): DocumentSource => ({
   number: "AG-1046",

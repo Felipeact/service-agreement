@@ -54,6 +54,7 @@ export function SettingsFields({ values, state, pending, readOnly, action }: Set
           {text("cpiCapPct", "CPI cap (%)", { inputMode: "decimal" })}
           {text("cancellationNoticeDays", "Cancellation notice (days)", { inputMode: "numeric" })}
           {text("paymentDays", "Payment terms (days)", { inputMode: "numeric" })}
+          {text("proposalValidityDays", "Proposals valid for (days)", { inputMode: "numeric" })}
           <Select
             id="governingProvince"
             name="governingProvince"

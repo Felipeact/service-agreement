@@ -23,6 +23,7 @@ const settings: OrgSettings = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
+  proposalValidityDays: 30,
 };
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'");
@@ -183,5 +184,26 @@ describe("renewal CPI fields", () => {
     expect(out).toContain("3.2%");
     expect(out).toContain("Oct 15, 2027");
     expect(view(role)).toMatch(/CPI for renewals<\/dt><dd[^>]*>Not set</);
+  });
+});
+
+describe("proposal validity", () => {
+  test.each<[OrgSettings, string]>([
+    [{ ...settings, proposalValidityDays: 14 }, "14"],
+    [settings, "30"],
+  ])("C1223: an owner gets an input labelled Proposals valid for, holding the saved days", (stored, value) => {
+    const out = view("owner", stored);
+    expect(out).toMatch(/<label[^>]*for="proposalValidityDays"[^>]*>Proposals valid for/);
+    const tag = control(out, "proposalValidityDays");
+    expect(tag).toContain(`value="${value}"`);
+    expect(hasAttr(tag, "readOnly")).toBe(false);
+  });
+
+  test("C1223: a viewer gets it read-only, as the term months input is", () => {
+    const out = view("viewer", { ...settings, proposalValidityDays: 14 });
+    const tag = control(out, "proposalValidityDays");
+    expect(tag).toContain('value="14"');
+    expect(hasAttr(tag, "readOnly")).toBe(true);
+    expect(hasAttr(control(out, "defaultTermMonths"), "readOnly")).toBe(true);
   });
 });

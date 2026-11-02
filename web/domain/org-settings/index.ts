@@ -20,6 +20,7 @@ export type OrgSettingsInput = {
   cpiRenegotiationThresholdPct: string;
   renewalCpiPct: string;
   renewalCpiAsOf: string;
+  proposalValidityDays: string;
 };
 
 export type OrgSettingsField = keyof OrgSettingsInput;
@@ -42,6 +43,8 @@ export type OrgSettingsValue = {
   /** The CPI W7 renews with and the date it was published (renewal door 2): both set or both `null`. */
   renewalCpiPct: number | null;
   renewalCpiAsOf: string | null;
+  /** How many days a sent proposal stays open for a decision (proposal-expiry door 2). */
+  proposalValidityDays: number;
 };
 
 export type OrgSettingsErrors = Partial<Record<OrgSettingsField, string>>;
@@ -54,6 +57,7 @@ const MAX_TERM_MONTHS = 60;
 export const RENEWAL_CPI_ERROR = "CPI must be a number from -20 to 100 with at most two decimals";
 export const RENEWAL_CPI_AS_OF_ERROR = "Enter the date this CPI was published";
 export const RENEWAL_CPI_PAIR_ERROR = "Set both CPI and its date, or neither";
+export const PROPOSAL_VALIDITY_ERROR = `Proposal validity must be a whole number of days from 1 to ${MAX_DAYS}`;
 
 function optionalText(raw: string, max: number, label: string, errors: OrgSettingsErrors, field: OrgSettingsField) {
   const text = raw.trim();
@@ -118,6 +122,9 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
   const cpiRenegotiationThresholdPct = percent(input.cpiRenegotiationThresholdPct, "CPI renegotiation threshold", errors,
     "cpiRenegotiationThresholdPct");
 
+  const proposalValidityDays = wholeNumber(input.proposalValidityDays, 1, MAX_DAYS, PROPOSAL_VALIDITY_ERROR, errors,
+    "proposalValidityDays");
+
   // The renewal CPI and its date go together, so W7 always knows how old the figure is (renewal door 2).
   const cpiRaw = input.renewalCpiPct.trim();
   const asOfRaw = input.renewalCpiAsOf.trim();
@@ -154,6 +161,7 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
       cpiRenegotiationThresholdPct,
       renewalCpiPct,
       renewalCpiAsOf: asOfRaw === "" ? null : asOfRaw,
+      proposalValidityDays,
     },
   };
 }

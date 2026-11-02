@@ -23,6 +23,7 @@ const value: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
+  proposalValidityDays: 30,
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -93,5 +94,19 @@ describe("org settings store", () => {
     expect(set).toMatchObject({ renewalCpiPct: 3.2, renewalCpiAsOf: "2027-10-15" });
     const unset = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row(null, null), error: null } }).typed).get(ORG);
     expect(unset).toMatchObject({ renewalCpiPct: null, renewalCpiAsOf: null });
+  });
+
+  test("C1225: get reads proposal_validity_days and save sends it", async () => {
+    const row = {
+      org_id: ORG, legal_name: "Acme Ltd.", address: null, phone: null, logo_path: null, accent_color: null,
+      repair_discount_pct: 10, cpi_cap_pct: 5, cancellation_notice_days: null, payment_days: null, governing_province: null,
+      tax_note: null, default_term_months: 12, renewal_notice_days: 30, cpi_renegotiation_threshold_pct: 5,
+      renewal_cpi_pct: null, renewal_cpi_as_of: null, proposal_validity_days: 14, updated_at: "2026-10-24T12:00:00Z",
+    };
+    const read = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row, error: null } }).typed).get(ORG);
+    expect(read?.proposalValidityDays).toBe(14);
+    const { typed, calls } = stubClient({ org_settings: { data: [{ org_id: ORG }], error: null } });
+    await supabaseOrgSettingsStore(typed).save(ORG, { ...value, proposalValidityDays: 14 }, AT);
+    expect(calls.find((call) => call.method === "update")?.args[0]).toMatchObject({ proposal_validity_days: 14 });
   });
 });

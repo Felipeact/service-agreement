@@ -17,6 +17,7 @@ const valid: OrgSettingsInput = {
   cpiRenegotiationThresholdPct: "5",
   renewalCpiPct: "",
   renewalCpiAsOf: "",
+  proposalValidityDays: "30",
 };
 
 const run = (patch: Partial<OrgSettingsInput>) => validateOrgSettings({ ...valid, ...patch });
@@ -170,5 +171,16 @@ describe("renewal CPI (renewal S1)", () => {
   test("C1168: one without the other is refused", () => {
     expect(cpi("3.2", "")).toEqual({ ok: false, errors: { renewalCpiAsOf: "Set both CPI and its date, or neither" } });
     expect(cpi("", "2027-10-15")).toEqual({ ok: false, errors: { renewalCpiPct: "Set both CPI and its date, or neither" } });
+  });
+
+  test.each([["1", 1], ["30", 30], ["365", 365]])("C1222: accepts proposal validity %s days", (raw, days) => {
+    expect(run({ proposalValidityDays: raw })).toMatchObject({ ok: true, value: { proposalValidityDays: days } });
+  });
+
+  test.each(["0", "366", "1.5", "abc", ""])("C1222: proposal validity %j is refused", (raw) => {
+    expect(run({ proposalValidityDays: raw })).toEqual({
+      ok: false,
+      errors: { proposalValidityDays: "Proposal validity must be a whole number of days from 1 to 365" },
+    });
   });
 });

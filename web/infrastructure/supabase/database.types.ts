@@ -24,6 +24,7 @@ export type Database = {
           term_end: string | null
           term_months: number
           term_start: string | null
+          valid_until: string | null
           version_no: number
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           term_end?: string | null
           term_months?: number
           term_start?: string | null
+          valid_until?: string | null
           version_no: number
         }
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           term_end?: string | null
           term_months?: number
           term_start?: string | null
+          valid_until?: string | null
           version_no?: number
         }
         Relationships: [
@@ -698,6 +701,7 @@ export type Database = {
           org_id: string
           payment_days: number | null
           phone: string | null
+          proposal_validity_days: number
           renewal_cpi_as_of: string | null
           renewal_cpi_pct: number | null
           renewal_notice_days: number
@@ -718,6 +722,7 @@ export type Database = {
           org_id: string
           payment_days?: number | null
           phone?: string | null
+          proposal_validity_days?: number
           renewal_cpi_as_of?: string | null
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
@@ -738,6 +743,7 @@ export type Database = {
           org_id?: string
           payment_days?: number | null
           phone?: string | null
+          proposal_validity_days?: number
           renewal_cpi_as_of?: string | null
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number

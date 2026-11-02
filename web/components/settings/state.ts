@@ -26,6 +26,7 @@ export function toInput(settings: OrgSettings): OrgSettingsInput {
     cpiRenegotiationThresholdPct: formatSettingNumber(settings.cpiRenegotiationThresholdPct),
     renewalCpiPct: formatSettingNumber(settings.renewalCpiPct),
     renewalCpiAsOf: settings.renewalCpiAsOf ?? "",
+    proposalValidityDays: String(settings.proposalValidityDays),
   };
 }
 
