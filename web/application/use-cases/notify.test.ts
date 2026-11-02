@@ -158,3 +158,52 @@ describe("notify", () => {
     expect(complete).toHaveBeenCalledTimes(0);
   });
 });
+
+describe("notify, W7 renewal messages", () => {
+  const W7 = { body: JSON.stringify({ idempotencyKey: "w7:2027-12-01", kind: "renewal_daily" }), timestamp: "1", signature: "sha256=x" };
+  const customerRenewal = (to: string[]): NotificationMessage => ({
+    notificationId: "n7c",
+    kind: "customer_renewal",
+    idempotencyKey: "w7:r1:customer",
+    to,
+    tenant,
+    agreement: { id: "r1", number: "AG-1013" },
+    renews: { number: "AG-1004" },
+    site: { name: "Harbourview Towers" },
+    oldAnnualCents: 119999,
+    annualCents: 123839,
+    appliedPct: 3.2,
+    term: { start: "2028-01-01", end: "2028-12-31", months: 12 },
+  });
+  const staffRenewal: NotificationMessage = {
+    notificationId: "n7s",
+    kind: "staff_renewal",
+    idempotencyKey: "w7:r2:staff",
+    to: ["owner@northwind.ca"],
+    tenant,
+    agreement: { id: "r2", number: "AG-1014" },
+    renews: { number: "AG-1005", termEnd: "2027-12-31" },
+    site: { name: "Harbourview Towers" },
+    customer: { name: "Harbourview Strata" },
+    reason: "at_threshold",
+    cpiPct: 5,
+  };
+
+  test("C1195: a customer_renewal to a reserved domain sends nothing and is completed skipped with reserved_domain", async () => {
+    claimed({ ok: true, decision: "send", messages: [customerRenewal(["pat@example.com"])] });
+    await notify(W7);
+    expect(send).toHaveBeenCalledTimes(0);
+    expect(complete).toHaveBeenCalledWith(W7, [{ id: "n7c", outcome: "skipped", reason: "reserved_domain" }]);
+  });
+
+  test("C1201: each renewal message is sent with its notification key and completed with its provider id", async () => {
+    claimed({ ok: true, decision: "send", messages: [customerRenewal(["pat@customer.ca"]), staffRenewal] });
+    send.mockResolvedValueOnce({ ok: true, providerMessageId: "re_c" }).mockResolvedValueOnce({ ok: true, providerMessageId: "re_s" });
+    expect(await notify(W7)).toEqual({ ok: true, outcome: "sent" });
+    expect(send.mock.calls.map((call) => call[0].idempotencyKey)).toEqual(["w7:r1:customer", "w7:r2:staff"]);
+    expect(complete).toHaveBeenCalledWith(W7, [
+      { id: "n7c", outcome: "sent", providerMessageId: "re_c" },
+      { id: "n7s", outcome: "sent", providerMessageId: "re_s" },
+    ]);
+  });
+});

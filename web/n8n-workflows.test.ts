@@ -5,7 +5,7 @@ import { describe, expect, test } from "vitest";
 
 /** The n8n exports of outbox-dispatch door 8, read as data. */
 const DIR = path.join(__dirname, "..", "automation", "n8n");
-const FILES = ["events.json", "W1-agreement-sent.json", "W3-agreement-decided.json", "W5-stale-daily.json"];
+const FILES = ["events.json", "W1-agreement-sent.json", "W3-agreement-decided.json", "W5-stale-daily.json", "W7-renewal-daily.json"];
 
 type N8nNode = { name: string; type: string; parameters: Record<string, unknown>; credentials?: Record<string, unknown>; onError?: string };
 type Link = { node: string; type: string; index: number };
@@ -252,7 +252,7 @@ describe("the n8n workflow exports", () => {
         expect(signer.parameters.secret, `${file} ${signer.name}`).toBe("__SA_HMAC_SECRET__");
       }
     }
-    expect(notifyCount).toBe(5);
+    expect(notifyCount).toBe(6);
   });
 
   test("C1035: the signature is checked before routing, over <X-SA-Timestamp>.<raw body> with __SA_HMAC_SECRET__, with the 300 s window", () => {
@@ -297,6 +297,7 @@ describe("the n8n workflow exports", () => {
     ["W1-agreement-sent.json", 2, "day7", theEnd],
     ["W3-agreement-decided.json", 0, "W3", theEnd],
     ["W5-stale-daily.json", 0, "W5", theEnd],
+    ["W7-renewal-daily.json", 0, "W7", theEnd],
   ] as const;
 
   describe.each(CALLS)("C1052: notify call %s #%i (%s)", (file, index, _label, nextStep) => {
@@ -338,5 +339,55 @@ describe("the n8n workflow exports", () => {
       expect(timestamp).toMatch(/Date\.now\(\)|\$now/);
       expect(signer.parameters.value).toBe("={{ $json.timestamp }}.{{ $json.body }}");
     });
+  });
+});
+
+describe("W7, the renewal export (renewal door 8)", () => {
+  const wf = load("W7-renewal-daily.json") as Workflow & { settings: { timezone: string } };
+
+  test("C1202: a Schedule at 08:00 starts Set, Crypto HMAC and one signed POST to the notify route", () => {
+    const schedule = wf.nodes.find((node) => node.type === "n8n-nodes-base.scheduleTrigger") as N8nNode;
+    expect((schedule.parameters.rule as { interval: Record<string, unknown>[] }).interval).toEqual([
+      { field: "days", daysInterval: 1, triggerAtHour: 8, triggerAtMinute: 0 },
+    ]);
+    expect(wf.settings.timezone).toBe("America/Vancouver");
+    const [set] = nextOf(wf, schedule.name);
+    expect(set.type).toBe("n8n-nodes-base.set");
+    const [signer] = nextOf(wf, set.name);
+    expect(signer.type).toBe("n8n-nodes-base.crypto");
+    expect(signer.parameters).toMatchObject({ action: "hmac", type: "SHA256", secret: "__SA_HMAC_SECRET__" });
+    const [http] = nextOf(wf, signer.name);
+    expect(http.type).toBe("n8n-nodes-base.httpRequest");
+    expect(http.parameters).toMatchObject({
+      method: "POST",
+      url: "__SA_APP_BASE_URL__/api/automation/notify",
+      contentType: "raw",
+      body: "={{ $json.body }}",
+      options: { response: { response: { fullResponse: true, neverError: true } } },
+    });
+    expect(http.onError).toBe("continueErrorOutput");
+  });
+
+  test("C1202: the body is kind renewal_daily with key w7:<yyyy-MM-dd>", () => {
+    const [http] = notifyNodes(wf);
+    const { body } = bodyOf(wf, http);
+    expect(body).toContain("kind: 'renewal_daily'");
+    expect(body).toMatch(/idempotencyKey: 'w7:' \+ \$now[^,]*toFormat\('yyyy-MM-dd'\)/);
+  });
+
+  test("C1202: the error output goes to an IF on $runIndex < 6 and a 10-minute Wait back to Set", () => {
+    const [http] = notifyNodes(wf);
+    const [retry] = nextOf(wf, http.name, 1);
+    expect(retry.type).toBe("n8n-nodes-base.if");
+    expect(JSON.stringify(retry.parameters)).toContain('"leftValue":"={{ $runIndex }}","rightValue":6');
+    const [wait] = nextOf(wf, retry.name, 0);
+    expect(wait.parameters).toMatchObject({ resume: "timeInterval", amount: 10, unit: "minutes" });
+    expect(nextOf(wf, wait.name)[0].type).toBe("n8n-nodes-base.set");
+  });
+
+  test("C1202: no credentials and no $env anywhere in the file", () => {
+    expect(wf.nodes.every((node) => node.credentials === undefined)).toBe(true);
+    expect(raw("W7-renewal-daily.json")).not.toContain("$env");
+    expect(raw("W7-renewal-daily.json")).not.toMatch(/"credentials"/);
   });
 });

@@ -212,8 +212,7 @@ export function customerRenewalEmail(input: CustomerRenewalInput): EmailContent 
       `<p style="margin:16px 0 0;color:#4b5563">${escapeHtml(contact)}</p>`,
     ].join(""),
   );
-  const text = [intro, "", `Site: ${siteName}`, `New term: ${period}`, `Price: ${price}`, "", contact].join("
-");
+  const text = [intro, "", `Site: ${siteName}`, `New term: ${period}`, `Price: ${price}`, "", contact].join("\n");
   return { subject, html, text };
 }
 
@@ -246,7 +245,6 @@ export function staffRenewalEmail(input: StaffRenewalInput): EmailContent {
       `<p style="margin:16px 0 0"><a href="${escapeHtml(href)}">Open ${escapeHtml(agreement.number)}</a></p>`,
     ].join(""),
   );
-  const text = [intro, "", why, "", `Open ${agreement.number}: ${href}`].join("
-");
+  const text = [intro, "", why, "", `Open ${agreement.number}: ${href}`].join("\n");
   return { subject, html, text };
 }

@@ -58,6 +58,40 @@ function toMessage(raw: Raw): NotificationMessage {
           sentAt: new Date(item.sentAt as string),
         })),
       };
+    case "customer_renewal":
+    case "staff_renewal": {
+      // A renewal email without its agreement or key cannot be sent or recorded, so the whole claim is refused.
+      const key = text(raw.idempotencyKey);
+      if (!isRecord(raw.agreement) || !key) throw new Error(`automation_claim returned a malformed ${raw.kind} message`);
+      const renews = isRecord(raw.renews) ? raw.renews : {};
+      const site = { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" };
+      if (raw.kind === "customer_renewal") {
+        const term = isRecord(raw.term) ? raw.term : {};
+        return {
+          ...base,
+          kind: "customer_renewal",
+          idempotencyKey: key,
+          agreement,
+          renews: { number: text(renews.number) ?? "" },
+          site,
+          oldAnnualCents: typeof raw.oldAnnualCents === "number" ? raw.oldAnnualCents : 0,
+          annualCents: typeof raw.annualCents === "number" ? raw.annualCents : 0,
+          appliedPct: typeof raw.appliedPct === "number" ? raw.appliedPct : 0,
+          term: { start: text(term.start) ?? "", end: text(term.end) ?? "", months: typeof term.months === "number" ? term.months : 0 },
+        };
+      }
+      return {
+        ...base,
+        kind: "staff_renewal",
+        idempotencyKey: key,
+        agreement,
+        renews: { number: text(renews.number) ?? "", termEnd: text(renews.termEnd) ?? "" },
+        site,
+        customer: { name: isRecord(raw.customer) ? (text(raw.customer.name) ?? "") : "" },
+        reason: raw.reason === "at_threshold" || raw.reason === "cpi_stale" ? raw.reason : "cpi_unset",
+        cpiPct: typeof raw.cpiPct === "number" ? raw.cpiPct : null,
+      };
+    }
     default:
       throw new Error(`automation_claim returned an unknown kind ${String(raw.kind)}`);
   }

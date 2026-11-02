@@ -120,3 +120,47 @@ describe("the automation callbacks adapter", () => {
     await expect(supabaseAutomationCallbacks(typed).complete(CALLBACK, results)).rejects.toThrow("P0002");
   });
 });
+
+describe("the automation callbacks adapter, renewal messages", () => {
+  const customer = {
+    notificationId: "n7c",
+    kind: "customer_renewal",
+    idempotencyKey: "w7:r1:customer",
+    to: ["pat@customer.ca"],
+    tenant: { legalName: "Kettle Ridge Mechanical Ltd.", phone: "604-555-0100", accent: "#1f6f8b" },
+    agreement: { id: "r1", number: "AG-1013" },
+    renews: { number: "AG-1004" },
+    site: { name: "Harbourview Towers" },
+    oldAnnualCents: 119999,
+    annualCents: 123839,
+    appliedPct: 3.2,
+    term: { start: "2028-01-01", end: "2028-12-31", months: 12 },
+  };
+  const staff = {
+    notificationId: "n7s",
+    kind: "staff_renewal",
+    idempotencyKey: "w7:r2:staff",
+    to: ["owner@kettle.ca", "admin@kettle.ca"],
+    tenant: { legalName: "Kettle Ridge Mechanical Ltd.", phone: null, accent: null },
+    agreement: { id: "r2", number: "AG-1014" },
+    renews: { number: "AG-1005", termEnd: "2027-12-31" },
+    site: { name: "Depot" },
+    customer: { name: "Harbourview Strata" },
+    reason: "cpi_unset",
+    cpiPct: null,
+  };
+
+  test("C1200: claim reads a customer_renewal and a staff_renewal message with every field", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: { decision: "send", messages: [customer, staff] }, error: null });
+    expect(await supabaseAutomationCallbacks(typed).claim(CALLBACK)).toEqual({ ok: true, decision: "send", messages: [customer, staff] });
+  });
+
+  test("C1200: a renewal message without its agreement is refused as a malformed claim", async () => {
+    const { client, typed } = stubClient({});
+    const broken: Record<string, unknown> = { ...customer };
+    delete broken.agreement;
+    client.rpc.mockResolvedValue({ data: { decision: "send", messages: [broken] }, error: null });
+    await expect(supabaseAutomationCallbacks(typed).claim(CALLBACK)).rejects.toThrow(/malformed customer_renewal/);
+  });
+});

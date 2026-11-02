@@ -1,4 +1,12 @@
-import { customerEmail, isReservedAddress, staffDecisionEmail, staleEmail, type EmailContent } from "@/domain/notifications";
+import {
+  customerEmail,
+  customerRenewalEmail,
+  isReservedAddress,
+  staffDecisionEmail,
+  staffRenewalEmail,
+  staleEmail,
+  type EmailContent,
+} from "@/domain/notifications";
 import { portalLinkUrl } from "@/domain/portal";
 import type {
   AutomationCallbacks,
@@ -38,11 +46,32 @@ function content(message: NotificationMessage, appBaseUrl: string, tokens: Pick<
       });
     case "staff_stale":
       return staleEmail({ appBaseUrl, agreements: message.agreements });
+    case "customer_renewal":
+      return customerRenewalEmail({
+        tenant: message.tenant,
+        agreementNumber: message.agreement.number,
+        renewsNumber: message.renews.number,
+        siteName: message.site.name,
+        oldAnnualCents: message.oldAnnualCents,
+        annualCents: message.annualCents,
+        appliedPct: message.appliedPct,
+        term: message.term,
+      });
+    case "staff_renewal":
+      return staffRenewalEmail({
+        appBaseUrl,
+        agreement: message.agreement,
+        renews: message.renews,
+        siteName: message.site.name,
+        customerName: message.customer.name,
+        reason: message.reason,
+      });
   }
 }
 
-/** The provider key of one message: the notification's own idempotency key (door 4), per org for W5. */
+/** The provider key of one message: the notification's own idempotency key (door 4), per org for W5, per renewal for W7. */
 function providerKey(key: string, message: NotificationMessage): string {
+  if (message.kind === "customer_renewal" || message.kind === "staff_renewal") return message.idempotencyKey;
   return message.kind === "staff_stale" ? `${key}:${message.orgId}` : key;
 }
 

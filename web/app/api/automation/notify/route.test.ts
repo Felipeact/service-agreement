@@ -131,3 +131,56 @@ describe("POST /api/automation/notify", () => {
     for (const response of answers) expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });
+
+describe("POST /api/automation/notify, renewal_daily", () => {
+  const W7 = JSON.stringify({ idempotencyKey: "w7:2027-12-01", kind: "renewal_daily", executionId: "exec-7" });
+  const renewal: NotificationMessage = {
+    notificationId: "n7",
+    kind: "customer_renewal",
+    idempotencyKey: "w7:r1:customer",
+    to: ["pat@customer.ca"],
+    tenant: { legalName: "Northwind Mechanical Ltd.", phone: null, accent: null },
+    agreement: { id: AGR, number: "AG-1013" },
+    renews: { number: "AG-1004" },
+    site: { name: "Harbourview Towers" },
+    oldAnnualCents: 119999,
+    annualCents: 123839,
+    appliedPct: 3.2,
+    term: { start: "2028-01-01", end: "2028-12-31", months: 12 },
+  };
+  const post = () => call(signed(W7), W7);
+
+  test("C1199: messages that all send are 200 sent", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [renewal] });
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "sent" });
+  });
+
+  test("C1199: a duplicate is 200 duplicate", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "duplicate" });
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "duplicate" });
+  });
+
+  test.each([
+    ["22023", "malformed", 400],
+    ["42501", "unauthorized", 401],
+  ] as const)("C1199: a claim refused with %s answers its status", async (_sqlstate, code, status) => {
+    claim.mockResolvedValue({ ok: false, code });
+    expect((await post()).status).toBe(status);
+    expect(send).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1199: a claim in flight is 409", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "in_flight" });
+    expect((await post()).status).toBe(409);
+  });
+
+  test("C1199: a provider outage is 503", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [renewal] });
+    send.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect((await post()).status).toBe(503);
+  });
+});

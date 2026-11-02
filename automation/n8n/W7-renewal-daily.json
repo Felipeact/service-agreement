@@ -1,0 +1,260 @@
+{
+  "name": "W7 renewal daily",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "c158de41-d23d-5748-81de-b4624bd83e6c",
+      "name": "Every day at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "483d3517-ffb6-56aa-a862-7ea3d3c8a641",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "9d636a5f-feef-5ce3-b2f8-b68569190534",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w7:' + $now.setZone('America/Vancouver').toFormat('yyyy-MM-dd'), kind: 'renewal_daily', executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "4f76a893-ac3a-51dc-b650-60f3902193fd",
+      "name": "Renewal body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "__SA_HMAC_SECRET__",
+        "encoding": "hex"
+      },
+      "id": "fa35fabf-c61c-56bd-a393-ed8eb07835bf",
+      "name": "Sign renewal",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "463a140a-7204-5eb3-b7b7-74875d3b2e2b",
+      "name": "Notify renewal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "01be2c9f-583f-5588-b575-79fa3c8ff06f",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "069da0e3-1792-520f-aa51-38ebcfd055bc",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "894ef752-d046-5bfb-b15e-333f72c4d540",
+      "name": "Retry renewal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "4366ba7f-2137-5fa4-891f-1b63ef33f76a",
+      "name": "Wait 10 minutes (renewal)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "f2ab270e-3bfe-582e-8e36-9effd87041ca"
+    }
+  ],
+  "connections": {
+    "Every day at 08:00": {
+      "main": [
+        [
+          {
+            "node": "Renewal body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Renewal body": {
+      "main": [
+        [
+          {
+            "node": "Sign renewal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign renewal": {
+      "main": [
+        [
+          {
+            "node": "Notify renewal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify renewal": {
+      "main": [
+        [
+          {
+            "node": "Retry renewal?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry renewal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry renewal?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (renewal)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (renewal)": {
+      "main": [
+        [
+          {
+            "node": "Renewal body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}
