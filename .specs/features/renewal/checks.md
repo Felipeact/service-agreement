@@ -430,3 +430,36 @@ Proof: Playwright MCP session (screenshots and `scrollWidth <= innerWidth` resul
 - 2026-11-02, build: `seed.sql` is left unchanged. Giving AG-1035 a soon-ending term broke term-dates' C1158, and that
   check is not this feature's to weaken. C1215's claim does not depend on it. The live run (C1218) sets AG-1035's
   `term_start` on the demo org by mcp `execute_sql` before the W7 POST, and the Handoff records it.
+- 2026-11-02, user: a second session adopted the build after the first left it at `84ac75e` plus uncommitted S1
+  work ("adopt and continue"). The first session was still running and committed `7246368` while this one worked.
+  `7246368` names C1168-C1171, but it holds the renewal message types (`ports`) and the two email builders
+  (`domain/notifications`) of S4, written by this session; S1 is `c567790`. The user then told this session to finish.
+- 2026-11-02, build: C1215's second command names a recipe that does not exist (`demo_seed_rerun`). The `demo_seed`
+  recipe runs `fixture.sql`, the seed, `demo_seed.sql`, the seed again and `demo_seed_rerun.sql`
+  (`web/scripts/test-db/runner.mts:48`), so `npm run test:db demo_seed` proves both halves. The check is unchanged.
+- 2026-11-02, build: test moves that keep their claims. `n8n-workflows.test.ts` lists five exports, not four, and
+  C1035's count of notify calls goes from 5 to 6, both for W7. W7 joins C1052's retry cases. C1133's stubbed
+  `org_settings` row gains `renewal_cpi_pct` and `renewal_cpi_as_of` as null, which `c567790` expected but did not add.
+- 2026-11-02, build: the renewal links and Expiring soon use plain `eq` / `in` queries, not a self-referencing embed
+  over the composite foreign key, whose PostgREST form this session could not confirm. The board rule reads the
+  renewals from the same newest-first read, since a renewal is always newer than the agreement it renews.
+- 2026-11-02, build: `domain/pipeline/expiring.ts` adds days with civil-date arithmetic, because C33 bans `new Date(`
+  in the domain.
+
+## Delivery results
+
+- **C1166** (2026-11-02, after the migration): `select count(*) filter (where renewal_cpi_pct is not null or
+  renewal_cpi_as_of is not null) as set_rows, count(*) as all_rows from public.org_settings;` gave
+  `[{"set_rows":0,"all_rows":1}]`. The before run was not recorded by the session that applied the migration.
+- **C1217** (2026-11-02, after): `get_advisors` security lists 13 findings: `rls_enabled_no_policy` on `outbox` (1),
+  `anon_security_definer_function_executable` (5: `automation_claim`, `automation_complete`, `portal_decide`,
+  `portal_record_view`, `portal_view`), `authenticated_security_definer_function_executable` (the same 5 and
+  `save_agreement_term`, from term-dates), and `auth_leaked_password_protection` (1). That is AD-075's 12 plus
+  term-dates' one; none names a function of this migration (`run_renewals` and `claim_renewals` are in `private`).
+  The before list was not recorded, so this compares against the lists those features recorded.
+- **C1215:** `npm run test:db demo_seed` passes (2026-11-02).
+- **C1216:** `npm run lint` and `npx tsc --noEmit` exit 0. Plain `npm test` (`vitest run`) exits 1 on this machine:
+  5 of 2090 fail, every one a 5-second timeout in the known rotating set (C930, C22, C32, C873, C1018 on this run;
+  STATE Handoff, and term-dates' C1161 note). `npx vitest run --testTimeout=60000` passes 2090 of 2090.
+- **C1218, C1219:** pending the user's choice of where they run (the deployed Railway app runs code from before
+  term-dates).
