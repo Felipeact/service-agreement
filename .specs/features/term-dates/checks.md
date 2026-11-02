@@ -57,11 +57,11 @@ Proof: `npx vitest run infrastructure/supabase -t "C1133:"`
 
 **C1134** - `saveSettingsAction` with an invalid renewal field returns that field's C1132 error and calls no store
 write (AC 4)
-Proof: `npx vitest run components/settings -t "C1134:"`
+Proof: `npx vitest run "app/(app)/screens" -t "C1134:"`
 
 **C1135** - `SettingsView` for an owner renders three inputs labelled `Default term (months)`, `Renewal notice (days)`
 and `CPI renegotiation threshold (%)` holding the stored values. For an estimator and a viewer it renders the same three
-values with no input element for them (AC 3, AC 5)
+values in inputs carrying `readOnly` (AC 3, AC 5)
 Proof: `npx vitest run components/settings -t "C1135:"`
 
 ### S2 - a version carries a term
@@ -103,7 +103,7 @@ Proof: `npx vitest run infrastructure/supabase -t "C1142:"`
 
 **C1143** - The term Server Action with invalid input returns the C1141 error and calls no store; with a `locked`
 answer it shows `This version can no longer be changed.`; a viewer is refused before any store call (AC 9, AC 10)
-Proof: `npx vitest run components/agreements -t "C1143:"`
+Proof: `npx vitest run "app/(app)/agreements" -t "C1143:"`
 
 **C1144** - `revise` on an agreement whose version 1 has `term_start 2027-01-01` and `term_months 24` creates version 2
 with the same `term_start` and `term_months`, and version 1 keeps both (AC 11, door 6)
@@ -283,3 +283,50 @@ Proof: `npx vitest run infrastructure/supabase -t "C1165:"`
   mcp `apply_migration` once the code and SQL tests are written, with the C1130 and C1147 queries run before and after,
   and (2) the two expected test moves above: `fixture.sql` draft versions gain a `term_start`, and the `AgreementTerms` and
   `OrgSettingsValue` fixtures gain the new fields. Each keeps its claim.
+- **Corrected before their tests existed (2026-11-02):** three proof lines named the wrong place, and one claim named a
+  rendering that is not the house pattern.
+  - C1134's proof is `npx vitest run "app/(app)/screens" -t "C1134:"`. `saveSettingsAction` is tested in `app/(app)`, not
+    in `components/settings`.
+  - C1143's proof is `npx vitest run "app/(app)/agreements" -t "C1143:"`, for the same reason.
+  - C1135's read-only half now reads: for an estimator and a viewer, the three inputs hold the stored values with the
+    `readOnly` attribute. This is how `/settings` shows every other field read-only (C145); "no input element" would
+    have made the Renewal section the one exception.
+- **Settled mid-build (2026-11-02):** the user also approved the following. Each item keeps its claim.
+  - (3) The SQL helpers that send a draft give it a `term_start` of 2027-01-01. These are `tests.cp_agr` in
+    `customer_portal.sql`, the `:v1` insert in `outbox_dispatch.sql` and the one in `cadence.sql`. It is the same move as
+    the approved `fixture.sql` one; those helpers build their own versions.
+  - (4) `customer_portal.sql` C933 expects eight frozen keys instead of six, with the defaults 30 and 5 on bare
+    settings.
+  - (5) C936 ×2 in `terms.test.ts` gain the two null renewal keys. So do C936 in `infrastructure/supabase/agreements.test.ts`
+    and the `tests.si_terms()` literal behind `service_included.sql` C810.
+  - (6) In `document.test.ts`, C864 ×6 and C934 ×1 expect a trailing `Renewal` row on a draft: lengths 6→7 and 5→6,
+    and the bare list `["Repair discount", "CPI cap"]` → `[..., "Renewal"]`.
+- **Test helper fix, no assertion touched:** `pdfColours` and `pdfPages` in `pdf-text.testing.ts` matched
+  `\r?\nendstream`, so a compressed stream whose last byte is 0x0D lost that byte and failed to inflate. With the term
+  line, C858's plum render hit exactly that. `contentStreams` now retries with the `\r` kept.
+- **Domain purity:** `term.ts` validates and formats dates by hand. C33 forbids `new Date(` in `domain/`, so neither
+  `Date` nor `Intl` is used.
+- Remote (mcp, project `gnxebrtcpbujhvcamtoe`, 2026-11-02):
+  - Pre-apply: snapshots md5 `233c66e4557d218da3789b693a45893b` over 18 versions; 1 `org_settings` row; no term
+    columns. `make_interval` and `date_pl_interval` are immutable (`i`). The values `2027-01-31 + 1 month - 1` =
+    2027-02-27 and `2028-02-29 + 12 months - 1` = 2029-02-27.
+  - Applied by `apply_migration` as version `20261102164904`; the local file was renamed to match it (AD-006).
+  - Post-apply: snapshots md5 `233c66e4557d218da3789b693a45893b` over 18 versions, unchanged. No version differs from
+    12 months with a null start (C1147). 0 of 1 settings rows differ from 12 / 30 / 5.00 (C1130).
+- **Live validation (Playwright, signed-in owner, 2026-11-02):**
+  - `/settings`: the Renewal fields show the stored 12 / 30 / 5. Saving 0 shows the default-term error; 24 saves and
+    survives a reload, then 12 was restored.
+  - `/agreements/<AG-1051>`: shows `Start date not set · 12 months`. Months 61 shows its error. 2027-01-01 with 12
+    shows `Term: Jan 1, 2027 – Dec 31, 2027 · 12 months` after a reload.
+  - 375, 768 and 1440 px: inputs and button 44 px on phone and tablet and 34 px on desktop; no horizontal scroll.
+  - Touch taps on "Save term" and "Save changes" at 375 and 768 px work.
+  - Both PDF routes answer `200 application/pdf`; the console has 0 errors and 0 warnings.
+  - Not live: the review page, because getting a link would revoke the demo customer's link. C1156 and C1159 cover it.
+- **Boundary:** C1130-C1165 closed at the feature commit.
+  - `npm run test:db`: 19 passed, 0 failed.
+  - `npx vitest run --testTimeout=60000`: 102 files, 2003 passed.
+  - Plain `npm test`: 5 of these fail by the 5 s timeout under load: C930, C22, C1018, C32, C873. The same tests time out
+    at `5fa2794` before any term-dates change (5 failed of 1914 there).
+  - `npx tsc --noEmit` exit 0; `npm run lint` exit 0.
+- **Abandoned:** a tsc-driven script that added fields at each error location. It put fields inside two test bodies;
+  those two files were restored and edited by hand.
