@@ -461,5 +461,23 @@ Proof: Playwright MCP session (screenshots and `scrollWidth <= innerWidth` resul
 - **C1216:** `npm run lint` and `npx tsc --noEmit` exit 0. Plain `npm test` (`vitest run`) exits 1 on this machine:
   5 of 2090 fail, every one a 5-second timeout in the known rotating set (C930, C22, C32, C873, C1018 on this run;
   STATE Handoff, and term-dates' C1161 note). `npx vitest run --testTimeout=60000` passes 2090 of 2090.
-- **C1218, C1219:** pending the user's choice of where they run (the deployed Railway app runs code from before
-  term-dates).
+- **Where the live checks ran (user, 2026-11-02):** a local build of `HEAD` (`next build`, `next start -p 3100`)
+  against the live project, not the deployed Railway app, which runs code from before term-dates. A recorded
+  deviation from "deployed" in C1218. Nothing was pushed or deployed. An already running `next dev` on port 3000,
+  started by another session, served a stale adapter ("unknown kind staff_renewal", answer `503`), so it was not used.
+- **Demo data changed for the run:** AG-1035's version 1 got `term_start` 2025-11-23 (`term_end` 2026-11-22, 20 days
+  out) by mcp `execute_sql`, guarded by `term_start is null`.
+- **C1218:** the body `{"idempotencyKey":"w7:2026-11-02","kind":"renewal_daily","executionId":"live-c1218-2"}`, signed
+  inside the database with the Vault secret (only the timestamp and signature left it), to
+  `POST http://localhost:3100/api/automation/notify` answered `200 {"outcome":"sent"}`. Afterwards: AG-1057, `draft`,
+  renews AG-1035 (the only renewal of it), 1 event `agreement.renewal_drafted` `{cpiPct: null, reason: "cpi_unset",
+  cpiAsOf: null}`, 1 outbox row, and notification `w7:0b63513d-54b1-40e3-8728-aae34fdd63e8:staff` `staff_renewal`
+  `sent` with a provider id, to the org's 1 manager. AG-1057 was created by the first attempt against the stale
+  server (19:09 UTC), whose claim left the notification `claimed`; the second run reclaimed it after 10 minutes and
+  created nothing new.
+- **C1219:** Playwright, the one signed-in page resized with `setViewportSize`: `/pipeline?view=expiring` at 1440 and
+  375 px shows one row, "Glacier Valley Warehouse 2 · Glacier Valley Cold Storage · AG-1035 · Renewal draft AG-1057 ·
+  Ends Nov 22, 2026 · $8,800/yr", with `scrollWidth` 1440 = `innerWidth` 1440 and 375 = 375, and the "Back to the
+  board" link. The board's "Expiring soon" link points to `/pipeline?view=expiring`, and AG-1057's card shows
+  "Renewal". Console: 0 errors, 0 warnings. Screenshots in the session scratchpad (`expiring-1440.png`,
+  `expiring-375.png`).

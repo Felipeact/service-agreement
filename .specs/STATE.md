@@ -111,10 +111,10 @@
 
 **Feature**: renewal (ROADMAP Phase 3.5 item 5), profile light, one builder (a second session started it; this one adopted it on 2026-11-02, see the feature's Settled mid-build)
 **Where**: committed locally on `development`, feature base `102bb12`: `84ac75e` database, `c567790` settings, `7246368` renewal message types and emails (mislabelled as settings), `2668bac` notify and W7, `040e0b8` links and board, `5d70b37` Expiring soon, then docs. Migration `20261102180706_renewal` applied to the project. `npm run lint`, `npx tsc --noEmit` and `npx vitest run --testTimeout=60000` (2090 tests) pass; every renewal `test:db` recipe passes
-**In progress**: the live checks C1218 (W7 against the app) and C1219 (Expiring soon in a browser), then the Verifier over `102bb12..HEAD`
-**Next step**: the live checks once approved, then the Verifier; then ROADMAP Phase 3.5 item 6, proposal validity and W8
+**In progress**: the Verifier over `102bb12..HEAD`; the live checks C1218 and C1219 ran against a local build on the live project (user's choice)
+**Next step**: the Verifier; then ROADMAP Phase 3.5 item 6, proposal validity and W8
 **Open, non-failing**: plain `npm test` still shows the known 5-second load timeouts (C930, C22, C27, C1018 and the container wiring test); the live Railway app runs code from before term dates; W7 is not imported into the n8n instance yet. Carried: the term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
 **Blockers**: none
 **Uncommitted**: none
 **Branch**: development (local commits, not pushed)
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migrations through `20261102180706_renewal` applied; Vault holds `automation_hmac_secret` and `n8n_events_url`. Demo org has no renewal CPI set
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migrations through `20261102180706_renewal` applied; Vault holds `automation_hmac_secret` and `n8n_events_url`. Demo org has no renewal CPI set; AG-1035 has `term_start` 2025-11-23 from the live run and is renewed by the draft AG-1057, whose `staff_renewal` email was sent
