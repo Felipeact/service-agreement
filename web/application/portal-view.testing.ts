@@ -38,6 +38,8 @@ export function portalView(over: Partial<PortalView> = {}): PortalView {
     },
     terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
     term: { start: null, months: 12, end: null },
+    validUntil: null,
+    today: "2026-11-02",
     decision: null,
     ...over,
   };

@@ -443,6 +443,8 @@ export type AgreementDetail = {
   terms: AgreementTerms | null;
   /** The shown version's start, months and end (term-dates door 1). */
   term: AgreementTerm;
+  /** The last day the shown version can be decided, `YYYY-MM-DD`, or `null` when it was never sent (proposal-expiry door 1). */
+  validUntil: string | null;
   /**
    * The live customer link of the shown version, when the agreement is `sent` and the version is the current one:
    * when the customer first opened it, or `null` for not yet. `null` too when there is no live link. The link itself
@@ -552,6 +554,10 @@ export type PortalView = {
   terms: AgreementTerms | null;
   /** The version's term (term-dates door 7). */
   term: AgreementTerm;
+  /** The last day the version can be decided, `YYYY-MM-DD`, or `null` for no bound (proposal-expiry door 7). */
+  validUntil: string | null;
+  /** Today in America/Vancouver as the database read it, `YYYY-MM-DD`; `null` when the document carries none. */
+  today: string | null;
   decision: { status: "accepted" | "refused" | "changes_requested"; decidedAt: Date; reason: string | null } | null;
 };
 

@@ -65,6 +65,7 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       serviceScope: portalScope(view),
       terms,
       term: view.term,
+      validUntil: view.validUntil,
     },
     // A frozen version prints its own terms; these are read only for the editable draft, which a link never shows.
     {
@@ -91,5 +92,10 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
 
 /** The state a link is in, `unknown` for no link. */
 export function portalViewState(view: PortalView | null): PortalState {
-  return portalState({ link: view ? { revoked: view.link.revoked, current: view.link.current } : null, status: view?.agreement.status ?? "draft" });
+  return portalState({
+    link: view ? { revoked: view.link.revoked, current: view.link.current } : null,
+    status: view?.agreement.status ?? "draft",
+    validUntil: view?.validUntil ?? null,
+    today: view?.today ?? null,
+  });
 }

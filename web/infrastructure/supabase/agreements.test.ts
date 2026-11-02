@@ -476,3 +476,21 @@ describe("agreement reader: renewal links (renewal door 1)", () => {
     expect(detail?.renewedBy).toBeNull();
   });
 });
+
+describe("the validity date on the agreement reader", () => {
+  const row = (validUntil: string | null) => ({
+    id: AGR,
+    number: "AG-1052",
+    status: "sent",
+    sites: { id: "s1", name: "Harbourview Towers", customers: { id: "c1", name: "Harbourview Strata" } },
+    agreement_versions: [{
+      id: "v1", version_no: 1, created_at: "2026-10-27T17:00:00Z", contracts: [],
+      term_start: "2027-01-01", term_months: 12, term_end: "2027-12-31", valid_until: validUntil,
+    }],
+  });
+
+  test.each([["2026-12-02", "2026-12-02"], [null, null]])("C1234: valid_until %s becomes validUntil %s", async (stored, shown) => {
+    const { typed } = stubClient({ agreements: ok(row(stored)), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(typed).get(AGR))?.validUntil).toBe(shown);
+  });
+});

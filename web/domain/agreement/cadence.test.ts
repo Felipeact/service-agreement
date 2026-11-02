@@ -96,6 +96,7 @@ describe("buildAgreementDocument, schedule", () => {
     serviceScope: { source: "live", takenAt: null, types: [] },
     terms: null,
     term: { start: null, months: 12, end: null },
+    validUntil: null,
   };
 
   test("C1081: the document carries the schedule of its lines", () => {

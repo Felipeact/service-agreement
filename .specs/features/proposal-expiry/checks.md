@@ -132,11 +132,11 @@ Proof: `npx vitest run components/review -t "C1236:"`
 
 **C1237** - The staff PDF route for a sent version with `valid_until` `2026-12-02` returns a PDF whose text holds
 `Valid until Dec 2, 2026`. For a version with null it holds no `Valid until` (AC 13, AC 14)
-Proof: `npx vitest run "app/(app)/agreements" -t "C1237:"`
+Proof: `npx vitest run composition/staff-pdf-terms.test.ts -t "C1237:"`
 
 **C1238** - `GET /review/[token]/pdf` for a view with `version.validUntil` `"2026-12-02"` returns a PDF whose text holds
 `Valid until Dec 2, 2026`. With null it holds no `Valid until` (AC 13, AC 14)
-Proof: `npx vitest run "app/review/[token]/pdf" -t "C1238:"`
+Proof: `npx vitest run composition/review-pdf.test.ts -t "C1238:"`
 
 ### S4 - the customer cannot decide after the date · 7 files · 75 KB · ~19k
 
@@ -460,3 +460,9 @@ Proof: Playwright MCP session (recorded in the Handoff)
   lock bullet now reads `pg_locks`, as renewal's C1179 does. The row-lock bullet is dropped: the expiry is a
   compare-and-set `update ... where status = 'sent'`, and the two sequential orders prove that a decision committed
   first wins and an expiry committed first refuses the decision.
+- 2026-11-02, build: the C1237 and C1238 proofs moved to `composition/`, with the claims unchanged. A test holds a
+  route and the real PDF renderer only in `composition/` (the rule stated in `composition/staff-pdf-terms.test.ts`).
+  Both route tests under `app/` use a fake renderer, which cannot read the PDF's text.
+- 2026-11-02, build: the plan's assumption "the PDF still downloads" after expiry is wrong about today's code. The
+  review PDF route already answers an empty `404` for a link in state `expired`, as it does for `withdrawn`. No check
+  claims otherwise, and the behaviour is left as it is. The page still shows `This agreement has expired.`.

@@ -18,6 +18,7 @@ const base: AgreementDocument = {
   schedule: [],
   scope: { kind: "listed", recordedOn: null, types: [] },
   term: "Term: Jan 1, 2027 – Dec 31, 2027 (12 months)",
+  validity: null,
   terms: [
     { label: "Repair discount", value: "10%" },
     { label: "CPI cap", value: "3%" },

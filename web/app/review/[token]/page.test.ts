@@ -41,6 +41,8 @@ function document(view: PortalView) {
     annualCents: view.annualCents,
     scope: view.scope,
     terms: view.terms,
+    version: { validUntil: view.validUntil },
+    today: view.today,
     decision: view.decision && { ...view.decision, decidedAt: view.decision.decidedAt.toISOString() },
   };
 }
@@ -294,5 +296,15 @@ describe("a failing read", () => {
   test("C932: a portal_view rejection is not caught by the page", async () => {
     rpc.mockResolvedValue({ data: null, error: { code: "XX000", message: "boom" } });
     await expect(render()).rejects.toThrow("XX000");
+  });
+});
+
+describe("the validity date", () => {
+  test("C1243: a sent view past its date reads as expired, with no Accept button", async () => {
+    answer(portalView({ validUntil: "2026-11-01", today: "2026-11-02" }));
+    const html = await render();
+    expect(text(html)).toContain("This agreement has expired.");
+    expect(html).not.toMatch(/<button[^>]*>[^<]*Accept/);
+    expect(text(html)).not.toContain("Accept");
   });
 });

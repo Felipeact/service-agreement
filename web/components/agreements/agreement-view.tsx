@@ -4,6 +4,7 @@ import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { labelFor, visitSchedule } from "@/domain/agreement";
+import { formatTermDate } from "@/domain/agreement/term";
 import { notEmailedWords } from "@/domain/notifications";
 import { formatCadExact } from "@/lib/money";
 import { LineFormControl } from "./line-form";
@@ -107,7 +108,11 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
           <>
             <p className="text-[13px] text-ink-2">{firstViewed ? `Viewed by the customer on ${date.format(firstViewed)}` : "Not viewed yet"}</p>
             <p className="break-words text-[13px] text-ink-2">{deliveryLine(agreement.linkEmail)}</p>
+            {agreement.validUntil && <p className="text-[13px] text-ink-2">Valid until {formatTermDate(agreement.validUntil)}</p>}
           </>
+        )}
+        {agreement.status === "expired" && shown.current && agreement.validUntil && (
+          <p className="text-[13px] text-ink-2">Expired · was valid until {formatTermDate(agreement.validUntil)}</p>
         )}
       </div>
 

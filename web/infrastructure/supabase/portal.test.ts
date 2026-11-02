@@ -93,6 +93,14 @@ describe("portal reader", () => {
     expect((await supabasePortalReader(typed).view(HASH))?.scope).toEqual(scope);
   });
 
+  test("C1242: version.validUntil and today become PortalView.validUntil and today", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, version: { validUntil: "2027-01-15" }, today: "2026-11-02" }, error: null });
+    expect(await supabasePortalReader(typed).view(HASH)).toMatchObject({ validUntil: "2027-01-15", today: "2026-11-02" });
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, version: { validUntil: null }, today: "2026-11-02" }, error: null });
+    expect(await supabasePortalReader(typed).view(HASH)).toMatchObject({ validUntil: null, today: "2026-11-02" });
+  });
+
   test("C925: view calls only portal_view with the hash", async () => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });

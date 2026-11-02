@@ -2,7 +2,7 @@ import type { OrgSettingsValue } from "../org-settings";
 import { formatSettingNumber } from "../org-settings";
 import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
-import { termLine, termMonthsLabel, type AgreementTerm } from "./term";
+import { formatTermDate, termLine, termMonthsLabel, type AgreementTerm } from "./term";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
 export const NEUTRAL_ACCENT = "#374151";
@@ -39,6 +39,8 @@ export type AgreementDocument = {
   scope: DocumentScope;
   /** The version's term as one printed line (term-dates AC 18, 19). */
   term: string;
+  /** `Valid until <date>` for a version that was sent with a validity date, else `null` (proposal-expiry AC 13, 14). */
+  validity: string | null;
   /** Only the terms that are set, in print order. */
   terms: { label: string; value: string }[];
 };
@@ -55,6 +57,8 @@ export type DocumentSource = {
   terms: AgreementTerms | null;
   /** The shown version's start, months and end (term-dates door 1). */
   term: AgreementTerm;
+  /** The shown version's last day for a decision, `YYYY-MM-DD`, or `null` (proposal-expiry door 1). */
+  validUntil: string | null;
 };
 
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
@@ -104,6 +108,7 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
     // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
     // settings of today (customer-portal AC 32, 33).
     term: termLine(source.term, source.editable),
+    validity: source.validUntil ? `Valid until ${formatTermDate(source.validUntil)}` : null,
     terms: source.editable ? termsOf(settings, source.term.months) : source.terms ? termsOf(source.terms, source.term.months) : [],
   };
 }

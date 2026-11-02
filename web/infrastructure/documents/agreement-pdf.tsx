@@ -67,6 +67,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
           <Text style={styles.metaItem}>{document.siteName}</Text>
         </View>
         <Text style={styles.termLine}>{document.term}</Text>
+        {document.validity && <Text style={styles.termLine}>{document.validity}</Text>}
 
         {document.lines.length === 0 ? (
           <>

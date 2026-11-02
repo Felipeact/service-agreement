@@ -50,6 +50,7 @@ function agreement(lines: ServiceLineView[]): AgreementDetail {
     equipmentChoices: [],
     serviceScope: { source: "live", takenAt: null, types: [RTU] },
     terms: null,
+    validUntil: null,
     portalLink: null,
     linkEmail: null,
     renews: null,

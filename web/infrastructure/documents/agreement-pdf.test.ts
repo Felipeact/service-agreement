@@ -28,6 +28,7 @@ const base: AgreementDocument = {
     { label: "Tax note", value: "GST extra" },
   ],
   term: "Term: not recorded for this version",
+  validity: null,
 };
 
 const asset = (unitNo: string | null, typeModel: string | null = null, location: string | null = null) => ({ unitNo, typeModel, location });

@@ -46,6 +46,7 @@ const detail: AgreementDetail = {
   serviceScope: { source: "not_recorded" },
   terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
   term: { start: null, months: 12, end: null },
+  validUntil: null,
   portalLink: null,
   linkEmail: null,
   renews: null,

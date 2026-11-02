@@ -44,6 +44,20 @@ describe("portalState", () => {
   });
 });
 
+describe("portalState and the validity date", () => {
+  const live = { revoked: false, current: true };
+
+  test.each<[string, PortalStateInput, PortalState]>([
+    ["sent, on the date", { link: live, status: "sent", validUntil: "2026-12-02", today: "2026-12-02" }, "open"],
+    ["sent, the day after", { link: live, status: "sent", validUntil: "2026-12-02", today: "2026-12-03" }, "expired"],
+    ["sent, no date", { link: live, status: "sent", validUntil: null, today: "2030-01-01" }, "open"],
+    ["accepted, the day after", { link: live, status: "accepted", validUntil: "2026-12-02", today: "2026-12-03" }, "decided"],
+    ["revoked, sent, the day after", { link: { revoked: true, current: true }, status: "sent", validUntil: "2026-12-02", today: "2026-12-03" }, "replaced"],
+  ])("C1239: %s -> %s", (_name, input, expected) => {
+    expect(portalState(input)).toBe(expected);
+  });
+});
+
 describe("contrastText", () => {
   const channel = (value: number) => {
     const v = value / 255;

@@ -33,6 +33,7 @@ describe("the customer PDF's term", () => {
       serviceScope: { source: "not_recorded" },
       terms: FROZEN,
       term: view.term,
+      validUntil: null,
       portalLink: null,
       linkEmail: null,
       renews: null,

@@ -47,6 +47,7 @@ describe("the portal PDF's schedule", () => {
       equipmentChoices: [],
       serviceScope: { source: "not_recorded" },
       terms: view.terms,
+      validUntil: null,
       portalLink: null,
       linkEmail: null,
       renews: null,

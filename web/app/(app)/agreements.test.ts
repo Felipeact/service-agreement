@@ -71,6 +71,7 @@ const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
   serviceScope: { source: "live", takenAt: null, types: [] },
   terms: null,
   term: { start: null, months: 12, end: null },
+  validUntil: null,
   portalLink: null,
     linkEmail: null,
     renews: null,

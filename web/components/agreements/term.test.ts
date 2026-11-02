@@ -23,6 +23,7 @@ function agreement(term: AgreementTerm, editable = true): AgreementDetail {
     serviceScope: { source: "live", takenAt: null, types: [] },
     terms: null,
     term,
+    validUntil: null,
     portalLink: null,
     linkEmail: null,
     renews: null,

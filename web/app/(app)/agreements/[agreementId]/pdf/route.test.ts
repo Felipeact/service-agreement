@@ -45,6 +45,7 @@ function detail(over: Partial<AgreementDetail> = {}, versionNo = 1): AgreementDe
     serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [] },
     terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
     term: { start: null, months: 12, end: null },
+    validUntil: null,
     portalLink: null,
     linkEmail: null,
     renews: null,

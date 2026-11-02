@@ -255,6 +255,7 @@ describe("composition root", () => {
       equipmentChoices: [],
       serviceScope: { source: "live", takenAt: null, types: [] },
       terms: null,
+      validUntil: null,
       portalLink: null,
       linkEmail: null,
       renews: null,

@@ -199,6 +199,7 @@ describe("buildAgreementDocument, seasonal tasks", () => {
     serviceScope: { source: "live", takenAt: null, types: TYPES },
     terms: null,
     term: { start: null, months: 12, end: null },
+    validUntil: null,
   };
 
   test("C1122: the document's schedule carries the scope's seasonal tasks", () => {

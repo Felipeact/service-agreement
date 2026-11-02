@@ -22,16 +22,19 @@ export type PortalStateInput = {
   /** `null` for a hash no link has. `current` is whether the link's version is the agreement's latest. */
   link: { revoked: boolean; current: boolean } | null;
   status: AgreementStatus;
+  /** The version's last day for a decision and today, both `YYYY-MM-DD` (proposal-expiry door 7); no bound when either is absent. */
+  validUntil?: string | null;
+  today?: string | null;
 };
 
 /** One of seven states. A revoked link is `replaced` whatever the agreement did since (AC 13 to 17). */
-export function portalState({ link, status }: PortalStateInput): PortalState {
+export function portalState({ link, status, validUntil, today }: PortalStateInput): PortalState {
   if (!link) return "unknown";
   if (link.revoked) return "replaced";
   if (status === "withdrawn") return "withdrawn";
   if (status === "expired") return "expired";
   if (!link.current) return "superseded";
-  if (status === "sent") return "open";
+  if (status === "sent") return validUntil && today && today > validUntil ? "expired" : "open";
   if (status === "accepted" || status === "refused" || status === "changes_requested") return "decided";
   return "unknown";
 }

@@ -100,6 +100,7 @@ const source = (over: Partial<DocumentSource>): DocumentSource => ({
   serviceScope: { source: "not_recorded" },
   terms: TERMS,
   term: { start: "2027-01-01", months: 12, end: "2027-12-31" },
+  validUntil: null,
   ...over,
 });
 

@@ -5,6 +5,7 @@ import { ServiceScopeSections } from "@/components/agreements/service-scope";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
 import { NEUTRAL_ACCENT, termLine, termsOf, visitSchedule } from "@/domain/agreement";
+import { formatTermDate } from "@/domain/agreement/term";
 import { contrastText, isAccent, type PortalState } from "@/domain/portal";
 import { formatCadExact } from "@/lib/money";
 import { DecisionControls } from "./decision-controls";
@@ -169,6 +170,9 @@ export function ReviewView({ token, view, state, actions }: ReviewViewProps) {
             <p data-term className="text-[14px] text-ink-2">
               {termLine(view.term, false)}
             </p>
+            {state === "open" && view.validUntil && (
+              <p className="text-[14px] text-ink-2">Valid until {formatTermDate(view.validUntil)}</p>
+            )}
           </div>
         ) : (
           <h1 className="sr-only">Agreement</h1>

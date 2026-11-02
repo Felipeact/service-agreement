@@ -44,6 +44,7 @@ type VersionRow = {
   term_start: string | null;
   term_months: number;
   term_end: string | null;
+  valid_until: string | null;
   contracts: { status: string }[];
 };
 
@@ -195,7 +196,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("agreements")
-        .select("id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, contracts(status))")
+        .select("id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, contracts(status))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -255,6 +256,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         serviceScope,
         terms,
         term: { start: shownVersion?.term_start ?? null, months: shownVersion?.term_months ?? 12, end: shownVersion?.term_end ?? null },
+        validUntil: shownVersion?.valid_until ?? null,
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
         ...(await renewalLinks(row.id, row.renews_agreement_id ?? null)),

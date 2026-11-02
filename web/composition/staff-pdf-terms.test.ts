@@ -46,6 +46,7 @@ let detail: AgreementDetail = {
   serviceScope: { source: "not_recorded" },
   terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
   term: { start: null, months: 12, end: null },
+  validUntil: null,
   portalLink: null,
   linkEmail: null,
   renews: null,
@@ -110,5 +111,12 @@ describe("the staff PDF prints the terms from the real renderer", () => {
     );
     expect(text).toContain("7%");
     expect(text).not.toContain("15%");
+  });
+});
+
+describe("the staff PDF prints the validity date from the real renderer", () => {
+  test("C1237: a sent version with a date prints Valid until; one with none prints no validity line", async () => {
+    expect(await render({ status: "sent", validUntil: "2026-12-02" })).toContain("Valid until Dec 2, 2026");
+    expect(await render({ status: "sent", validUntil: null })).not.toContain("Valid until");
   });
 });

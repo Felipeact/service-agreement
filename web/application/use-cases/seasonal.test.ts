@@ -70,6 +70,7 @@ describe("the portal's seasonal tasks", () => {
       equipmentChoices: [],
       serviceScope: { source: "frozen", takenAt: new Date(SCOPE.takenAt), types: parsed?.types ?? [] },
       terms: view.terms,
+      validUntil: null,
       portalLink: null,
       linkEmail: null,
       renews: null,

@@ -55,6 +55,7 @@ const source = (visitMonths: number[]): DocumentSource => ({
   serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [RTU] },
   terms: null,
   term: { start: null, months: 12, end: null },
+  validUntil: null,
 });
 const render = async (visitMonths: number[]) =>
   (await pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildAgreementDocument(source(visitMonths), SETTINGS)))).join("\n");

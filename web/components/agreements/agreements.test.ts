@@ -27,7 +27,7 @@ const LINES: ServiceLineView[] = [
 ];
 
 function agreement(
-  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"]; equipmentChoices?: EquipmentChoice[] } = {},
+  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"]; equipmentChoices?: EquipmentChoice[]; validUntil?: string | null } = {},
 ): AgreementDetail {
   const status = over.status ?? "draft";
   const count = over.versions ?? 2;
@@ -46,6 +46,7 @@ function agreement(
     equipmentChoices: over.equipmentChoices ?? CHOICES,
     serviceScope: over.serviceScope ?? { source: "live", takenAt: null, types: [] },
     terms: null,
+    validUntil: over.validUntil ?? null,
     portalLink: over.portalLink ?? null,
     linkEmail: over.linkEmail ?? null,
     renews: null,
@@ -374,6 +375,24 @@ describe("sending an agreement and its customer link", () => {
     const unopened = view(agreement({ status: "sent", portalLink: { firstViewedAt: null } }));
     expect(text(unopened)).toContain("Not viewed yet");
     expect(text(unopened)).not.toContain("Viewed by the customer");
+  });
+
+  test("C1235: a sent agreement shows its validity date, formatted from the text", () => {
+    expect(text(view(agreement({ status: "sent", validUntil: "2026-12-02" })))).toContain("Valid until Dec 2, 2026");
+    const jan = text(view(agreement({ status: "sent", validUntil: "2027-01-01" })));
+    expect(jan).toContain("Valid until Jan 1, 2027");
+    expect(jan).not.toContain("Dec 31, 2026");
+  });
+
+  test("C1235: an expired agreement says it expired, and offers neither Withdraw nor Get a new link", () => {
+    const out = view(agreement({ status: "expired", validUntil: "2026-12-02" }));
+    expect(text(out)).toContain("Expired · was valid until Dec 2, 2026");
+    expect(has(out, "Withdraw")).toBe(false);
+    expect(has(out, "Get a new link")).toBe(false);
+  });
+
+  test("C1235: a sent agreement with no date shows no validity line", () => {
+    expect(text(view(agreement({ status: "sent", validUntil: null })))).not.toContain("Valid until");
   });
 
   test("C905: a draft shows neither line", () => {

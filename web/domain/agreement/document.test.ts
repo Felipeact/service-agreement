@@ -47,6 +47,7 @@ const SOURCE: DocumentSource = {
     cpiRenegotiationThresholdPct: null,
   },
   term: { start: null, months: 12, end: null },
+  validUntil: null,
 };
 
 // The terms of a draft come from the org's settings (customer-portal AC 32); a frozen version prints its own.

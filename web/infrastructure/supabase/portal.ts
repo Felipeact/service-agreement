@@ -111,6 +111,8 @@ function toView(json: unknown): PortalView | null {
     scope: json.scope ?? null,
     terms: parseTerms({ terms: json.terms }),
     term: toTerm(json.term),
+    validUntil: isRecord(json.version) && typeof json.version.validUntil === "string" ? json.version.validUntil : null,
+    today: typeof json.today === "string" ? json.today : null,
     decision: decision
       ? {
           status: decision.status as "accepted" | "refused" | "changes_requested",
