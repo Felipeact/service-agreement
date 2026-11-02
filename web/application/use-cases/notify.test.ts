@@ -207,3 +207,38 @@ describe("notify, W7 renewal messages", () => {
     ]);
   });
 });
+
+describe("notify for W8", () => {
+  const W8 = { body: JSON.stringify({ idempotencyKey: "w8:2026-12-03", kind: "expiry_daily" }), timestamp: "1", signature: "sha256=x" };
+  const expired = (to: string[]): NotificationMessage => ({
+    notificationId: "n8",
+    kind: "staff_expired",
+    idempotencyKey: "w8:e1",
+    to,
+    tenant,
+    agreement: { id: "a1", number: "AG-1004" },
+    customer: { name: "Acme Holdings" },
+    site: { name: "Plant 2" },
+    validUntil: "2026-12-02",
+  });
+
+  test("C1257: a staff_expired message is sent with its notification key and completed sent", async () => {
+    claimed({ ok: true, decision: "send", messages: [expired(["estimator@northwind.ca"])] });
+    expect(await notify(W8)).toEqual({ ok: true, outcome: "sent" });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0]).toMatchObject({
+      to: ["estimator@northwind.ca"],
+      subject: "AG-1004 expired without a decision",
+      idempotencyKey: "w8:e1",
+    });
+    expect(complete).toHaveBeenCalledWith(W8, [{ id: "n8", outcome: "sent", providerMessageId: "re_1" }]);
+  });
+
+  test("C1257: a reserved-domain recipient sends nothing and is completed skipped", async () => {
+    claimed({ ok: true, decision: "send", messages: [expired(["uE@example.test"])] });
+    await notify(W8);
+    expect(send).toHaveBeenCalledTimes(0);
+    expect(complete).toHaveBeenCalledWith(W8, [{ id: "n8", outcome: "skipped", reason: "reserved_domain" }]);
+  });
+});
+

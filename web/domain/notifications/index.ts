@@ -8,7 +8,8 @@ export type NotificationKind =
   | "staff_decision"
   | "staff_stale"
   | "customer_renewal"
-  | "staff_renewal";
+  | "staff_renewal"
+  | "staff_expired";
 
 /** Why W7 drafted a renewal instead of renewing on its own (renewal door 3). */
 export type RenewalReason = "at_threshold" | "cpi_unset" | "cpi_stale";
@@ -246,5 +247,31 @@ export function staffRenewalEmail(input: StaffRenewalInput): EmailContent {
     ].join(""),
   );
   const text = [intro, "", why, "", `Open ${agreement.number}: ${href}`].join("\n");
+  return { subject, html, text };
+}
+
+export type StaffExpiredInput = {
+  appBaseUrl: string;
+  agreement: { id: string; number: string };
+  customerName: string;
+  siteName: string;
+  validUntil: string;
+};
+
+/** The sender's email when W8 expires a proposal nobody decided (proposal-expiry AC 30). */
+export function staffExpiredEmail(input: StaffExpiredInput): EmailContent {
+  const { agreement, customerName, siteName } = input;
+  const subject = `${agreement.number} expired without a decision`;
+  const href = `${base(input.appBaseUrl)}/agreements/${agreement.id}`;
+  const intro = `${customerName} did not accept, refuse or ask for changes to ${agreement.number} (${siteName}) in time.`;
+  const valid = `Valid until ${formatTermDate(input.validUntil)}`;
+  const html = page(
+    [
+      `<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`,
+      `<p style="margin:0 0 12px">${escapeHtml(valid)}</p>`,
+      `<p style="margin:16px 0 0"><a href="${escapeHtml(href)}">Open ${escapeHtml(agreement.number)}</a></p>`,
+    ].join(""),
+  );
+  const text = [intro, "", valid, "", `Open ${agreement.number}: ${href}`].join("\n");
   return { subject, html, text };
 }

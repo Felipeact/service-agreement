@@ -1,0 +1,260 @@
+{
+  "name": "W8 expiry daily",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "20fc08e2-6026-4e96-8daf-f77c08d6ad30",
+      "name": "Every day at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "184704cc-2025-4c05-845c-7db3ba2956ae",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "a47877e8-7dac-47a9-b9f9-9488bb0cc00c",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w8:' + $now.setZone('America/Vancouver').toFormat('yyyy-MM-dd'), kind: 'expiry_daily', executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "e36f0d98-c1b4-4bcb-b11c-5aa949f3df96",
+      "name": "Expiry body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "__SA_HMAC_SECRET__",
+        "encoding": "hex"
+      },
+      "id": "dd59ec54-1c2f-4bf6-a4a2-0057e4102056",
+      "name": "Sign expiry",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b655b37d-f1e9-4360-96ff-306e6ece78b4",
+      "name": "Notify expiry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c797fb22-60fb-4062-b96c-f989d7ffa6a2",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "409ed757-0c4d-458b-a352-899fcc6cb526",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ddb5a684-be80-42e7-b183-7c48b485615f",
+      "name": "Retry expiry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "e8b25ad0-34d3-4071-8ecd-2f89e9c32d65",
+      "name": "Wait 10 minutes (expiry)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "77a5764f-0de4-43d0-be36-ba914c95ee70"
+    }
+  ],
+  "connections": {
+    "Every day at 08:00": {
+      "main": [
+        [
+          {
+            "node": "Expiry body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expiry body": {
+      "main": [
+        [
+          {
+            "node": "Sign expiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign expiry": {
+      "main": [
+        [
+          {
+            "node": "Notify expiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify expiry": {
+      "main": [
+        [
+          {
+            "node": "Retry expiry?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry expiry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry expiry?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (expiry)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (expiry)": {
+      "main": [
+        [
+          {
+            "node": "Expiry body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

@@ -92,6 +92,21 @@ function toMessage(raw: Raw): NotificationMessage {
         cpiPct: typeof raw.cpiPct === "number" ? raw.cpiPct : null,
       };
     }
+    case "staff_expired": {
+      // As a renewal email: without its agreement, key or date it cannot be sent or recorded.
+      const key = text(raw.idempotencyKey);
+      const validUntil = text(raw.validUntil);
+      if (!isRecord(raw.agreement) || !key || !validUntil) throw new Error("automation_claim returned a malformed staff_expired message");
+      return {
+        ...base,
+        kind: "staff_expired",
+        idempotencyKey: key,
+        agreement,
+        customer: { name: isRecord(raw.customer) ? (text(raw.customer.name) ?? "") : "" },
+        site: { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" },
+        validUntil,
+      };
+    }
     default:
       throw new Error(`automation_claim returned an unknown kind ${String(raw.kind)}`);
   }

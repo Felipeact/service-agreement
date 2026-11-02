@@ -3,6 +3,7 @@ import {
   customerRenewalEmail,
   isReservedAddress,
   staffDecisionEmail,
+  staffExpiredEmail,
   staffRenewalEmail,
   staleEmail,
   type EmailContent,
@@ -66,12 +67,20 @@ function content(message: NotificationMessage, appBaseUrl: string, tokens: Pick<
         customerName: message.customer.name,
         reason: message.reason,
       });
+    case "staff_expired":
+      return staffExpiredEmail({
+        appBaseUrl,
+        agreement: message.agreement,
+        customerName: message.customer.name,
+        siteName: message.site.name,
+        validUntil: message.validUntil,
+      });
   }
 }
 
-/** The provider key of one message: the notification's own idempotency key (door 4), per org for W5, per renewal for W7. */
+/** The provider key of one message: the notification's own idempotency key (door 4), per org for W5, per renewal for W7, per expiry for W8. */
 function providerKey(key: string, message: NotificationMessage): string {
-  if (message.kind === "customer_renewal" || message.kind === "staff_renewal") return message.idempotencyKey;
+  if (message.kind === "customer_renewal" || message.kind === "staff_renewal" || message.kind === "staff_expired") return message.idempotencyKey;
   return message.kind === "staff_stale" ? `${key}:${message.orgId}` : key;
 }
 

@@ -624,6 +624,15 @@ export type NotificationMessage =
       customer: { name: string };
       reason: RenewalReason;
       cpiPct: number | null;
+    })
+  /** W8's message carries its own key, `w8:<eventId>` (proposal-expiry door 6). */
+  | (MessageBase & {
+      kind: "staff_expired";
+      idempotencyKey: string;
+      agreement: { id: string; number: string };
+      customer: { name: string };
+      site: { name: string };
+      validUntil: string;
     });
 
 export type ClaimDecision =

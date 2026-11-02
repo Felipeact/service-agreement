@@ -184,3 +184,49 @@ describe("POST /api/automation/notify, renewal_daily", () => {
     expect((await post()).status).toBe(503);
   });
 });
+
+describe("POST /api/automation/notify for W8", () => {
+  const W8 = JSON.stringify({ kind: "expiry_daily", idempotencyKey: "w8:2026-12-03", executionId: "exec-8" });
+  const expired: NotificationMessage = {
+    notificationId: "n8",
+    kind: "staff_expired",
+    idempotencyKey: "w8:e1",
+    to: ["estimator@northwind.ca"],
+    tenant: { legalName: "Northwind Mechanical Ltd.", phone: null, accent: null },
+    agreement: { id: AGR, number: "AG-1004" },
+    customer: { name: "Acme Holdings" },
+    site: { name: "Plant 2" },
+    validUntil: "2026-12-02",
+  };
+  const post = (headers: Record<string, string> = signed(W8)) => call(headers, W8);
+
+  test("C1269: no X-SA-Signature is 401", async () => {
+    expect((await post({ "X-SA-Timestamp": signed(W8)["X-SA-Timestamp"] })).status).toBe(401);
+    expect(claim).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1269: a claim refused as malformed (22023) is 400", async () => {
+    claim.mockResolvedValue({ ok: false, code: "malformed" });
+    expect((await post()).status).toBe(400);
+  });
+
+  test("C1269: a claim in flight is 409", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "in_flight" });
+    expect((await post()).status).toBe(409);
+  });
+
+  test("C1269: a provider outage is 503", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [expired] });
+    send.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect((await post()).status).toBe(503);
+  });
+
+  test("C1269: the one staff_expired message sent is 200 sent", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [expired] });
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "sent" });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
