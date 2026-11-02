@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 20,
+  "next_id": 23,
   "lessons": [
     {
       "id": "L-001",
@@ -346,6 +346,60 @@
       ],
       "created": "2026-10-30T21:30:57Z",
       "last_seen": "2026-10-30T21:30:57Z"
+    },
+    {
+      "id": "L-020",
+      "key": "gate_fail::run the plain npm test command a check names before claiming it a suite that passes only with a longer timeout is a failing gate until the config says so",
+      "text": "Run the plain npm test command a check names before claiming it; a suite that passes only with a longer timeout is a failing gate until the config says so.",
+      "signal": "gate_fail",
+      "scope": "web/vitest",
+      "status": "candidate",
+      "features": [
+        "renewal"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1216 (web/vitest)"
+      ],
+      "created": "2026-11-02T22:18:03Z",
+      "last_seen": "2026-11-02T22:18:03Z"
+    },
+    {
+      "id": "L-021",
+      "key": "spec_precision_gap::when a check names a comparison such as runindex 6 assert the operator as well as both operands",
+      "text": "When a check names a comparison such as runIndex < 6, assert the operator as well as both operands.",
+      "signal": "spec_precision_gap",
+      "scope": "automation/n8n",
+      "status": "candidate",
+      "features": [
+        "renewal"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/n8n-workflows.test.ts:382 (automation/n8n)"
+      ],
+      "created": "2026-11-02T22:18:03Z",
+      "last_seen": "2026-11-02T22:18:03Z"
+    },
+    {
+      "id": "L-022",
+      "key": "spec_precision_gap::when a check says the latest version select the highest version no in the assertion rather than any version",
+      "text": "When a check says the latest version, select the highest version_no in the assertion rather than any version.",
+      "signal": "spec_precision_gap",
+      "scope": "supabase/tests",
+      "status": "candidate",
+      "features": [
+        "renewal"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "supabase/tests/demo_seed.sql:247 (supabase/tests)"
+      ],
+      "created": "2026-11-02T22:18:03Z",
+      "last_seen": "2026-11-02T22:18:03Z"
     }
   ]
 }

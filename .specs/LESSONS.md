@@ -128,6 +128,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md precision gap: C1119 web/domain/agreement/seasonal.test.ts:148-151 (domain)
 - last seen: 2026-10-30T21:30:57Z
 
+### L-020 - Run the plain npm test command a check names before claiming it; a suite that passes only with a longer timeout is a failing gate until the config says so.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `web/vitest` · harmful: 0
+- features: renewal
+- evidence: C1216 (web/vitest)
+- last seen: 2026-11-02T22:18:03Z
+
+### L-021 - When a check names a comparison such as runIndex < 6, assert the operator as well as both operands.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `automation/n8n` · harmful: 0
+- features: renewal
+- evidence: web/n8n-workflows.test.ts:382 (automation/n8n)
+- last seen: 2026-11-02T22:18:03Z
+
+### L-022 - When a check says the latest version, select the highest version_no in the assertion rather than any version.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `supabase/tests` · harmful: 0
+- features: renewal
+- evidence: supabase/tests/demo_seed.sql:247 (supabase/tests)
+- last seen: 2026-11-02T22:18:03Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
