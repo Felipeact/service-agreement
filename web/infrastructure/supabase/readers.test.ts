@@ -376,3 +376,76 @@ describe("pipeline reader: the board rule for renewals (renewal door 7)", () => 
     expect(cards.find((card) => card.id === "solo")?.isRenewal).toBe(false);
   });
 });
+
+describe("pipeline reader: Expiring soon (renewal S6)", () => {
+  const TODAY = "2027-12-01";
+  const accepted = (id: string, termEnd: string | null, extra: { site?: string; notice?: number } = {}) => ({
+    id,
+    number: `AG-${id}`,
+    site_id: extra.site ?? `site-${id}`,
+    sites: { name: `Site ${id}`, customers: { name: `Customer ${id}` } },
+    agreement_versions: [
+      { version_no: 1, term_end: "2020-01-01", snapshot: {}, service_lines: [] },
+      {
+        version_no: 2,
+        term_end: termEnd,
+        snapshot: extra.notice === undefined ? {} : { terms: { renewalNoticeDays: extra.notice } },
+        service_lines: [{ visits_per_year: 4, cost_per_visit_cents: 25000 }],
+      },
+    ],
+  });
+
+  async function expiring(rows: unknown[], renewals: unknown[] = [], open: unknown[] = []) {
+    const { typed, calls } = stubClient({
+      agreements: { sequence: [ok(rows), ok(renewals), ok(open)] },
+      org_settings: ok({ renewal_notice_days: 30 }),
+    });
+    return { rows: await supabasePipelineReader(typed, fixedClock(NOW)).expiring(TODAY), calls };
+  }
+
+  test("C1209: accepted agreements ending from today to today + 90, earliest first, with every field", async () => {
+    const { rows, calls } = await expiring([
+      accepted("c", "2028-02-29"),
+      accepted("x1", "2027-11-30"),
+      accepted("a", "2027-12-01"),
+      accepted("x2", "2028-03-01"),
+      accepted("b", "2027-12-31", { notice: 16 }),
+    ]);
+    expect(rows.map((row) => row.id)).toEqual(["a", "b", "c"]);
+    expect(rows[1]).toEqual({
+      id: "b",
+      number: "AG-b",
+      site: "Site b",
+      customer: "Customer b",
+      termEnd: "2027-12-31",
+      noticeDate: "2027-12-15",
+      annualCents: 100000,
+      renewal: null,
+      openAgreement: null,
+    });
+    expect(rows[0].noticeDate).toBe("2027-11-01");
+    expect(calls).toContainEqual({ table: "agreements", method: "eq", args: ["status", "accepted"] });
+  });
+
+  test("C1209: a sent agreement ending in the window is left out", async () => {
+    const { calls } = await expiring([accepted("a", "2027-12-31")]);
+    const statusFilters = calls.filter((call) => call.table === "agreements" && call.method === "eq" && call.args[0] === "status");
+    expect(statusFilters).toEqual([{ table: "agreements", method: "eq", args: ["status", "accepted"] }]);
+  });
+
+  test("C1209: a row carries its renewal's number and status", async () => {
+    const { rows } = await expiring([accepted("a", "2027-12-31")], [{ id: "r", number: "AG-1013", status: "draft", renews_agreement_id: "a" }]);
+    expect(rows[0].renewal).toEqual({ id: "r", number: "AG-1013", status: "draft" });
+  });
+
+  test("C1211: a row with no renewal carries the open agreement on its site", async () => {
+    const { rows, calls } = await expiring(
+      [accepted("a", "2027-12-31", { site: "s1", notice: 41 })],
+      [],
+      [{ number: "AG-1009", site_id: "s1", status: "sent" }],
+    );
+    expect(rows[0].openAgreement).toBe("AG-1009");
+    expect(calls).toContainEqual({ table: "agreements", method: "in", args: ["status", ["draft", "sent", "changes_requested"]] });
+    expect(calls).toContainEqual({ table: "agreements", method: "in", args: ["site_id", ["s1"]] });
+  });
+});

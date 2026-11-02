@@ -14,6 +14,7 @@ import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domai
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
 import type { NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
+import type { ExpiringAgreement } from "@/domain/pipeline";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -89,6 +90,8 @@ export type PipelineCard = {
 
 export interface PipelineReader {
   board(): Promise<PipelineCard[]>;
+  /** Accepted agreements whose term ends from `today` (`YYYY-MM-DD`) to 90 days on, earliest end first (renewal S6). */
+  expiring(today: string): Promise<ExpiringAgreement[]>;
 }
 
 export type CustomerSummary = {

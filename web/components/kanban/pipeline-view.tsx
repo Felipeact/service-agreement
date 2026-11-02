@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { PipelineCard } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
@@ -37,6 +38,11 @@ export function PipelineView({ cards, initialQuery = "" }: { cards: PipelineCard
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="text-[13px]">
+        <Link href="/pipeline?view=expiring" className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
+          Expiring soon
+        </Link>
+      </div>
       <PageHeader
         title="Pipeline"
         controls={

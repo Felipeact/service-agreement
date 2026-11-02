@@ -110,6 +110,7 @@ export async function getContainer() {
     transitionAgreement: makeTransitionAgreement(agreementRepository),
     transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
     pipelineBoard: pipeline.board,
+    pipelineExpiring: pipeline.expiring,
     listCustomers: customers.list,
     customerDetail: customers.detail,
     siteRegister: sites.get,

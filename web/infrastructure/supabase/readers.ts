@@ -2,7 +2,7 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { LIVE_STATUSES, type AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
-import { pipelineStage } from "@/domain/pipeline";
+import { addDays, EXPIRING_WINDOW_DAYS, pipelineStage, type ExpiringAgreement } from "@/domain/pipeline";
 import type {
   AssetTypeCatalog,
   AssetView,
@@ -112,6 +112,75 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
         });
       }
       return cards;
+    },
+
+    async expiring(today) {
+      const last = addDays(today, EXPIRING_WINDOW_DAYS);
+      const { data, error } = await client
+        .from("agreements")
+        .select("id, number, site_id, sites(name, customers(name)), agreement_versions(version_no, term_end, snapshot, service_lines(visits_per_year, cost_per_visit_cents))")
+        .eq("status", "accepted")
+        .limit(ROW_CAP);
+      if (error) throw unexpected(error);
+      type Row = {
+        id: string;
+        number: string | null;
+        site_id: string;
+        sites: { name: string; customers: { name: string } };
+        agreement_versions: { version_no: number; term_end: string | null; snapshot: unknown; service_lines: VersionRow["service_lines"] }[];
+      };
+      const due = (data as unknown as Row[]).flatMap((row) => {
+        const [version] = [...row.agreement_versions].sort((a, b) => b.version_no - a.version_no);
+        return version?.term_end && version.term_end >= today && version.term_end <= last ? [{ row, version, termEnd: version.term_end }] : [];
+      });
+      if (due.length === 0) return [];
+
+      // The notice the version froze, else the org's current one (renewal door 3).
+      const { data: settings, error: settingsError } = await client.from("org_settings").select("renewal_notice_days").maybeSingle();
+      if (settingsError) throw unexpected(settingsError);
+      const orgNotice = (settings as { renewal_notice_days: number } | null)?.renewal_notice_days ?? 30;
+
+      const { data: renewals, error: renewalsError } = await client
+        .from("agreements")
+        .select("id, number, status, renews_agreement_id")
+        .in("renews_agreement_id", due.map(({ row }) => row.id));
+      if (renewalsError) throw unexpected(renewalsError);
+      const { data: open, error: openError } = await client
+        .from("agreements")
+        .select("number, site_id, status")
+        .in("site_id", due.map(({ row }) => row.site_id))
+        .in("status", [...LIVE_STATUSES]);
+      if (openError) throw unexpected(openError);
+
+      const renewalOf = new Map(
+        ((renewals ?? []) as { id: string; number: string | null; status: string; renews_agreement_id: string | null }[]).map((r) => [
+          r.renews_agreement_id,
+          { id: r.id, number: r.number ?? "", status: r.status },
+        ]),
+      );
+      const openOn = new Map(
+        ((open ?? []) as { number: string | null; site_id: string; status: string }[])
+          .filter((r) => (LIVE_STATUSES as readonly string[]).includes(r.status))
+          .map((r) => [r.site_id, r.number ?? ""]),
+      );
+
+      return due
+        .map(({ row, version, termEnd }): ExpiringAgreement => {
+          const terms = (version.snapshot as { terms?: { renewalNoticeDays?: unknown } } | null)?.terms;
+          const notice = typeof terms?.renewalNoticeDays === "number" ? terms.renewalNoticeDays : orgNotice;
+          return {
+            id: row.id,
+            number: row.number ?? "",
+            site: row.sites.name,
+            customer: row.sites.customers.name,
+            termEnd,
+            noticeDate: addDays(termEnd, -notice),
+            annualCents: sumCents(version.service_lines.map((line) => lineAnnualCents(line.visits_per_year, cents(line.cost_per_visit_cents)))),
+            renewal: renewalOf.get(row.id) ?? null,
+            openAgreement: openOn.get(row.site_id) ?? null,
+          };
+        })
+        .sort((a, b) => a.termEnd.localeCompare(b.termEnd) || a.number.localeCompare(b.number));
     },
   };
 }
