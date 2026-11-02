@@ -16,6 +16,7 @@ const card = (patch: Partial<PipelineCard> = {}): PipelineCard => ({
   versionNo: 3,
   ageDays: 9,
   isRenewal: false,
+  status: "draft",
   ...patch,
 });
 
@@ -178,5 +179,17 @@ describe("KanbanCard: the renewal marker", () => {
 
   test("C1207: any other card shows no such text", () => {
     expect(html(false)).not.toContain("Renewal");
+  });
+});
+
+describe("KanbanCard: the expiry marker", () => {
+  const html = (status: PipelineCard["status"]) => renderToStaticMarkup(createElement(KanbanCard, { card: card({ stage: "refused", status }) }));
+
+  test("C1261: an expired agreement's card shows a neutral Expired pill", () => {
+    expect(html("expired")).toMatch(/>Expired</);
+  });
+
+  test("C1261: a refused agreement's card shows none", () => {
+    expect(html("refused")).not.toContain("Expired");
   });
 });

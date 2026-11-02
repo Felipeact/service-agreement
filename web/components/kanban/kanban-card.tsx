@@ -16,9 +16,10 @@ export function KanbanCard({ card }: { card: PipelineCard }) {
       <p className="text-[12px] text-ink-2">{card.customer}</p>
       <p className="mt-0.5 text-[12px] text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</p>
       <p className="text-[12px] text-ink-2">{ageLabel(card.ageDays)}</p>
-      {(card.attention || card.isRenewal) && (
+      {(card.attention || card.isRenewal || card.status === "expired") && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {card.isRenewal && <StatusPill tone="neutral" label="Renewal" />}
+          {card.status === "expired" && <StatusPill tone="neutral" label="Expired" />}
           {card.attention && <StatusPill tone="attention" label={card.attention} />}
         </div>
       )}

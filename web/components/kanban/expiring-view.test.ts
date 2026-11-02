@@ -38,7 +38,7 @@ describe("ExpiringView", () => {
 
   test("C1213: Expiring soon links back to the board, and the board links to Expiring soon", () => {
     expect(html([])).toMatch(/<a[^>]*href="\/pipeline"[^>]*>Back to the board<\/a>/);
-    const card: PipelineCard = { id: "c", stage: "sent", site: "S", customer: "C", number: "AG-1", versionNo: 1, ageDays: 0, isRenewal: false };
+    const card: PipelineCard = { id: "c", stage: "sent", site: "S", customer: "C", number: "AG-1", versionNo: 1, ageDays: 0, isRenewal: false, status: "sent" };
     const board = renderToStaticMarkup(createElement(PipelineView, { cards: [card] }));
     expect(board).toMatch(/<a[^>]*href="\/pipeline\?view=expiring"[^>]*>Expiring soon<\/a>/);
   });

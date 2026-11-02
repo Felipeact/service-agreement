@@ -449,3 +449,11 @@ describe("pipeline reader: Expiring soon (renewal S6)", () => {
     expect(calls).toContainEqual({ table: "agreements", method: "in", args: ["site_id", ["s1"]] });
   });
 });
+
+describe("pipeline reader: the agreement's status on its card (proposal-expiry S7)", () => {
+  test("C1262: an expired agreement's card carries status expired", async () => {
+    const cards = await board([{ ...agreement("gone", "expired"), renews_agreement_id: null }]);
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toMatchObject({ id: "gone", stage: "refused", status: "expired" });
+  });
+});

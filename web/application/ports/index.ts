@@ -74,6 +74,8 @@ export interface MemberDirectory {
 export type PipelineCard = {
   id: string;
   stage: PipelineStage;
+  /** The agreement's own status, which tells an expiry from a refusal in the Refused column (proposal-expiry AC 34). */
+  status: AgreementStatus;
   /** The agreement's site, the card's heading. */
   site: string;
   customer: string;

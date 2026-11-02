@@ -101,6 +101,7 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
         cards.push({
           id: row.id,
           stage,
+          status: row.status as AgreementStatus,
           site: row.sites.name,
           customer: row.sites.customers.name,
           number: row.number,
