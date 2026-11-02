@@ -71,5 +71,14 @@ do $$ begin
     'the second run changed a demo version');
 end $$;
 
+-- C1215 (renewal): the second run moves no term start and adds no agreement.
+do $$ begin
+  perform tests.ok('C1215 versions unchanged', (select h from tests.demo_versions) = (
+    select md5(coalesce(string_agg(v::text, ',' order by v.id), '')) from public.agreement_versions v where v.org_id = tests.demo()),
+    'a demo version changed on the second run');
+  perform tests.ok('C1215 agreements unchanged', (select n from tests.demo_counts where t = 'agreements')
+    = (select count(*) from public.agreements where org_id = tests.demo()), 'the demo agreement count changed');
+end $$;
+
 rollback;
 select 'demo_seed: pass' as result;

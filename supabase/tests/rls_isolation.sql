@@ -153,5 +153,20 @@ begin
 end $$;
 
 reset role;
+-- Renewal C1208: org B's member reads no org A agreement, a renewal of A included.
+reset role;
+select set_config('request.jwt.claims', '', true);
+select tests.rn_cpi(3.20, '2027-10-15');
+select tests.rn_agreement('i1208');
+select private.run_renewals('2027-12-01');
+select tests.act_as('uB');
+do $$ begin
+  perform tests.ok('C1208 no A rows', (select count(*) from public.agreements where org_id = tests.id('orgA')) = 0,
+    'org B reads org A agreements');
+  perform tests.ok('C1208 no renewal of A', (select count(*) from public.agreements where renews_agreement_id = tests.id('i1208')) = 0,
+    'org B reads the renewal of A');
+end $$;
+reset role;
+
 rollback;
 select 'rls_isolation: pass' as result;

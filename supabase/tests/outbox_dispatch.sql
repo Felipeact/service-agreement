@@ -832,5 +832,176 @@ begin
     and (tests.od_notif(bf ->> 'idempotencyKey')).error = 'provider down', 'not failed with the error');
 end $$;
 
+-- Renewal (.specs/features/renewal/checks.md): C1190, C1191, C1193, C1194, C1196-C1198, C1203. A due agreement's term
+-- ends current_date + 20, because door 5 bounds the W7 date to today.
+create function tests.od_w7(p_date date) returns jsonb
+language sql as $$
+  select jsonb_build_object('kind', 'renewal_daily', 'idempotencyKey', 'w7:' || to_char(p_date, 'YYYY-MM-DD'),
+                            'executionId', 'exec-w7')
+$$;
+create function tests.od_due(p_name text, p_org text default 'A', p_email text default 'pat@customer.ca') returns uuid
+language sql as $$
+  select tests.rn_agreement(p_name, p_org, ((current_date + 21) - interval '12 months')::date, p_email => p_email)
+$$;
+create function tests.od_renewal_msgs(p_result jsonb, p_kind text) returns jsonb
+language sql immutable as $$
+  select coalesce(jsonb_agg(m), '[]') from jsonb_array_elements(p_result -> 'messages') m where m ->> 'kind' = p_kind
+$$;
+create table tests.od_r (label text, result jsonb);
+
+-- C1198: a bad or stale signature renews nothing.
+select tests.rn_cpi(3.20, current_date - 10);
+select tests.od_due('w1198');
+do $$
+declare b text := tests.od_w7(current_date)::text;
+begin
+  perform tests.ok('C1198 wrong signature', tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts(), 'wrong-secret'))) = '42501',
+    'a wrong signature was not 42501');
+  perform tests.ok('C1198 stale', tests.od_state(tests.od_claim_sql(b, tests.od_ts(-301), tests.od_sig(b, tests.od_ts(-301)))) = '42501',
+    'a 301 s old signature was not 42501');
+  perform tests.ok('C1198 nothing renewed', (tests.rn_of(tests.id('w1198'))).id is null, 'a refused call renewed');
+end $$;
+
+-- C1197: a malformed key, or a date more than one day away, renews nothing; one day either side is accepted.
+do $$
+declare
+  k text;
+  b text;
+begin
+  foreach k in array array['w7:2027-1-01', 'w7:2027-02-30', 'w7:today', 'w5:' || to_char(current_date, 'YYYY-MM-DD'),
+                           'w7:' || to_char(current_date + 2, 'YYYY-MM-DD'), 'w7:' || to_char(current_date - 2, 'YYYY-MM-DD')] loop
+    b := jsonb_build_object('kind', 'renewal_daily', 'idempotencyKey', k)::text;
+    perform tests.ok('C1197 ' || k, tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts()))) = '22023',
+      k || ' was not 22023');
+  end loop;
+  perform tests.ok('C1197 nothing renewed', (tests.rn_of(tests.id('w1198'))).id is null, 'a refused key renewed');
+  foreach k in array array['w7:' || to_char(current_date + 1, 'YYYY-MM-DD'), 'w7:' || to_char(current_date - 1, 'YYYY-MM-DD')] loop
+    b := jsonb_build_object('kind', 'renewal_daily', 'idempotencyKey', k)::text;
+    perform tests.ok('C1197 accepted ' || k, tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts()))) = 'ok',
+      k || ' was refused');
+  end loop;
+end $$;
+-- Settle what C1197's accepted calls claimed, so the next checks start from nothing in flight.
+update public.notifications set status = 'sent', sent_at = now() where kind in ('customer_renewal', 'staff_renewal');
+
+-- C1190: the W7 body renews A and returns its customer_renewal message.
+select tests.od_due('w1190');
+insert into tests.od_r select 'C1190', tests.od_claim(tests.od_w7(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1190');
+  r public.agreements := tests.rn_of(tests.id('w1190'));
+  v public.agreement_versions := (select v from public.agreement_versions v where v.agreement_id = r.id);
+  m jsonb := tests.od_msg(res);
+begin
+  perform tests.ok('C1190 renewed', r.status = 'accepted', 'A was not auto-renewed');
+  perform tests.ok('C1190 decision', res ->> 'decision' = 'send' and jsonb_array_length(res -> 'messages') = 1,
+    'result ' || res::text);
+  perform tests.ok('C1190 kind', m ->> 'kind' = 'customer_renewal' and m -> 'to' = '["pat@customer.ca"]', 'message ' || m::text);
+  perform tests.ok('C1190 agreement', m -> 'agreement' = jsonb_build_object('id', r.id, 'number', r.number)
+    and m -> 'renews' ->> 'number' = 'AG-w1190' and m -> 'site' ->> 'name' = 'Harbour Plant w1190', 'message ' || m::text);
+  perform tests.ok('C1190 money', (m ->> 'oldAnnualCents')::bigint = 119999 and (m ->> 'annualCents')::bigint = 123839
+    and m -> 'appliedPct' = '3.2'::jsonb, 'message ' || m::text);
+  perform tests.ok('C1190 term', m -> 'term' = jsonb_build_object('start', v.term_start, 'end', v.term_end, 'months', 12),
+    'message ' || m::text);
+  perform tests.ok('C1190 row', (tests.od_notif('w7:' || r.id || ':customer')).status = 'claimed'
+    and (tests.od_notif('w7:' || r.id || ':customer')).kind = 'customer_renewal'
+    and (tests.od_notif('w7:' || r.id || ':customer')).id::text = m ->> 'notificationId', 'no claimed customer_renewal row');
+end $$;
+
+-- C1193: a failed send is claimed again by the next day's run, and nothing renews A twice.
+do $$
+declare
+  r public.agreements := tests.rn_of(tests.id('w1190'));
+  n public.notifications := tests.od_notif('w7:' || r.id || ':customer');
+  res jsonb;
+begin
+  perform tests.od_complete(tests.od_w7(current_date), jsonb_build_array(jsonb_build_object('id', n.id, 'outcome', 'failed',
+    'error', 'provider down')));
+  perform tests.ok('C1193 failed', (tests.od_notif(n.idempotency_key)).status = 'failed', 'not failed');
+  res := tests.od_claim(tests.od_w7(current_date + 1));
+  perform tests.ok('C1193 reclaimed', res ->> 'decision' = 'send' and jsonb_array_length(res -> 'messages') = 1
+    and tests.od_msg(res) ->> 'notificationId' = n.id::text and (tests.od_notif(n.idempotency_key)).status = 'claimed',
+    'result ' || res::text);
+  perform tests.ok('C1193 one renewal', (select count(*) from public.agreements where renews_agreement_id = tests.id('w1190')) = 1,
+    'A renewed twice');
+end $$;
+
+-- C1194: once sent, no later run sends it again.
+do $$
+declare
+  r public.agreements := tests.rn_of(tests.id('w1190'));
+  n public.notifications := tests.od_notif('w7:' || r.id || ':customer');
+  res jsonb;
+  res2 jsonb;
+begin
+  perform tests.od_complete(tests.od_w7(current_date), jsonb_build_array(jsonb_build_object('id', n.id, 'outcome', 'sent',
+    'providerMessageId', 're_w7')));
+  res := tests.od_claim(tests.od_w7(current_date));
+  res2 := tests.od_claim(tests.od_w7(current_date + 1));
+  perform tests.ok('C1194 today', res ->> 'decision' = 'duplicate' and res -> 'messages' = '[]', 'result ' || res::text);
+  perform tests.ok('C1194 tomorrow', res2 ->> 'decision' = 'duplicate' and res2 -> 'messages' = '[]', 'result ' || res2::text);
+  perform tests.ok('C1194 still sent', (tests.od_notif(n.idempotency_key)).status = 'sent'
+    and (tests.od_notif(n.idempotency_key)).provider_message_id = 're_w7', 'the sent row changed');
+end $$;
+
+-- C1191: with no CPI, the renewal is a draft and staff get staff_renewal.
+select tests.rn_cpi(null, null);
+select tests.od_due('w1191');
+insert into tests.od_r select 'C1191', tests.od_claim(tests.od_w7(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1191');
+  r public.agreements := tests.rn_of(tests.id('w1191'));
+  m jsonb := tests.od_msg(res);
+begin
+  perform tests.ok('C1191 draft', r.status = 'draft', 'not a draft');
+  perform tests.ok('C1191 one message', jsonb_array_length(res -> 'messages') = 1 and m ->> 'kind' = 'staff_renewal',
+    'result ' || res::text);
+  perform tests.ok('C1191 to', m -> 'to' = '["ua@example.test", "ud@example.test"]'::jsonb
+    or m -> 'to' = '["uA@example.test", "uD@example.test"]'::jsonb, 'to ' || (m -> 'to')::text);
+  perform tests.ok('C1191 data', m -> 'agreement' = jsonb_build_object('id', r.id, 'number', r.number)
+    and m -> 'renews' = jsonb_build_object('number', 'AG-w1191',
+          'termEnd', (select term_end from public.agreement_versions where id = tests.id('w1191:v1')))
+    and m -> 'site' ->> 'name' = 'Harbour Plant w1191' and m -> 'customer' ->> 'name' = 'Customer A'
+    and m ->> 'reason' = 'cpi_unset' and m -> 'cpiPct' = 'null'::jsonb, 'message ' || m::text);
+  perform tests.ok('C1191 row', (tests.od_notif('w7:' || r.id || ':staff')).kind = 'staff_renewal', 'no staff row');
+end $$;
+
+-- C1196: no site contact email, and no owner or admin email, skip with no_recipient.
+select tests.rn_cpi(3.20, current_date - 10);
+select tests.od_due('w1196', p_email => null);
+select tests.od_due('w1196b', 'B');
+delete from public.memberships where org_id = tests.id('orgB');
+insert into tests.od_r select 'C1196', tests.od_claim(tests.od_w7(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1196');
+  ra uuid := (tests.rn_of(tests.id('w1196'))).id;
+  rb uuid := (tests.rn_of(tests.id('w1196b'))).id;
+begin
+  perform tests.ok('C1196 customer', (tests.od_notif('w7:' || ra || ':customer')).status = 'skipped'
+    and (tests.od_notif('w7:' || ra || ':customer')).skip_reason = 'no_recipient', 'customer row not skipped');
+  perform tests.ok('C1196 staff', (tests.od_notif('w7:' || rb || ':staff')).status = 'skipped'
+    and (tests.od_notif('w7:' || rb || ':staff')).skip_reason = 'no_recipient', 'staff row not skipped');
+  perform tests.ok('C1196 no message', not exists (select 1 from jsonb_array_elements(res -> 'messages') m
+    where m -> 'agreement' ->> 'id' in (ra::text, rb::text)), 'result ' || res::text);
+end $$;
+
+-- C1203: the claim writer stays closed, and the kind check takes the two renewal kinds only.
+do $$ begin
+  perform tests.ok('C1203 anon', not has_function_privilege('anon', 'private.claim_notification(text, text, uuid, uuid, uuid)', 'execute'),
+    'anon can execute');
+  perform tests.ok('C1203 authenticated',
+    not has_function_privilege('authenticated', 'private.claim_notification(text, text, uuid, uuid, uuid)', 'execute'),
+    'authenticated can execute');
+  perform tests.expect_rows('C1203 customer_renewal', format(
+    'insert into public.notifications (org_id, idempotency_key, kind) values (%L, ''c1203:c'', ''customer_renewal'')', tests.id('orgA')), 1);
+  perform tests.expect_rows('C1203 staff_renewal', format(
+    'insert into public.notifications (org_id, idempotency_key, kind) values (%L, ''c1203:s'', ''staff_renewal'')', tests.id('orgA')), 1);
+  perform tests.expect_error('C1203 other', format(
+    'insert into public.notifications (org_id, idempotency_key, kind) values (%L, ''c1203:o'', ''other'')', tests.id('orgA')), '23514');
+end $$;
+
 rollback;
 select 'outbox_dispatch: pass' as result;

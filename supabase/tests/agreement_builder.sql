@@ -483,5 +483,277 @@ do $$ begin
     where id = tests.id('a1144:v1')), 'version 1 changed');
 end $$;
 
+-- Renewal (.specs/features/renewal/checks.md): C1172-C1189. Each check makes its own agreements with
+-- tests.rn_agreement; every due agreement is renewed by the end of its check, so a later run returns only its own.
+create table tests.rn_ids (label text, id uuid);
+create function tests.rn_run(p_label text, p_date date) returns setof uuid
+language sql as $$
+  insert into tests.rn_ids select p_label, id from private.run_renewals(p_date) as id returning id
+$$;
+create function tests.rn_ret(p_label text) returns uuid[]
+language sql as $$ select coalesce(array_agg(id order by id), '{}') from tests.rn_ids where label = p_label $$;
+create function tests.rn_event(p_agreement uuid) returns public.events
+language sql as $$ select * from public.events where entity_id = p_agreement order by created_at, id limit 1 $$;
+create function tests.rn_costs(p_agreement uuid) returns bigint[]
+language sql as $$
+  select array_agg(l.cost_per_visit_cents order by l.position) from public.service_lines l
+  join public.agreement_versions v on v.id = l.agreement_version_id where v.agreement_id = p_agreement
+$$;
+
+-- C1172-C1176: CPI 3.20 as of 2027-10-15, frozen cap 5 and threshold 5: an accepted renewal R.
+select tests.rn_cpi(3.20, '2027-10-15');
+select tests.rn_agreement('r1172');
+create table tests.rn_expected as
+select 'AG-' || (max(substring(number from '^AG-([0-9]+)$')::integer) + 1) as number
+from public.agreements where org_id = tests.id('orgA');
+select tests.rn_run('C1172', '2027-12-01');
+do $$
+declare
+  r public.agreements := tests.rn_of(tests.id('r1172'));
+  a public.agreements := (select x from public.agreements x where x.id = tests.id('r1172'));
+  v public.agreement_versions;
+  e public.events;
+begin
+  perform tests.ok('C1172 returns R', tests.rn_ret('C1172') = array[r.id], 'returned ' || tests.rn_ret('C1172')::text);
+  perform tests.ok('C1172 R', r.status = 'accepted' and r.org_id = a.org_id and r.site_id = a.site_id
+    and r.number = (select number from tests.rn_expected), 'R is ' || to_jsonb(r)::text);
+
+  select * into v from public.agreement_versions where agreement_id = r.id;
+  perform tests.ok('C1173 one version', (select count(*) from public.agreement_versions where agreement_id = r.id) = 1
+    and v.version_no = 1, 'R has another version set');
+  perform tests.ok('C1173 term', v.term_start = '2028-01-01' and v.term_months = 12 and v.term_end = '2028-12-31',
+    'term ' || v.term_start || ' ' || v.term_months || ' ' || v.term_end);
+
+  perform tests.ok('C1174 3.2 on 5', tests.rn_costs(r.id) = array[25800, 20639]::bigint[], 'costs ' || tests.rn_costs(r.id)::text);
+  perform tests.ok('C1174 kept', (
+    select array_agg(row(l.description, l.visit_months, l.visits_per_year, l.position)::text order by l.position)
+    from public.service_lines l where l.agreement_version_id = v.id) = (
+    select array_agg(row(l.description, l.visit_months, l.visits_per_year, l.position)::text order by l.position)
+    from public.service_lines l where l.agreement_version_id = tests.id('r1172:v1')), 'a line field changed');
+  perform tests.ok('C1174 coverage', (
+    select array_agg(l.position || ':' || c.asset_type_id order by l.position, c.asset_type_id)
+    from public.service_lines l join public.service_line_asset_types c on c.service_line_id = l.id
+    where l.agreement_version_id = v.id) = (
+    select array_agg(l.position || ':' || c.asset_type_id order by l.position, c.asset_type_id)
+    from public.service_lines l join public.service_line_asset_types c on c.service_line_id = l.id
+    where l.agreement_version_id = tests.id('r1172:v1')), 'coverage changed');
+
+  perform tests.ok('C1175 snapshot', v.snapshot = (select snapshot from public.agreement_versions where id = tests.id('r1172:v1')),
+    'snapshot differs');
+
+  e := tests.rn_event(r.id);
+  perform tests.ok('C1176 one event', (select count(*) from public.events where entity_id = r.id) = 1
+    and e.type = 'agreement.renewed', 'events on R: ' || (select string_agg(type, ',') from public.events where entity_id = r.id));
+  perform tests.ok('C1176 payload', e.payload = jsonb_build_object('renewsAgreementId', tests.id('r1172'), 'cpiPct', 3.2,
+    'appliedPct', 3.2, 'cpiAsOf', '2027-10-15'), 'payload ' || e.payload::text);
+  perform tests.ok('C1176 outbox', (select count(*) from public.outbox where event_id = e.id) = 1, 'not one outbox row');
+end $$;
+
+-- C1174: CPI 4.00 with cap 2.5, and CPI -1.00.
+select tests.rn_cpi(4.00, '2027-10-15');
+select tests.rn_agreement('r1174b', p_terms => '{"cpiCapPct": 2.5, "cpiRenegotiationThresholdPct": 5, "renewalNoticeDays": 30}');
+select tests.rn_run('C1174b', '2027-12-01');
+select tests.rn_cpi(-1.00, '2027-10-15');
+select tests.rn_agreement('r1174c');
+select tests.rn_run('C1174c', '2027-12-01');
+do $$ begin
+  perform tests.ok('C1174 4.0 on 2.5', tests.rn_costs((tests.rn_of(tests.id('r1174b'))).id) = array[25625, 20499]::bigint[],
+    'costs ' || tests.rn_costs((tests.rn_of(tests.id('r1174b'))).id)::text);
+  perform tests.ok('C1174 -1.0', tests.rn_costs((tests.rn_of(tests.id('r1174c'))).id) = array[25000, 19999]::bigint[],
+    'costs ' || tests.rn_costs((tests.rn_of(tests.id('r1174c'))).id)::text);
+end $$;
+
+-- C1177: due on term_end - 30 days, not the day before.
+select tests.rn_cpi(3.20, '2027-10-15');
+select tests.rn_agreement('r1177');
+select tests.rn_run('C1177a', '2027-11-30');
+do $$ begin
+  perform tests.ok('C1177 day before', tests.rn_ret('C1177a') = '{}' and (tests.rn_of(tests.id('r1177'))).id is null,
+    'renewed on 2027-11-30');
+end $$;
+select tests.rn_run('C1177b', '2027-12-01');
+do $$ begin
+  perform tests.ok('C1177 notice day', tests.rn_ret('C1177b') = array[(tests.rn_of(tests.id('r1177'))).id], 'not renewed on 2027-12-01');
+end $$;
+
+-- C1178: never a second renewal; the link refuses a duplicate, itself and another org.
+select tests.rn_run('C1178a', '2027-12-01');
+select tests.rn_run('C1178b', '2027-12-02');
+do $$ begin
+  perform tests.ok('C1178 reruns', tests.rn_ret('C1178a') = '{}' and tests.rn_ret('C1178b') = '{}', 'a rerun created a renewal');
+  perform tests.ok('C1178 one', (select count(*) from public.agreements where renews_agreement_id = tests.id('r1172')) = 1,
+    'more than one renewal of A');
+  perform tests.expect_error('C1178 duplicate', format(
+    'insert into public.agreements (org_id, site_id, status, renews_agreement_id) values (%L, %L, ''withdrawn'', %L)',
+    tests.id('orgA'), tests.id('r1172:site'), tests.id('r1172')), '23505');
+  perform tests.expect_error('C1178 self', format(
+    'insert into public.agreements (id, org_id, site_id, status, renews_agreement_id) values (%L, %L, %L, ''withdrawn'', %L)',
+    tests.id('r1178self'), tests.id('orgA'), tests.id('r1172:site'), tests.id('r1178self')), '23514');
+  perform tests.expect_error('C1178 other org', format(
+    'insert into public.agreements (org_id, site_id, status, renews_agreement_id) values (%L, %L, ''withdrawn'', %L)',
+    tests.id('orgB'), tests.id('siteB'), tests.id('agrA')), '23503');
+end $$;
+
+-- C1179: the run holds the renewals lock for the rest of its transaction.
+do $$ begin
+  perform tests.ok('C1179 lock', exists (
+    select 1 from pg_locks l
+    where l.locktype = 'advisory' and l.granted and l.pid = pg_backend_pid() and l.objsubid = 1
+      and l.classid::bigint = ((hashtext('renewals')::bigint >> 32) & 4294967295)
+      and l.objid::bigint = (hashtext('renewals')::bigint & 4294967295)), 'no granted renewals lock');
+end $$;
+
+-- C1180: the frozen terms decide, whatever Company settings say now.
+select tests.rn_agreement('r1180');
+update public.org_settings set cpi_cap_pct = 0, cpi_renegotiation_threshold_pct = 1, renewal_notice_days = 90
+where org_id = tests.id('orgA');
+select tests.rn_run('C1180a', '2027-11-30');
+select tests.rn_run('C1180b', '2027-12-01');
+do $$ begin
+  perform tests.ok('C1180 notice', tests.rn_ret('C1180a') = '{}', 'renewed on 2027-11-30 with the org''s 90 days');
+  perform tests.ok('C1180 auto', (tests.rn_of(tests.id('r1180'))).status = 'accepted'
+    and (tests.rn_event((tests.rn_of(tests.id('r1180'))).id)).payload -> 'appliedPct' = '3.2'::jsonb, 'not auto at 3.2');
+end $$;
+update public.org_settings set cpi_cap_pct = 0, cpi_renegotiation_threshold_pct = 5, renewal_notice_days = 30
+where org_id = tests.id('orgA');
+
+-- C1181: no frozen notice or threshold falls back to the org's; no frozen cap is cpi_unset.
+select tests.rn_agreement('r1181', p_terms => '{"cpiCapPct": 5}');
+select tests.rn_run('C1181a', '2027-11-30');
+select tests.rn_run('C1181b', '2027-12-01');
+select tests.rn_agreement('r1181c', p_terms => '{"cpiCapPct": null, "cpiRenegotiationThresholdPct": 5, "renewalNoticeDays": 30}');
+select tests.rn_run('C1181c', '2027-12-01');
+do $$ begin
+  perform tests.ok('C1181 fallback notice', tests.rn_ret('C1181a') = '{}', 'renewed on 2027-11-30');
+  perform tests.ok('C1181 fallback auto', (tests.rn_of(tests.id('r1181'))).status = 'accepted', 'not auto on 2027-12-01');
+  perform tests.ok('C1181 no cap', (tests.rn_of(tests.id('r1181c'))).status = 'draft'
+    and (tests.rn_event((tests.rn_of(tests.id('r1181c'))).id)).payload ->> 'reason' = 'cpi_unset', 'not a cpi_unset draft');
+end $$;
+
+-- C1182: only an accepted agreement with a start date is renewed.
+do $$
+declare s text;
+begin
+  foreach s in array array['draft', 'sent', 'changes_requested', 'refused', 'expired', 'withdrawn'] loop
+    perform tests.rn_agreement('r1182' || s);
+    update public.agreements set status = s where id = tests.id('r1182' || s);
+  end loop;
+  perform tests.rn_agreement('r1182nostart', p_start => null);
+end $$;
+select tests.rn_run('C1182', '2028-06-01');
+do $$
+declare s text;
+begin
+  foreach s in array array['draft', 'sent', 'changes_requested', 'refused', 'expired', 'withdrawn', 'nostart'] loop
+    perform tests.ok('C1182 ' || s, (tests.rn_of(tests.id('r1182' || s))).id is null, s || ' was renewed');
+  end loop;
+end $$;
+
+-- C1183: no client can call the writer.
+do $$ begin
+  perform tests.ok('C1183 anon', not has_function_privilege('anon', 'private.run_renewals(date)', 'execute'), 'anon can execute');
+  perform tests.ok('C1183 authenticated', not has_function_privilege('authenticated', 'private.run_renewals(date)', 'execute'),
+    'authenticated can execute');
+end $$;
+
+-- C1184: CPI at the threshold drafts at the old prices; just below renews.
+select tests.rn_cpi(5.00, '2027-10-15');
+select tests.rn_agreement('r1184');
+select tests.rn_run('C1184', '2027-12-01');
+select tests.rn_cpi(4.99, '2027-10-15');
+select tests.rn_agreement('r1184b');
+select tests.rn_run('C1184b', '2027-12-01');
+do $$
+declare
+  r public.agreements := tests.rn_of(tests.id('r1184'));
+  e public.events := tests.rn_event(r.id);
+begin
+  perform tests.ok('C1184 draft', r.status = 'draft' and (select snapshot from public.agreement_versions where agreement_id = r.id) = '{}',
+    'R is ' || r.status);
+  perform tests.ok('C1184 prices', tests.rn_costs(r.id) = array[25000, 19999]::bigint[], 'costs ' || tests.rn_costs(r.id)::text);
+  perform tests.ok('C1184 event', e.type = 'agreement.renewal_drafted'
+    and (select count(*) from public.events where entity_id = r.id) = 1
+    and e.payload = jsonb_build_object('renewsAgreementId', tests.id('r1184'), 'cpiPct', 5, 'cpiAsOf', '2027-10-15',
+                                       'reason', 'at_threshold'), 'event ' || e.type || ' ' || e.payload::text);
+  perform tests.ok('C1184 4.99', (tests.rn_of(tests.id('r1184b'))).status = 'accepted', '4.99 did not auto-renew');
+end $$;
+
+-- C1185: no CPI set.
+select tests.rn_cpi(null, null);
+select tests.rn_agreement('r1185');
+select tests.rn_run('C1185', '2027-12-01');
+do $$ begin
+  perform tests.ok('C1185 unset', (tests.rn_of(tests.id('r1185'))).status = 'draft'
+    and (tests.rn_event((tests.rn_of(tests.id('r1185'))).id)).payload ->> 'reason' = 'cpi_unset', 'not a cpi_unset draft');
+end $$;
+
+-- C1186: a CPI older than 13 months is stale.
+select tests.rn_cpi(3.20, '2026-10-31');
+select tests.rn_agreement('r1186');
+select tests.rn_run('C1186', '2027-12-01');
+select tests.rn_cpi(3.20, '2026-11-01');
+select tests.rn_agreement('r1186b');
+select tests.rn_run('C1186b', '2027-12-01');
+do $$ begin
+  perform tests.ok('C1186 stale', (tests.rn_of(tests.id('r1186'))).status = 'draft'
+    and (tests.rn_event((tests.rn_of(tests.id('r1186'))).id)).payload ->> 'reason' = 'cpi_stale', 'not a cpi_stale draft');
+  perform tests.ok('C1186 fresh', (tests.rn_of(tests.id('r1186b'))).status = 'accepted', '2026-11-01 did not auto-renew');
+end $$;
+
+-- C1188: a draft renewal carries the next term.
+do $$
+declare v public.agreement_versions := (select v from public.agreement_versions v
+                                        where v.agreement_id = (tests.rn_of(tests.id('r1185'))).id);
+begin
+  perform tests.ok('C1188 term', v.term_start = '2028-01-01' and v.term_months = 12 and v.term_end = '2028-12-31',
+    'term ' || v.term_start || ' ' || v.term_months || ' ' || v.term_end);
+end $$;
+
+-- C1189: a renewal draft is an ordinary draft for its estimator.
+create table tests.rn_r1189 as select (tests.rn_of(tests.id('r1185'))).id as id;
+grant select on tests.rn_r1189 to authenticated;
+select tests.act_as('uE');
+select public.save_service_line((select id from tests.rn_r1189), null, 'Added after renegotiation', '{6}'::smallint[], 15000,
+                                array[tests.id('typeA')]);
+select public.save_agreement_term((select id from tests.rn_r1189), '2028-02-01', 12::smallint);
+select public.send_agreement((select id from tests.rn_r1189), md5('r1189') || md5('r1189:2'), 'agreement.sent',
+                             '{"from": "draft", "to": "sent"}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$
+declare
+  r uuid := (select id from tests.rn_r1189);
+  v public.agreement_versions := (select v from public.agreement_versions v where v.agreement_id = r);
+begin
+  perform tests.ok('C1189 line', (select count(*) from public.service_lines where agreement_version_id = v.id) = 3, 'no added line');
+  perform tests.ok('C1189 term', v.term_start = '2028-02-01', 'term not saved');
+  perform tests.ok('C1189 sent', (select status from public.agreements where id = r) = 'sent' and v.snapshot ? 'takenAt',
+    'not sent with a frozen snapshot');
+end $$;
+
+-- C1187: an open agreement on the site blocks that renewal only. Last, because A stays due.
+select tests.rn_cpi(3.20, '2027-10-15');
+select tests.rn_agreement('r1187');
+select tests.rn_agreement('r1187b');
+insert into public.agreements (id, org_id, site_id, status)
+values (tests.id('r1187:d'), tests.id('orgA'), tests.id('r1187:site'), 'draft');
+select tests.rn_run('C1187draft', '2027-12-01');
+update public.agreements set status = 'sent' where id = tests.id('r1187:d');
+select tests.rn_run('C1187sent', '2027-12-01');
+update public.agreements set status = 'changes_requested' where id = tests.id('r1187:d');
+select tests.rn_run('C1187changes', '2027-12-01');
+do $$
+declare s text;
+begin
+  perform tests.ok('C1187 other renewed', tests.rn_ret('C1187draft') = array[(tests.rn_of(tests.id('r1187b'))).id],
+    'returned ' || tests.rn_ret('C1187draft')::text);
+  foreach s in array array['draft', 'sent', 'changes'] loop
+    perform tests.ok('C1187 ' || s, (s = 'draft' or tests.rn_ret('C1187' || s) = '{}')
+      and (tests.rn_of(tests.id('r1187'))).id is null
+      and not exists (select 1 from public.events where payload ->> 'renewsAgreementId' = tests.id('r1187')::text)
+      and not exists (select 1 from public.notifications where agreement_id = tests.id('r1187')), 'A renewed with ' || s || ' open');
+  end loop;
+end $$;
+
 rollback;
 select 'agreement_builder: pass' as result;

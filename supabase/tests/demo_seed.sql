@@ -241,3 +241,10 @@ end $$;
 create table tests.demo_versions as
 select md5(coalesce(string_agg(v::text, ',' order by v.id), '')) as h
 from public.agreement_versions v where v.org_id = tests.demo();
+
+-- C1215 (renewal): an accepted demo agreement has a term, so W7 has something to read.
+do $$ begin
+  perform tests.ok('C1215 accepted with term', exists (
+    select 1 from public.agreements a join public.agreement_versions v on v.agreement_id = a.id
+    where a.org_id = tests.demo() and a.status = 'accepted' and v.term_start is not null), 'no accepted demo agreement has a term');
+end $$;

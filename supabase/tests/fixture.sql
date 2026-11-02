@@ -172,3 +172,52 @@ end $$;
 -- The tests are written for a database without the demo org. On a project where supabase/seed.sql already ran,
 -- remove it inside this transaction (every tenant table cascades from orgs, AD-003); the rollback restores it.
 delete from public.orgs where id = '00000000-0000-4000-8000-00000000de30';
+
+-- Renewal (.specs/features/renewal/checks.md, "the fixture"): an accepted agreement <name> of org p_org on its own
+-- site, whose contact has p_email (no contact when null), version 1 from p_start for 12 months with frozen terms
+-- p_terms, and two lines: 4 x 25000 and 1 x 19999, the second covering two asset types. Org A's CPI is set apart, by
+-- tests.rn_cpi. Created as the table owner with no signed-in user, so the line triggers stand aside.
+create function tests.rn_agreement(p_name text, p_org text default 'A', p_start date default '2027-01-01',
+                                   p_terms jsonb default '{"cpiCapPct": 5, "cpiRenegotiationThresholdPct": 5, "renewalNoticeDays": 30}',
+                                   p_email text default 'pat@customer.ca', p_number text default null)
+returns uuid
+language plpgsql as $$
+declare
+  o uuid := tests.id('org' || p_org);
+begin
+  if p_email is not null then
+    insert into public.contacts (id, org_id, customer_id, name, email)
+    values (tests.id(p_name || ':ct'), o, tests.id('cust' || p_org), 'Pat ' || p_name, p_email);
+  end if;
+  insert into public.sites (id, org_id, customer_id, site_contact_id, name)
+  values (tests.id(p_name || ':site'), o, tests.id('cust' || p_org),
+          case when p_email is not null then tests.id(p_name || ':ct') end, 'Harbour Plant ' || p_name);
+  insert into public.asset_types (id, org_id, code, name)
+  values (tests.id(p_name || ':t2'), o, 'T' || upper(substr(md5(p_name), 1, 7)), 'Make-up air ' || p_name);
+  insert into public.agreements (id, org_id, site_id, number)
+  values (tests.id(p_name), o, tests.id(p_name || ':site'), coalesce(p_number, 'AG-' || p_name));
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start, term_months, snapshot)
+  values (tests.id(p_name || ':v1'), o, tests.id(p_name), 1, p_start, 12,
+          jsonb_build_object('schema', 2, 'takenAt', '2026-12-01T00:00:00+00:00', 'types', '[]'::jsonb, 'terms', p_terms));
+  insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year,
+                                    cost_per_visit_cents) values
+    (tests.id(p_name || ':l1'), o, tests.id(p_name || ':v1'), 0, 'HVAC maintenance', '{3,6,9,12}', 4, 25000),
+    (tests.id(p_name || ':l2'), o, tests.id(p_name || ':v1'), 1, 'Boiler service', '{10}', 1, 19999);
+  insert into public.service_line_asset_types (org_id, service_line_id, asset_type_id) values
+    (o, tests.id(p_name || ':l1'), tests.id('type' || p_org)),
+    (o, tests.id(p_name || ':l2'), tests.id('type' || p_org)),
+    (o, tests.id(p_name || ':l2'), tests.id(p_name || ':t2'));
+  update public.agreements set status = 'accepted' where id = tests.id(p_name);
+  return tests.id(p_name);
+end $$;
+
+create function tests.rn_cpi(p_pct numeric, p_as_of date, p_org text default 'A') returns void
+language sql as $$
+  update public.org_settings set renewal_cpi_pct = p_pct, renewal_cpi_as_of = p_as_of where org_id = tests.id('org' || p_org)
+$$;
+
+-- The agreement that renews <p_agreement>, or null.
+create function tests.rn_of(p_agreement uuid) returns public.agreements
+language sql as $$ select * from public.agreements where renews_agreement_id = p_agreement $$;
+
+grant execute on all functions in schema tests to anon, authenticated;

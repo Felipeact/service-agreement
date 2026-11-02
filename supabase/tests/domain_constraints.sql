@@ -228,5 +228,32 @@ begin
   end loop;
 end $$;
 
+-- Renewal C1167 (door 2): the tenant CPI and its date are bounded and paired.
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$
+declare
+  c record;
+  o uuid := tests.id('org1167');
+begin
+  -- An org of its own: earlier checks here delete the fixture orgs, and an update that matches no row raises nothing.
+  insert into public.orgs (id, name) values (o, 'Org 1167');
+  insert into public.org_settings (org_id, legal_name) values (o, 'CPI bounds');
+  for c in select * from (values
+      ('pct -20.01', '-20.01', '2027-10-15'), ('pct 100.01', '100.01', '2027-10-15'),
+      ('date 1999-12-31', '3.20', '1999-12-31'), ('date 2100-01-01', '3.20', '2100-01-01'),
+      ('pct only', '3.20', null), ('date only', null, '2027-10-15')) as t(label, pct, d) loop
+    perform tests.expect_error('C1167 ' || c.label, format(
+      'update public.org_settings set renewal_cpi_pct = %L::numeric, renewal_cpi_as_of = %L::date where org_id = %L', c.pct, c.d, o),
+      '23514');
+  end loop;
+  for c in select * from (values
+      ('-20', '-20', '2027-10-15'), ('100', '100', '2027-10-15'), ('3.20 with date', '3.20', '2027-10-15'),
+      ('both null', null, null)) as t(label, pct, d) loop
+    perform tests.expect_rows('C1167 ' || c.label, format(
+      'update public.org_settings set renewal_cpi_pct = %L::numeric, renewal_cpi_as_of = %L::date where org_id = %L', c.pct, c.d, o), 1);
+  end loop;
+end $$;
+
 rollback;
 select 'domain_constraints: pass' as result;
