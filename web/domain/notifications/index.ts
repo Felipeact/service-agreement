@@ -1,7 +1,17 @@
+import { formatTermDate } from "../agreement/term";
 import { contrastText, isAccent } from "../portal";
 
 /** One email the system decided to send or skip (outbox-dispatch door 4). */
-export type NotificationKind = "customer_link" | "customer_reminder" | "staff_decision" | "staff_stale";
+export type NotificationKind =
+  | "customer_link"
+  | "customer_reminder"
+  | "staff_decision"
+  | "staff_stale"
+  | "customer_renewal"
+  | "staff_renewal";
+
+/** Why W7 drafted a renewal instead of renewing on its own (renewal door 3). */
+export type RenewalReason = "at_threshold" | "cpi_unset" | "cpi_stale";
 
 /** Why a notification was not sent: the six stored skip reasons, and `failed` for a provider refusal or outage. */
 export type NotEmailedReason = "decided" | "superseded" | "viewed" | "no_recipient" | "no_link_secret" | "reserved_domain" | "failed";
@@ -167,5 +177,76 @@ export function staleEmail(input: { appBaseUrl: string; agreements: StaleAgreeme
     "",
     ...rows.map((row) => `${row.number} · ${row.customerName} · sent ${row.sent}: ${row.href}`),
   ].join("\n");
+  return { subject, html, text };
+}
+
+const percent = new Intl.NumberFormat("en-CA", { maximumFractionDigits: 2 });
+
+export type CustomerRenewalInput = {
+  tenant: Tenant;
+  agreementNumber: string;
+  renewsNumber: string;
+  siteName: string;
+  oldAnnualCents: number;
+  annualCents: number;
+  appliedPct: number;
+  /** The renewal's term, as calendar dates `YYYY-MM-DD`. */
+  term: { start: string; end: string; months: number };
+};
+
+/** The customer's notice that the agreement renews on its own, with the CPI applied (renewal AC 24). */
+export function customerRenewalEmail(input: CustomerRenewalInput): EmailContent {
+  const { tenant, agreementNumber, renewsNumber, siteName, oldAnnualCents, annualCents, appliedPct, term } = input;
+  const name = tenant.legalName;
+  const start = formatTermDate(term.start);
+  const subject = `Your service agreement renews on ${start}`;
+  const intro = `Your service agreement ${renewsNumber} with ${name} renews automatically as ${agreementNumber}. Nothing needs to be signed.`;
+  const period = `${start} – ${formatTermDate(term.end)} (${term.months} ${term.months === 1 ? "month" : "months"})`;
+  const price = `${formatCents(oldAnnualCents)} per year becomes ${formatCents(annualCents)} per year before tax, a CPI increase of ${percent.format(appliedPct)}%`;
+  const contact = tenant.phone ? `Questions? Call ${name} at ${tenant.phone}.` : `Questions? Reply to this email.`;
+
+  const html = page(
+    [
+      `<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`,
+      `<p style="margin:0">Site: <strong>${escapeHtml(siteName)}</strong><br>New term: <strong>${escapeHtml(period)}</strong><br>Price: <strong>${escapeHtml(price)}</strong></p>`,
+      `<p style="margin:16px 0 0;color:#4b5563">${escapeHtml(contact)}</p>`,
+    ].join(""),
+  );
+  const text = [intro, "", `Site: ${siteName}`, `New term: ${period}`, `Price: ${price}`, "", contact].join("
+");
+  return { subject, html, text };
+}
+
+const RENEWAL_REASONS: Record<RenewalReason, string> = {
+  at_threshold: "CPI is at or above your renegotiation threshold, so the agreement does not renew on its own.",
+  cpi_unset: "No CPI for renewals is set in Company settings, so the price could not be raised on its own.",
+  cpi_stale: "The CPI for renewals in Company settings is more than 13 months old, so it was not applied.",
+};
+
+export type StaffRenewalInput = {
+  appBaseUrl: string;
+  agreement: { id: string; number: string };
+  renews: { number: string; termEnd: string };
+  siteName: string;
+  customerName: string;
+  reason: RenewalReason;
+};
+
+/** Owners' and admins' email when W7 drafts a renewal to negotiate (renewal AC 25). */
+export function staffRenewalEmail(input: StaffRenewalInput): EmailContent {
+  const { agreement, renews, siteName, customerName, reason } = input;
+  const subject = `${agreement.number} needs renegotiation before ${formatTermDate(renews.termEnd)}`;
+  const href = `${base(input.appBaseUrl)}/agreements/${agreement.id}`;
+  const intro = `${renews.number} for ${customerName} (${siteName}) ends on ${formatTermDate(renews.termEnd)}. Its renewal ${agreement.number} is a draft.`;
+  const why = RENEWAL_REASONS[reason];
+  const html = page(
+    [
+      `<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`,
+      `<p style="margin:0 0 12px">${escapeHtml(why)}</p>`,
+      `<p style="margin:16px 0 0"><a href="${escapeHtml(href)}">Open ${escapeHtml(agreement.number)}</a></p>`,
+    ].join(""),
+  );
+  const text = [intro, "", why, "", `Open ${agreement.number}: ${href}`].join("
+");
   return { subject, html, text };
 }

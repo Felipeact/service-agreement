@@ -13,7 +13,7 @@ import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/do
 import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
-import type { NotEmailedReason, StaleAgreement, Tenant } from "@/domain/notifications";
+import type { NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -588,7 +588,29 @@ export type NotificationMessage =
       decision: "refused" | "changes_requested";
       reason: string | null;
     })
-  | (MessageBase & { kind: "staff_stale"; orgId: string; agreements: StaleAgreement[] });
+  | (MessageBase & { kind: "staff_stale"; orgId: string; agreements: StaleAgreement[] })
+  /** W7's messages carry their own key, `w7:<renewalId>:customer` or `:staff` (renewal door 6). */
+  | (MessageBase & {
+      kind: "customer_renewal";
+      idempotencyKey: string;
+      agreement: { id: string; number: string };
+      renews: { number: string };
+      site: { name: string };
+      oldAnnualCents: number;
+      annualCents: number;
+      appliedPct: number;
+      term: { start: string; end: string; months: number };
+    })
+  | (MessageBase & {
+      kind: "staff_renewal";
+      idempotencyKey: string;
+      agreement: { id: string; number: string };
+      renews: { number: string; termEnd: string };
+      site: { name: string };
+      customer: { name: string };
+      reason: RenewalReason;
+      cpiPct: number | null;
+    });
 
 export type ClaimDecision =
   | { decision: "send"; messages: NotificationMessage[] }
