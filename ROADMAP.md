@@ -149,7 +149,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Seasonal tasks: a checklist task can apply to selected visits only
 - [x] Term dates (start, term months, end) and tenant renewal settings (default term, notice days, CPI renegotiation threshold)
 - [x] Renewal: auto-renew with CPI applied below the threshold; at or above it, a renewal draft linked to the agreement it renews. "Expiring soon" view and n8n W7
-- [ ] Proposal validity date and automatic expiry of sent agreements (n8n W8)
+- [x] Proposal validity date and automatic expiry of sent agreements (n8n W8)
 - [ ] Deactivate sites, customers and assets, with the live-agreement and live-contract rules; asset replacement link
 - [ ] Versioning: compare two versions (lines, prices, months, equipment, annual total change); the reason for each version (the customer's change request or a staff note); who created it and its sent, viewed and decided history from `events`; mark the version that was sent and the one accepted
 - [ ] Agreements page: list with filters (status, site, expiring); enable the New agreement button on Pipeline

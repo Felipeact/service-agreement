@@ -466,3 +466,55 @@ Proof: Playwright MCP session (recorded in the Handoff)
 - 2026-11-02, build: the plan's assumption "the PDF still downloads" after expiry is wrong about today's code. The
   review PDF route already answers an empty `404` for a link in state `expired`, as it does for `withdrawn`. No check
   claims otherwise, and the behaviour is left as it is. The page still shows `This agreement has expired.`.
+
+## Delivery results
+
+- **C1221, C1233** (2026-11-02, right after `apply_migration`, version `20261102222043`): one query gave
+  `c1221_not_30 0` of 1 settings row, `c1233_latest_mismatch 0` and `c1233_other_set 0`, with 2 sent agreements and the
+  earliest `valid_until` 2026-11-29. The latest-version rule compares with `(last agreement.sent at time zone
+  'America/Vancouver')::date + 30`, and null when there is no such event.
+- **C1264** (after): `get_advisors` security lists 13 findings: `rls_enabled_no_policy` on `outbox` (1),
+  `anon_security_definer_function_executable` (5) and `authenticated_security_definer_function_executable` (6, the
+  same 5 plus `save_agreement_term`), and `auth_leaked_password_protection` (1). That is C1217's list unchanged, and none
+  names `run_expiries`, `claim_expiries` or `stamp_valid_until`.
+- **C1263, C1253, C1265** (at `88a4c0b`): `npm run lint` 0, `npx tsc --noEmit` 0, and plain `npm test` 0 (110 files,
+  2155 tests). `npm run test:db` passes for `demo_seed`, `agreement_builder`, `domain_constraints`, `customer_portal` and
+  `outbox_dispatch`.
+- **Server for the live runs:** `npm run build` at `88a4c0b`, then `next start -p 3200` against the project. Port 3100
+  was already held by another process, which was left alone. The demo owner's existing session cookie for `localhost`
+  was used, in one Playwright page.
+- **C1266:** AG-1046's version 1 `valid_until` went from 2026-11-29 to 2026-11-01 by mcp `execute_sql`. The body
+  `{"kind": "expiry_daily", "executionId": "live-c1266", "idempotencyKey": "w8:2026-11-02"}` was signed inside the
+  database with the Vault secret, so only the timestamp and signature left it. `POST
+  http://localhost:3200/api/automation/notify` answered `200 {"outcome":"sent"}`. Afterwards:
+  - AG-1046 is `expired`, with 1 `agreement.expired` event (`{from: sent, to: expired, versionNo: 1, validUntil:
+    2026-11-01, via: w8}`, `n8n_execution_id` `live-c1266`) and 1 outbox row.
+  - Notification `w8:56074b4e-fa22-4358-8b7a-142df3d27df4` is `staff_expired`, `sent`, with a provider id and 1
+    recipient.
+  - AG-1048 is still `sent`, with no expiry.
+- **C1268:** AG-1048's live link, its token unsealed locally with `PORTAL_LINK_KEY` and checked against the stored
+  hash. Opening it recorded the link's first view (`agreement.viewed`, no outbox row), a side effect of opening a link.
+  - At 1440 and 375 px it shows `Valid until Nov 29, 2026`, with `scrollWidth` 1425/1440 and 360/375 and an Accept
+    button.
+  - With version 2's `valid_until` set to 2026-11-01 by mcp, it shows `This agreement has expired.` with no button
+    (375/375). The date was then set back to 2026-11-29.
+- **C1267:** in one page, at 1440, 768 and 375 px:
+  - `/settings` has the `Proposals valid for (days)` label.
+  - AG-1046 shows `Expired · was valid until Nov 1, 2026`, and AG-1048 shows `Valid until Nov 29, 2026`.
+  - AG-1046's card on `/pipeline` reads "… AG-1046 · v1 Updated today Expired 4 visits/yr $21,600/yr".
+  - `scrollWidth` never exceeds `innerWidth`, and there are 0 controls under 44 px at 768 and 375.
+  - At 375 px the Refused tab was tapped, and the card shows the neutral `Expired` pill.
+  - Console: 0 errors and 0 warnings. Screenshots are in `.playwright-mcp/` (git-ignored): `pe-review-open-375.png`,
+    `pe-review-expired-375.png`, `pe-pipeline-375.png`, `pe-pipeline-refused-375.png`.
+- **Demo data left changed:** AG-1046 is `expired` with a `valid_until` of 2026-11-01, and one `staff_expired` email
+  went to the demo org. AG-1048 is back to 2026-11-29 and now has a first view.
+
+## Boundary
+
+- **Boundary:** C1220-C1269 closed at `88a4c0b` (one builder). Feature base `c2f23eb`. Commits: `c33ba8c` (plan,
+  checks), `66c02b3` (database), `75066fd` (settings), `b600f55` (display and portal), `c439d04` (email and W8),
+  `88a4c0b` (board).
+- **Settled mid-build:** see the section above (C1259, C1248 and C1237/C1238 proofs corrected before or while their
+  tests were written; door 9; the PDF assumption).
+- **Abandoned:** making `send_agreement` security definer, replaced by door 9. `75066fd` left `app/(app)/screens.test.ts`
+  red until `88a4c0b` added the field to its form fixture.
