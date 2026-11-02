@@ -18,6 +18,9 @@ const settings: OrgSettings = {
   paymentDays: 30,
   governingProvince: "BC",
   taxNote: "Prices exclude applicable taxes (GST and PST).",
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'");
@@ -129,5 +132,32 @@ describe("settings form", () => {
     const select = fields(idle).match(/<select[\s\S]*?<\/select>/)?.[0] ?? "";
     const values = [...select.matchAll(/<option value="([^"]*)"/g)].map((match) => match[1]);
     expect(values).toEqual(["", ...PROVINCES]);
+  });
+});
+
+describe("the renewal settings", () => {
+  const RENEWAL: [string, string, string][] = [
+    ["defaultTermMonths", "Default term (months)", "12"],
+    ["renewalNoticeDays", "Renewal notice (days)", "30"],
+    ["cpiRenegotiationThresholdPct", "CPI renegotiation threshold (%)", "5"],
+  ];
+
+  test("C1135: an owner gets three labelled inputs holding the stored values", () => {
+    const out = view("owner");
+    for (const [id, label, value] of RENEWAL) {
+      expect(out).toContain(`<label for="${id}" class="text-[13px] font-medium text-ink">${label}</label>`);
+      const tag = control(out, id);
+      expect(tag, id).toContain(`value="${value}"`);
+      expect(hasAttr(tag, "readOnly"), id).toBe(false);
+    }
+  });
+
+  test.each<MemberRole>(["estimator", "viewer"])("C1135: a %s sees the three values read-only", (role) => {
+    const out = view(role);
+    for (const [id, , value] of RENEWAL) {
+      const tag = control(out, id);
+      expect(tag, id).toContain(`value="${value}"`);
+      expect(hasAttr(tag, "readOnly"), id).toBe(true);
+    }
   });
 });

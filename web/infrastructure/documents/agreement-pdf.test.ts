@@ -27,6 +27,7 @@ const base: AgreementDocument = {
     { label: "Governing province", value: "BC" },
     { label: "Tax note", value: "GST extra" },
   ],
+  term: "Term: not recorded for this version",
 };
 
 const asset = (unitNo: string | null, typeModel: string | null = null, location: string | null = null) => ({ unitNo, typeModel, location });

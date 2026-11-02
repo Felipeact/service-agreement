@@ -95,7 +95,7 @@ describe("the open page", () => {
   });
 
   test("C909: a term that is not set is not printed", async () => {
-    answer(portalView({ terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: null, paymentDays: null, governingProvince: null, taxNote: null } }));
+    answer(portalView({ terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: null, paymentDays: null, governingProvince: null, taxNote: null, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null } }));
     const page = text(await render());
     expect(page).toContain("Repair discount 10%");
     expect(page).not.toContain("Payment terms");
@@ -103,7 +103,7 @@ describe("the open page", () => {
   });
 
   test("C911: the page prints the repair discount the version carries", async () => {
-    answer(portalView({ terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null } }));
+    answer(portalView({ terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null } }));
     const page = text(await render());
     expect(page).toContain("Repair discount 10%");
     expect(page).not.toContain("15%");

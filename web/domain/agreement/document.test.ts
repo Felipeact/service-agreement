@@ -13,6 +13,9 @@ const SETTINGS: OrgSettingsValue = {
   paymentDays: 30,
   governingProvince: "BC",
   taxNote: "GST extra",
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 
 const SOURCE: DocumentSource = {
@@ -37,7 +40,10 @@ const SOURCE: DocumentSource = {
     paymentDays: 30,
     governingProvince: "BC",
     taxNote: "GST extra",
+    renewalNoticeDays: null,
+    cpiRenegotiationThresholdPct: null,
   },
+  term: { start: null, months: 12, end: null },
 };
 
 // The terms of a draft come from the org's settings (customer-portal AC 32); a frozen version prints its own.
@@ -68,6 +74,7 @@ describe("buildAgreementDocument", () => {
       { label: "Payment terms", value: "30 days" },
       { label: "Governing province", value: "BC" },
       { label: "Tax note", value: "GST extra" },
+      { label: "Renewal", value: "Renews automatically for another 12 months with the CPI increase, capped at 5%. If CPI is 5% or more, the renewal is renegotiated. Notice is given 30 days before the end date." },
     ]);
   });
 
@@ -79,12 +86,12 @@ describe("buildAgreementDocument", () => {
   ])("C864: with %s null only that term is absent", (_name, over, label) => {
     const labels = buildAgreementDocument(DRAFT_SOURCE, { ...SETTINGS, ...over }).terms.map((term) => term.label);
     expect(labels).not.toContain(label);
-    expect(labels).toHaveLength(5);
+    expect(labels).toHaveLength(6);
   });
 
   test("C864: with the four nullable terms null, the two numeric terms still print", () => {
     const bare = { ...SETTINGS, cancellationNoticeDays: null, paymentDays: null, governingProvince: null, taxNote: null };
-    expect(buildAgreementDocument(DRAFT_SOURCE, bare).terms.map((term) => term.label)).toEqual(["Repair discount", "CPI cap"]);
+    expect(buildAgreementDocument(DRAFT_SOURCE, bare).terms.map((term) => term.label)).toEqual(["Repair discount", "CPI cap", "Renewal"]);
   });
 
   test("C864: one day is singular and a fractional percent keeps its decimals", () => {
@@ -135,6 +142,8 @@ describe("which terms the document prints", () => {
     paymentDays: 30,
     governingProvince: "BC",
     taxNote: "GST extra",
+    renewalNoticeDays: null,
+    cpiRenegotiationThresholdPct: null,
   };
   const LABELS = ["Repair discount", "CPI cap", "Cancellation notice", "Payment terms", "Governing province", "Tax note"];
 
@@ -154,7 +163,7 @@ describe("which terms the document prints", () => {
     const changed = { ...SETTINGS, repairDiscountPct: 15 };
     const { terms } = buildAgreementDocument({ ...SOURCE, editable: true, terms: null }, changed);
     expect(terms[0]).toEqual({ label: "Repair discount", value: "15%" });
-    expect(terms).toHaveLength(6);
+    expect(terms).toHaveLength(7);
   });
 
   test("C934: a past version of a draft is frozen and prints its own terms", () => {

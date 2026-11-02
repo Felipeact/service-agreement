@@ -36,7 +36,7 @@ describe("the portal PDF route with the real renderer", () => {
 
   test("C930: the PDF holds the frozen value, whatever the settings say now", async () => {
     // The route reads no settings at all: the view's terms are the version's. 15 is what Company settings might say now.
-    current = portalView({ terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null } });
+    current = portalView({ terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null } });
     const text = await textOf(await call());
     expect(text).toContain("10%");
     expect(text).not.toContain("15%");

@@ -12,12 +12,12 @@ const TERMS = {
 
 describe("parseTerms", () => {
   test("C936: the six-key document is accepted from a snapshot", () => {
-    expect(parseTerms({ schema: 1, types: [], terms: TERMS })).toEqual(TERMS);
+    expect(parseTerms({ schema: 1, types: [], terms: TERMS })).toEqual({ ...TERMS, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null });
   });
 
   test("C936: the four nullable terms may be JSON null", () => {
     const bare = { ...TERMS, cancellationNoticeDays: null, paymentDays: null, governingProvince: null, taxNote: null };
-    expect(parseTerms({ terms: bare })).toEqual(bare);
+    expect(parseTerms({ terms: bare })).toEqual({ ...bare, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null });
   });
 
   const withoutCpi = Object.fromEntries(Object.entries(TERMS).filter(([key]) => key !== "cpiCapPct"));

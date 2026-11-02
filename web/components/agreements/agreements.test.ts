@@ -48,6 +48,7 @@ function agreement(
     terms: null,
     portalLink: over.portalLink ?? null,
     linkEmail: over.linkEmail ?? null,
+    term: { start: null, months: 12, end: null },
   };
 }
 
@@ -59,6 +60,7 @@ const actions: AgreementActions = {
   withdraw: async () => ({ status: "withdrawn" }),
   send: async () => ({ status: "idle" }),
   reissue: async () => ({ status: "idle" }),
+  saveTerm: async () => ({ status: "idle" as const }),
 };
 
 const view = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions }));

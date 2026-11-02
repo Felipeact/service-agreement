@@ -10,6 +10,7 @@ import type {
   LinkEmailView,
   AgreementServiceScope,
   AgreementStore,
+  AgreementTermStore,
   ServiceLineStore,
   ServiceLineView,
   ServiceLineWriteResult,
@@ -36,7 +37,15 @@ function unavailable(what: string, cause: unknown): { ok: false; code: "unavaila
   return { ok: false, code: "unavailable" };
 }
 
-type VersionRow = { id: string; version_no: number; created_at: string; contracts: { status: string }[] };
+type VersionRow = {
+  id: string;
+  version_no: number;
+  created_at: string;
+  term_start: string | null;
+  term_months: number;
+  term_end: string | null;
+  contracts: { status: string }[];
+};
 
 type AgreementRow = {
   id: string;
@@ -169,7 +178,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("agreements")
-        .select("id, number, status, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, contracts(status))")
+        .select("id, number, status, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, contracts(status))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -228,6 +237,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         equipmentChoices: editable ? await equipmentChoices(row.sites.id, lines.flatMap((line) => line.equipment.map((type) => type.id))) : [],
         serviceScope,
         terms,
+        term: { start: shownVersion?.term_start ?? null, months: shownVersion?.term_months ?? 12, end: shownVersion?.term_end ?? null },
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
       };
@@ -327,6 +337,33 @@ export function supabaseServiceLineStore(client: Client): ServiceLineStore {
         return await written("Removing a service line", client.from("service_lines").delete().eq("id", lineId).select("id"));
       } catch (cause) {
         return unavailable("Removing a service line", cause);
+      }
+    },
+  };
+}
+
+const TERM_FAILURES: Record<string, "locked" | "forbidden" | "not_found" | "invalid"> = {
+  [FROZEN]: "locked",
+  "42501": "forbidden",
+  P0002: "not_found",
+  "23514": "invalid",
+};
+
+/** The term of the current version of a draft, through `save_agreement_term` only (term-dates door 3). */
+export function supabaseAgreementTermStore(client: Client): AgreementTermStore {
+  return {
+    async save(agreementId, term) {
+      try {
+        const { error } = await client.rpc("save_agreement_term", {
+          p_agreement_id: agreementId,
+          p_term_start: term.start,
+          p_term_months: term.months,
+        });
+        if (!error) return { ok: true };
+        const code = TERM_FAILURES[error.code];
+        return code ? { ok: false, code } : failure("Saving the term", error);
+      } catch (cause) {
+        return unavailable("Saving the term", cause);
       }
     },
   };

@@ -18,6 +18,9 @@ function readInput(formData: FormData): OrgSettingsInput {
     paymentDays: text("paymentDays"),
     governingProvince: text("governingProvince"),
     taxNote: text("taxNote"),
+    defaultTermMonths: text("defaultTermMonths"),
+    renewalNoticeDays: text("renewalNoticeDays"),
+    cpiRenegotiationThresholdPct: text("cpiRenegotiationThresholdPct"),
   };
 }
 

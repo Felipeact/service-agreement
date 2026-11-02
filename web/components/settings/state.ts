@@ -21,6 +21,9 @@ export function toInput(settings: OrgSettings): OrgSettingsInput {
     paymentDays: formatSettingNumber(settings.paymentDays),
     governingProvince: settings.governingProvince ?? "",
     taxNote: settings.taxNote ?? "",
+    defaultTermMonths: String(settings.defaultTermMonths),
+    renewalNoticeDays: String(settings.renewalNoticeDays),
+    cpiRenegotiationThresholdPct: formatSettingNumber(settings.cpiRenegotiationThresholdPct),
   };
 }
 

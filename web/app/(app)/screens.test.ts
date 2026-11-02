@@ -102,6 +102,9 @@ function form(patch: Record<string, string> = {}) {
     paymentDays: "30",
     governingProvince: "BC",
     taxNote: "",
+    defaultTermMonths: "12",
+    renewalNoticeDays: "30",
+    cpiRenegotiationThresholdPct: "5",
     ...patch,
   };
   for (const [name, value] of Object.entries(fields)) data.set(name, value);
@@ -140,5 +143,19 @@ describe("saveSettingsAction", () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(saveSettingsAction({ status: "idle" }, form())).rejects.toThrow("NEXT_REDIRECT /login");
     expect(saveOrgSettings).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveSettingsAction with the renewal settings", () => {
+  test.each([
+    ["defaultTermMonths", "0", "Default term must be a whole number of months from 1 to 60"],
+    ["renewalNoticeDays", "366", "Renewal notice must be a whole number from 0 to 365"],
+    ["cpiRenegotiationThresholdPct", "5.123", "CPI renegotiation threshold must be a number from 0 to 100 with at most two decimals"],
+  ])("C1134: an invalid %s returns its error and saves nothing", async (field, value, message) => {
+    currentMember.mockResolvedValue(member);
+    saveOrgSettings.mockClear();
+    const state = await saveSettingsAction({ status: "idle" }, form({ [field]: value }));
+    expect(saveOrgSettings).not.toHaveBeenCalled();
+    expect(state.status === "invalid" ? state.errors : {}).toEqual({ [field]: message });
   });
 });

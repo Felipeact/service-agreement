@@ -67,6 +67,7 @@ function agreement(over: Partial<AgreementDetail> = {}): AgreementDetail {
     equipmentChoices: CHOICES,
     serviceScope: { source: "live", takenAt: null, types: [] },
     terms: null,
+    term: { start: null, months: 12, end: null },
     portalLink: null,
     linkEmail: null,
     ...over,
@@ -81,6 +82,7 @@ const actions: AgreementActions = {
   withdraw: async () => ({ status: "withdrawn" }),
   send: async () => ({ status: "idle" }),
   reissue: async () => ({ status: "idle" }),
+  saveTerm: async () => ({ status: "idle" as const }),
 };
 const view = (a: AgreementDetail) => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role: "estimator", actions }));
 

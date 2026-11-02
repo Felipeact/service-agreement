@@ -27,7 +27,12 @@ import { resendEmailSender } from "@/infrastructure/email";
 import { supabaseAutomationCallbacks } from "@/infrastructure/supabase/automation";
 import type { Database } from "@/infrastructure/supabase/database.types";
 import { supabaseAgreementRepository, supabaseContractRepository } from "@/infrastructure/supabase";
-import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "@/infrastructure/supabase/agreements";
+import {
+  supabaseAgreementReader,
+  supabaseAgreementStore,
+  supabaseAgreementTermStore,
+  supabaseServiceLineStore,
+} from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
@@ -139,6 +144,7 @@ export async function getContainer() {
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
     serviceLineStore: supabaseServiceLineStore(supabase),
+    agreementTermStore: supabaseAgreementTermStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.
     sendAgreement: makeSendAgreement(agreementRepository, supabaseAgreementSender(supabase), portalTokens),
     reissueLink: makeReissueLink(supabasePortalLinkStore(supabase), portalTokens),

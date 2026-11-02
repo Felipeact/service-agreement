@@ -79,6 +79,9 @@ describe("buildAgreementDocument, schedule", () => {
     paymentDays: null,
     governingProvince: null,
     taxNote: null,
+    defaultTermMonths: 12,
+    renewalNoticeDays: 30,
+    cpiRenegotiationThresholdPct: 5,
   };
   const line = (description: string, l: typeof HVAC) => ({ description, visitsPerYear: l.visitMonths.length, costPerVisitCents: 100, annualCents: 100 * l.visitMonths.length, ...l });
   const source: DocumentSource = {
@@ -89,6 +92,7 @@ describe("buildAgreementDocument, schedule", () => {
     shown: { versionNo: 1, lines: [line("HVAC", HVAC), line("Boiler", BOILER), line("RTU", MARCH_RTU)], annualCents: 900 },
     serviceScope: { source: "live", takenAt: null, types: [] },
     terms: null,
+    term: { start: null, months: 12, end: null },
   };
 
   test("C1081: the document carries the schedule of its lines", () => {

@@ -39,6 +39,8 @@ export function supabaseAgreementSender(client: Client): AgreementSender {
       // PostgREST picks the overload by the names sent: with the sealed token, the 5-argument one (outbox-dispatch Landing 10).
       const { error } = await client.rpc("send_agreement", tokenSealed === undefined ? args : { ...args, p_token_sealed: tokenSealed });
       if (!error) return { ok: true };
+      // The send's two 23514 refusals: the hint marks a missing start date (term-dates door 4), none means no lines.
+      if (error.code === "23514" && error.hint === "no_term_start") return { ok: false, code: "no_term_start" };
       const code = FAILURES[error.code];
       if (!code) throw unexpected(error);
       return { ok: false, code };
@@ -62,6 +64,13 @@ export function supabasePortalLinkStore(client: Client): PortalLinkStore {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const orNull = (value: unknown): Date | null => (typeof value === "string" ? new Date(value) : null);
+const dateOrNull = (value: unknown): string | null => (typeof value === "string" ? value : null);
+
+/** `portal_view`'s `term` (term-dates door 7): ISO dates, `null` while the version has no start. */
+function toTerm(value: unknown): PortalView["term"] {
+  const term = isRecord(value) ? value : {};
+  return { start: dateOrNull(term.start), months: typeof term.months === "number" ? term.months : 12, end: dateOrNull(term.end) };
+}
 
 /** One of `portal_view`'s lines; `visitMonths` and `equipment` are cadence door 6's keys. */
 function toLine(value: unknown): PortalView["lines"][number] {
@@ -101,6 +110,7 @@ function toView(json: unknown): PortalView | null {
     annualCents: json.annualCents as number,
     scope: json.scope ?? null,
     terms: parseTerms({ terms: json.terms }),
+    term: toTerm(json.term),
     decision: decision
       ? {
           status: decision.status as "accepted" | "refused" | "changes_requested",

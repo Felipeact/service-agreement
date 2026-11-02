@@ -26,6 +26,9 @@ const SETTINGS: OrgSettingsValue = {
   paymentDays: null,
   governingProvince: null,
   taxNote: null,
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 const source = (visitMonths: number[]): DocumentSource => ({
   number: "AG-1046",
@@ -48,6 +51,7 @@ const source = (visitMonths: number[]): DocumentSource => ({
   },
   serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [RTU] },
   terms: null,
+  term: { start: null, months: 12, end: null },
 });
 const render = async (visitMonths: number[]) =>
   (await pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildAgreementDocument(source(visitMonths), SETTINGS)))).join("\n");

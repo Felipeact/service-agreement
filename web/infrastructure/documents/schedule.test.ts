@@ -24,6 +24,7 @@ const base: AgreementDocument = {
   ],
   scope: { kind: "listed", recordedOn: null, types: [] },
   terms: [],
+  term: "Term: not recorded for this version",
 };
 
 const render = async (over: Partial<AgreementDocument>) => (await pdfPages(await reactPdfDocumentRenderer.renderAgreement({ ...base, ...over }))).join("\n");

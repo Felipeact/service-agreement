@@ -10,6 +10,7 @@ const container = {
   agreementReader: { get: vi.fn() },
   agreementStore: { create: vi.fn() },
   serviceLineStore: { add: vi.fn(), update: vi.fn(), remove: vi.fn() },
+  agreementTermStore: { save: vi.fn() },
   transitionAgreement: vi.fn(),
 };
 const WRITES = [
@@ -69,6 +70,7 @@ const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
   equipmentChoices: [{ id: TYPE, code: "RTU", name: "Rooftop unit", defaultVisitMonths: [3, 6, 9, 12] }],
   serviceScope: { source: "live", takenAt: null, types: [] },
   terms: null,
+  term: { start: null, months: 12, end: null },
   portalLink: null,
     linkEmail: null,
   ...over,
@@ -317,3 +319,37 @@ describe("the agreement page", () => {
   });
 });
 
+describe("saveTermAction", () => {
+  test("C1143: invalid input returns the term errors with what was typed and calls no store", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    const state = await actions.saveTermAction(AGR, form({ termStart: "1999-12-31", termMonths: "61" }));
+    expect(state).toEqual({
+      status: "invalid",
+      errors: { start: "Enter a start date between 2000 and 2099", months: "Term must be a whole number of months from 1 to 60" },
+      values: { start: "1999-12-31", months: "61" },
+    });
+    expect(container.agreementTermStore.save).not.toHaveBeenCalled();
+  });
+
+  test("C1143: valid input is saved once for the agreement", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    container.agreementTermStore.save.mockResolvedValue({ ok: true });
+    expect(await actions.saveTermAction(AGR, form({ termStart: "2027-01-01", termMonths: "12" }))).toEqual({ status: "saved" });
+    expect(container.agreementTermStore.save).toHaveBeenCalledExactlyOnceWith(AGR, { start: "2027-01-01", months: 12 });
+  });
+
+  test("C1143: a locked answer shows that the version can no longer change", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    container.agreementTermStore.save.mockResolvedValue({ ok: false, code: "locked" });
+    const state = await actions.saveTermAction(AGR, form({ termStart: "2027-01-01", termMonths: "12" }));
+    expect(state).toEqual({ status: "locked" });
+    const { messageFor } = await import("@/components/agreements/state");
+    expect(messageFor(state.status)).toBe("This version can no longer be changed.");
+  });
+
+  test("C1143: a viewer is refused before any store call", async () => {
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await actions.saveTermAction(AGR, form({ termStart: "2027-01-01", termMonths: "12" }))).toEqual({ status: "forbidden" });
+    expect(container.agreementTermStore.save).not.toHaveBeenCalled();
+  });
+});

@@ -19,6 +19,9 @@ const SETTINGS: OrgSettingsValue = {
   paymentDays: null,
   governingProvince: null,
   taxNote: null,
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 
 const detail: AgreementDetail = {
@@ -38,7 +41,8 @@ const detail: AgreementDetail = {
   editable: false,
   equipmentChoices: [],
   serviceScope: { source: "not_recorded" },
-  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
+  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
+  term: { start: null, months: 12, end: null },
   portalLink: null,
   linkEmail: null,
 };

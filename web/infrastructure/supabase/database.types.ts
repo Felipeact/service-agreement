@@ -21,6 +21,9 @@ export type Database = {
           id: string
           org_id: string
           snapshot: Json
+          term_end: string | null
+          term_months: number
+          term_start: string | null
           version_no: number
         }
         Insert: {
@@ -29,6 +32,9 @@ export type Database = {
           id?: string
           org_id: string
           snapshot?: Json
+          term_end?: string | null
+          term_months?: number
+          term_start?: string | null
           version_no: number
         }
         Update: {
@@ -37,6 +43,9 @@ export type Database = {
           id?: string
           org_id?: string
           snapshot?: Json
+          term_end?: string | null
+          term_months?: number
+          term_start?: string | null
           version_no?: number
         }
         Relationships: [
@@ -671,12 +680,15 @@ export type Database = {
           address: string | null
           cancellation_notice_days: number | null
           cpi_cap_pct: number
+          cpi_renegotiation_threshold_pct: number
+          default_term_months: number
           governing_province: string | null
           legal_name: string
           logo_path: string | null
           org_id: string
           payment_days: number | null
           phone: string | null
+          renewal_notice_days: number
           repair_discount_pct: number
           tax_note: string | null
           updated_at: string
@@ -686,12 +698,15 @@ export type Database = {
           address?: string | null
           cancellation_notice_days?: number | null
           cpi_cap_pct?: number
+          cpi_renegotiation_threshold_pct?: number
+          default_term_months?: number
           governing_province?: string | null
           legal_name: string
           logo_path?: string | null
           org_id: string
           payment_days?: number | null
           phone?: string | null
+          renewal_notice_days?: number
           repair_discount_pct?: number
           tax_note?: string | null
           updated_at?: string
@@ -701,12 +716,15 @@ export type Database = {
           address?: string | null
           cancellation_notice_days?: number | null
           cpi_cap_pct?: number
+          cpi_renegotiation_threshold_pct?: number
+          default_term_months?: number
           governing_province?: string | null
           legal_name?: string
           logo_path?: string | null
           org_id?: string
           payment_days?: number | null
           phone?: string | null
+          renewal_notice_days?: number
           repair_discount_pct?: number
           tax_note?: string | null
           updated_at?: string
@@ -1083,6 +1101,14 @@ export type Database = {
             }
             Returns: string
           }
+      save_agreement_term: {
+        Args: {
+          p_agreement_id: string
+          p_term_months: number
+          p_term_start: string
+        }
+        Returns: string
+      }
       save_service_line: {
         Args: {
           p_agreement_id: string

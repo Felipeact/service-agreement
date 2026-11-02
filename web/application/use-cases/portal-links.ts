@@ -2,7 +2,7 @@ import { applyAgreementCommand } from "@/domain/agreement";
 import type { AgreementRepository, AgreementSender, PortalLinkStore, PortalTokens, PortalWriteFailure } from "@/application/ports";
 
 /** The new link's secret, handed back once; the database keeps its hash and a sealed copy (customer-portal door 1, outbox-dispatch door 5). */
-export type LinkIssueResult = { ok: true; token: string } | { ok: false; code: PortalWriteFailure | "no_lines" };
+export type LinkIssueResult = { ok: true; token: string } | { ok: false; code: PortalWriteFailure | "no_lines" | "no_term_start" };
 
 /** A draft goes to `sent` with a new link. A refusal is a value; an infrastructure failure is thrown. */
 export function makeSendAgreement(agreements: AgreementRepository, sender: AgreementSender, tokens: PortalTokens) {

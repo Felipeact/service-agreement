@@ -13,6 +13,9 @@ export type OrgSettingsInput = {
   paymentDays: string;
   governingProvince: string;
   taxNote: string;
+  defaultTermMonths: string;
+  renewalNoticeDays: string;
+  cpiRenegotiationThresholdPct: string;
 };
 
 export type OrgSettingsField = keyof OrgSettingsInput;
@@ -29,6 +32,9 @@ export type OrgSettingsValue = {
   paymentDays: number | null;
   governingProvince: string | null;
   taxNote: string | null;
+  defaultTermMonths: number;
+  renewalNoticeDays: number;
+  cpiRenegotiationThresholdPct: number;
 };
 
 export type OrgSettingsErrors = Partial<Record<OrgSettingsField, string>>;
@@ -36,6 +42,7 @@ export type OrgSettingsErrors = Partial<Record<OrgSettingsField, string>>;
 export type OrgSettingsValidation = { ok: true; value: OrgSettingsValue } | { ok: false; errors: OrgSettingsErrors };
 
 const MAX_DAYS = 365;
+const MAX_TERM_MONTHS = 60;
 
 function optionalText(raw: string, max: number, label: string, errors: OrgSettingsErrors, field: OrgSettingsField) {
   const text = raw.trim();
@@ -62,6 +69,15 @@ function days(raw: string, label: string, errors: OrgSettingsErrors, field: OrgS
   return Number(text);
 }
 
+function wholeNumber(raw: string, min: number, max: number, message: string, errors: OrgSettingsErrors, field: OrgSettingsField) {
+  const text = raw.trim();
+  if (!/^\d+$/.test(text) || Number(text) < min || Number(text) > max) {
+    errors[field] = message;
+    return min;
+  }
+  return Number(text);
+}
+
 /** Checks the form on the server; the same rules back the database's own constraints. */
 export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidation {
   const errors: OrgSettingsErrors = {};
@@ -83,6 +99,14 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
   const cancellationNoticeDays = days(input.cancellationNoticeDays, "Cancellation notice", errors, "cancellationNoticeDays");
   const paymentDays = days(input.paymentDays, "Payment terms", errors, "paymentDays");
 
+  // The renewal settings always hold a value (term-dates door 2), so none of them may be left empty.
+  const defaultTermMonths = wholeNumber(input.defaultTermMonths, 1, MAX_TERM_MONTHS,
+    `Default term must be a whole number of months from 1 to ${MAX_TERM_MONTHS}`, errors, "defaultTermMonths");
+  const renewalNoticeDays = wholeNumber(input.renewalNoticeDays, 0, MAX_DAYS,
+    `Renewal notice must be a whole number from 0 to ${MAX_DAYS}`, errors, "renewalNoticeDays");
+  const cpiRenegotiationThresholdPct = percent(input.cpiRenegotiationThresholdPct, "CPI renegotiation threshold", errors,
+    "cpiRenegotiationThresholdPct");
+
   const provinceRaw = input.governingProvince.trim();
   if (provinceRaw !== "" && !(PROVINCES as readonly string[]).includes(provinceRaw)) {
     errors.governingProvince = "Choose a province or territory from the list";
@@ -102,6 +126,9 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
       paymentDays,
       governingProvince: provinceRaw === "" ? null : provinceRaw,
       taxNote,
+      defaultTermMonths,
+      renewalNoticeDays,
+      cpiRenegotiationThresholdPct,
     },
   };
 }

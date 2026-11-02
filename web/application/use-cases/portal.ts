@@ -64,6 +64,7 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       shown: { versionNo: view.link.versionNo, lines: view.lines, annualCents: view.annualCents },
       serviceScope: portalScope(view),
       terms,
+      term: view.term,
     },
     // A frozen version prints its own terms; these are read only for the editable draft, which a link never shows.
     {
@@ -77,6 +78,10 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       paymentDays: terms?.paymentDays ?? null,
       governingProvince: terms?.governingProvince ?? null,
       taxNote: terms?.taxNote ?? null,
+      // Never printed here either: a link's version is frozen, so its term and frozen renewal values decide.
+      defaultTermMonths: view.term.months,
+      renewalNoticeDays: terms?.renewalNoticeDays ?? 0,
+      cpiRenegotiationThresholdPct: terms?.cpiRenegotiationThresholdPct ?? 0,
     },
   );
 }

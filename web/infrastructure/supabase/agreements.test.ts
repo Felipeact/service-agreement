@@ -344,7 +344,7 @@ describe("agreement reader: terms and the customer link", () => {
   test("C936: a frozen version returns the terms of its snapshot", async () => {
     const stub = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
     const detail = await supabaseAgreementReader(stub.typed).get(AGR);
-    expect(detail?.terms).toEqual(TERMS);
+    expect(detail?.terms).toEqual({ ...TERMS, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null });
   });
 
   test("C936: the editable version has no terms and its snapshot is not read", async () => {

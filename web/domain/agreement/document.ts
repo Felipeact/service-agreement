@@ -2,6 +2,7 @@ import type { OrgSettingsValue } from "../org-settings";
 import { formatSettingNumber } from "../org-settings";
 import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
+import { termLine, termMonthsLabel, type AgreementTerm } from "./term";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
 export const NEUTRAL_ACCENT = "#374151";
@@ -36,6 +37,8 @@ export type AgreementDocument = {
    */
   schedule: ScheduleRow[];
   scope: DocumentScope;
+  /** The version's term as one printed line (term-dates AC 18, 19). */
+  term: string;
   /** Only the terms that are set, in print order. */
   terms: { label: string; value: string }[];
 };
@@ -50,11 +53,23 @@ export type DocumentSource = {
   serviceScope: { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
   /** The terms frozen into the shown version; `null` while it is editable or when it recorded none (customer-portal door 3). */
   terms: AgreementTerms | null;
+  /** The shown version's start, months and end (term-dates door 1). */
+  term: AgreementTerm;
 };
 
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 
-export function termsOf(settings: AgreementTerms): AgreementDocument["terms"] {
+/** The renewal clause, from the frozen or current terms and the version's term months (term-dates AC 20). */
+export function renewalClause(terms: AgreementTerms, termMonths: number): string | null {
+  if (terms.renewalNoticeDays === null || terms.cpiRenegotiationThresholdPct === null) return null;
+  return (
+    `Renews automatically for another ${termMonthsLabel(termMonths)} with the CPI increase, capped at ` +
+    `${formatSettingNumber(terms.cpiCapPct)}%. If CPI is ${formatSettingNumber(terms.cpiRenegotiationThresholdPct)}% or more, ` +
+    `the renewal is renegotiated. Notice is given ${days(terms.renewalNoticeDays)} before the end date.`
+  );
+}
+
+export function termsOf(settings: AgreementTerms, termMonths: number): AgreementDocument["terms"] {
   const terms: AgreementDocument["terms"] = [
     { label: "Repair discount", value: `${formatSettingNumber(settings.repairDiscountPct)}%` },
     { label: "CPI cap", value: `${formatSettingNumber(settings.cpiCapPct)}%` },
@@ -63,6 +78,8 @@ export function termsOf(settings: AgreementTerms): AgreementDocument["terms"] {
   if (settings.paymentDays !== null) terms.push({ label: "Payment terms", value: days(settings.paymentDays) });
   if (settings.governingProvince !== null) terms.push({ label: "Governing province", value: settings.governingProvince });
   if (settings.taxNote !== null) terms.push({ label: "Tax note", value: settings.taxNote });
+  const renewal = renewalClause(settings, termMonths);
+  if (renewal !== null) terms.push({ label: "Renewal", value: renewal });
   return terms;
 }
 
@@ -86,6 +103,7 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
     scope: scope.source === "not_recorded" ? { kind: "not_recorded" } : { kind: "listed", recordedOn: scope.source === "frozen" ? scope.takenAt : null, types: scope.types },
     // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
     // settings of today (customer-portal AC 32, 33).
-    terms: source.editable ? termsOf(settings) : source.terms ? termsOf(source.terms) : [],
+    term: termLine(source.term, source.editable),
+    terms: source.editable ? termsOf(settings, source.term.months) : source.terms ? termsOf(source.terms, source.term.months) : [],
   };
 }

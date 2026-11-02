@@ -36,7 +36,8 @@ export function portalView(over: Partial<PortalView> = {}): PortalView {
       takenAt: "2026-10-20T15:00:00Z",
       types: [{ code: "RTU", name: "Rooftop unit", tasks: ["Inspect belts"], assets: [{ unitNo: "RTU-1", typeModel: "Carrier 48", location: "Roof" }] }],
     },
-    terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
+    terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
+    term: { start: null, months: 12, end: null },
     decision: null,
     ...over,
   };

@@ -1,4 +1,4 @@
-import type { ServiceLineErrors, ServiceLineInput } from "@/domain/agreement";
+import type { AgreementTermInput, ServiceLineErrors, ServiceLineInput } from "@/domain/agreement";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
@@ -10,17 +10,23 @@ export type LineState =
   | { status: "idle" | "saved" | "removed" | "too_many" | "locked" | Failure }
   | { status: "invalid"; errors: ServiceLineErrors; values: ServiceLineInput };
 
+/** What `saveTermAction` answers; `invalid` keeps what was typed (term-dates AC 9, 10). */
+export type TermState =
+  | { status: "idle" | "saved" | "locked" | Failure }
+  | { status: "invalid"; errors: Partial<Record<keyof AgreementTermInput, string>>; values: AgreementTermInput };
+
 /** What `reviseAgreementAction` (when it does not redirect) and `withdrawAgreementAction` answer. */
 export type MoveState = { status: "idle" | "withdrawn" | "conflict" | "invalid_transition" | Failure };
 
 /** What `sendAgreementAction` and `reissueLinkAction` answer: the full link once, or why nothing was written. */
 export type LinkState =
-  | { status: "idle" | "no_lines" | "conflict" | Failure }
+  | { status: "idle" | "no_lines" | "no_term_start" | "conflict" | Failure }
   | { status: "sent" | "reissued"; url: string };
 
 /** The send and new-link alerts; `conflict` and `no_lines` say what to do next (customer-portal AC 2, 3). */
 export const LINK_MESSAGES = {
   no_lines: "Add at least one service line before sending.",
+  no_term_start: "Set the term start date before sending.",
   conflict: "This agreement was changed by someone else. Reload the page.",
   forbidden: "You don't have permission to send agreements.",
   not_found: "This agreement no longer exists.",

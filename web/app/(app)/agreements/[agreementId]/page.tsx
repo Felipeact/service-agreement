@@ -11,6 +11,7 @@ import {
   reissueLinkAction,
   removeServiceLineAction,
   reviseAgreementAction,
+  saveTermAction,
   sendAgreementAction,
   updateServiceLineAction,
   withdrawAgreementAction,
@@ -46,6 +47,7 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         withdraw: withdrawAgreementAction.bind(null, agreementId),
         send: sendAgreementAction.bind(null, agreementId),
         reissue: reissueLinkAction.bind(null, agreementId),
+        saveTerm: saveTermAction.bind(null, agreementId),
       }
     : undefined;
 

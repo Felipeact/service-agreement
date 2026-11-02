@@ -4,7 +4,7 @@ import { portalScope, type PortalDecision } from "@/application/use-cases";
 import { ServiceScopeSections } from "@/components/agreements/service-scope";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
-import { NEUTRAL_ACCENT, termsOf, visitSchedule } from "@/domain/agreement";
+import { NEUTRAL_ACCENT, termLine, termsOf, visitSchedule } from "@/domain/agreement";
 import { contrastText, isAccent, type PortalState } from "@/domain/portal";
 import { formatCadExact } from "@/lib/money";
 import { DecisionControls } from "./decision-controls";
@@ -58,7 +58,7 @@ function Phone({ phone }: { phone: string | null }) {
 
 /** What the customer reads: the version's lines, scope and frozen terms. Every state with content shows this. */
 function Content({ view }: { view: PortalView }) {
-  const terms = view.terms ? termsOf(view.terms) : [];
+  const terms = view.terms ? termsOf(view.terms, view.term.months) : [];
   const scope = portalScope(view);
   return (
     <>
@@ -165,6 +165,10 @@ export function ReviewView({ token, view, state, actions }: ReviewViewProps) {
             <h1 className="text-[22px] leading-tight font-bold">{`Agreement ${view.agreement.number}`}</h1>
             <div data-accent-rule="" style={{ backgroundColor: accent }} className="h-1 w-16 rounded-full" />
             <p className="text-[14px] text-ink-2">{`Version ${view.link.versionNo} · ${view.customer.name} · ${view.site.name}`}</p>
+            {/* A link always shows a frozen version (term-dates AC 18, 19). */}
+            <p data-term className="text-[14px] text-ink-2">
+              {termLine(view.term, false)}
+            </p>
           </div>
         ) : (
           <h1 className="sr-only">Agreement</h1>

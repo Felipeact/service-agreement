@@ -21,6 +21,9 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
         paymentDays: data.payment_days,
         governingProvince: data.governing_province,
         taxNote: data.tax_note,
+        defaultTermMonths: data.default_term_months,
+        renewalNoticeDays: data.renewal_notice_days,
+        cpiRenegotiationThresholdPct: Number(data.cpi_renegotiation_threshold_pct),
       };
     },
 
@@ -39,6 +42,9 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
             payment_days: value.paymentDays,
             governing_province: value.governingProvince,
             tax_note: value.taxNote,
+            default_term_months: value.defaultTermMonths,
+            renewal_notice_days: value.renewalNoticeDays,
+            cpi_renegotiation_threshold_pct: value.cpiRenegotiationThresholdPct,
             updated_at: at.toISOString(),
           })
           .eq("org_id", orgId)

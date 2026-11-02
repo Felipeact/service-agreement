@@ -17,6 +17,9 @@ const SETTINGS: OrgSettingsValue = {
   paymentDays: 30,
   governingProvince: "BC",
   taxNote: "GST extra",
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 
 function detail(over: Partial<AgreementDetail> = {}, versionNo = 1): AgreementDetail {
@@ -37,7 +40,8 @@ function detail(over: Partial<AgreementDetail> = {}, versionNo = 1): AgreementDe
     editable: false,
     equipmentChoices: [],
     serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [] },
-    terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
+    terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
+    term: { start: null, months: 12, end: null },
     portalLink: null,
     linkEmail: null,
     ...over,

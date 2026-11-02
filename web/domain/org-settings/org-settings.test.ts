@@ -12,6 +12,9 @@ const valid: OrgSettingsInput = {
   paymentDays: "30",
   governingProvince: "BC",
   taxNote: "Prices exclude applicable taxes (GST and PST).",
+  defaultTermMonths: "12",
+  renewalNoticeDays: "30",
+  cpiRenegotiationThresholdPct: "5",
 };
 
 const run = (patch: Partial<OrgSettingsInput>) => validateOrgSettings({ ...valid, ...patch });
@@ -97,5 +100,44 @@ describe("provinces", () => {
   test("C154: the list is exactly the thirteen codes", () => {
     expect([...PROVINCES]).toEqual(["AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"]);
     for (const code of PROVINCES) expect(accepts("governingProvince", code)?.governingProvince).toBe(code);
+  });
+});
+
+describe("the renewal settings", () => {
+  test.each([
+    ["defaultTermMonths", "1", 1],
+    ["defaultTermMonths", "12", 12],
+    ["defaultTermMonths", "60", 60],
+    ["renewalNoticeDays", "0", 0],
+    ["renewalNoticeDays", "30", 30],
+    ["renewalNoticeDays", "365", 365],
+    ["cpiRenegotiationThresholdPct", "0", 0],
+    ["cpiRenegotiationThresholdPct", "5", 5],
+    ["cpiRenegotiationThresholdPct", "4.75", 4.75],
+    ["cpiRenegotiationThresholdPct", "100", 100],
+  ] as const)("C1132: %s %j is accepted as %d", (field, raw, value) => {
+    const result = run({ [field]: raw });
+    expect(result.ok && result.value[field]).toBe(value);
+  });
+
+  const TERM = "Default term must be a whole number of months from 1 to 60";
+  const NOTICE = "Renewal notice must be a whole number from 0 to 365";
+  const THRESHOLD = "CPI renegotiation threshold must be a number from 0 to 100 with at most two decimals";
+  test.each([
+    ["defaultTermMonths", "", TERM],
+    ["defaultTermMonths", "0", TERM],
+    ["defaultTermMonths", "61", TERM],
+    ["defaultTermMonths", "1.5", TERM],
+    ["defaultTermMonths", "abc", TERM],
+    ["renewalNoticeDays", "", NOTICE],
+    ["renewalNoticeDays", "366", NOTICE],
+    ["renewalNoticeDays", "-1", NOTICE],
+    ["renewalNoticeDays", "2.5", NOTICE],
+    ["cpiRenegotiationThresholdPct", "", THRESHOLD],
+    ["cpiRenegotiationThresholdPct", "100.01", THRESHOLD],
+    ["cpiRenegotiationThresholdPct", "5.123", THRESHOLD],
+    ["cpiRenegotiationThresholdPct", "-1", THRESHOLD],
+  ] as const)("C1132: %s %j gives its error", (field, raw, message) => {
+    expect(run({ [field]: raw })).toEqual({ ok: false, errors: { [field]: message } });
   });
 });

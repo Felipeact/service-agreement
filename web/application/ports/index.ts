@@ -1,4 +1,12 @@
-import type { AgreementDocument, AgreementStatus, AgreementTerms, EquipmentChoice, ScopeType, ServiceLineValue } from "@/domain/agreement";
+import type {
+  AgreementDocument,
+  AgreementStatus,
+  AgreementTerm,
+  AgreementTerms,
+  EquipmentChoice,
+  ScopeType,
+  ServiceLineValue,
+} from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
@@ -428,6 +436,8 @@ export type AgreementDetail = {
   serviceScope: AgreementServiceScope;
   /** The terms the shown version was sent with; `null` while it is editable or when it recorded none (customer-portal door 3). */
   terms: AgreementTerms | null;
+  /** The shown version's start, months and end (term-dates door 1). */
+  term: AgreementTerm;
   /**
    * The live customer link of the shown version, when the agreement is `sent` and the version is the current one:
    * when the customer first opened it, or `null` for not yet. `null` too when there is no live link. The link itself
@@ -475,6 +485,13 @@ export interface ServiceLineStore {
   remove(lineId: string): Promise<ServiceLineWriteResult>;
 }
 
+export type AgreementTermWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" | "invalid" };
+
+/** The term of the current version of a draft, through `save_agreement_term` (term-dates door 3); anything else is `locked`. */
+export interface AgreementTermStore {
+  save(agreementId: string, term: { start: string; months: number }): Promise<AgreementTermWriteResult>;
+}
+
 /** Turns the content of one agreement into a PDF (agreement-pdf door 2). Rejects when it cannot render. */
 export interface DocumentRenderer {
   renderAgreement(document: AgreementDocument): Promise<Uint8Array>;
@@ -483,7 +500,7 @@ export interface DocumentRenderer {
 /** Why a send or a new link wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type PortalWriteFailure = "conflict" | "forbidden" | "not_found";
 
-export type SendAgreementResult = { ok: true } | { ok: false; code: PortalWriteFailure | "no_lines" };
+export type SendAgreementResult = { ok: true } | { ok: false; code: PortalWriteFailure | "no_lines" | "no_term_start" };
 export type ReissueLinkResult = { ok: true } | { ok: false; code: PortalWriteFailure };
 
 /** Moves a draft to sent, freezes it and creates its customer link in one transaction (customer-portal door 2). */
@@ -525,6 +542,8 @@ export type PortalView = {
   annualCents: number;
   scope: unknown;
   terms: AgreementTerms | null;
+  /** The version's term (term-dates door 7). */
+  term: AgreementTerm;
   decision: { status: "accepted" | "refused" | "changes_requested"; decidedAt: Date; reason: string | null } | null;
 };
 

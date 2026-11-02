@@ -72,6 +72,15 @@ export function SettingsFields({ values, state, pending, readOnly, action }: Set
         </div>
       </section>
 
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[14px] font-semibold">Renewal</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {text("defaultTermMonths", "Default term (months)", { inputMode: "numeric" })}
+          {text("renewalNoticeDays", "Renewal notice (days)", { inputMode: "numeric" })}
+          {text("cpiRenegotiationThresholdPct", "CPI renegotiation threshold (%)", { inputMode: "decimal" })}
+        </div>
+      </section>
+
       {readOnly ? (
         <p className="text-[13px] text-ink-2">Only owners and admins can edit company settings.</p>
       ) : (

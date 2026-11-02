@@ -11,8 +11,9 @@ import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
 import { ServiceScopeSections } from "./service-scope";
 import { LinkControls } from "./link-controls";
+import { TermSection } from "./term-section";
 import { VisitScheduleSection } from "./visit-schedule";
-import type { LineState, LinkState, MoveState } from "./state";
+import type { LineState, LinkState, MoveState, TermState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -23,6 +24,7 @@ export type AgreementActions = {
   withdraw: () => Promise<MoveState>;
   send: () => Promise<LinkState>;
   reissue: () => Promise<LinkState>;
+  saveTerm: (formData: FormData) => Promise<TermState>;
 };
 
 type AgreementViewProps = {
@@ -102,6 +104,8 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
       {writer && (canSend || canReissue) && (
         <LinkControls number={agreement.number} canSend={canSend} canReissue={canReissue} send={writer.send} reissue={writer.reissue} />
       )}
+
+      <TermSection term={agreement.term} action={lineActions?.saveTerm} />
 
       <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
         <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>

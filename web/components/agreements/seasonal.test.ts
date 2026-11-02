@@ -52,6 +52,7 @@ function agreement(lines: ServiceLineView[]): AgreementDetail {
     terms: null,
     portalLink: null,
     linkEmail: null,
+    term: { start: null, months: 12, end: null },
   };
 }
 
@@ -63,6 +64,7 @@ const actions: AgreementActions = {
   withdraw: async () => ({ status: "withdrawn" }),
   send: async () => ({ status: "idle" }),
   reissue: async () => ({ status: "idle" }),
+  saveTerm: async () => ({ status: "idle" as const }),
 };
 const view = (a: AgreementDetail) => text(renderToStaticMarkup(createElement(AgreementView, { agreement: a, role: "estimator", actions })));
 const included = (out: string) => between(out, "Service included", "Equipment");

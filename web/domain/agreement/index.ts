@@ -196,7 +196,10 @@ export function parseServiceScope(document: unknown): ServiceScope | null {
   return { takenAt, types: ordered.sort((a, b) => compareText(a.name, b.name)) };
 }
 
-/** The six default terms a version carries once it has left draft (customer-portal door 3). */
+/**
+ * The default terms a version carries once it has left draft (customer-portal door 3), plus the two renewal settings
+ * (term-dates door 5), which are `null` in a version frozen before they existed.
+ */
 export type AgreementTerms = {
   repairDiscountPct: number;
   cpiCapPct: number;
@@ -204,6 +207,8 @@ export type AgreementTerms = {
   paymentDays: number | null;
   governingProvince: string | null;
   taxNote: string | null;
+  renewalNoticeDays: number | null;
+  cpiRenegotiationThresholdPct: number | null;
 };
 
 const isPercent = (value: unknown): value is number => typeof value === "number" && value >= 0 && value <= 100;
@@ -219,7 +224,9 @@ export function parseTerms(snapshot: unknown): AgreementTerms | null {
     !isOptionalDays(terms.cancellationNoticeDays) ||
     !isOptionalDays(terms.paymentDays) ||
     !isOptionalText(terms.governingProvince) ||
-    !isOptionalText(terms.taxNote)
+    !isOptionalText(terms.taxNote) ||
+    !(terms.renewalNoticeDays === undefined || (isOptionalDays(terms.renewalNoticeDays) && (terms.renewalNoticeDays ?? 0) <= 365)) ||
+    !(terms.cpiRenegotiationThresholdPct === undefined || terms.cpiRenegotiationThresholdPct === null || isPercent(terms.cpiRenegotiationThresholdPct))
   ) {
     return null;
   }
@@ -230,8 +237,11 @@ export function parseTerms(snapshot: unknown): AgreementTerms | null {
     paymentDays: terms.paymentDays,
     governingProvince: terms.governingProvince,
     taxNote: terms.taxNote,
+    renewalNoticeDays: terms.renewalNoticeDays ?? null,
+    cpiRenegotiationThresholdPct: terms.cpiRenegotiationThresholdPct ?? null,
   };
 }
 
 export * from "./cadence";
+export * from "./term";
 export * from "./document";

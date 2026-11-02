@@ -19,6 +19,9 @@ let SETTINGS: OrgSettingsValue = {
   paymentDays: null,
   governingProvince: null,
   taxNote: null,
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 
 let detail: AgreementDetail = {
@@ -38,7 +41,8 @@ let detail: AgreementDetail = {
   editable: false,
   equipmentChoices: [],
   serviceScope: { source: "not_recorded" },
-  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" },
+  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
+  term: { start: null, months: 12, end: null },
   portalLink: null,
   linkEmail: null,
 };
@@ -55,7 +59,7 @@ vi.mock("@/composition", () => ({ getContainer: async () => container }));
 
 const { GET } = await import("../app/(app)/agreements/[agreementId]/pdf/route");
 
-const FROZEN = { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra" };
+const FROZEN = { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null };
 const BASE = detail;
 const BASE_SETTINGS = SETTINGS;
 

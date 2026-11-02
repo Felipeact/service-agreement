@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import { validateServiceLine, type ServiceLineInput } from "@/domain/agreement";
+import { validateAgreementTerm, validateServiceLine, type ServiceLineInput } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
-import type { CreateAgreementState, LineState, LinkState, MoveState } from "@/components/agreements/state";
+import type { CreateAgreementState, LineState, LinkState, MoveState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 
 const FORBIDDEN = { status: "forbidden" } as const;
@@ -77,6 +77,23 @@ export async function removeServiceLineAction(lineId: string): Promise<LineState
   if (!removed.ok) return { status: removed.code };
   revalidatePath("/agreements/[agreementId]", "page");
   return { status: "removed" };
+}
+
+/** Saves the start date and months of the current version of a draft (term-dates door 3). */
+export async function saveTermAction(agreementId: string, formData: FormData): Promise<TermState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  const input = { start: String(formData.get("termStart") ?? ""), months: String(formData.get("termMonths") ?? "") };
+  const checked = validateAgreementTerm(input);
+  if (!checked.ok) return { status: "invalid", errors: checked.errors, values: input };
+  const saved = await container.agreementTermStore.save(agreementId, checked.value);
+  if (saved.ok) {
+    revalidatePath(`/agreements/${agreementId}`);
+    return { status: "saved" };
+  }
+  // The form checks the same bounds, so a database refusal of the values is unexpected here.
+  return { status: saved.code === "invalid" ? "unavailable" : saved.code };
 }
 
 type Moved = { ok: true } | MoveState;

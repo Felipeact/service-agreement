@@ -21,6 +21,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 13, fontFamily: "Helvetica-Bold", marginTop: 18 },
   meta: { marginTop: 4, flexDirection: "row", flexWrap: "wrap" },
   metaItem: { marginRight: 18 },
+  termLine: { marginTop: 4 },
   h2: { fontSize: 11, fontFamily: "Helvetica-Bold", marginTop: 18, marginBottom: 6 },
   head: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: HAIRLINE, paddingBottom: 3, fontFamily: "Helvetica-Bold", fontSize: 9 },
   row: { flexDirection: "row", paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: HAIRLINE },
@@ -65,6 +66,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
           <Text style={styles.metaItem}>{document.customerName}</Text>
           <Text style={styles.metaItem}>{document.siteName}</Text>
         </View>
+        <Text style={styles.termLine}>{document.term}</Text>
 
         {document.lines.length === 0 ? (
           <>

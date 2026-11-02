@@ -257,6 +257,7 @@ describe("composition root", () => {
       terms: null,
       portalLink: null,
       linkEmail: null,
+      term: { start: null, months: 12, end: null },
     };
     const reader: AgreementReader = { get: async () => detail };
     const created: CreateAgreementResult[] = [

@@ -182,6 +182,9 @@ describe("buildAgreementDocument, seasonal tasks", () => {
     paymentDays: null,
     governingProvince: null,
     taxNote: null,
+    defaultTermMonths: 12,
+    renewalNoticeDays: 30,
+    cpiRenegotiationThresholdPct: 5,
   };
   const line = (description: string, l: typeof HVAC) => ({ description, visitsPerYear: l.visitMonths.length, costPerVisitCents: 100, annualCents: 100 * l.visitMonths.length, ...l });
   const source: DocumentSource = {
@@ -192,6 +195,7 @@ describe("buildAgreementDocument, seasonal tasks", () => {
     shown: { versionNo: 1, lines: [line("HVAC", HVAC), line("Boiler", BOILER)], annualCents: 500 },
     serviceScope: { source: "live", takenAt: null, types: TYPES },
     terms: null,
+    term: { start: null, months: 12, end: null },
   };
 
   test("C1122: the document's schedule carries the scope's seasonal tasks", () => {

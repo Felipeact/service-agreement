@@ -18,6 +18,9 @@ const value: OrgSettingsValue = {
   paymentDays: null,
   governingProvince: "BC",
   taxNote: null,
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
 };
 
 afterEach(() => vi.restoreAllMocks());
