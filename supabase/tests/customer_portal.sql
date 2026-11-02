@@ -1,4 +1,5 @@
--- customer-portal, database side: C901-C907, C910, C911, C919-C928, C933, C939-C943, C945, C946; term-dates C1149, C1151, C1157, C1164. Run after fixture.sql in
+-- customer-portal, database side: C901-C907, C910, C911, C919-C928, C933, C939-C943, C945, C946; term-dates C1149, C1151, C1157, C1164;
+-- proposal-expiry C1226-C1231, C1240, C1241. Run after fixture.sql in
 -- the same execute_sql call (npm run test:db customer_portal). Fixture: org A owner uA, estimator uE, viewer uV;
 -- org B owner uB; uX in no org (made an admin of org A below). Setup runs as the table owner with no signed-in user.
 
@@ -817,6 +818,186 @@ select set_config('request.jwt.claims', '', true);
 do $$ begin
   perform tests.ok('C1164 no lines', (select count(*) = 2 from tests.t1164 where state = '23514' and coalesce(hint, '') = ''),
     'a send with no line did not refuse 23514 with no hint');
+end $$;
+
+-- Proposal expiry (.specs/features/proposal-expiry/checks.md): C1226-C1231, C1240, C1241. T is today in
+-- America/Vancouver.
+create function tests.pe_today() returns date
+language sql stable as $$ select (now() at time zone 'America/Vancouver')::date $$;
+
+create function tests.pe_valid(p_name text, p_version int default 1) returns date
+language sql security definer as $$
+  select valid_until from public.agreement_versions where agreement_id = tests.id(p_name) and version_no = p_version
+$$;
+-- The SQLSTATE a statement raises, or 'ok'.
+create function tests.od_state_cp(p_sql text) returns text
+language plpgsql as $$
+begin
+  begin
+    execute p_sql;
+  exception when others then
+    return sqlstate;
+  end;
+  return 'ok';
+end $$;
+grant execute on function tests.pe_today(), tests.pe_valid(text, int), tests.od_state_cp(text) to anon, authenticated;
+
+-- C1226: send stamps T + the org's days on the latest version only.
+select tests.cp_sent('pe1226');
+update public.org_settings set proposal_validity_days = 14 where org_id = tests.id('orgA');
+select tests.cp_sent('pe1226b');
+update public.org_settings set proposal_validity_days = 30 where org_id = tests.id('orgA');
+select tests.cp_agr('pe1226c');
+insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start)
+values (tests.id('pe1226c:v2'), tests.id('orgA'), tests.id('pe1226c'), 2, '2027-01-01');
+insert into public.service_lines (org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
+values (tests.id('orgA'), tests.id('pe1226c:v2'), 1, 'pe1226c v2 line', '{4,10}', 2, 30000);
+select tests.act_as('uE');
+select public.send_agreement(tests.id('pe1226c'), tests.cp_hash('pe1226c'), 'agreement.sent', '{"from": "draft", "to": "sent"}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1226 30 days', tests.pe_valid('pe1226') = tests.pe_today() + 30,
+    'got ' || coalesce(tests.pe_valid('pe1226')::text, 'null'));
+  perform tests.ok('C1226 14 days', tests.pe_valid('pe1226b') = tests.pe_today() + 14,
+    'got ' || coalesce(tests.pe_valid('pe1226b')::text, 'null'));
+  perform tests.ok('C1226 latest only', tests.pe_valid('pe1226c', 2) = tests.pe_today() + 30
+    and tests.pe_valid('pe1226c', 1) is null, 'v1 ' || coalesce(tests.pe_valid('pe1226c', 1)::text, 'null')
+    || ', v2 ' || coalesce(tests.pe_valid('pe1226c', 2)::text, 'null'));
+end $$;
+
+-- C1227: changing the setting after a send leaves the date alone.
+select tests.cp_sent('pe1227');
+update public.org_settings set proposal_validity_days = 7 where org_id = tests.id('orgA');
+do $$ begin
+  perform tests.ok('C1227 unchanged', tests.pe_valid('pe1227') = tests.pe_today() + 30,
+    'got ' || coalesce(tests.pe_valid('pe1227')::text, 'null'));
+end $$;
+update public.org_settings set proposal_validity_days = 30 where org_id = tests.id('orgA');
+
+-- C1228: a new link keeps the date.
+select tests.cp_sent('pe1228');
+update public.agreement_versions set valid_until = '2027-01-15' where agreement_id = tests.id('pe1228');
+select tests.act_as('uE');
+select public.reissue_portal_link(tests.id('pe1228'), tests.cp_hash('pe1228-new'));
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1228 unchanged', tests.pe_valid('pe1228') = '2027-01-15',
+    'got ' || coalesce(tests.pe_valid('pe1228')::text, 'null'));
+end $$;
+
+-- C1229: revise starts version 2 with no date and keeps version 1's; sending version 2 stamps version 2 only.
+select tests.cp_sent('pe1229');
+update public.agreement_versions set valid_until = '2027-01-20' where agreement_id = tests.id('pe1229');
+select tests.act_as_anon();
+select public.portal_decide(tests.cp_hash('pe1229'), 'changes_requested', 'agreement.changes_requested', '{"reason": "fewer visits"}');
+select tests.act_as('uE');
+select public.apply_agreement_transition(tests.id('pe1229'), 'changes_requested', 'draft', 'agreement.revised',
+  '{"from": "changes_requested", "to": "draft"}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1229 v2 null', (select count(*) from public.agreement_versions where agreement_id = tests.id('pe1229')) = 2
+    and tests.pe_valid('pe1229', 2) is null, 'v2 ' || coalesce(tests.pe_valid('pe1229', 2)::text, 'null'));
+  perform tests.ok('C1229 v1 kept', tests.pe_valid('pe1229', 1) = '2027-01-20', 'v1 changed');
+end $$;
+select tests.act_as('uE');
+select public.send_agreement(tests.id('pe1229'), tests.cp_hash('pe1229-v2'), 'agreement.sent', '{"from": "draft", "to": "sent"}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1229 v2 sent', tests.pe_valid('pe1229', 2) = tests.pe_today() + 30,
+    'v2 ' || coalesce(tests.pe_valid('pe1229', 2)::text, 'null'));
+  perform tests.ok('C1229 v1 still kept', tests.pe_valid('pe1229', 1) = '2027-01-20', 'v1 changed on the second send');
+end $$;
+
+-- C1230: no member writes the date, the owner included.
+select tests.cp_sent('pe1230');
+select tests.act_as('uA');
+do $$ begin
+  perform tests.expect_error('C1230 owner update', format(
+    'update public.agreement_versions set valid_until = ''2030-01-01'' where id = %L', tests.id('pe1230:v1')), '42501');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1230 unchanged', tests.pe_valid('pe1230') = tests.pe_today() + 30, 'the date changed');
+end $$;
+
+-- C1231: a failed send stamps nothing.
+select tests.cp_agr('pe1231a', 'draft', 'A', 0);
+select tests.cp_agr('pe1231b');
+update public.agreement_versions set term_start = null where agreement_id = tests.id('pe1231b');
+select tests.cp_sent('pe1231c');
+update public.agreement_versions set valid_until = null where agreement_id = tests.id('pe1231c');
+select tests.act_as('uE');
+do $$ begin
+  perform tests.expect_error('C1231 no line', tests.cp_send_sql('pe1231a', 'pe1231a'), '23514');
+  perform tests.expect_error('C1231 no term start', tests.cp_send_sql('pe1231b', 'pe1231b'), '23514');
+  perform tests.expect_error('C1231 already sent', tests.cp_send_sql('pe1231c', 'pe1231c-again'), '40001');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1231 none stamped', (select count(*) from public.agreement_versions
+    where agreement_id in (tests.id('pe1231a'), tests.id('pe1231b'), tests.id('pe1231c')) and valid_until is not null) = 0,
+    'a failed send stamped a date');
+end $$;
+
+-- C1240: the review page gets the version's date and today in America/Vancouver.
+select tests.cp_sent('pe1240');
+update public.agreement_versions set valid_until = '2027-01-15' where agreement_id = tests.id('pe1240');
+select tests.cp_sent('pe1240n');
+update public.agreement_versions set valid_until = null where agreement_id = tests.id('pe1240n');
+select tests.act_as_anon();
+do $$
+declare
+  v jsonb := public.portal_view(tests.cp_hash('pe1240'));
+  n jsonb := public.portal_view(tests.cp_hash('pe1240n'));
+begin
+  perform tests.ok('C1240 date', v -> 'version' ->> 'validUntil' = '2027-01-15', 'version ' || coalesce((v -> 'version')::text, 'none'));
+  perform tests.ok('C1240 today', v ->> 'today' = to_char(tests.pe_today(), 'YYYY-MM-DD'), 'today ' || coalesce(v ->> 'today', 'none'));
+  perform tests.ok('C1240 null', n -> 'version' -> 'validUntil' = 'null'::jsonb, 'version ' || coalesce((n -> 'version')::text, 'none'));
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- C1241: no decision after the date; on the date, and with no date, a decision goes through.
+select tests.cp_sent('pe1241a');
+select tests.cp_sent('pe1241r');
+select tests.cp_sent('pe1241c');
+select tests.cp_sent('pe1241t');
+select tests.cp_sent('pe1241n');
+update public.agreement_versions set valid_until = tests.pe_today() - 1
+where agreement_id in (tests.id('pe1241a'), tests.id('pe1241r'), tests.id('pe1241c'));
+update public.agreement_versions set valid_until = tests.pe_today() where agreement_id = tests.id('pe1241t');
+update public.agreement_versions set valid_until = null where agreement_id = tests.id('pe1241n');
+create table tests.t1241 (outbox_before bigint);
+grant all on tests.t1241 to anon, authenticated;
+insert into tests.t1241 select count(*) from public.outbox;
+select tests.act_as_anon();
+do $$ begin
+  perform tests.expect_error('C1241 accept past', tests.cp_decide_sql('pe1241a', 'accepted', 'agreement.accepted'), '40001');
+  perform tests.expect_error('C1241 refuse past', tests.cp_decide_sql('pe1241r', 'refused', 'agreement.refused', 'too late'), '40001');
+  perform tests.expect_error('C1241 changes past',
+    tests.cp_decide_sql('pe1241c', 'changes_requested', 'agreement.changes_requested', 'too late'), '40001');
+  perform tests.ok('C1241 on the date', tests.od_state_cp(tests.cp_decide_sql('pe1241t', 'accepted', 'agreement.accepted')) = 'ok',
+    'a decision on the date was refused');
+  perform tests.ok('C1241 no date', tests.od_state_cp(tests.cp_decide_sql('pe1241n', 'accepted', 'agreement.accepted')) = 'ok',
+    'a decision with no date was refused');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1241 still sent', tests.cp_status('pe1241a') = 'sent' and tests.cp_status('pe1241r') = 'sent'
+    and tests.cp_status('pe1241c') = 'sent', 'a refused decision changed a status');
+  perform tests.ok('C1241 no events', tests.cp_events('pe1241a', 'agreement.accepted') + tests.cp_events('pe1241r', 'agreement.refused')
+    + tests.cp_events('pe1241c', 'agreement.changes_requested') = 0, 'a refused decision wrote an event');
+  perform tests.ok('C1241 no outbox', (select count(*) from public.outbox) = (select outbox_before from tests.t1241) + 2,
+    'outbox grew by ' || ((select count(*) from public.outbox) - (select outbox_before from tests.t1241)) || ', expected 2 (the two accepted)');
+  perform tests.ok('C1241 accepted', tests.cp_status('pe1241t') = 'accepted' and tests.cp_status('pe1241n') = 'accepted',
+    'the allowed decisions did not land');
 end $$;
 
 rollback;

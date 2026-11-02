@@ -1,4 +1,4 @@
--- S3 domain shape: C16-C27, C37-C40, C42; term-dates C1131. Runs as table owner, after fixture.sql in the same execute_sql call.
+-- S3 domain shape: C16-C27, C37-C40, C42; term-dates C1131; proposal-expiry C1220, C1232. Runs as table owner, after fixture.sql in the same execute_sql call.
 
 -- C16
 do $$
@@ -253,6 +253,40 @@ begin
     perform tests.expect_rows('C1167 ' || c.label, format(
       'update public.org_settings set renewal_cpi_pct = %L::numeric, renewal_cpi_as_of = %L::date where org_id = %L', c.pct, c.d, o), 1);
   end loop;
+end $$;
+
+-- Proposal expiry C1220: proposal_validity_days is 1 to 365, not null, 30 by default. An org of its own: C27 deleted
+-- the fixture orgs.
+do $$
+declare
+  a uuid := tests.id('c1220');
+  got integer;
+begin
+  insert into public.orgs (id, name) values (a, 'C1220 org');
+  insert into public.org_settings (org_id, legal_name) values (a, 'C1220') returning proposal_validity_days into got;
+  perform tests.ok('C1220 default', got = 30, 'default is ' || coalesce(got::text, 'null'));
+  perform tests.expect_error('C1220 0', format('update public.org_settings set proposal_validity_days = 0 where org_id = %L', a), '23514');
+  perform tests.expect_error('C1220 366', format('update public.org_settings set proposal_validity_days = 366 where org_id = %L', a), '23514');
+  perform tests.expect_error('C1220 null', format('update public.org_settings set proposal_validity_days = null where org_id = %L', a), '23502');
+  perform tests.expect_rows('C1220 1', format('update public.org_settings set proposal_validity_days = 1 where org_id = %L', a), 1);
+  perform tests.expect_rows('C1220 365', format('update public.org_settings set proposal_validity_days = 365 where org_id = %L', a), 1);
+end $$;
+
+-- Proposal expiry C1232: valid_until is 2000-01-01 to 2099-12-31, or null, on a version of the C1220 org.
+do $$
+declare
+  a uuid := tests.id('c1220');
+  v uuid := tests.id('c1232:v1');
+begin
+  insert into public.customers (id, org_id, name) values (tests.id('c1232:cust'), a, 'C1232 customer');
+  insert into public.sites (id, org_id, customer_id, name) values (tests.id('c1232:site'), a, tests.id('c1232:cust'), 'C1232 site');
+  insert into public.agreements (id, org_id, site_id) values (tests.id('c1232'), a, tests.id('c1232:site'));
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no) values (v, a, tests.id('c1232'), 1);
+  perform tests.expect_error('C1232 1999-12-31', format('update public.agreement_versions set valid_until = ''1999-12-31'' where id = %L', v), '23514');
+  perform tests.expect_error('C1232 2100-01-01', format('update public.agreement_versions set valid_until = ''2100-01-01'' where id = %L', v), '23514');
+  perform tests.expect_rows('C1232 2000-01-01', format('update public.agreement_versions set valid_until = ''2000-01-01'' where id = %L', v), 1);
+  perform tests.expect_rows('C1232 2099-12-31', format('update public.agreement_versions set valid_until = ''2099-12-31'' where id = %L', v), 1);
+  perform tests.expect_rows('C1232 null', format('update public.agreement_versions set valid_until = null where id = %L', v), 1);
 end $$;
 
 rollback;

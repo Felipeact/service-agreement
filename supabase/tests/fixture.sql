@@ -220,4 +220,42 @@ $$;
 create function tests.rn_of(p_agreement uuid) returns public.agreements
 language sql as $$ select * from public.agreements where renews_agreement_id = p_agreement $$;
 
+-- Proposal expiry (.specs/features/proposal-expiry/checks.md, "the fixture"): an agreement <name> of org A in
+-- p_status on its own site, whose contact has an example.org email; version 1 with a term start, one line (4 x 25000)
+-- and valid_until p_valid; an agreement.sent event by uE; one live link whose token is <name>. Created as the table
+-- owner with no signed-in user, so the line triggers stand aside.
+create function tests.pe_sent(p_name text, p_valid date, p_status text default 'sent') returns uuid
+language plpgsql as $$
+declare
+  o uuid := tests.id('orgA');
+begin
+  insert into public.contacts (id, org_id, customer_id, name, email)
+  values (tests.id(p_name || ':ct'), o, tests.id('custA'), 'Pat ' || p_name, 'pat.' || p_name || '@example.org');
+  insert into public.sites (id, org_id, customer_id, site_contact_id, name)
+  values (tests.id(p_name || ':site'), o, tests.id('custA'), tests.id(p_name || ':ct'), 'Plant ' || p_name);
+  insert into public.agreements (id, org_id, site_id, number)
+  values (tests.id(p_name), o, tests.id(p_name || ':site'), 'AG-' || p_name);
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start, valid_until)
+  values (tests.id(p_name || ':v1'), o, tests.id(p_name), 1, '2027-01-01', p_valid);
+  insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year,
+                                    cost_per_visit_cents)
+  values (tests.id(p_name || ':l1'), o, tests.id(p_name || ':v1'), 0, 'HVAC maintenance', '{3,6,9,12}', 4, 25000);
+  update public.agreements set status = p_status where id = tests.id(p_name);
+  insert into public.events (org_id, entity_type, entity_id, type, payload, actor_id)
+  values (o, 'agreement', tests.id(p_name), 'agreement.sent', '{"from": "draft", "to": "sent"}', tests.id('uE'));
+  insert into public.portal_links (org_id, agreement_version_id, token_hash)
+  values (o, tests.id(p_name || ':v1'), encode(sha256(convert_to(p_name, 'UTF8')), 'hex'));
+  return tests.id(p_name);
+end $$;
+
+-- The number of <p_type> events of agreement <p_name>.
+create function tests.pe_events(p_name text, p_type text) returns bigint
+language sql security definer as $$
+  select count(*) from public.events where entity_id = tests.id(p_name) and type = p_type
+$$;
+
+-- The status of agreement <p_name>, read past RLS.
+create function tests.pe_status(p_name text) returns text
+language sql security definer as $$ select status from public.agreements where id = tests.id(p_name) $$;
+
 grant execute on all functions in schema tests to anon, authenticated;

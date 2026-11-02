@@ -1003,5 +1003,285 @@ do $$ begin
     'insert into public.notifications (org_id, idempotency_key, kind) values (%L, ''c1203:o'', ''other'')', tests.id('orgA')), '23514');
 end $$;
 
+-- Proposal expiry (.specs/features/proposal-expiry/checks.md): C1244-C1252, C1254, C1255, C1258, C1259. Every claim
+-- answers for every expiry in this transaction, so the recipient fallbacks (C1255) run before any other expiry exists.
+-- Key dates use current_date, which door 5 bounds; a version due today is valid until the day before in Vancouver.
+create function tests.od_w8(p_date date) returns jsonb
+language sql as $$
+  select jsonb_build_object('kind', 'expiry_daily', 'idempotencyKey', 'w8:' || to_char(p_date, 'YYYY-MM-DD'),
+                            'executionId', 'exec-w8')
+$$;
+create function tests.pe_t() returns date
+language sql stable as $$ select (now() at time zone 'America/Vancouver')::date $$;
+create function tests.pe_expired_event(p_name text) returns public.events
+language sql as $$ select * from public.events where entity_id = tests.id(p_name) and type = 'agreement.expired' $$;
+create table tests.pe_r (label text, ids uuid[]);
+create function tests.pe_run(p_label text, p_date date) returns void
+language sql as $$ insert into tests.pe_r select p_label, coalesce(array_agg(x), '{}') from private.run_expiries(p_date) x $$;
+create function tests.pe_ids(p_label text) returns uuid[]
+language sql as $$ select ids from tests.pe_r where label = p_label $$;
+grant execute on all functions in schema tests to anon, authenticated;
+
+-- Only this section's agreements carry a date.
+update public.agreement_versions set valid_until = null where valid_until is not null;
+
+-- C1252: no client can run the writer or the claim.
+do $$ begin
+  perform tests.ok('C1252 grants', not has_function_privilege('anon', 'private.run_expiries(date)', 'execute')
+    and not has_function_privilege('authenticated', 'private.run_expiries(date)', 'execute')
+    and not has_function_privilege('anon', 'private.claim_expiries(jsonb)', 'execute')
+    and not has_function_privilege('authenticated', 'private.claim_expiries(jsonb)', 'execute'), 'a client can execute');
+end $$;
+select tests.act_as('uA');
+do $$ begin
+  perform tests.expect_error('C1252 run as uA', 'select private.run_expiries(''2027-02-01'')', '42501');
+  perform tests.expect_error('C1252 claim as uA', 'select private.claim_expiries(''{}''::jsonb)', '42501');
+end $$;
+select tests.act_as_anon();
+do $$ begin
+  perform tests.expect_error('C1252 run as anon', 'select private.run_expiries(''2027-02-01'')', '42501');
+  perform tests.expect_error('C1252 claim as anon', 'select private.claim_expiries(''{}''::jsonb)', '42501');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- C1255, second half: with the sender and every owner and admin gone, the email is skipped with no_recipient.
+select tests.pe_sent('x1255b', tests.pe_t() - 1);
+create table tests.pe_members as select * from public.memberships where org_id = tests.id('orgA');
+delete from public.memberships where org_id = tests.id('orgA') and role in ('owner', 'admin', 'estimator');
+insert into tests.od_r select 'C1255b', tests.od_claim(tests.od_w8(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1255b');
+  n public.notifications := tests.od_notif('w8:' || (tests.pe_expired_event('x1255b')).id);
+begin
+  perform tests.ok('C1255 skipped', n.status = 'skipped' and n.skip_reason = 'no_recipient', 'row ' || coalesce(to_jsonb(n)::text, 'none'));
+  perform tests.ok('C1255 skip', res ->> 'decision' = 'skip' and res -> 'messages' = '[]', 'result ' || res::text);
+end $$;
+insert into public.memberships select * from tests.pe_members on conflict do nothing;
+
+-- C1255, first half: with the sender gone, the owners and admins get it.
+select tests.pe_sent('x1255a', tests.pe_t() - 1);
+delete from public.memberships where org_id = tests.id('orgA') and user_id = tests.id('uE');
+insert into tests.od_r select 'C1255a', tests.od_claim(tests.od_w8(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1255a');
+  m jsonb := tests.od_msg(res);
+begin
+  perform tests.ok('C1255 fallback', res ->> 'decision' = 'send' and jsonb_array_length(res -> 'messages') = 1
+    and m -> 'agreement' ->> 'id' = tests.id('x1255a')::text
+    and (select array_agg(lower(t) order by lower(t)) from jsonb_array_elements_text(m -> 'to') t)
+        = array['ua@example.test', 'ud@example.test'], 'result ' || res::text);
+  perform tests.od_complete(tests.od_w8(current_date), jsonb_build_array(jsonb_build_object('id', m ->> 'notificationId',
+    'outcome', 'sent', 'providerMessageId', 're_1255')));
+end $$;
+insert into public.memberships select * from tests.pe_members on conflict do nothing;
+
+-- C1244: a version valid until the day before the run date expires, once, by the system.
+select tests.pe_sent('x1244', '2027-01-31');
+select tests.pe_run('C1244', '2027-02-01');
+do $$
+declare
+  e public.events := tests.pe_expired_event('x1244');
+begin
+  perform tests.ok('C1244 returned', tests.id('x1244') = any (tests.pe_ids('C1244')), 'ids ' || tests.pe_ids('C1244')::text);
+  perform tests.ok('C1244 expired', tests.pe_status('x1244') = 'expired', 'status ' || tests.pe_status('x1244'));
+  perform tests.ok('C1244 one event', tests.pe_events('x1244', 'agreement.expired') = 1, 'events ' || tests.pe_events('x1244', 'agreement.expired'));
+  perform tests.ok('C1244 actor', e.actor_id is null, 'actor ' || coalesce(e.actor_id::text, 'null'));
+  perform tests.ok('C1244 payload', e.payload = '{"from": "sent", "to": "expired", "versionNo": 1, "validUntil": "2027-01-31", "via": "w8"}'::jsonb,
+    'payload ' || e.payload::text);
+  perform tests.ok('C1244 outbox', (select count(*) from public.outbox o where o.event_id = e.id) = 1, 'no outbox row');
+end $$;
+
+-- C1248, lock: the run holds the expiries lock for the rest of its transaction.
+do $$ begin
+  perform tests.ok('C1248 lock', exists (
+    select 1 from pg_locks l
+    where l.locktype = 'advisory' and l.granted and l.pid = pg_backend_pid() and l.objsubid = 1
+      and l.classid::bigint = ((hashtext('expiries')::bigint >> 32) & 4294967295)
+      and l.objid::bigint = (hashtext('expiries')::bigint & 4294967295)), 'no granted expiries lock');
+end $$;
+
+-- C1245: on the date itself, the agreement stays sent.
+select tests.pe_sent('x1245', '2027-01-31');
+select tests.pe_run('C1245', '2027-01-31');
+do $$ begin
+  perform tests.ok('C1245 none', tests.pe_ids('C1245') = '{}', 'ids ' || tests.pe_ids('C1245')::text);
+  perform tests.ok('C1245 sent', tests.pe_status('x1245') = 'sent' and tests.pe_events('x1245', 'agreement.expired') = 0,
+    'status ' || tests.pe_status('x1245'));
+end $$;
+
+-- C1246: no other status moves, and neither does a sent agreement with no date or a due older version only.
+do $$
+declare s text;
+begin
+  foreach s in array array['draft', 'accepted', 'refused', 'changes_requested', 'withdrawn', 'expired'] loop
+    perform tests.pe_sent('x1246' || s, '2027-01-31', s);
+  end loop;
+end $$;
+select tests.pe_sent('x1246null', null);
+select tests.pe_sent('x1246v2', '2027-01-31');
+insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start, valid_until)
+values (tests.id('x1246v2:v2'), tests.id('orgA'), tests.id('x1246v2'), 2, '2027-01-01', '2027-03-01');
+select tests.pe_run('C1246', '2027-02-01');
+do $$
+declare s text;
+begin
+  foreach s in array array['draft', 'accepted', 'refused', 'changes_requested', 'withdrawn', 'expired'] loop
+    perform tests.ok('C1246 ' || s, tests.pe_status('x1246' || s) = s and tests.pe_events('x1246' || s, 'agreement.expired') = 0,
+      s || ' became ' || tests.pe_status('x1246' || s));
+  end loop;
+  perform tests.ok('C1246 null date', tests.pe_status('x1246null') = 'sent' and tests.pe_events('x1246null', 'agreement.expired') = 0,
+    'a sent agreement with no date expired');
+  perform tests.ok('C1246 older version', tests.pe_status('x1246v2') = 'sent' and tests.pe_events('x1246v2', 'agreement.expired') = 0,
+    'an agreement whose latest version is not due expired');
+end $$;
+
+-- C1247: running again, or the next day, expires nothing twice.
+select tests.pe_run('C1247a', '2027-02-01');
+select tests.pe_run('C1247b', '2027-02-01');
+select tests.pe_run('C1247c', '2027-02-02');
+do $$ begin
+  perform tests.ok('C1247 one event', tests.pe_events('x1244', 'agreement.expired') = 1, 'events ' || tests.pe_events('x1244', 'agreement.expired'));
+  perform tests.ok('C1247 nothing more', tests.pe_ids('C1247b') = '{}' and tests.pe_ids('C1247c') = '{}',
+    'ids ' || tests.pe_ids('C1247b')::text || ' ' || tests.pe_ids('C1247c')::text);
+end $$;
+
+-- C1248, orders: a decision committed first wins; an expiry committed first refuses the decision.
+select tests.pe_sent('x1248a', '2027-01-31');
+select tests.act_as_anon();
+select public.portal_decide(tests.od_hash('x1248a'), 'accepted', 'agreement.accepted', '{}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+select tests.pe_run('C1248a', '2027-02-01');
+select tests.pe_sent('x1248b', '2027-01-31');
+select tests.pe_run('C1248b', '2027-02-01');
+select tests.act_as_anon();
+do $$ begin
+  perform tests.expect_error('C1248 decide after expiry', format('select public.portal_decide(%L, ''accepted'', ''agreement.accepted'', ''{}'')',
+    tests.od_hash('x1248b')), '40001');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1248 decided first', tests.pe_status('x1248a') = 'accepted' and tests.pe_events('x1248a', 'agreement.expired') = 0,
+    'x1248a ' || tests.pe_status('x1248a'));
+  perform tests.ok('C1248 expired first', tests.pe_status('x1248b') = 'expired' and tests.pe_events('x1248b', 'agreement.accepted') = 0,
+    'x1248b ' || tests.pe_status('x1248b'));
+end $$;
+
+-- C1250: an expired agreement frees its site.
+select tests.act_as('uA');
+do $$
+declare a uuid := public.create_agreement(tests.id('x1244:site'));
+begin
+  perform tests.ok('C1250 created', (select status from public.agreements where id = a) = 'draft', 'no draft on the freed site');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- C1251: a W1 reminder for an expired agreement is skipped as decided.
+do $$
+declare
+  ev uuid := (select id from public.events where entity_id = tests.id('x1244') and type = 'agreement.sent');
+  res jsonb := tests.od_claim(jsonb_build_object('kind', 'customer_reminder', 'idempotencyKey', 'w1:' || ev || ':day3',
+    'eventId', ev, 'agreementId', tests.id('x1244'), 'executionId', 'exec-1251'));
+begin
+  perform tests.ok('C1251 decided', res ->> 'decision' = 'skip' and res ->> 'reason' = 'decided', 'result ' || res::text);
+end $$;
+
+-- C1249: a malformed key, or a date more than one day away, expires nothing; one day either side is accepted.
+select tests.pe_sent('x1249', tests.pe_t() - 1);
+do $$
+declare
+  k text;
+  b text;
+begin
+  foreach k in array array['w8:2027-13-01', 'w8:2027-02-30', 'w8:tomorrow', 'w7:' || to_char(current_date, 'YYYY-MM-DD'),
+                           'w8:' || to_char(current_date + 2, 'YYYY-MM-DD'), 'w8:' || to_char(current_date - 2, 'YYYY-MM-DD')] loop
+    b := jsonb_build_object('kind', 'expiry_daily', 'idempotencyKey', k)::text;
+    perform tests.ok('C1249 ' || k, tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts()))) = '22023',
+      k || ' was not 22023');
+  end loop;
+  perform tests.ok('C1249 nothing expired', tests.pe_status('x1249') = 'sent', 'a refused key expired x1249');
+  foreach k in array array['w8:' || to_char(current_date + 1, 'YYYY-MM-DD'), 'w8:' || to_char(current_date - 1, 'YYYY-MM-DD')] loop
+    b := jsonb_build_object('kind', 'expiry_daily', 'idempotencyKey', k)::text;
+    perform tests.ok('C1249 accepted ' || k, tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts()))) = 'ok',
+      k || ' was refused');
+  end loop;
+end $$;
+-- Settle every expiry email claimed so far, so C1254 starts from nothing in flight.
+select tests.od_claim(tests.od_w8(current_date));
+update public.notifications set status = 'sent', sent_at = now() where kind = 'staff_expired' and status in ('claimed', 'failed');
+
+-- C1254: the W8 body expires X and returns one staff_expired message for the member who sent it.
+select tests.pe_sent('x1254', tests.pe_t() - 1);
+insert into tests.od_r select 'C1254', tests.od_claim(tests.od_w8(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1254');
+  m jsonb := tests.od_msg(res);
+  e public.events := tests.pe_expired_event('x1254');
+  n public.notifications := tests.od_notif('w8:' || e.id);
+begin
+  perform tests.ok('C1254 expired', tests.pe_status('x1254') = 'expired', 'status ' || tests.pe_status('x1254'));
+  perform tests.ok('C1254 decision', res ->> 'decision' = 'send' and jsonb_array_length(res -> 'messages') = 1
+    and m ->> 'kind' = 'staff_expired', 'result ' || res::text);
+  perform tests.ok('C1254 to', lower((m -> 'to')::text) = '["ue@example.test"]', 'to ' || (m -> 'to')::text);
+  perform tests.ok('C1254 data', m -> 'agreement' = jsonb_build_object('id', tests.id('x1254'), 'number', 'AG-x1254')
+    and m -> 'customer' ->> 'name' = 'Customer A' and m -> 'site' ->> 'name' = 'Plant x1254'
+    and m ->> 'validUntil' = to_char(tests.pe_t() - 1, 'YYYY-MM-DD'), 'message ' || m::text);
+  perform tests.ok('C1254 row', n.kind = 'staff_expired' and n.status = 'claimed' and n.id::text = m ->> 'notificationId'
+    and lower(n.recipients::text) = '{ue@example.test}', 'row ' || coalesce(to_jsonb(n)::text, 'none'));
+end $$;
+
+-- C1259: an expiry_daily body completes only staff_expired notifications, and only when signed.
+do $$
+declare
+  b jsonb := tests.od_w8(current_date);
+  nid uuid := (tests.od_notif('w8:' || (tests.pe_expired_event('x1254')).id)).id;
+  renewal uuid := (select id from public.notifications where kind = 'staff_renewal' limit 1);
+  link uuid := (select id from public.notifications where kind = 'customer_link' limit 1);
+  before text := (select string_agg(to_jsonb(n)::text, ',' order by n.id) from public.notifications n);
+begin
+  perform tests.ok('C1259 fixtures', renewal is not null and link is not null, 'no staff_renewal or customer_link row to name');
+  perform tests.expect_error('C1259 staff_renewal', format('select tests.od_complete(%L, %L)', b,
+    jsonb_build_array(jsonb_build_object('id', renewal, 'outcome', 'sent'))), 'P0002');
+  perform tests.expect_error('C1259 customer_link', format('select tests.od_complete(%L, %L)', b,
+    jsonb_build_array(jsonb_build_object('id', link, 'outcome', 'sent'))), 'P0002');
+  perform tests.expect_error('C1259 malformed', format('select tests.od_complete(%L, %L)', b,
+    jsonb_build_array(jsonb_build_object('id', nid, 'outcome', 'maybe'))), '22023');
+  perform tests.expect_error('C1259 wrong signature', format('select public.automation_complete(%L, %L, %L, %L)', b::text, tests.od_ts(),
+    tests.od_sig(b::text, tests.od_ts(), 'wrong-secret'), jsonb_build_array(jsonb_build_object('id', nid, 'outcome', 'sent'))), '42501');
+  perform tests.ok('C1259 nothing changed', before = (select string_agg(to_jsonb(n)::text, ',' order by n.id) from public.notifications n),
+    'a refused complete changed a notification');
+end $$;
+
+-- C1258: a failed send is claimed again by the next day's run; once sent, it is never sent again.
+do $$
+declare
+  n public.notifications := tests.od_notif('w8:' || (tests.pe_expired_event('x1254')).id);
+  res jsonb;
+  res2 jsonb;
+begin
+  perform tests.od_complete(tests.od_w8(current_date), jsonb_build_array(jsonb_build_object('id', n.id, 'outcome', 'failed',
+    'error', 'provider down')));
+  perform tests.ok('C1258 failed', (tests.od_notif(n.idempotency_key)).status = 'failed', 'not failed');
+  res := tests.od_claim(tests.od_w8(current_date + 1));
+  perform tests.ok('C1258 reclaimed', res ->> 'decision' = 'send' and jsonb_array_length(res -> 'messages') = 1
+    and tests.od_msg(res) ->> 'notificationId' = n.id::text and (tests.od_notif(n.idempotency_key)).status = 'claimed',
+    'result ' || res::text);
+  perform tests.ok('C1258 one expiry', tests.pe_events('x1254', 'agreement.expired') = 1, 'x1254 expired twice');
+  perform tests.od_complete(tests.od_w8(current_date), jsonb_build_array(jsonb_build_object('id', n.id, 'outcome', 'sent',
+    'providerMessageId', 're_w8')));
+  res := tests.od_claim(tests.od_w8(current_date));
+  res2 := tests.od_claim(tests.od_w8(current_date + 1));
+  perform tests.ok('C1258 today', res ->> 'decision' = 'duplicate' and res -> 'messages' = '[]', 'result ' || res::text);
+  perform tests.ok('C1258 tomorrow', res2 ->> 'decision' = 'duplicate' and res2 -> 'messages' = '[]', 'result ' || res2::text);
+  perform tests.ok('C1258 still sent', (tests.od_notif(n.idempotency_key)).status = 'sent'
+    and (tests.od_notif(n.idempotency_key)).provider_message_id = 're_w8', 'the sent row changed');
+end $$;
+
 rollback;
 select 'outbox_dispatch: pass' as result;
