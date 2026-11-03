@@ -1,9 +1,11 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { LIVE_STATUSES, type AgreementStatus } from "@/domain/agreement";
+import { LIVE_STATUSES, matchesStatusFilter, type AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { addDays, EXPIRING_WINDOW_DAYS, pipelineStage, type ExpiringAgreement } from "@/domain/pipeline";
 import type {
+  AgreementLister,
+  AgreementListRow,
   AssetTypeCatalog,
   AssetView,
   Clock,
@@ -13,6 +15,8 @@ import type {
   CustomerSummary,
   PipelineCard,
   PipelineReader,
+  SiteLister,
+  SiteOption,
   SiteRegister,
 } from "@/application/ports";
 import type { Database } from "./database.types";
@@ -406,6 +410,84 @@ export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
       const { data, error } = await client.from("asset_types").select("id, code, name").order("name").limit(ROW_CAP);
       if (error) throw unexpected(error);
       return data.map(({ id, code, name }) => ({ id, code, name }));
+    },
+  };
+}
+
+type ListRow = AgreementRow & {
+  site_id: string;
+  sites: { name: string; customers: { name: string } };
+  agreement_versions: (VersionRow & { term_end: string | null })[];
+};
+
+/** Every agreement of the org in any status, narrowed by the filter (agreements-page S1). The site is asked of the database; status and window need the latest version, so they apply to the rows read. */
+export function supabaseAgreementLister(client: Client): AgreementLister {
+  return {
+    async list(filter, today) {
+      let query = client
+        .from("agreements")
+        .select(
+          "id, number, status, updated_at, site_id, sites(name, customers(name)), agreement_versions(version_no, term_end, contracts(status), service_lines(visits_per_year, cost_per_visit_cents))",
+        );
+      if (filter.siteId) query = query.eq("site_id", filter.siteId);
+      const { data, error } = await query.order("updated_at", { ascending: false }).limit(ROW_CAP);
+      if (error) throw unexpected(error);
+
+      const last = addDays(today, EXPIRING_WINDOW_DAYS);
+      const rows: AgreementListRow[] = [];
+      for (const row of data as unknown as ListRow[]) {
+        const version = latestVersion(row) as (VersionRow & { term_end: string | null }) | undefined;
+        const termEnd = version?.term_end ?? null;
+        const status = row.status as AgreementStatus;
+        if (filter.siteId && row.site_id !== filter.siteId) continue;
+        if (filter.status && !matchesStatusFilter(filter.status, status, version?.contracts[0]?.status as ContractStatus | undefined)) continue;
+        if (filter.expiring && !(status === "accepted" && termEnd && termEnd >= today && termEnd <= last)) continue;
+        rows.push({
+          id: row.id,
+          number: row.number,
+          status,
+          site: row.sites.name,
+          customer: row.sites.customers.name,
+          versionNo: version?.version_no ?? 1,
+          annualCents: amounts(version).annualCents ?? null,
+          updatedAt: row.updated_at,
+          termEnd,
+        });
+      }
+      return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    },
+  };
+}
+
+/** The active sites, each with the live agreement it already has (agreements-page S2). */
+export function supabaseSiteLister(client: Client): SiteLister {
+  return {
+    async listActive() {
+      const { data, error } = await client
+        .from("sites")
+        .select("id, name, deactivated_at, customers(name, deactivated_at), agreements(id, number, status)")
+        .is("deactivated_at", null)
+        .limit(ROW_CAP);
+      if (error) throw unexpected(error);
+      type Row = {
+        id: string;
+        name: string;
+        deactivated_at: string | null;
+        customers: { name: string; deactivated_at: string | null };
+        agreements: { id: string; number: string | null; status: string }[];
+      };
+      return (data as unknown as Row[])
+        .filter((row) => isActive(row) && isActive(row.customers))
+        .map((row): SiteOption => {
+          const live = row.agreements.find((agreement) => (LIVE_STATUSES as readonly string[]).includes(agreement.status));
+          return {
+            id: row.id,
+            name: row.name,
+            customer: row.customers.name,
+            liveAgreement: live ? { id: live.id, number: live.number ?? "" } : null,
+          };
+        })
+        .sort((a, b) => byName(a.customer, b.customer) || byName(a.name, b.name));
     },
   };
 }

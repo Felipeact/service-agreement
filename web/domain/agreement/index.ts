@@ -247,3 +247,4 @@ export * from "./term";
 export * from "./document";
 export * from "./version-diff";
 export * from "./version-note";
+export * from "./list-filter";

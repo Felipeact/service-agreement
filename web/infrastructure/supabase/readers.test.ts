@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { fixedClock } from "@/infrastructure/clock";
-import { supabaseAssetTypeCatalog, supabaseCustomerDirectory, supabasePipelineReader, supabaseSiteRegister } from "./readers";
+import {
+  supabaseAgreementLister,
+  supabaseAssetTypeCatalog,
+  supabaseCustomerDirectory,
+  supabasePipelineReader,
+  supabaseSiteLister,
+  supabaseSiteRegister,
+} from "./readers";
 import { stubClient } from "./stub-client";
 
 const ID = "00000000-0000-4000-8000-000000000001";
@@ -522,5 +529,142 @@ describe("pipeline reader: the agreement's status on its card (proposal-expiry S
     const cards = await board([{ ...agreement("gone", "expired"), renews_agreement_id: null }]);
     expect(cards).toHaveLength(1);
     expect(cards[0]).toMatchObject({ id: "gone", stage: "refused", status: "expired" });
+  });
+});
+
+describe("agreement lister (agreements-page)", () => {
+  const TODAY = "2026-11-03";
+  const SITE_ID = "00000000-0000-4000-8000-0000000000aa";
+  type ListVersion = { version_no: number; term_end: string | null; contracts: { status: string }[]; service_lines: Line[] };
+  const version = (version_no: number, term_end: string | null, contract?: string): ListVersion => ({
+    version_no,
+    term_end,
+    contracts: contract ? [{ status: contract }] : [],
+    service_lines: [{ visits_per_year: 4, cost_per_visit_cents: 100000 }],
+  });
+  function row(id: string, status: string, patch: { updated_at?: string; versions?: ListVersion[]; site_id?: string } = {}) {
+    return {
+      id,
+      number: `AG-${id}`,
+      status,
+      updated_at: patch.updated_at ?? "2026-10-20T00:00:00Z",
+      site_id: patch.site_id ?? ID,
+      sites: { name: `Site ${id}`, customers: { name: `Customer ${id}` } },
+      agreement_versions: patch.versions ?? [version(1, null)],
+    };
+  }
+  async function list(rows: unknown[], filter = {}) {
+    const { typed, calls } = stubClient({ agreements: ok(rows) });
+    return { rows: await supabaseAgreementLister(typed).list(filter, TODAY), calls };
+  }
+  const EIGHT = [
+    row("d", "draft", { updated_at: "2026-10-01T00:00:00Z" }),
+    row("c", "changes_requested", { updated_at: "2026-10-02T00:00:00Z" }),
+    row("s", "sent", { updated_at: "2026-10-03T00:00:00Z" }),
+    row("a", "accepted", { updated_at: "2026-10-04T00:00:00Z" }),
+    row("k", "accepted", { updated_at: "2026-10-05T00:00:00Z", versions: [version(1, null, "completed")] }),
+    row("r", "refused", { updated_at: "2026-10-06T00:00:00Z" }),
+    row("e", "expired", { updated_at: "2026-10-07T00:00:00Z" }),
+    row("w", "withdrawn", { updated_at: "2026-10-08T00:00:00Z" }),
+  ];
+
+  test("C1349: every status is listed, newest change first, with the row fields", async () => {
+    const { rows, calls } = await list(EIGHT);
+    expect(rows.map((r) => r.id)).toEqual(["w", "e", "r", "k", "a", "s", "c", "d"]);
+    expect(rows.find((r) => r.id === "w")).toEqual({
+      id: "w",
+      number: "AG-w",
+      status: "withdrawn",
+      site: "Site w",
+      customer: "Customer w",
+      versionNo: 1,
+      annualCents: 400000,
+      updatedAt: "2026-10-08T00:00:00Z",
+      termEnd: null,
+    });
+    expect(calls.some((c) => c.method === "order" && c.args[0] === "updated_at")).toBe(true);
+  });
+
+  test("C1349: the latest version supplies the number, total and term end; a version with no lines has no total", async () => {
+    const { rows } = await list([
+      row("a", "accepted", { versions: [version(1, "2027-01-01"), { ...version(2, "2027-06-30"), service_lines: [] }] }),
+    ]);
+    expect(rows[0]).toMatchObject({ versionNo: 2, annualCents: null, termEnd: "2027-06-30" });
+  });
+
+  test("C1350: a site filter asks the database for that site only", async () => {
+    const { calls } = await list([], { siteId: SITE_ID });
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "site_id" && c.args[1] === SITE_ID)).toBe(true);
+    expect((await list([], { siteId: SITE_ID })).rows).toEqual([]);
+  });
+
+  test("C1351: expiring keeps accepted agreements ending from today to today + 90 days", async () => {
+    const accepted = (id: string, end: string | null) => row(id, "accepted", { versions: [version(1, end)] });
+    const { rows } = await list(
+      [
+        accepted("today", "2026-11-03"),
+        accepted("last", "2027-02-01"),
+        accepted("past", "2026-11-02"),
+        accepted("late", "2027-02-02"),
+        accepted("none", null),
+        row("sent", "sent", { versions: [version(1, "2026-12-01")] }),
+        row("old", "accepted", { versions: [version(1, "2026-12-01"), version(2, "2028-01-01")] }),
+      ],
+      { expiring: true },
+    );
+    expect(rows.map((r) => r.id).sort()).toEqual(["last", "today"]);
+    expect(rows.find((r) => r.id === "today")?.termEnd).toBe("2026-11-03");
+  });
+
+  test("C1352: every given filter applies", async () => {
+    const { rows } = await list(
+      [
+        row("hit", "accepted", { site_id: SITE_ID, versions: [version(1, "2026-12-01")] }),
+        row("wrong-status", "sent", { site_id: SITE_ID, versions: [version(1, "2026-12-01")] }),
+        row("wrong-site", "accepted", { versions: [version(1, "2026-12-01")] }),
+        row("wrong-date", "accepted", { site_id: SITE_ID, versions: [version(1, "2030-12-01")] }),
+      ],
+      { status: "accepted", siteId: SITE_ID, expiring: true },
+    );
+    expect(rows.map((r) => r.id)).toEqual(["hit"]);
+  });
+
+  test("C1352: the status filter keeps what matchesStatusFilter keeps, contract included", async () => {
+    const { rows } = await list(EIGHT, { status: "completed" });
+    expect(rows.map((r) => r.id)).toEqual(["k"]);
+  });
+});
+
+describe("site lister (agreements-page)", () => {
+  test("C1361: active sites come with their customer and live agreement; expired and refused are not live", async () => {
+    const site = (id: string, agreements: { id: string; number: string; status: string }[], deactivated_at: string | null = null) => ({
+      id,
+      name: `Site ${id}`,
+      deactivated_at,
+      customers: { name: `Customer ${id}`, deactivated_at: null },
+      agreements,
+    });
+    const { typed, calls } = stubClient({
+      sites: ok([
+        site("free", []),
+        site("busy", [{ id: "x1", number: "AG-1001", status: "sent" }]),
+        site("past", [
+          { id: "x2", number: "AG-1002", status: "expired" },
+          { id: "x3", number: "AG-1003", status: "refused" },
+        ]),
+        site("off", [], "2026-10-01T00:00:00Z"),
+      ]),
+    });
+    const options = await supabaseSiteLister(typed).listActive();
+    expect(options.map((o) => o.id)).toEqual(["busy", "free", "past"]);
+    expect(options.find((o) => o.id === "busy")).toEqual({
+      id: "busy",
+      name: "Site busy",
+      customer: "Customer busy",
+      liveAgreement: { id: "x1", number: "AG-1001" },
+    });
+    expect(options.find((o) => o.id === "free")?.liveAgreement).toBeNull();
+    expect(options.find((o) => o.id === "past")?.liveAgreement).toBeNull();
+    expect(calls.some((c) => c.method === "is" && c.args[0] === "deactivated_at")).toBe(true);
   });
 });

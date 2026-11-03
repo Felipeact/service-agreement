@@ -45,9 +45,11 @@ import {
   supabasePortalViewRecorder,
 } from "@/infrastructure/supabase/portal";
 import {
+  supabaseAgreementLister,
   supabaseAssetTypeCatalog,
   supabaseCustomerDirectory,
   supabasePipelineReader,
+  supabaseSiteLister,
   supabaseSiteRegister,
 } from "@/infrastructure/supabase/readers";
 import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supabaseSiteStore } from "@/infrastructure/supabase/records";
@@ -90,6 +92,8 @@ export async function getContainer() {
   const members = supabaseMemberDirectory(supabase);
   const pipeline = supabasePipelineReader(supabase, systemClock);
   const customers = supabaseCustomerDirectory(supabase);
+  const agreementLister = supabaseAgreementLister(supabase);
+  const siteLister = supabaseSiteLister(supabase);
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
   const customerStore = supabaseCustomerStore(supabase);
@@ -112,6 +116,8 @@ export async function getContainer() {
     transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
     pipelineBoard: pipeline.board,
     pipelineExpiring: pipeline.expiring,
+    listAgreements: agreementLister.list,
+    listActiveSites: siteLister.listActive,
     listCustomers: customers.list,
     customerDetail: customers.detail,
     siteRegister: sites.get,

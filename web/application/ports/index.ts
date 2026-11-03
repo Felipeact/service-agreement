@@ -1,5 +1,6 @@
 import type {
   AgreementDocument,
+  AgreementFilter,
   AgreementStatus,
   AgreementTerm,
   AgreementTerms,
@@ -94,6 +95,38 @@ export interface PipelineReader {
   board(): Promise<PipelineCard[]>;
   /** Accepted agreements whose term ends from `today` (`YYYY-MM-DD`) to 90 days on, earliest end first (renewal S6). */
   expiring(today: string): Promise<ExpiringAgreement[]>;
+}
+
+/** One row of the Agreements page: an agreement in any status (agreements-page door 2). */
+export type AgreementListRow = {
+  id: string;
+  number: string | null;
+  status: AgreementStatus;
+  site: string;
+  customer: string;
+  versionNo: number;
+  /** From the latest version's lines; null when it has none. */
+  annualCents: number | null;
+  updatedAt: string;
+  /** The latest version's term end (`YYYY-MM-DD`), or null. */
+  termEnd: string | null;
+};
+
+export interface AgreementLister {
+  /** Newest change first; `today` (`YYYY-MM-DD`) anchors the `expiring` window. */
+  list(filter: AgreementFilter, today: string): Promise<AgreementListRow[]>;
+}
+
+/** An active site the New agreement form offers, with the agreement already live on it (agreements-page door 2). */
+export type SiteOption = {
+  id: string;
+  name: string;
+  customer: string;
+  liveAgreement: { id: string; number: string } | null;
+};
+
+export interface SiteLister {
+  listActive(): Promise<SiteOption[]>;
 }
 
 export type CustomerSummary = {
