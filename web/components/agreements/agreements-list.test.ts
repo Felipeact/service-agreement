@@ -48,7 +48,9 @@ describe("agreements list", () => {
   });
 
   test("C1353: a withdrawn agreement is listed with its own label", () => {
-    expect(list([row({ status: "withdrawn" })])).toContain("Withdrawn");
+    const html = list([row({ status: "withdrawn" })]);
+    expect(html).toMatch(/data-tone="neutral"[^>]*>Withdrawn</);
+    expect(html).not.toContain("data-stage-dot");
   });
 
   test("C1354: with no agreements and no filter it says No agreements yet", () => {

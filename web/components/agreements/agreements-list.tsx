@@ -99,7 +99,11 @@ export function AgreementsListView({ rows, sites, filter, role }: Props) {
                   <span className="text-ink">{row.site}</span>
                   <span className="col-span-2 text-ink-2 md:col-span-1">{row.customer}</span>
                   <span className="col-span-2 md:col-span-1">
-                    <StatusPill stage={pipelineStage(row.status) ?? "refused"} label={statusLabel(row.status)} />
+                    {pipelineStage(row.status) ? (
+                      <StatusPill stage={pipelineStage(row.status)!} label={statusLabel(row.status)} />
+                    ) : (
+                      <StatusPill tone="neutral" label={statusLabel(row.status)} />
+                    )}
                     {row.termEnd && <span className="ml-2 text-[12px] text-ink-2">{`Term ends ${row.termEnd}`}</span>}
                   </span>
                   <span className="text-ink-2">{`v${row.versionNo}`}</span>
