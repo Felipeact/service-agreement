@@ -15,10 +15,13 @@ import type {
   CustomerSummary,
   PipelineCard,
   PipelineReader,
+  SiteDirectory,
+  SiteListRow,
   SiteLister,
   SiteOption,
   SiteRegister,
 } from "@/application/ports";
+import type { SiteFilter } from "@/domain/records";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -487,6 +490,61 @@ export function supabaseSiteLister(client: Client): SiteLister {
             liveAgreement: live ? { id: live.id, number: live.number ?? "" } : null,
           };
         })
+        .sort((a, b) => byName(a.customer, b.customer) || byName(a.name, b.name));
+    },
+  };
+}
+
+type DirectoryRow = {
+  id: string;
+  name: string;
+  address: string | null;
+  customer_id: string;
+  deactivated_at: string | null;
+  customers: { id: string; name: string; deactivated_at: string | null };
+  assets: { deactivated_at: string | null; asset_types: { code: string } }[];
+  agreements: { id: string; number: string | null; status: string }[];
+};
+
+function equipmentOf(assets: DirectoryRow["assets"]): SiteListRow["equipment"] {
+  const counts = new Map<string, number>();
+  for (const asset of assets.filter(isActive)) counts.set(asset.asset_types.code, (counts.get(asset.asset_types.code) ?? 0) + 1);
+  return [...counts].map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
+}
+
+/** Every site across customers with its equipment and live agreement, narrowed by the filter (sites-page S1, S2). The customer is asked of the database; text and inactive apply to the rows read. */
+export function supabaseSiteDirectory(client: Client): SiteDirectory {
+  return {
+    async list(filter: SiteFilter) {
+      let query = client
+        .from("sites")
+        .select(
+          "id, name, address, customer_id, deactivated_at, customers(id, name, deactivated_at), assets(deactivated_at, asset_types(code)), agreements(id, number, status)",
+        );
+      if (filter.customerId) query = query.eq("customer_id", filter.customerId);
+      const { data, error } = await query.limit(ROW_CAP);
+      if (error) throw unexpected(error);
+
+      const text = filter.q?.toLowerCase();
+      return (data as unknown as DirectoryRow[])
+        .filter((row) => !filter.customerId || row.customer_id === filter.customerId)
+        .map((row): SiteListRow => {
+          const live = row.agreements.find((agreement) => (LIVE_STATUSES as readonly string[]).includes(agreement.status));
+          const equipment = equipmentOf(row.assets);
+          return {
+            id: row.id,
+            name: row.name,
+            address: row.address,
+            customerId: row.customers.id,
+            customer: row.customers.name,
+            active: isActive(row) && isActive(row.customers),
+            assetCount: equipment.reduce((total, type) => total + type.count, 0),
+            equipment,
+            liveAgreement: live ? { id: live.id, number: live.number ?? "", status: live.status as AgreementStatus } : null,
+          };
+        })
+        .filter((row) => filter.showInactive || row.active)
+        .filter((row) => !text || [row.name, row.address ?? "", row.customer].some((field) => field.toLowerCase().includes(text)))
         .sort((a, b) => byName(a.customer, b.customer) || byName(a.name, b.name));
     },
   };

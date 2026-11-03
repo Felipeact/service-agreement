@@ -11,7 +11,7 @@ import type {
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
-import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
+import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
 import type { NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
@@ -127,6 +127,27 @@ export type SiteOption = {
 
 export interface SiteLister {
   listActive(): Promise<SiteOption[]>;
+}
+
+/** One row of the Sites & equipment page: a site across customers (sites-page door 1). */
+export type SiteListRow = {
+  id: string;
+  name: string;
+  address: string | null;
+  customerId: string;
+  customer: string;
+  /** False when the site or its customer is deactivated. */
+  active: boolean;
+  /** Active assets only. */
+  assetCount: number;
+  /** Active assets by equipment type code, most units first, then by code. */
+  equipment: { code: string; count: number }[];
+  liveAgreement: { id: string; number: string; status: AgreementStatus } | null;
+};
+
+export interface SiteDirectory {
+  /** By customer name, then site name; inactive sites and sites of inactive customers only for `showInactive`. */
+  list(filter: SiteFilter): Promise<SiteListRow[]>;
 }
 
 export type CustomerSummary = {

@@ -5,6 +5,7 @@ import {
   supabaseAssetTypeCatalog,
   supabaseCustomerDirectory,
   supabasePipelineReader,
+  supabaseSiteDirectory,
   supabaseSiteLister,
   supabaseSiteRegister,
 } from "./readers";
@@ -668,5 +669,139 @@ describe("site lister (agreements-page)", () => {
     expect(options.find((o) => o.id === "free")?.liveAgreement).toBeNull();
     expect(options.find((o) => o.id === "past")?.liveAgreement).toBeNull();
     expect(calls.some((c) => c.method === "is" && c.args[0] === "deactivated_at")).toBe(true);
+  });
+});
+
+describe("site directory (sites-page)", () => {
+  type AssetRow = { deactivated_at: string | null; asset_types: { code: string } };
+  const asset = (code: string, off = false): AssetRow => ({ deactivated_at: off ? "2026-10-01T00:00:00Z" : null, asset_types: { code } });
+  const siteRow = (
+    id: string,
+    patch: {
+      name?: string;
+      address?: string | null;
+      customer?: string;
+      customerId?: string;
+      off?: boolean;
+      customerOff?: boolean;
+      assets?: AssetRow[];
+      agreements?: { id: string; number: string; status: string }[];
+    } = {},
+  ) => ({
+    id,
+    name: patch.name ?? `Site ${id}`,
+    address: patch.address === undefined ? `${id} Main St` : patch.address,
+    customer_id: patch.customerId ?? `cust-${patch.customer ?? "A"}`,
+    deactivated_at: patch.off ? "2026-10-01T00:00:00Z" : null,
+    customers: { id: patch.customerId ?? `cust-${patch.customer ?? "A"}`, name: patch.customer ?? "A", deactivated_at: patch.customerOff ? "2026-10-01T00:00:00Z" : null },
+    assets: patch.assets ?? [],
+    agreements: patch.agreements ?? [],
+  });
+  const list = async (rows: unknown[], filter: Parameters<ReturnType<typeof supabaseSiteDirectory>["list"]>[0] = {}) => {
+    const { typed, calls } = stubClient({ sites: ok(rows) });
+    return { rows: await supabaseSiteDirectory(typed).list(filter), calls };
+  };
+  // The four fixture sites of the checks, deliberately out of order.
+  const fixture = () => [
+    siteRow("tower", { name: "Tower", customer: "Zed", assets: [asset("RTU")] }),
+    siteRow("plain", { name: "Annex", customer: "Alpha" }),
+    siteRow("gone", { name: "Old", customer: "Alpha", off: true }),
+    siteRow("orphan", { name: "Shed", customer: "Beta", customerOff: true }),
+  ];
+
+  test("C1368: only active sites of active customers, by customer then site name, with every field", async () => {
+    const { rows } = await list(fixture());
+    expect(rows.map((r) => r.id)).toEqual(["plain", "tower"]);
+    expect(rows[1]).toEqual({
+      id: "tower",
+      name: "Tower",
+      address: "tower Main St",
+      customerId: "cust-Zed",
+      customer: "Zed",
+      active: true,
+      assetCount: 1,
+      equipment: [{ code: "RTU", count: 1 }],
+      liveAgreement: null,
+    });
+    expect((await list([siteRow("n", { address: null })])).rows[0].address).toBeNull();
+  });
+
+  test("C1368: two sites of one customer are ordered by site name", async () => {
+    const { rows } = await list([siteRow("b", { name: "Bravo" }), siteRow("a", { name: "alpha" })]);
+    expect(rows.map((r) => r.name)).toEqual(["alpha", "Bravo"]);
+  });
+
+  test("C1369: counts and equipment cover active assets only, by count then code", async () => {
+    const { rows } = await list([
+      siteRow("s", { assets: [asset("RTU"), asset("RTU"), asset("RTU"), asset("BLR"), asset("RTU", true)] }),
+      siteRow("t", { name: "Tie", customer: "B", assets: [asset("MUA"), asset("AHU")] }),
+      siteRow("e", { name: "Empty", customer: "C" }),
+    ]);
+    const by = (id: string) => rows.find((r) => r.id === id)!;
+    expect(by("s").assetCount).toBe(4);
+    expect(by("s").equipment).toEqual([{ code: "RTU", count: 3 }, { code: "BLR", count: 1 }]);
+    expect(by("t").equipment).toEqual([{ code: "AHU", count: 1 }, { code: "MUA", count: 1 }]);
+    expect(by("e")).toMatchObject({ assetCount: 0, equipment: [] });
+  });
+
+  test.each([
+    ["draft", true],
+    ["sent", true],
+    ["changes_requested", true],
+    ["accepted", false],
+    ["refused", false],
+    ["expired", false],
+    ["withdrawn", false],
+  ])("C1370: a %s agreement is live: %s", async (status, live) => {
+    const { rows } = await list([siteRow("s", { agreements: [{ id: "x1", number: "AG-1001", status }] })]);
+    expect(rows[0].liveAgreement).toEqual(live ? { id: "x1", number: "AG-1001", status } : null);
+  });
+
+  test("C1371: the query is capped at 500 rows", async () => {
+    const { calls } = await list([]);
+    expect(calls.some((c) => c.method === "limit" && c.args[0] === 500)).toBe(true);
+  });
+
+  test("C1371: a Supabase error rejects instead of returning an empty list", async () => {
+    const { typed } = stubClient({ sites: fail("42501") });
+    await expect(supabaseSiteDirectory(typed).list({})).rejects.toThrow("Supabase error 42501");
+  });
+
+  test("C1378: only the customer's sites, asked of the database and re-checked, none for an unknown customer", async () => {
+    const rows = [siteRow("a", { customer: "A" }), siteRow("b", { customer: "B" })];
+    const result = await list(rows, { customerId: "cust-A" });
+    expect(result.rows.map((r) => r.id)).toEqual(["a"]);
+    expect(result.calls.some((c) => c.method === "eq" && c.args[0] === "customer_id" && c.args[1] === "cust-A")).toBe(true);
+    expect((await list(rows, { customerId: "cust-none" })).rows).toEqual([]);
+  });
+
+  test("C1379: q matches site name, address or customer name, ignoring case, and survives a null address", async () => {
+    const rows = [
+      siteRow("n", { name: "Harbour Tower", customer: "X1", address: null }),
+      siteRow("a", { name: "Annex", customer: "X2", address: "12 Maple Road" }),
+      siteRow("c", { name: "Depot", customer: "Maple Leaf Strata", address: "9 Pine" }),
+      siteRow("z", { name: "Other", customer: "X3", address: "1 Oak" }),
+    ];
+    expect((await list(rows, { q: "HARBOUR" })).rows.map((r) => r.id)).toEqual(["n"]);
+    expect((await list(rows, { q: "maple" })).rows.map((r) => r.id).sort()).toEqual(["a", "c"]);
+    expect((await list(rows, { q: "nothing" })).rows).toEqual([]);
+  });
+
+  test("C1380: both filters must hold", async () => {
+    const rows = [
+      siteRow("hit", { name: "Maple Court", customer: "A" }),
+      siteRow("wrongCustomer", { name: "Maple Court", customer: "B" }),
+      siteRow("wrongText", { name: "Pine Court", customer: "A" }),
+    ];
+    expect((await list(rows, { customerId: "cust-A", q: "maple" })).rows.map((r) => r.id)).toEqual(["hit"]);
+  });
+
+  test("C1381: showInactive lists all four with their active flag and still counts active assets only", async () => {
+    const rows = fixture();
+    rows[2] = siteRow("gone", { name: "Old", customer: "Alpha", off: true, assets: [asset("RTU"), asset("RTU", true)] });
+    const { rows: out } = await list(rows, { showInactive: true });
+    expect(out.map((r) => r.id)).toEqual(["plain", "gone", "orphan", "tower"]);
+    expect(out.map((r) => r.active)).toEqual([true, false, false, true]);
+    expect(out.find((r) => r.id === "gone")?.assetCount).toBe(1);
   });
 });

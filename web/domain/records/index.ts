@@ -1,3 +1,5 @@
+import { isUuid } from "../imports";
+
 /** A form's field errors, one message per field that failed. */
 export type FieldErrors<Field extends string> = Partial<Record<Field, string>>;
 
@@ -72,4 +74,24 @@ export function validateAsset(input: AssetInput, allowedTypeIds: readonly string
 /** Inactive records are listed only for `?show=inactive`; any other value, or none, hides them (deactivation door 8). */
 export function showInactive(params: { show?: string | string[] }): boolean {
   return params.show === "inactive";
+}
+
+/** What the Sites & equipment page asks of the list; each member is optional (sites-page door 1). */
+export type SiteFilter = { q?: string; customerId?: string; showInactive?: boolean };
+
+const SITE_SEARCH_MAX = 100;
+
+type SiteParams = Record<string, string | string[] | undefined>;
+
+const single = (value: string | string[] | undefined): string | undefined => (typeof value === "string" ? value : undefined);
+
+/** The filter a URL asks for; a value that is not valid is dropped, never an error (sites-page AC 9). */
+export function parseSiteFilter(params: SiteParams): SiteFilter {
+  const q = single(params.q)?.trim().slice(0, SITE_SEARCH_MAX).trim();
+  const customer = single(params.customer);
+  return {
+    ...(q && { q }),
+    ...(customer && isUuid(customer) && { customerId: customer }),
+    ...(showInactive(params) && { showInactive: true }),
+  };
 }

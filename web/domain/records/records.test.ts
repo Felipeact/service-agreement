@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { validateAsset, validateContact, validateCustomer, validateSite } from "./index";
-import { showInactive } from "./index";
+import { parseSiteFilter, showInactive } from "./index";
 
 const chars = (n: number) => "x".repeat(n);
 /** An address of exactly `n` characters that matches the email pattern. */
@@ -108,5 +108,36 @@ describe("showInactive", () => {
   test("C1300: only show=inactive lists inactive records", () => {
     expect(showInactive({ show: "inactive" })).toBe(true);
     for (const params of [{}, { show: "all" }, { show: ["inactive"] }, { show: "" }]) expect(showInactive(params), JSON.stringify(params)).toBe(false);
+  });
+});
+
+describe("parseSiteFilter", () => {
+  const CUSTOMER = "00000000-0000-4000-8000-0000000000c1";
+
+  test("C1377: q is trimmed, cut at 100 characters and dropped when empty", () => {
+    expect(parseSiteFilter({ q: "  tower  " })).toEqual({ q: "tower" });
+    expect(parseSiteFilter({ q: "x".repeat(150) })).toEqual({ q: "x".repeat(100) });
+    expect(parseSiteFilter({ q: "   " })).toEqual({});
+    expect(parseSiteFilter({ q: "" })).toEqual({});
+  });
+
+  test("C1377: customer is kept only as a uuid", () => {
+    expect(parseSiteFilter({ customer: CUSTOMER })).toEqual({ customerId: CUSTOMER });
+    expect(parseSiteFilter({ customer: "nope" })).toEqual({});
+    expect(parseSiteFilter({ customer: "" })).toEqual({});
+  });
+
+  test("C1377: showInactive is kept only for show exactly inactive", () => {
+    expect(parseSiteFilter({ show: "inactive" })).toEqual({ showInactive: true });
+    for (const show of ["Inactive", "all", "1", ""]) expect(parseSiteFilter({ show }), show).toEqual({});
+  });
+
+  test("C1377: an array-valued parameter keeps nothing and nothing throws", () => {
+    expect(parseSiteFilter({ q: ["a", "b"], customer: [CUSTOMER], show: ["inactive"] })).toEqual({});
+    expect(parseSiteFilter({})).toEqual({});
+  });
+
+  test("C1377: several parameters are all kept", () => {
+    expect(parseSiteFilter({ q: "a", customer: CUSTOMER, show: "inactive" })).toEqual({ q: "a", customerId: CUSTOMER, showInactive: true });
   });
 });

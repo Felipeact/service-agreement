@@ -8,7 +8,7 @@ export const MAIN_NAV: NavItem[] = [
   { label: "Pipeline", href: "/pipeline" },
   { label: "Agreements", href: "/agreements" },
   { label: "Customers", href: "/customers" },
-  { label: "Sites & equipment" },
+  { label: "Sites & equipment", href: "/sites" },
   { label: "Imports" },
   { label: "Task library" },
 ];

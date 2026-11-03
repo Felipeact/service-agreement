@@ -8,11 +8,11 @@ After this ships: "Sites & equipment" opens one list of every site across custom
 
 ## Flow
 
-Reuses `ROW_CAP`, `isActive`, `byName`, `unexpected`, `LIVE_STATUSES` and the embedded-select style in `readers.ts`; `showInactive()` + `ShowInactiveToggle`; the `AgreementsListView` GET-form + grid pattern; `EmptyPanel`, `PageHeader`, `StatusPill`, `PageLoading`; `/sites/[siteId]` and `/customers/[customerId]` as link targets (AD-024).
+Reuses `ROW_CAP`, `isActive`, `byName`, `unexpected`, `LIVE_STATUSES` and the embedded-select style in `readers.ts`; `showInactive()` (the Show/Hide inactive link is built in the view, because `ShowInactiveToggle` drops other query parameters); the `AgreementsListView` GET-form + grid pattern; `EmptyPanel`, `PageHeader`, `StatusPill`, `PageLoading`; `/sites/[siteId]` and `/customers/[customerId]` as link targets (AD-024).
 
-1. Sidebar "Sites & equipment" -> `web/app/(app)/sites/page.tsx` (new, placement) reads `searchParams` (`q`, `customer`, `show`) -> `parseSiteFilter` (new, pure, `web/domain/records`) -> `SiteDirectory.list(filter)` (door 1).
+1. Sidebar "Sites & equipment" -> `web/app/(app)/sites/page.tsx` (new, placement) reads `searchParams` (`q`, `customer`, `show`) -> `parseSiteFilter` (new, pure, `web/domain/records`) -> `SiteDirectory.list(filter)` (door 1), and `listCustomers` (exists) for the customer filter options.
 2. `supabaseSiteDirectory` (new, placement, in `readers.ts`) selects `sites` with `customers(id, name, deactivated_at)`, `assets(deactivated_at, asset_types(code))`, `agreements(id, number, status)`; filters in memory; caps at `ROW_CAP`.
-3. `SitesListView` (new, placement, `web/components/sites/`) renders rows linking to `/sites/[siteId]`, customer links to `/customers/[customerId]`.
+3. `SitesListView` (new, placement, `web/components/sites/`) renders one row per site with separate links to `/sites/[siteId]`, `/customers/[customerId]` and `/agreements/[agreementId]` (a link cannot contain a link).
 4. Nav: `MAIN_NAV` "Sites & equipment" gains `href: "/sites"` (exists); active on `/sites` and `/sites/*`.
 
 ## Impact
