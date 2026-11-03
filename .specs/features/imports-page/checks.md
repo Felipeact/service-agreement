@@ -171,3 +171,13 @@ Proof: live, recorded in the Handoff (author-side Playwright, one signed-in cont
 - Plan `Flow` is kept true in the build: the site filter options come from the site directory read with inactive sites
   included (a job can belong to an inactive site), and `STATUS_LABELS` and `outcomeLine` are exported from
   `job-list.tsx` instead of copied.
+
+- **Boundary:** C1387-C1404 closed at `967f584` (`3ad4fe5` reader, filter and port; `967f584` view, page, nav); C1405 and C1406 run live (below)
+- **Settled mid-build:**
+  - The site filter options come from `SiteDirectory.list({ showInactive: true })`, labelled `Customer · Site`; `STATUS_LABELS`, `outcomeLine`, `REVIEWABLE`, `ATTENTION` and `date` are exported from `job-list.tsx`. Plan `Flow` updated in `3ad4fe5`.
+  - C1389's claim text says `parsed` prints "n tables, m rows"; the site page, which the claim defers to ("as the site page prints it"), prints "15 rows in 2 tables", and the test asserts that.
+  - The form sends an empty `site=` when no site is picked; `parseImportFilter` drops it (C1398 covers a non-uuid).
+  - The refactor shared `jobViews` between `forSite` and the history; the uuid guard of `forSite` was restored after the first cut dropped it.
+- **Live C1406 (1440 px, one signed-in context):** `/imports` lists 3 jobs (all "Added to site") across two sites, the sidebar Imports item is current. Status `Added to site` through the form gave `/imports?status=committed&site=`, still 3 rows; `Needs attention` gave the no-match state; "Clear filters" returned to `/imports` with 3 rows. Console: no errors. The demo org has no job in another status, so the other pills and the Open on site link were proven by test only.
+- **Live C1405:** 375, 768 and 1440 px: no horizontal scroll (scrollWidth equals clientWidth at each); at 375 and 768 px no control or link under 44 px high and zero overlapping boxes among links, selects and buttons; at 1440 px controls are 34 px and links 19 px, the same desktop sizing as Sites and Agreements.
+- **Abandoned:** nothing.

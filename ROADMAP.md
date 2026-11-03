@@ -154,7 +154,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Versioning: compare two versions (lines, prices, months, equipment, annual total change); the reason for each version (the customer's change request or a staff note); who created it and its sent, viewed and decided history from `events`; mark the version that was sent and the one accepted
 - [x] Agreements page: list with filters (status, site, expiring); enable the New agreement button on Pipeline
 - [x] Sites & equipment page: every site across customers
-- [ ] Imports page: import job history
+- [x] Imports page: import job history
 - [ ] Task library page: view and edit checklists and default months per equipment type
 - [ ] Contact roles: site, billing and approver
 - [ ] Agreement activity timeline from `events`

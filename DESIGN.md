@@ -272,7 +272,7 @@ Quiet, familiar, and exact. Every control is a native element styled with role t
 Every focusable element gets the global `:focus-visible` treatment: a 2px solid Action Blue outline with a 2px offset. Components do not override it.
 
 ### Navigation
-- **Sidebar items:** 500 weight at 13px, 10px padding, 6px radius, 2px apart; resting in Nav Ink with a Cool Ground hover; the active item (`aria-current="page"`) in Action Blue on Action Tint; items without a page are disabled in Slate Secondary.
+- **Sidebar items:** 500 weight at 13px, 10px padding, 6px radius, 2px apart; resting in Nav Ink with a Cool Ground hover; the active item (`aria-current="page"`) in Action Blue on Action Tint; items without a page are disabled in Slate Secondary (today only Task library).
 - **Mobile and tablet:** the top bar and drawer described in Layout; drawer items are 44px tall.
 - **Stage tabs (mobile pipeline):** 44px, 6px radius, 1px border; unselected white with Hairline border and Ink label, count in Slate Secondary; selected Action Tint with Action Blue border, label and count.
 
