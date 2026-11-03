@@ -586,6 +586,34 @@ describe("agreement reader, versions and their history", () => {
     expect(detail).toMatchObject({ sentVersion: 2, acceptedVersion: null });
   });
 
+  test("C1328: an accepted event is listed in its version's history with the customer who accepted", async () => {
+    const agreements = withVersions([{ id: "v1", version_no: 1 }]);
+    const events = ok([
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.accepted", 1, "2026-10-22T09:00:00Z", null, { via: "portal" }),
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.versions[0]?.events.map((e) => [e.type, e.by])).toEqual([
+      ["sent", "estimator"],
+      ["accepted", "customer"],
+    ]);
+  });
+
+  test("C1346: a staff-written decision with no versionNo takes the newest version that existed, and is the accepted one", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" },
+      { id: "v2", version_no: 2, created_at: "2026-10-23T17:00:00Z" },
+    ]);
+    const bare = { from: "sent", to: "accepted" };
+    const events = ok([{ type: "agreement.accepted", payload: bare, actor_id: UA, created_at: "2026-10-24T09:00:00Z" }]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.acceptedVersion).toBe(2);
+    expect(detail?.versions.find((v) => v.versionNo === 2)?.events.map((e) => [e.type, e.by])).toEqual([["accepted", "owner"]]);
+    expect(detail?.versions.find((v) => v.versionNo === 1)?.events).toEqual([]);
+  });
+
   test("C1329: a sent event written before the first version existed is not listed", async () => {
     const agreements = withVersions([{ id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" }]);
     const events = ok([{ type: "agreement.sent", payload: {}, actor_id: null, created_at: "2026-10-19T09:00:00Z" }]);

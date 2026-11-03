@@ -3,7 +3,7 @@
 Profile: light
 Plan: `.specs/features/versioning/plan.md`
 
-26 checks in 3 slices plus delivery · 3 one-way doors · 0 open, 0 block
+28 checks in 3 slices plus delivery · 5 one-way doors · 0 open, 0 block
 
 ## How proofs run
 
@@ -139,6 +139,14 @@ Proof: `npx vitest run components/agreements/agreements.test.ts -t "C1340:"` in 
 every control is at least 44 px tall (AC 15)
 Proof: live (Playwright at 375 px, one signed-in context), result in the Handoff
 
+### Doors found while building (added after Verifier round 1)
+
+**C1345** - Door 4: an insert into `agreement_versions` by a signed-in member is stamped `created_by = auth.uid()` even when the row names another user, and an insert with no signed-in user keeps the `created_by` it names (door 4)
+Proof: `npm run test:db agreement_builder` (assertions `C1345`)
+
+**C1346** - Door 5: an event with no `versionNo` belongs to the newest version whose `created_at` is not after the event's, and one older than every version is listed on none; the latest such `agreement.sent` or `agreement.accepted` sets `sentVersion` or `acceptedVersion` (door 5)
+Proof: `npx vitest run infrastructure/supabase/agreements.test.ts -t "C1346:"` in `web/`, with the sent-event cases `C1328:` (no versionNo) and `C1329:` (older than every version) in the same file
+
 ### Delivery - regressions, data and the live run
 
 **C1342** - `npm test`, `npm run lint`, `npm run build` and `npm run test:db` all exit 0 on `HEAD` (every AC)
@@ -160,6 +168,8 @@ Proof: live (Playwright at 1440 and 768 px, one signed-in context), result in th
 | door 1: `created_by` + `reason` on `agreement_versions` (4) | written at revise C1319 · written at create C1320 · not directly writable C1321 · backfill C1327 | - |
 | door 2: `diffVersions` line kinds (3) | added C1334 · removed C1334 · changed C1334 | - |
 | door 2: compared fields (5) | description C1334 · price per visit C1334 · visits per year C1334 · visit months C1334 · equipment C1334 | - |
+| door 4: author stamped by the database (2) | signed-in insert C1345 · no user keeps the value C1345 | - |
+| door 5: event with no `versionNo` (3) | newest version at the time C1346 · older than every version C1346 · staff-written decision C1346 | - |
 | door 3: markers derived from events (2) | sent C1329 · accepted C1329 | - |
 | `GET /agreements/[agreementId]` statuses (2) | 200 C1338 · 404 C1332 | - |
 | `compare` parameter values that show no comparison (4) | equals shown C1338 · missing C1338 · unknown version C1338 · not a number C1338 | - |
@@ -218,3 +228,5 @@ comparison in the portal or PDF; diffing the "Service included" snapshot.
 - **Superseded earlier assertions (not weakened, adapted to the new signature):** agreements adapter test "the detail carries ... versions" now lists `reason`, `author`, `events`; C1032 "reader asks for the customer_link notification" takes the last three `events` filters and the last `order` (the history query runs first); C1032 "a draft reads no notification" still bars `notifications` and the `agreement.sent` lookup but no longer bars every `events` read; C727 page tests expect `get(AGR, n, undefined)`; composition C748 pins `get(id, versionNo?, compareNo?)`; fixtures of `AgreementDetail` and `AgreementActions` gained the new fields.
 - **Abandoned:** a Compare form with a select (see 2); an events-only author (no table of names exists).
 - **Open, non-failing:** the stale `next start` on port 3201 (the proposal-expiry/deactivation build) is still running. Staff-side `agreement.accepted` or `refused` events have no `versionNo` and take the time-based fallback. Demo data: AG-1044 now has version 2 with a note and a changed price.
+
+- **Verifier round 1 (FAIL, 22/26):** (1) C1328 named `accepted` but no test listed one: `C1328: an accepted event is listed ...` added. (2) C1324 and C1325 named hints but asserted only the SQLSTATE: assertions `C1324 hint` and `C1325 hint` added to `agreement_builder.sql`. (3) Doors 4 and 5 had no check: C1345 and C1346 and their Coverage rows added (additive, no approved check edited). (4) C1327 runs a copy of the migration's UPDATE, not the file; kept, since a migration cannot be replayed in a rolled-back recipe, and the live count of 0 stands. C1341 and C1344 stay author-side live runs. `agreement_builder` passes; `agreements.test.ts` 68 passed.

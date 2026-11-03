@@ -1,4 +1,4 @@
--- agreement-builder: C704, C706-C709, C712, C717, C730, C735, C736, C738, C742, C751; term-dates C1136-C1140, C1144; versioning C1319-C1321, C1324, C1325, C1327. Run after fixture.sql in the same
+-- agreement-builder: C704, C706-C709, C712, C717, C730, C735, C736, C738, C742, C751; term-dates C1136-C1140, C1144; versioning C1319-C1321, C1324, C1325, C1327, C1345. Run after fixture.sql in the same
 -- execute_sql call (npm run test:db agreement_builder). Fixture: agrA (draft, versions 1 and 2) on siteA, agrB on siteB.
 -- Setup runs as the table owner with no signed-in user, so the line trigger stands aside (door 4).
 
@@ -840,6 +840,44 @@ select set_config('request.jwt.claims', '', true);
 do $$ begin
   perform tests.ok('C1325 unchanged', (select reason is null from public.agreement_versions
     where id = tests.id('a1325d:v1')), 'a refused note was stored');
+end $$;
+
+-- versioning C1324, C1325: the refusals carry their hints.
+select tests.act_as('uE');
+do $$
+declare h text;
+begin
+  begin
+    perform public.save_version_note(tests.id('a1324'), repeat('n', 501));
+  exception when others then
+    get stacked diagnostics h = pg_exception_hint;
+  end;
+  perform tests.ok('C1324 hint', h = 'note_too_long', 'the 501-character refusal hint was ' || coalesce(h, 'null'));
+  h := null;
+  begin
+    perform public.save_version_note(tests.id('a1325s'), 'x');
+  exception when others then
+    get stacked diagnostics h = pg_exception_hint;
+  end;
+  perform tests.ok('C1325 hint', h = 'not_editable', 'the not-a-draft refusal hint was ' || coalesce(h, 'null'));
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- versioning C1345 (door 4): a signed-in insert is stamped with the caller, and a setup insert with no user keeps its value.
+select tests.ab_agr('a1345', 'draft');
+insert into public.agreement_versions (id, org_id, agreement_id, version_no, created_by)
+values (tests.id('a1345:v7'), tests.id('orgA'), tests.id('a1345'), 7, tests.id('uA'));
+select tests.act_as('uE');
+insert into public.agreement_versions (id, org_id, agreement_id, version_no, created_by)
+values (tests.id('a1345:v8'), tests.id('orgA'), tests.id('a1345'), 8, tests.id('uA'));
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1345 no user', (select created_by = tests.id('uA') from public.agreement_versions
+    where id = tests.id('a1345:v7')), 'an insert with no signed-in user lost its created_by');
+  perform tests.ok('C1345 spoof', (select created_by = tests.id('uE') from public.agreement_versions
+    where id = tests.id('a1345:v8')), 'a signed-in insert named another author');
 end $$;
 
 -- versioning C1327: the backfill (the migration's statement, run over rows built as they were before it).
