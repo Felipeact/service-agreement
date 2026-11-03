@@ -70,12 +70,25 @@ describe("PipelineView", () => {
     expect(html).toMatch(/data-tone="attention"[^>]*>Awaiting countersignature</);
   });
 
-  test("C118: with no agreements it shows the empty panel and a disabled New agreement", () => {
+  test("C118: with no agreements it shows the empty panel and no disabled New agreement", () => {
     const html = render([]);
     expect(html).toContain("No agreements yet");
     expect(html).toContain("Agreements you create appear here by stage.");
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>New agreement</);
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>New agreement</);
     expect(html).not.toContain("No agreements match");
+  });
+
+  test("C1359: for a writer New agreement is a link to /agreements/new, on the board and on the empty board", () => {
+    for (const cards of [[], [card()]]) {
+      const html = renderToStaticMarkup(createElement(PipelineView, { cards, canCreate: true }));
+      expect(html).toMatch(/<a\b[^>]*href="\/agreements\/new"[^>]*>New agreement</);
+      expect(html).not.toMatch(/<[^>]*\sdisabled(?:=|\s|>)[^>]*>New agreement</);
+    }
+  });
+
+  test("C1360: without the right to create, the Pipeline header has no New agreement", () => {
+    expect(render([card()])).not.toContain("New agreement");
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()], canCreate: false }))).not.toContain("New agreement");
   });
 
   test("C746: each card is a link to its agreement page", () => {

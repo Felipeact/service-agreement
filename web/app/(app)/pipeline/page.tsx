@@ -1,26 +1,27 @@
 import type { Metadata } from "next";
 import { ExpiringView } from "@/components/kanban/expiring-view";
 import { PipelineView } from "@/components/kanban/pipeline-view";
+import { canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
+import type { MemberRole } from "@/application/ports";
+import { today as businessDay } from "@/lib/business-day";
 
 export const metadata: Metadata = {
   title: "Pipeline",
 };
 
-// The business's calendar date, as `YYYY-MM-DD` (en-CA formats dates that way).
-const businessDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Vancouver", year: "numeric", month: "2-digit", day: "2-digit" });
-
 /** `?view=expiring` shows Expiring soon; any other value, or none, shows the board (renewal Surface). */
-export async function PipelineForRequest({ view }: { view: string | string[] | undefined }) {
+export async function PipelineForRequest({ view, role }: { view: string | string[] | undefined; role?: MemberRole }) {
   const { pipelineBoard, pipelineExpiring, clock } = await getContainer();
   if (view === "expiring") {
-    const today = businessDay.format(clock.now());
+    const today = businessDay(clock.now());
     return <ExpiringView rows={await pipelineExpiring(today)} today={today} />;
   }
-  return <PipelineView cards={await pipelineBoard()} />;
+  return <PipelineView cards={await pipelineBoard()} canCreate={role !== undefined && canWriteRecords(role)} />;
 }
 
 export default async function PipelinePage({ searchParams }: PageProps<"/pipeline">) {
   const { view } = await searchParams;
-  return <PipelineForRequest view={view} />;
+  const member = await (await getContainer()).currentMember();
+  return <PipelineForRequest view={view} role={member.status === "member" ? member.role : undefined} />;
 }

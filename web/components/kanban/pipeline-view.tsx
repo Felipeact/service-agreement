@@ -5,12 +5,13 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import type { PipelineCard } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { SearchInput } from "@/components/ui/search-input";
 import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
 import { KanbanColumn } from "./kanban-column";
 
 /** The Pipeline page body: header with search, then the board (tabs on mobile, scroll on tablet, grid on desktop). */
-export function PipelineView({ cards, initialQuery = "" }: { cards: PipelineCard[]; initialQuery?: string }) {
+export function PipelineView({ cards, initialQuery = "", canCreate = false }: { cards: PipelineCard[]; initialQuery?: string; canCreate?: boolean }) {
   const [query, setQuery] = useState(initialQuery);
   const [selected, setSelected] = useState<PipelineStage>("in_progress");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -56,9 +57,11 @@ export function PipelineView({ cards, initialQuery = "" }: { cards: PipelineCard
           />
         }
         action={
-          <Button variant="primary" disabled title="The agreement builder arrives in a later release">
-            New agreement
-          </Button>
+          canCreate ? (
+            <LinkButton href="/agreements/new" variant="primary">
+              New agreement
+            </LinkButton>
+          ) : undefined
         }
       />
 
