@@ -82,12 +82,25 @@ describe("composition root", () => {
       "updateSite",
       "createAsset",
       "updateAsset",
-      "deleteAsset",
       "listAssetTypes",
       "contactForEdit",
       "assetForEdit",
     ] as const;
     for (const name of names) expect(typeof container[name], name).toBe("function");
+  });
+
+  test("C1280: assets are never deleted; the container exposes the three status writers instead", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect("deleteAsset" in container).toBe(false);
+    for (const name of ["setCustomerActive", "setSiteActive", "setAssetActive"] as const) {
+      expect(typeof container[name], name).toBe("function");
+    }
+    const records = await import("@/app/(app)/record-actions");
+    expect("deleteAssetAction" in records).toBe(false);
+    const { supabaseAssetStore } = await import("@/infrastructure/supabase/records");
+    expect("delete" in supabaseAssetStore({} as never)).toBe(false);
   });
 
   test("C433: getContainer() exposes the import job store and read", async () => {
@@ -107,12 +120,13 @@ describe("composition root", () => {
     expect(body).toContain("discard(jobId: string)");
   });
 
-  test("C340: the ports declare one store per entity, and delete only on contacts and assets", () => {
+  // Deactivation door 2 supersedes the asset half of C340: assets are never deleted (C1280).
+  test("C340: the ports declare one store per entity, and delete only on contacts", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
     for (const name of ["CustomerStore", "ContactStore", "SiteStore", "AssetStore"]) expect(body(name), name).toContain("create(");
     expect(body("ContactStore")).toContain("delete(id: string)");
-    expect(body("AssetStore")).toContain("delete(id: string)");
+    expect(body("AssetStore")).not.toContain("delete(");
     expect(body("CustomerStore")).not.toContain("delete(");
     expect(body("SiteStore")).not.toContain("delete(");
   });

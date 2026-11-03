@@ -186,6 +186,9 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
   };
 }
 
+type Inactive = { deactivated_at?: string | null };
+const isActive = (row: Inactive) => !row.deactivated_at;
+
 type ContactRow = { id: string; name: string; email: string | null; phone: string | null; created_at: string };
 
 function primaryContact(contacts: ContactRow[]): string | null {
@@ -198,20 +201,30 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
     async list() {
       const { data, error } = await client
         .from("customers")
-        .select("id, name, contacts(id, name, email, phone, created_at), sites(assets(count))")
+        .select("id, name, deactivated_at, contacts(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at))")
         .order("name")
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
 
-      const rows = data as unknown as { id: string; name: string; contacts: ContactRow[]; sites: { assets: { count: number }[] }[] }[];
+      const rows = data as unknown as {
+        id: string;
+        name: string;
+        deactivated_at: string | null;
+        contacts: ContactRow[];
+        sites: { deactivated_at: string | null; assets: Inactive[] }[];
+      }[];
       return rows
-        .map<CustomerSummary>((row) => ({
-          id: row.id,
-          name: row.name,
-          primaryContact: primaryContact(row.contacts),
-          siteCount: row.sites.length,
-          assetCount: row.sites.reduce((total, site) => total + (site.assets[0]?.count ?? 0), 0),
-        }))
+        .map<CustomerSummary>((row) => {
+          const sites = row.sites.filter(isActive);
+          return {
+            id: row.id,
+            name: row.name,
+            primaryContact: primaryContact(row.contacts),
+            active: isActive(row),
+            siteCount: sites.length,
+            assetCount: sites.reduce((total, site) => total + site.assets.filter(isActive).length, 0),
+          };
+        })
         .sort((a, b) => byName(a.name, b.name));
     },
 
@@ -220,8 +233,8 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
       const { data, error } = await client
         .from("customers")
         .select(
-          `id, name, contacts(id, name, email, phone, created_at),
-           sites(id, name, address, site_contact_id, created_at, assets(count), agreements(${AGREEMENT_COLUMNS}))`,
+          `id, name, deactivated_at, contacts(id, name, email, phone, created_at),
+           sites(id, name, address, site_contact_id, created_at, deactivated_at, assets(deactivated_at), agreements(${AGREEMENT_COLUMNS}))`,
         )
         .eq("id", id)
         .maybeSingle();
@@ -231,6 +244,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
       const row = data as unknown as {
         id: string;
         name: string;
+        deactivated_at: string | null;
         contacts: ContactRow[];
         sites: {
           id: string;
@@ -238,7 +252,8 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
           address: string | null;
           site_contact_id: string | null;
           created_at: string;
-          assets: { count: number }[];
+          deactivated_at: string | null;
+          assets: Inactive[];
           agreements: AgreementRow[];
         }[];
       };
@@ -267,13 +282,15 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
       const detail: CustomerDetail = {
         id: row.id,
         name: row.name,
+        active: isActive(row),
         contacts: contacts.map(({ id: contactId, name, email, phone }) => ({ id: contactId, name, email, phone })),
         sites: sites.map((site) => ({
           id: site.id,
           name: site.name,
           address: site.address,
           contactName: contacts.find((contact) => contact.id === site.site_contact_id)?.name ?? null,
-          assetCount: site.assets[0]?.count ?? 0,
+          assetCount: site.assets.filter(isActive).length,
+          active: isActive(site),
         })),
         agreements,
       };
@@ -290,6 +307,11 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
   };
 }
 
+/** A replacement is named by its unit no, else its type code (deactivation AC 3). */
+function replacementLabel(asset: { unit_no: string | null; asset_types: { code: string } } | undefined): string | null {
+  return asset ? (asset.unit_no ?? asset.asset_types.code) : null;
+}
+
 export function supabaseSiteRegister(client: Client): SiteRegister {
   return {
     async get(id) {
@@ -297,9 +319,9 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
       const { data, error } = await client
         .from("sites")
         .select(
-          `id, name, address, customer_id, site_contact_id,
-           customers(name, contacts(id, name)),
-           assets(id, unit_no, type_model, location, source, asset_types(code, name)),
+          `id, name, address, customer_id, site_contact_id, deactivated_at,
+           customers(name, deactivated_at, contacts(id, name)),
+           assets(id, unit_no, type_model, location, source, deactivated_at, replaced_by_asset_id, asset_types(code, name)),
            agreements(id, number, status)`,
         )
         .eq("id", id)
@@ -314,17 +336,21 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         address: string | null;
         customer_id: string;
         site_contact_id: string | null;
-        customers: { name: string; contacts: { id: string; name: string }[] };
+        deactivated_at: string | null;
+        customers: { name: string; deactivated_at: string | null; contacts: { id: string; name: string }[] };
         assets: {
           id: string;
           unit_no: string | null;
           type_model: string | null;
           location: string | null;
           source: string;
+          deactivated_at: string | null;
+          replaced_by_asset_id: string | null;
           asset_types: { code: string; name: string };
         }[];
         agreements?: { id: string; number: string | null; status: string }[];
       };
+      const byId = new Map(row.assets.map((asset) => [asset.id, asset]));
       const live = (row.agreements ?? []).find((agreement) => LIVE_STATUSES.includes(agreement.status as AgreementStatus));
 
       return {
@@ -333,6 +359,8 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         address: row.address,
         customerId: row.customer_id,
         customerName: row.customers.name,
+        active: isActive(row),
+        customerActive: isActive(row.customers),
         siteContactId: row.site_contact_id,
         contactName: row.customers.contacts.find((contact) => contact.id === row.site_contact_id)?.name ?? null,
         assets: row.assets.map<AssetView>((asset) => ({
@@ -343,6 +371,8 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
           typeModel: asset.type_model,
           location: asset.location,
           source: asset.source === "import" ? "import" : "manual",
+          active: isActive(asset),
+          replacedBy: replacementLabel(asset.replaced_by_asset_id ? byId.get(asset.replaced_by_asset_id) : undefined),
         })),
         liveAgreement: live ? { id: live.id, number: live.number ?? "", status: live.status as AgreementStatus } : null,
       };
@@ -352,7 +382,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
       if (!UUID.test(id)) return null;
       const { data, error } = await client
         .from("assets")
-        .select("id, site_id, asset_type_id, unit_no, type_model, location")
+        .select("id, site_id, asset_type_id, unit_no, type_model, location, deactivated_at")
         .eq("id", id)
         .maybeSingle();
       if (error) throw unexpected(error);
@@ -364,6 +394,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         unitNo: data.unit_no,
         typeModel: data.type_model,
         location: data.location,
+        active: !data.deactivated_at,
       };
     },
   };

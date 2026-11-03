@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { CustomerSummary, MemberRole } from "@/application/ports";
+import { ShowInactiveToggle } from "@/components/records/show-inactive";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -19,14 +20,18 @@ type CustomersViewProps = {
   initialQuery?: string;
   /** Decides whether New customer shows; without a role the screen is read-only. */
   role?: MemberRole;
+  /** `?show=inactive`: list deactivated customers too (deactivation door 8). */
+  showInactive?: boolean;
 };
 
 /** The Customers page body: header with a count and search, then one row per customer. */
-export function CustomersView({ customers, initialQuery = "", role }: CustomersViewProps) {
+export function CustomersView({ customers, initialQuery = "", role, showInactive = false }: CustomersViewProps) {
   const [query, setQuery] = useState(initialQuery);
   const searchRef = useRef<HTMLInputElement>(null);
-  const shown = filterCustomers(customers, query);
-  const count = `${customers.length} ${customers.length === 1 ? "customer" : "customers"}`;
+  const listed = showInactive ? customers : customers.filter((customer) => customer.active);
+  const shown = filterCustomers(listed, query);
+  const count = `${listed.length} ${listed.length === 1 ? "customer" : "customers"}`;
+  const toggle = <ShowInactiveToggle href="/customers" showing={showInactive} />;
   const newCustomer = role && canWriteRecords(role) && (
     <LinkButton href="/customers/new" variant="primary">
       New customer
@@ -42,16 +47,19 @@ export function CustomersView({ customers, initialQuery = "", role }: CustomersV
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Customers"
-        badge={customers.length > 0 ? <StatusPill tone="neutral" label={count} /> : undefined}
+        badge={listed.length > 0 ? <StatusPill tone="neutral" label={count} /> : undefined}
         controls={
-          <SearchInput
-            ref={searchRef}
-            label="Search customers"
-            placeholder="Search customers…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="w-full md:w-60"
-          />
+          <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+            <SearchInput
+              ref={searchRef}
+              label="Search customers"
+              placeholder="Search customers…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full md:w-60"
+            />
+            {customers.length > 0 && toggle}
+          </div>
         }
         action={newCustomer || undefined}
       />
@@ -60,6 +68,8 @@ export function CustomersView({ customers, initialQuery = "", role }: CustomersV
         <EmptyPanel title="No customers yet" text="Customers appear here once they are added or imported.">
           {newCustomer}
         </EmptyPanel>
+      ) : listed.length === 0 ? (
+        <EmptyPanel title="No active customers.">{toggle}</EmptyPanel>
       ) : shown.length === 0 ? (
         <EmptyPanel title={`No customers match "${query}"`}>
           <Button onClick={clearSearch}>Clear search</Button>
@@ -83,6 +93,11 @@ export function CustomersView({ customers, initialQuery = "", role }: CustomersV
                   className="col-span-2 inline-flex min-h-11 items-center text-[13.5px] font-semibold text-ink hover:text-action md:col-span-1 lg:min-h-0"
                 >
                   {customer.name}
+                  {!customer.active && (
+                    <span className="ml-2">
+                      <StatusPill tone="neutral" label="Inactive" />
+                    </span>
+                  )}
                 </Link>
                 <span className="col-span-2 text-ink-2 md:col-span-1">{customer.primaryContact ?? "-"}</span>
                 <span className="text-ink-2">

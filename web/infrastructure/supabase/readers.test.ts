@@ -139,8 +139,14 @@ describe("pipeline reader", () => {
 type ContactRow = { id: string; name: string; email: string | null; phone: string | null; created_at: string };
 const contact = (id: string, name: string, created_at: string): ContactRow => ({ id, name, email: null, phone: null, created_at });
 
-function customerRow(id: string, name: string, patch: { contacts?: ContactRow[]; sites?: { assets: { count: number }[] }[] } = {}) {
-  return { id, name, contacts: patch.contacts ?? [], sites: patch.sites ?? [] };
+type SiteRow = { deactivated_at: string | null; assets: { deactivated_at: string | null }[] };
+const units = (active: number, inactive = 0) => [
+  ...Array.from({ length: active }, () => ({ deactivated_at: null })),
+  ...Array.from({ length: inactive }, () => ({ deactivated_at: "2026-11-01T00:00:00Z" })),
+];
+
+function customerRow(id: string, name: string, patch: { contacts?: ContactRow[]; sites?: SiteRow[]; deactivated_at?: string | null } = {}) {
+  return { id, name, deactivated_at: patch.deactivated_at ?? null, contacts: patch.contacts ?? [], sites: patch.sites ?? [] };
 }
 
 async function customers(rows: unknown[]) {
@@ -155,8 +161,24 @@ describe("customer directory list", () => {
   });
 
   test("C122: site and asset counts add up", async () => {
-    const [customer] = await customers([customerRow("1", "A", { sites: [{ assets: [{ count: 3 }] }, { assets: [{ count: 4 }] }] })]);
+    const [customer] = await customers([
+      customerRow("1", "A", { sites: [{ deactivated_at: null, assets: units(3) }, { deactivated_at: null, assets: units(4) }] }),
+    ]);
     expect(customer).toMatchObject({ siteCount: 2, assetCount: 7 });
+  });
+
+  test("C1304: counts are of active sites and their active assets, and each customer says whether it is active", async () => {
+    const [active, inactive] = await customers([
+      customerRow("1", "A", {
+        sites: [
+          { deactivated_at: null, assets: units(2, 1) },
+          { deactivated_at: "2026-11-01T00:00:00Z", assets: units(3) },
+        ],
+      }),
+      customerRow("2", "B", { deactivated_at: "2026-11-01T00:00:00Z" }),
+    ]);
+    expect(active).toMatchObject({ active: true, siteCount: 1, assetCount: 2 });
+    expect(inactive.active).toBe(false);
   });
 
   test("C123: the primary contact is the earliest created, ties by name", async () => {
@@ -189,7 +211,8 @@ function siteWithAgreements() {
         address: null,
         site_contact_id: "c-early",
         created_at: "2026-02-01T00:00:00Z",
-        assets: [{ count: 5 }],
+        deactivated_at: null,
+        assets: units(5),
         agreements: [
           { ...agreement("old", "sent", { updated_at: "2026-09-01T00:00:00Z" }), sites: undefined },
           {
@@ -201,7 +224,16 @@ function siteWithAgreements() {
           },
         ],
       },
-      { id: "s-early", name: "Early site", address: "1 Main St", site_contact_id: null, created_at: "2026-01-01T00:00:00Z", assets: [], agreements: [] },
+      {
+        id: "s-early",
+        name: "Early site",
+        address: "1 Main St",
+        site_contact_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+        deactivated_at: "2026-11-01T00:00:00Z",
+        assets: units(1, 2),
+        agreements: [],
+      },
     ],
   };
 }
@@ -229,6 +261,15 @@ describe("customer directory detail", () => {
     expect(detail?.sites.map((s) => s.id)).toEqual(["s-early", "s-late"]);
     expect(detail?.agreements.map((a) => a.id)).toEqual(["new", "old"]);
     expect(detail?.sites[1]).toMatchObject({ contactName: "Early", assetCount: 5 });
+  });
+
+  test("C1305: the customer and each site say whether they are active; a site counts its active assets", async () => {
+    const detail = await supabaseCustomerDirectory(stubClient({ customers: ok({ ...siteWithAgreements(), deactivated_at: "2026-11-01T00:00:00Z" }) }).typed).detail(ID);
+    expect(detail?.active).toBe(false);
+    expect(detail?.sites.map((site) => [site.id, site.active, site.assetCount])).toEqual([
+      ["s-early", false, 1],
+      ["s-late", true, 5],
+    ]);
   });
 });
 
@@ -258,6 +299,31 @@ describe("site register", () => {
     const site = await supabaseSiteRegister(stubClient({ sites: ok(row) }).typed).get(ID);
     expect(site).toMatchObject({ customerId: "cust", customerName: "Customer", contactName: "Dana" });
     expect(site?.assets[0]).toMatchObject({ typeCode: "BOILER", typeName: "Boiler", unitNo: "B-1", source: "import" });
+  });
+
+  test("C1305: the register says whether the site, its customer and each asset are active, and names a replacement", async () => {
+    const site = await supabaseSiteRegister(
+      stubClient({
+        sites: ok({
+          ...row,
+          deactivated_at: "2026-11-01T00:00:00Z",
+          customers: { ...row.customers, deactivated_at: null },
+          assets: [
+            { id: "a1", unit_no: "RTU-1", type_model: null, location: null, source: "manual", deactivated_at: "2026-11-01T00:00:00Z", replaced_by_asset_id: "a2", asset_types: { code: "RTU", name: "Rooftop unit" } },
+            { id: "a2", unit_no: "RTU-2", type_model: null, location: null, source: "manual", deactivated_at: null, replaced_by_asset_id: null, asset_types: { code: "RTU", name: "Rooftop unit" } },
+            { id: "a3", unit_no: null, type_model: null, location: null, source: "manual", deactivated_at: null, replaced_by_asset_id: null, asset_types: { code: "MUA", name: "Make-up air" } },
+            { id: "a4", unit_no: "MUA-0", type_model: null, location: null, source: "manual", deactivated_at: "2026-11-01T00:00:00Z", replaced_by_asset_id: "a3", asset_types: { code: "MUA", name: "Make-up air" } },
+          ],
+        }),
+      }).typed,
+    ).get(ID);
+    expect(site).toMatchObject({ active: false, customerActive: true });
+    expect(site?.assets.map((asset) => [asset.id, asset.active, asset.replacedBy])).toEqual([
+      ["a1", false, "RTU-2"],
+      ["a2", true, null],
+      ["a3", true, null],
+      ["a4", false, "MUA"],
+    ]);
   });
 
   test("C155: the assets of a site are capped at 500 rows", async () => {
@@ -339,6 +405,7 @@ describe("record reads for the edit forms", () => {
       unitNo: "1",
       typeModel: null,
       location: "Roof",
+      active: true,
     });
     await expect(supabaseSiteRegister(stubClient({ assets: fail("XX000") }).typed).asset(ID)).rejects.toThrow("XX000");
   });

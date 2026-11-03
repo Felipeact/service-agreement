@@ -68,3 +68,8 @@ export function validateAsset(input: AssetInput, allowedTypeIds: readonly string
   const location = optionalText(input.location, 300, "Location/access", errors, "location");
   return result({ assetTypeId, unitNo, typeModel, location }, errors);
 }
+
+/** Inactive records are listed only for `?show=inactive`; any other value, or none, hides them (deactivation door 8). */
+export function showInactive(params: { show?: string | string[] }): boolean {
+  return params.show === "inactive";
+}

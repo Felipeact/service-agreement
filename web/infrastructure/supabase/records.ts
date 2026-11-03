@@ -5,6 +5,7 @@ import type {
   CreateResult,
   CustomerStore,
   DeleteResult,
+  SetActiveResult,
   SiteStore,
   WriteFailure,
   WriteResult,
@@ -43,6 +44,49 @@ const created = (outcome: Outcome) => outcome as CreateResult;
 const updated = (outcome: Outcome): WriteResult => (outcome.ok ? { ok: true } : (outcome as WriteResult));
 const deleted = (outcome: Outcome): DeleteResult => (outcome.ok ? { ok: true } : outcome);
 
+type RpcCall = () => PromiseLike<{ error: PostgrestError | null }>;
+
+function detailOf(error: PostgrestError): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(error.details ?? "");
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+const textOf = (value: unknown) => (typeof value === "string" ? value : "");
+
+/**
+ * Runs one `set_*_active` call (deactivation door 3) and maps its refusals: `55000` by its hint (the detail names the
+ * blocking site, agreement or parent), `23514` an invalid replacement, `42501` forbidden, `P0002` not found.
+ */
+async function setActive(what: string, run: RpcCall): Promise<SetActiveResult> {
+  try {
+    const { error } = await run();
+    if (!error) return { ok: true };
+    if (error.code === "55000") {
+      const detail = detailOf(error);
+      if (error.hint === "in_term") {
+        const termEnd = textOf(detail.termEnd);
+        return { ok: false, code: "in_term", site: textOf(detail.site), number: textOf(detail.number), termEnd: termEnd || null };
+      }
+      if (error.hint === "changes_requested") return { ok: false, code: "changes_requested", site: textOf(detail.site), number: textOf(detail.number) };
+      if (error.hint === "customer_inactive" || error.hint === "site_inactive") {
+        return { ok: false, code: "parent_inactive", parent: textOf(detail.customer ?? detail.site) };
+      }
+    }
+    if (error.code === "23514") return { ok: false, code: "invalid_replacement" };
+    if (error.code === "42501") return { ok: false, code: "forbidden" };
+    if (error.code === "P0002") return { ok: false, code: "not_found" };
+    console.error(`${what} failed: ${error.code} ${error.message}`);
+    return { ok: false, code: "unavailable" };
+  } catch (cause) {
+    console.error(`${what} failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return { ok: false, code: "unavailable" };
+  }
+}
+
 const contactRow = (value: ContactValue) => ({ name: value.name, email: value.email, phone: value.phone });
 const siteRow = (value: SiteValue) => ({ name: value.name, address: value.address, site_contact_id: value.siteContactId });
 const assetRow = (value: AssetValue) => ({
@@ -59,6 +103,9 @@ export function supabaseCustomerStore(client: Client): CustomerStore {
     },
     async update(id, value) {
       return updated(await write("Updating a customer", "update", () => client.from("customers").update({ name: value.name }).eq("id", id).select("id")));
+    },
+    async setActive(id, active) {
+      return setActive("Changing a customer's status", () => client.rpc("set_customer_active", { p_customer_id: id, p_active: active }));
     },
   };
 }
@@ -93,6 +140,9 @@ export function supabaseSiteStore(client: Client): SiteStore {
     async update(id, value) {
       return updated(await write("Updating a site", "update", () => client.from("sites").update(siteRow(value)).eq("id", id).select("id")));
     },
+    async setActive(id, active) {
+      return setActive("Changing a site's status", () => client.rpc("set_site_active", { p_site_id: id, p_active: active }));
+    },
   };
 }
 
@@ -108,8 +158,10 @@ export function supabaseAssetStore(client: Client): AssetStore {
     async update(id, value) {
       return updated(await write("Updating an asset", "update", () => client.from("assets").update(assetRow(value)).eq("id", id).select("id")));
     },
-    async delete(id) {
-      return deleted(await write("Deleting an asset", "delete", () => client.from("assets").delete().eq("id", id).select("id")));
+    async setActive(id, active, replacedBy = null) {
+      return setActive("Changing an asset's status", () =>
+        client.rpc("set_asset_active", { p_asset_id: id, p_active: active, p_replaced_by: replacedBy as string }),
+      );
     },
   };
 }

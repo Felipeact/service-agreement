@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CustomerDetail, MemberRole } from "@/application/ports";
+import { ShowInactiveToggle } from "@/components/records/show-inactive";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkButton } from "@/components/ui/link-button";
@@ -41,15 +42,28 @@ function ContactLink({ href, text }: { href: string; text: string | null }) {
 const EDIT_LINK = "inline-flex min-h-11 min-w-11 items-center font-medium text-action lg:min-h-0 lg:min-w-0 md:ml-auto";
 
 /** The customer record: contacts, sites and the agreements on those sites. Without a role it is read-only. */
-export function CustomerDetailView({ customer, role }: { customer: CustomerDetail; role?: MemberRole }) {
+export function CustomerDetailView({
+  customer,
+  role,
+  showInactive = false,
+}: {
+  customer: CustomerDetail;
+  role?: MemberRole;
+  /** `?show=inactive`: list deactivated sites too (deactivation door 8). */
+  showInactive?: boolean;
+}) {
   const canWrite = role !== undefined && canWriteRecords(role);
+  const sites = showInactive ? customer.sites : customer.sites.filter((site) => site.active);
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <Link href="/customers" className="inline-flex min-h-11 items-center text-[13px] font-medium text-action lg:min-h-0">
           Customers
         </Link>
-        <PageHeader title={customer.name} action={canWrite ? <LinkButton href={`/customers/${customer.id}/edit`}>Edit</LinkButton> : undefined} />
+        <PageHeader
+          title={customer.name}
+          badge={customer.active ? undefined : <StatusPill tone="neutral" label="Inactive" />}
+          action={canWrite ? <LinkButton href={`/customers/${customer.id}/edit`}>Edit</LinkButton> : undefined} />
       </div>
 
       <Section
@@ -78,14 +92,22 @@ export function CustomerDetailView({ customer, role }: { customer: CustomerDetai
 
       <Section
         title="Sites"
-        empty="No sites yet"
-        isEmpty={customer.sites.length === 0}
-        action={canWrite && <LinkButton href={`/customers/${customer.id}/sites/new`}>Add site</LinkButton>}
+        empty={customer.sites.length === 0 ? "No sites yet" : "No active sites."}
+        isEmpty={sites.length === 0}
+        action={
+          (customer.sites.length > 0 || (canWrite && customer.active)) && (
+            <div className="flex flex-wrap items-center gap-3">
+              {customer.sites.length > 0 && <ShowInactiveToggle href={`/customers/${customer.id}`} showing={showInactive} />}
+              {canWrite && customer.active && <LinkButton href={`/customers/${customer.id}/sites/new`}>Add site</LinkButton>}
+            </div>
+          )
+        }
       >
-        {customer.sites.map((site) => (
+        {sites.map((site) => (
           <li key={site.id} className={ROW}>
-            <Link href={`/sites/${site.id}`} className="inline-flex min-h-11 items-center font-semibold text-ink hover:text-action md:w-56 lg:min-h-0">
+            <Link href={`/sites/${site.id}`} className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink hover:text-action md:w-56 lg:min-h-0">
               {site.name}
+              {!site.active && <StatusPill tone="neutral" label="Inactive" />}
             </Link>
             <span className="text-ink-2 md:flex-1">{value(site.address)}</span>
             <span className="text-ink-2">{value(site.contactName)}</span>

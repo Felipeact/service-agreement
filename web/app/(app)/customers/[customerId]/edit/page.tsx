@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { DeactivateControl, ReactivateControl } from "@/components/records/active-control";
 import { CustomerForm } from "@/components/records/customer-form";
 import { RecordPage } from "@/components/records/record-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
-import { updateCustomerAction } from "../../../record-actions";
+import { deactivateCustomerAction, reactivateCustomerAction, updateCustomerAction } from "../../../record-actions";
 
 export const metadata: Metadata = { title: "Edit customer" };
 
@@ -24,6 +25,11 @@ export default async function EditCustomerPage({ params }: PageProps<"/customers
         cancelHref={cancelHrefFor("edit-customer", { customerId })}
         action={updateCustomerAction.bind(null, customerId)}
       />
+      {customer.active ? (
+        <DeactivateControl kind="customer" name={customer.name} action={deactivateCustomerAction.bind(null, customerId)} />
+      ) : (
+        <ReactivateControl kind="customer" action={reactivateCustomerAction.bind(null, customerId)} />
+      )}
     </RecordPage>
   );
 }

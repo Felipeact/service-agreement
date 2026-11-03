@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
 import type { Database } from "./database.types";
 
-export type Reply = { data: unknown; error: { code: string; message: string } | null };
+export type Reply = { data: unknown; error: { code: string; message: string; hint?: string | null; details?: string | null } | null };
 export type Call = { table: string; method: string; args: unknown[] };
 /** Successive queries on the table get successive replies; the last one repeats. */
 export type Sequence = { sequence: Reply[] };

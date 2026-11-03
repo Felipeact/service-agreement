@@ -10,6 +10,13 @@ export type RecordFormState<Input> =
 
 export type DeleteState = { status: "idle" | "forbidden" | "not_found" | "in_use" | "unavailable" };
 
+/** What a deactivate, remove or reactivate control shows after a submit (deactivation door 5). */
+export type ActiveState =
+  | { status: "idle" | "forbidden" | "not_found" | "unavailable" | "invalid_replacement" }
+  | { status: "in_term"; site: string; number: string; termEnd: string | null }
+  | { status: "changes_requested"; site: string; number: string }
+  | { status: "parent_inactive"; parent: string };
+
 /** Owners, admins and estimators write customers, contacts, sites and assets (the RLS policies); RLS still decides. */
 export function canWriteRecords(role: MemberRole): boolean {
   return role === "owner" || role === "admin" || role === "estimator";

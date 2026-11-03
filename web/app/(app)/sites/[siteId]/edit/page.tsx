@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { DeactivateControl, ReactivateControl } from "@/components/records/active-control";
 import { RecordPage } from "@/components/records/record-form";
 import { SiteForm } from "@/components/records/site-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
-import { updateSiteAction } from "../../../record-actions";
+import { deactivateSiteAction, reactivateSiteAction, updateSiteAction } from "../../../record-actions";
 
 export const metadata: Metadata = { title: "Edit site" };
 
@@ -26,6 +27,16 @@ export default async function EditSitePage({ params }: PageProps<"/sites/[siteId
         cancelHref={cancelHrefFor("edit-site", { customerId: site.customerId })}
         action={updateSiteAction.bind(null, siteId)}
       />
+      {site.active ? (
+        <DeactivateControl
+          kind="site"
+          name={site.name}
+          withdraws={site.liveAgreement && site.liveAgreement.status !== "changes_requested" ? site.liveAgreement.number : null}
+          action={deactivateSiteAction.bind(null, siteId)}
+        />
+      ) : (
+        <ReactivateControl kind="site" action={reactivateSiteAction.bind(null, siteId)} />
+      )}
     </RecordPage>
   );
 }

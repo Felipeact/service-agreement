@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { validateAsset, validateContact, validateCustomer, validateSite } from "./index";
+import { showInactive } from "./index";
 
 const chars = (n: number) => "x".repeat(n);
 /** An address of exactly `n` characters that matches the email pattern. */
@@ -100,5 +101,12 @@ describe("validateAsset", () => {
   ] as const)("C324: %s accepts %i characters and refuses one more", (field, max, message) => {
     expect(validateAsset({ ...valid, [field]: chars(max) }, ["t1"])).toMatchObject({ ok: true, value: { [field]: chars(max) } });
     expect(validateAsset({ ...valid, [field]: chars(max + 1) }, ["t1"])).toEqual({ ok: false, errors: { [field]: message } });
+  });
+});
+
+describe("showInactive", () => {
+  test("C1300: only show=inactive lists inactive records", () => {
+    expect(showInactive({ show: "inactive" })).toBe(true);
+    for (const params of [{}, { show: "all" }, { show: ["inactive"] }, { show: "" }]) expect(showInactive(params), JSON.stringify(params)).toBe(false);
   });
 });

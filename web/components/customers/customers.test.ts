@@ -10,6 +10,7 @@ const summary = (id: string, name: string, patch: Partial<CustomerSummary> = {})
   id,
   name,
   primaryContact: "Dana Whitfield",
+  active: true,
   siteCount: 1,
   assetCount: 5,
   ...patch,
@@ -78,6 +79,7 @@ describe("filterCustomers", () => {
 const detail = (patch: Partial<CustomerDetail> = {}): CustomerDetail => ({
   id: "c1",
   name: "Harbourview Towers Strata",
+  active: true,
   contacts: [],
   sites: [],
   agreements: [],
@@ -110,7 +112,7 @@ describe("CustomerDetailView", () => {
   test("C131: a site row links to the site and shows address, contact and asset count", () => {
     const out = detailHtml(
       detail({
-        sites: [{ id: "s1", name: "Harbourview Towers", address: "2150 Harbour Lane, North Vancouver, BC", contactName: "Dana Whitfield", assetCount: 5 }],
+        sites: [{ id: "s1", name: "Harbourview Towers", address: "2150 Harbour Lane, North Vancouver, BC", contactName: "Dana Whitfield", assetCount: 5, active: true }],
       }),
     );
     expect(out).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Harbourview Towers</);
@@ -153,7 +155,7 @@ describe("CustomerDetailView", () => {
 
 const populated = detail({
   contacts: [{ id: "ct1", name: "Dana", email: "dana@example.com", phone: null }],
-  sites: [{ id: "s1", name: "Tower A", address: "1 Main St", contactName: "Dana", assetCount: 3 }],
+  sites: [{ id: "s1", name: "Tower A", address: "1 Main St", contactName: "Dana", assetCount: 3, active: true }],
   agreements: [{ id: "ag1", siteName: "Tower A", number: "AG-1", versionNo: 1, stage: "sent", annualCents: 120000 }],
 });
 const listAs = (role: MemberRole, customers: CustomerSummary[]) => html(createElement(CustomersView, { customers, role }));
@@ -207,5 +209,58 @@ describe("record write controls on the customer screens", () => {
     expect(out).toContain("1 Main St");
     expect(out).toContain("AG-1 · v1");
     expect(out).toContain("$1,200/yr");
+  });
+});
+
+const inactive = (out: string) => (out.match(/>Inactive</g) ?? []).length;
+
+describe("inactive customers and sites", () => {
+  const customers = [summary("1", "Alpha"), summary("2", "Bravo", { active: false })];
+
+  test("C1301: the list hides an inactive customer by default and links to show it", () => {
+    const out = html(createElement(CustomersView, { customers }));
+    expect(out).toContain("Alpha");
+    expect(out).not.toContain("Bravo");
+    expect(out).toMatch(/<a[^>]*href="\/customers\?show=inactive"[^>]*>Show inactive<\/a>/);
+  });
+
+  test("C1301: showing inactive lists it with an Inactive pill and links back", () => {
+    const out = html(createElement(CustomersView, { customers, showInactive: true }));
+    expect(out).toMatch(/Bravo[\s\S]*>Inactive</);
+    expect(inactive(out)).toBe(1);
+    expect(out).toMatch(/<a[^>]*href="\/customers"[^>]*>Hide inactive<\/a>/);
+  });
+
+  const sites = detail({
+    sites: [
+      { id: "s1", name: "Tower A", address: null, contactName: null, assetCount: 3, active: true },
+      { id: "s2", name: "Tower B", address: null, contactName: null, assetCount: 0, active: false },
+    ],
+  });
+
+  test("C1302: the customer's Sites list hides an inactive site, and shows it with a pill when asked", () => {
+    const hidden = html(createElement(CustomerDetailView, { customer: sites }));
+    expect(hidden).toContain("Tower A");
+    expect(hidden).not.toContain("Tower B");
+    expect(hidden).toMatch(/<a[^>]*href="\/customers\/c1\?show=inactive"[^>]*>Show inactive<\/a>/);
+    const shown = html(createElement(CustomerDetailView, { customer: sites, showInactive: true }));
+    expect(shown).toMatch(/Tower B[\s\S]*?>Inactive</);
+    expect(shown).toMatch(/<a[^>]*href="\/customers\/c1"[^>]*>Hide inactive<\/a>/);
+  });
+
+  test("C1303: only inactive rows left says so, with the toggle", () => {
+    const list = html(createElement(CustomersView, { customers: [summary("2", "Bravo", { active: false })] }));
+    expect(list).toMatch(/No active customers\.[\s\S]*Show inactive/);
+    const onlyInactive = detail({ sites: [{ id: "s2", name: "Tower B", address: null, contactName: null, assetCount: 0, active: false }] });
+    const out = html(createElement(CustomerDetailView, { customer: onlyInactive }));
+    expect(out).toContain("No active sites.");
+    expect(out).toContain("Show inactive");
+  });
+
+  test("C1299: an inactive customer shows the pill and no Add site to a writer", () => {
+    const out = html(createElement(CustomerDetailView, { customer: { ...populated, active: false }, role: "estimator" }));
+    expect(inactive(out)).toBe(1);
+    expect(out).not.toContain("Add site");
+    expect(out).toContain("Add contact");
   });
 });

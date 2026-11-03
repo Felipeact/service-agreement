@@ -120,19 +120,21 @@ describe("createAgreementAction", () => {
       address: null,
       customerId: "c1",
       customerName: "Customer",
+      active: true,
+      customerActive: true,
       siteContactId: null,
       contactName: null,
       assets: [],
       liveAgreement: null,
     };
     container.siteRegister.mockResolvedValue(site);
-    const page = (await SitePage({ params: Promise.resolve({ siteId: SITE }) } as never)) as ReactElement<{ newAgreement?: () => unknown }>;
+    const page = (await SitePage({ params: Promise.resolve({ siteId: SITE }), searchParams: Promise.resolve({}) } as never)) as ReactElement<{ newAgreement?: () => unknown }>;
     expect(page.props.newAgreement?.name).toBe("bound createAgreementAction");
     container.agreementStore.create.mockResolvedValue({ ok: false, code: "unavailable" });
     expect(await page.props.newAgreement?.()).toEqual({ status: "unavailable" });
     expect(container.agreementStore.create).toHaveBeenCalledWith(SITE);
     currentMember.mockResolvedValue(member("viewer"));
-    const viewerPage = (await SitePage({ params: Promise.resolve({ siteId: SITE }) } as never)) as ReactElement<{ newAgreement?: unknown }>;
+    const viewerPage = (await SitePage({ params: Promise.resolve({ siteId: SITE }), searchParams: Promise.resolve({}) } as never)) as ReactElement<{ newAgreement?: unknown }>;
     expect(viewerPage.props.newAgreement).toBeUndefined();
   });
 });

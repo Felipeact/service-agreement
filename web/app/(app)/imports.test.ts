@@ -43,6 +43,8 @@ const site: SiteView = {
   address: null,
   customerId: "c1",
   customerName: "Kettle Test",
+  active: true,
+  customerActive: true,
   siteContactId: null,
   contactName: null,
   assets: [],

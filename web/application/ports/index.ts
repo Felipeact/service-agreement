@@ -101,13 +101,25 @@ export type CustomerSummary = {
   name: string;
   /** The contact created first; null when the customer has none. */
   primaryContact: string | null;
+  /** False once deactivated (deactivation door 1). */
+  active: boolean;
+  /** Active sites only. */
   siteCount: number;
+  /** Active assets on active sites only. */
   assetCount: number;
 };
 
 export type ContactView = { id: string; name: string; email: string | null; phone: string | null };
 
-export type CustomerSiteView = { id: string; name: string; address: string | null; contactName: string | null; assetCount: number };
+export type CustomerSiteView = {
+  id: string;
+  name: string;
+  address: string | null;
+  contactName: string | null;
+  /** Active assets only. */
+  assetCount: number;
+  active: boolean;
+};
 
 export type CustomerAgreementView = {
   id: string;
@@ -121,6 +133,7 @@ export type CustomerAgreementView = {
 export type CustomerDetail = {
   id: string;
   name: string;
+  active: boolean;
   contacts: ContactView[];
   sites: CustomerSiteView[];
   agreements: CustomerAgreementView[];
@@ -145,6 +158,9 @@ export type AssetView = {
   typeModel: string | null;
   location: string | null;
   source: "manual" | "import";
+  active: boolean;
+  /** The unit that replaced this removed one: its unit no, else its type code; null when none (deactivation door 4). */
+  replacedBy: string | null;
 };
 
 export type SiteView = {
@@ -153,6 +169,8 @@ export type SiteView = {
   address: string | null;
   customerId: string;
   customerName: string;
+  active: boolean;
+  customerActive: boolean;
   siteContactId: string | null;
   contactName: string | null;
   assets: AssetView[];
@@ -168,6 +186,7 @@ export type AssetRecord = {
   unitNo: string | null;
   typeModel: string | null;
   location: string | null;
+  active: boolean;
 };
 
 export interface SiteRegister {
@@ -204,9 +223,24 @@ export type CreateResult = { ok: true; id: string } | { ok: false; code: WriteFa
 export type WriteResult = { ok: true } | { ok: false; code: WriteFailure };
 export type DeleteResult = { ok: true } | { ok: false; code: WriteFailure | "in_use" };
 
+/**
+ * Why a deactivation or reactivation changed nothing (deactivation door 5). `in_term` and `changes_requested` name the
+ * site and agreement that block it; `parent_inactive` names the customer or site to reactivate first.
+ */
+export type ActiveRefusal =
+  | { code: WriteFailure }
+  | { code: "in_term"; site: string; number: string; termEnd: string | null }
+  | { code: "changes_requested"; site: string; number: string }
+  | { code: "parent_inactive"; parent: string }
+  | { code: "invalid_replacement" };
+
+export type SetActiveResult = { ok: true } | ({ ok: false } & ActiveRefusal);
+
 export interface CustomerStore {
   create(orgId: string, value: CustomerValue): Promise<CreateResult>;
   update(id: string, value: CustomerValue): Promise<WriteResult>;
+  /** Deactivating also deactivates the customer's active sites; reactivating brings back the customer only. */
+  setActive(id: string, active: boolean): Promise<SetActiveResult>;
 }
 
 export interface ContactStore {
@@ -219,6 +253,8 @@ export interface SiteStore {
   create(orgId: string, customerId: string, value: SiteValue): Promise<CreateResult>;
   /** The site's customer never changes. */
   update(id: string, value: SiteValue): Promise<WriteResult>;
+  /** Deactivating withdraws the site's draft or sent agreement in the same transaction. */
+  setActive(id: string, active: boolean): Promise<SetActiveResult>;
 }
 
 export interface AssetStore {
@@ -226,7 +262,8 @@ export interface AssetStore {
   create(orgId: string, siteId: string, value: AssetValue): Promise<CreateResult>;
   /** Leaves `source` as it is. */
   update(id: string, value: AssetValue): Promise<WriteResult>;
-  delete(id: string): Promise<DeleteResult>;
+  /** Assets are never deleted (deactivation door 2); a removed one may name the active unit on its site that replaced it. */
+  setActive(id: string, active: boolean, replacedBy?: string | null): Promise<SetActiveResult>;
 }
 
 /**

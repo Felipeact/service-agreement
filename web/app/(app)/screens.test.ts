@@ -66,23 +66,23 @@ describe("screen states", () => {
 
   test("C105: the customer page calls notFound when the reader returns null, and renders otherwise", async () => {
     customerDetail.mockResolvedValueOnce(null);
-    await expect(CustomerPage({ params: Promise.resolve({ customerId: "x" }) } as never)).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(CustomerPage({ params: Promise.resolve({ customerId: "x" }), searchParams: Promise.resolve({}) } as never)).rejects.toThrow("NEXT_NOT_FOUND");
     expect(customerDetail).toHaveBeenCalledWith("x");
 
     notFound.mockClear();
     customerDetail.mockResolvedValueOnce({ id: "x", name: "Alpha", contacts: [], sites: [], agreements: [] });
-    await CustomerPage({ params: Promise.resolve({ customerId: "x" }) } as never);
+    await CustomerPage({ params: Promise.resolve({ customerId: "x" }), searchParams: Promise.resolve({}) } as never);
     expect(notFound).not.toHaveBeenCalled();
   });
 
   test("C105: the site page calls notFound when the reader returns null, and renders otherwise", async () => {
     siteRegister.mockResolvedValueOnce(null);
-    await expect(SitePage({ params: Promise.resolve({ siteId: "y" }) } as never)).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(SitePage({ params: Promise.resolve({ siteId: "y" }), searchParams: Promise.resolve({}) } as never)).rejects.toThrow("NEXT_NOT_FOUND");
     expect(siteRegister).toHaveBeenCalledWith("y");
 
     notFound.mockClear();
     siteRegister.mockResolvedValueOnce({ id: "y", name: "S", address: null, customerId: "c", customerName: "C", contactName: null, assets: [] });
-    await SitePage({ params: Promise.resolve({ siteId: "y" }) } as never);
+    await SitePage({ params: Promise.resolve({ siteId: "y" }), searchParams: Promise.resolve({}) } as never);
     expect(notFound).not.toHaveBeenCalled();
   });
 });

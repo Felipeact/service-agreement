@@ -207,9 +207,12 @@ export type Database = {
         Row: {
           asset_type_id: string
           created_at: string
+          deactivated_at: string | null
+          deactivated_by: string | null
           id: string
           location: string | null
           org_id: string
+          replaced_by_asset_id: string | null
           site_id: string
           source: string
           type_model: string | null
@@ -218,9 +221,12 @@ export type Database = {
         Insert: {
           asset_type_id: string
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           id?: string
           location?: string | null
           org_id: string
+          replaced_by_asset_id?: string | null
           site_id: string
           source?: string
           type_model?: string | null
@@ -229,9 +235,12 @@ export type Database = {
         Update: {
           asset_type_id?: string
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           id?: string
           location?: string | null
           org_id?: string
+          replaced_by_asset_id?: string | null
           site_id?: string
           source?: string
           type_model?: string | null
@@ -251,6 +260,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orgs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_replaced_by_same_site"
+            columns: ["replaced_by_asset_id", "site_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id", "site_id"]
           },
           {
             foreignKeyName: "assets_site_id_org_id_fkey"
@@ -348,18 +364,24 @@ export type Database = {
       customers: {
         Row: {
           created_at: string
+          deactivated_at: string | null
+          deactivated_by: string | null
           id: string
           name: string
           org_id: string
         }
         Insert: {
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           id?: string
           name: string
           org_id: string
         }
         Update: {
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           id?: string
           name?: string
           org_id?: string
@@ -980,6 +1002,8 @@ export type Database = {
           address: string | null
           created_at: string
           customer_id: string
+          deactivated_at: string | null
+          deactivated_by: string | null
           id: string
           name: string
           org_id: string
@@ -989,6 +1013,8 @@ export type Database = {
           address?: string | null
           created_at?: string
           customer_id: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           id?: string
           name: string
           org_id: string
@@ -998,6 +1024,8 @@ export type Database = {
           address?: string | null
           created_at?: string
           customer_id?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           id?: string
           name?: string
           org_id?: string
@@ -1162,6 +1190,18 @@ export type Database = {
             }
             Returns: string
           }
+      set_asset_active: {
+        Args: { p_active: boolean; p_asset_id: string; p_replaced_by?: string }
+        Returns: undefined
+      }
+      set_customer_active: {
+        Args: { p_active: boolean; p_customer_id: string }
+        Returns: string[]
+      }
+      set_site_active: {
+        Args: { p_active: boolean; p_site_id: string }
+        Returns: string[]
+      }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
     }
     Enums: {

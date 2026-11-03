@@ -4,9 +4,11 @@ import { describe, expect, test } from "vitest";
 import { AssetFields } from "./asset-form";
 import { ContactFields } from "./contact-form";
 import { CustomerFields } from "./customer-form";
+import { DeactivatePrompt, ReactivatePrompt } from "./active-control";
 import { DeletePrompt } from "./delete-control";
+import { RecordPage } from "./record-form";
 import { SiteFields } from "./site-form";
-import { cancelHrefFor, canWriteRecords, type DeleteState, type RecordFormKind } from "./state";
+import { cancelHrefFor, canWriteRecords, type ActiveState, type DeleteState, type RecordFormKind } from "./state";
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 const form = { pending: false, submitLabel: "Save changes", cancelHref: "/customers" };
@@ -134,5 +136,87 @@ describe("record forms", () => {
     const cancelHref = cancelHrefFor(kind, { customerId: "c1", siteId: "s1" });
     expect(cancelHref).toBe(href);
     expect(customer({ status: "idle" }, { cancelHref })).toMatch(new RegExp(`<a[^>]*href="${href}"[^>]*>Cancel</a>`));
+  });
+});
+
+type DeactivateProps = Parameters<typeof DeactivatePrompt>[0];
+const deactivate = (props: Partial<DeactivateProps> & Pick<DeactivateProps, "kind" | "name">) =>
+  html(createElement(DeactivatePrompt, { confirming: false, pending: false, state: { status: "idle" }, ...props }));
+const reactivate = (kind: DeactivateProps["kind"], state: ActiveState = { status: "idle" }) =>
+  html(createElement(ReactivatePrompt, { kind, pending: false, state }));
+const IN_TERM: ActiveState = { status: "in_term", site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" };
+
+describe("deactivation controls", () => {
+  test("C1278: before confirming, an asset offers one Remove from service button and no Delete asset", () => {
+    const out = deactivate({ kind: "asset", name: "RTU RTU-1" });
+    expect(out.match(/<button[^>]*>([^<]*)<\/button>/g)).toEqual([expect.stringContaining(">Remove from service<")]);
+    expect(out).not.toContain("Delete asset");
+    expect(out).not.toContain("<form");
+  });
+
+  test("C1278: confirming offers Replaced by: None, then the other active units by code and unit", () => {
+    const out = deactivate({
+      kind: "asset",
+      name: "RTU RTU-1",
+      confirming: true,
+      replacements: [
+        { id: "a2", label: "RTU RTU-2" },
+        { id: "a3", label: "MUA MUA-1" },
+      ],
+    });
+    expect(out).toContain("Remove RTU RTU-1 from service?");
+    expect(options(out, "replacedBy")).toEqual([
+      { value: "", selected: true, text: "None" },
+      { value: "a2", selected: false, text: "RTU RTU-2" },
+      { value: "a3", selected: false, text: "MUA MUA-1" },
+    ]);
+    expect(out).toMatch(/<select[^>]*name="replacedBy"/);
+  });
+
+  test("C1278: with no other active unit there is no Replaced by field", () => {
+    expect(deactivate({ kind: "asset", name: "RTU RTU-1", confirming: true })).not.toContain("Replaced by");
+  });
+
+  test("C1294: a site asks by name and says what it withdraws", () => {
+    const out = deactivate({ kind: "site", name: "Tower A", confirming: true, withdraws: "AG-1004" });
+    expect(out).toContain("Deactivate Tower A?");
+    expect(out).toContain("This withdraws AG-1004.");
+    expect(deactivate({ kind: "site", name: "Tower A", confirming: true })).not.toContain("This withdraws");
+  });
+
+  test("C1294: the in-term and changes-requested refusals read as the plan says", () => {
+    expect(deactivate({ kind: "site", name: "Tower A", state: IN_TERM })).toContain(
+      "AG-1004 is in term until Dec 31, 2027, so this site can't be deactivated yet.",
+    );
+    expect(deactivate({ kind: "site", name: "Tower A", state: { status: "changes_requested", site: "Tower A", number: "AG-1004" } })).toContain(
+      "AG-1004 has changes requested. Revise and withdraw it first.",
+    );
+  });
+
+  test("C1298: a customer's refusal is prefixed with the site", () => {
+    expect(deactivate({ kind: "customer", name: "Kettle Test", state: IN_TERM })).toContain(
+      "Tower A: AG-1004 is in term until Dec 31, 2027, so this site can't be deactivated yet.",
+    );
+  });
+
+  test("C1310: a refused reactivation names the parent to reactivate first", () => {
+    expect(reactivate("site", { status: "parent_inactive", parent: "Kettle Test" })).toContain("Reactivate Kettle Test first.");
+    expect(reactivate("asset", { status: "parent_inactive", parent: "Tower A" })).toContain("Reactivate Tower A first.");
+  });
+
+  test("C1311: a writer sees Reactivate on an inactive record; a viewer sees no status control at all", () => {
+    for (const kind of ["customer", "site", "asset"] as const) {
+      expect(reactivate(kind)).toMatch(/<button type="submit"[^>]*>Reactivate<\/button>/);
+    }
+    const controls = createElement("div", null, [
+      createElement(DeactivatePrompt, { key: "c", kind: "customer", name: "Kettle", confirming: false, pending: false, state: { status: "idle" } }),
+      createElement(DeactivatePrompt, { key: "s", kind: "site", name: "Tower A", confirming: false, pending: false, state: { status: "idle" } }),
+      createElement(DeactivatePrompt, { key: "a", kind: "asset", name: "RTU-1", confirming: false, pending: false, state: { status: "idle" } }),
+      createElement(ReactivatePrompt, { key: "r", kind: "site", pending: false, state: { status: "idle" } }),
+    ]);
+    const writer = html(createElement(RecordPage, { title: "Edit", canWrite: true } as Parameters<typeof RecordPage>[0], controls));
+    for (const text of ["Deactivate customer", "Deactivate site", "Remove from service", "Reactivate"]) expect(writer, text).toContain(text);
+    const viewer = html(createElement(RecordPage, { title: "Edit", canWrite: false } as Parameters<typeof RecordPage>[0], controls));
+    for (const text of ["Deactivate customer", "Deactivate site", "Remove from service", "Reactivate"]) expect(viewer, text).not.toContain(text);
   });
 });

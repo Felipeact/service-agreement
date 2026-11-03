@@ -20,7 +20,9 @@ const container = {
   updateSite: vi.fn(),
   createAsset: vi.fn(),
   updateAsset: vi.fn(),
-  deleteAsset: vi.fn(),
+  setCustomerActive: vi.fn(),
+  setSiteActive: vi.fn(),
+  setAssetActive: vi.fn(),
 };
 const STORE_METHODS = [
   "createCustomer",
@@ -32,7 +34,9 @@ const STORE_METHODS = [
   "updateSite",
   "createAsset",
   "updateAsset",
-  "deleteAsset",
+  "setCustomerActive",
+  "setSiteActive",
+  "setAssetActive",
 ] as const;
 
 const notFound = vi.fn(() => {
@@ -60,6 +64,7 @@ const member = (role: MemberRole): CurrentMember => ({ status: "member", userId:
 const customer: CustomerDetail = {
   id: CUSTOMER,
   name: "Kettle Test",
+  active: true,
   contacts: [{ id: CONTACT, name: "Dana", email: null, phone: null }],
   sites: [],
   agreements: [],
@@ -70,13 +75,15 @@ const site: SiteView = {
   address: null,
   customerId: CUSTOMER,
   customerName: "Kettle Test",
+  active: true,
+  customerActive: true,
   siteContactId: null,
   contactName: null,
   assets: [],
   liveAgreement: null,
 };
 const contact: ContactRecord = { id: CONTACT, customerId: CUSTOMER, name: "Dana", email: null, phone: null };
-const asset: AssetRecord = { id: ASSET, siteId: SITE, assetTypeId: TYPE, unitNo: "1", typeModel: null, location: "Roof" };
+const asset: AssetRecord = { id: ASSET, siteId: SITE, assetTypeId: TYPE, unitNo: "1", typeModel: null, location: "Roof", active: true };
 
 function form(fields: Record<string, string>) {
   const data = new FormData();
@@ -187,10 +194,10 @@ describe("asset actions", () => {
     expect(container.updateAsset).toHaveBeenCalledWith(ASSET, { assetTypeId: TYPE, unitNo: "1", typeModel: null, location: "Mechanical room" });
   });
 
-  test("C327: a deleted asset goes back to its site", async () => {
-    await expect(actions.deleteAssetAction(ASSET)).rejects.toThrow(`NEXT_REDIRECT /sites/${SITE}`);
-    expect(container.deleteAsset).toHaveBeenCalledTimes(1);
-    expect(container.deleteAsset).toHaveBeenCalledWith(ASSET);
+  // Deactivation door 2 supersedes C327: an asset is removed from service, never deleted (C1277, C1280).
+  test("C327: there is no asset delete action; a removed asset goes back to its site", async () => {
+    expect("deleteAssetAction" in actions).toBe(false);
+    await expect(actions.removeAssetAction(ASSET, IDLE, form({}))).rejects.toThrow(`NEXT_REDIRECT /sites/${SITE}`);
   });
 });
 
@@ -204,7 +211,6 @@ const allActions: [string, () => Promise<unknown>, (typeof STORE_METHODS)[number
   ["updateSite", () => actions.updateSiteAction(SITE, IDLE, siteForm()), "updateSite"],
   ["createAsset", () => actions.createAssetAction(SITE, IDLE, assetForm()), "createAsset"],
   ["updateAsset", () => actions.updateAssetAction(ASSET, IDLE, assetForm()), "updateAsset"],
-  ["deleteAsset", () => actions.deleteAssetAction(ASSET), "deleteAsset"],
 ];
 const formActions = allActions.filter(([name]) => !name.startsWith("delete"));
 
@@ -346,5 +352,59 @@ describe("form pages", () => {
     const out = renderToStaticMarkup(createElement(Loading));
     expect(out).toMatch(new RegExp(`<h1[^>]*>${title}</h1>`));
     expect(out).toMatch(/<p[^>]*role="status"[^>]*>Loading…<\/p>/);
+  });
+});
+
+const REPLACEMENT = "66666666-6666-4666-8666-666666666666";
+
+describe("deactivation actions", () => {
+  test("C1277: removing an asset passes the chosen replacement, then its site opens", async () => {
+    await expect(actions.removeAssetAction(ASSET, IDLE, form({ replacedBy: REPLACEMENT }))).rejects.toThrow(`NEXT_REDIRECT /sites/${SITE}`);
+    expect(container.setAssetActive).toHaveBeenCalledWith(ASSET, false, REPLACEMENT);
+  });
+
+  test("C1277: no replacement is null, and an invalid one is shown with no redirect", async () => {
+    await expect(actions.removeAssetAction(ASSET, IDLE, form({ replacedBy: "" }))).rejects.toThrow("NEXT_REDIRECT");
+    expect(container.setAssetActive).toHaveBeenCalledWith(ASSET, false, null);
+    container.setAssetActive.mockResolvedValue({ ok: false, code: "invalid_replacement" });
+    expect(await actions.removeAssetAction(ASSET, IDLE, form({ replacedBy: REPLACEMENT }))).toEqual({ status: "invalid_replacement" });
+    expect(redirect).toHaveBeenCalledTimes(1);
+  });
+
+  test("C1293: deactivating a site opens it; in_term comes back with the agreement and no redirect", async () => {
+    await expect(actions.deactivateSiteAction(SITE)).rejects.toThrow(`NEXT_REDIRECT /sites/${SITE}`);
+    expect(container.setSiteActive).toHaveBeenCalledWith(SITE, false);
+    container.setSiteActive.mockResolvedValue({ ok: false, code: "in_term", site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" });
+    expect(await actions.deactivateSiteAction(SITE)).toEqual({ status: "in_term", site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" });
+    expect(redirect).toHaveBeenCalledTimes(1);
+  });
+
+  test("C1298: deactivating a customer opens the customer; a refusal names the site", async () => {
+    await expect(actions.deactivateCustomerAction(CUSTOMER)).rejects.toThrow(`NEXT_REDIRECT /customers/${CUSTOMER}`);
+    expect(container.setCustomerActive).toHaveBeenCalledWith(CUSTOMER, false);
+    container.setCustomerActive.mockResolvedValue({ ok: false, code: "changes_requested", site: "Tower A", number: "AG-1004" });
+    expect(await actions.deactivateCustomerAction(CUSTOMER)).toEqual({ status: "changes_requested", site: "Tower A", number: "AG-1004" });
+  });
+
+  test("C1312: reactivating calls the store with true and opens the record", async () => {
+    await expect(actions.reactivateCustomerAction(CUSTOMER)).rejects.toThrow(`NEXT_REDIRECT /customers/${CUSTOMER}`);
+    expect(container.setCustomerActive).toHaveBeenCalledWith(CUSTOMER, true);
+    await expect(actions.reactivateSiteAction(SITE)).rejects.toThrow(`NEXT_REDIRECT /sites/${SITE}`);
+    expect(container.setSiteActive).toHaveBeenCalledWith(SITE, true);
+    await expect(actions.reactivateAssetAction(ASSET)).rejects.toThrow(`NEXT_REDIRECT /sites/${SITE}`);
+    expect(container.setAssetActive).toHaveBeenCalledWith(ASSET, true);
+  });
+
+  test.each([
+    ["deactivateCustomerAction", () => actions.deactivateCustomerAction(CUSTOMER)],
+    ["reactivateCustomerAction", () => actions.reactivateCustomerAction(CUSTOMER)],
+    ["deactivateSiteAction", () => actions.deactivateSiteAction(SITE)],
+    ["reactivateSiteAction", () => actions.reactivateSiteAction(SITE)],
+    ["removeAssetAction", () => actions.removeAssetAction(ASSET, IDLE, form({ replacedBy: REPLACEMENT }))],
+    ["reactivateAssetAction", () => actions.reactivateAssetAction(ASSET)],
+  ] as [string, () => Promise<unknown>][])("C1312: %s refuses a viewer and calls no store method", async (_name, run) => {
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await run()).toEqual({ status: "forbidden" });
+    expect(storeCalls()).toBe(0);
   });
 });

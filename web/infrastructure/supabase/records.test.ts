@@ -68,10 +68,9 @@ describe("record stores", () => {
   });
 
   test("deletes filter by id and succeed when a row is returned", async () => {
-    const { typed, calls } = stubClient({ contacts: ok([{ id: ID }]), assets: ok([{ id: ID }]) });
+    const { typed, calls } = stubClient({ contacts: ok([{ id: ID }]) });
     expect(await supabaseContactStore(typed).delete(ID)).toEqual({ ok: true });
-    expect(await supabaseAssetStore(typed).delete(ID)).toEqual({ ok: true });
-    expect(calls.filter((call) => call.method === "delete").map((call) => call.table)).toEqual(["contacts", "assets"]);
+    expect(calls.filter((call) => call.method === "delete").map((call) => call.table)).toEqual(["contacts"]);
     expect(calls).toContainEqual({ table: "contacts", method: "eq", args: ["id", ID] });
   });
 
@@ -97,7 +96,7 @@ describe("record stores", () => {
   test("C334: an update or delete returning no row is not_found", async () => {
     const { typed } = stubClient({ customers: ok([]), assets: ok([]) });
     expect(await supabaseCustomerStore(typed).update(ID, { name: "Acme" })).toEqual({ ok: false, code: "not_found" });
-    expect(await supabaseAssetStore(typed).delete(ID)).toEqual({ ok: false, code: "not_found" });
+    expect(await supabaseAssetStore(typed).update(ID, asset)).toEqual({ ok: false, code: "not_found" });
   });
 
   test("C334: any other error code is unavailable and logs the code", async () => {
@@ -115,5 +114,62 @@ describe("record stores", () => {
     };
     expect(await supabaseCustomerStore(typed).create(ORG, { name: "Acme" })).toEqual({ ok: false, code: "unavailable" });
     expect(spy.mock.calls[0][0]).toContain("fetch failed");
+  });
+});
+
+const failWith = (code: string, hint: string | null = null, details: unknown = null): Reply => ({
+  data: null,
+  error: { code, message: `boom ${code}`, hint, details: details === null ? null : JSON.stringify(details) },
+});
+
+describe("status writers", () => {
+  test("C1276: removing an asset calls set_asset_active with the replacement, or null", async () => {
+    const { typed, client } = stubClient({});
+    expect(await supabaseAssetStore(typed).setActive(ID, false, PARENT)).toEqual({ ok: true });
+    expect(client.rpc).toHaveBeenLastCalledWith("set_asset_active", { p_asset_id: ID, p_active: false, p_replaced_by: PARENT });
+    await supabaseAssetStore(typed).setActive(ID, false);
+    expect(client.rpc).toHaveBeenLastCalledWith("set_asset_active", { p_asset_id: ID, p_active: false, p_replaced_by: null });
+  });
+
+  test.each([
+    [failWith("23514", "replacement_invalid"), { ok: false, code: "invalid_replacement" }],
+    [failWith("55000", "site_inactive", { site: "Tower A" }), { ok: false, code: "parent_inactive", parent: "Tower A" }],
+    [failWith("42501"), { ok: false, code: "forbidden" }],
+    [failWith("P0002"), { ok: false, code: "not_found" }],
+    [failWith("XX000"), { ok: false, code: "unavailable" }],
+  ])("C1276: an asset refusal maps to its code (%#)", async (reply, expected) => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { typed, client } = stubClient({});
+    client.rpc.mockResolvedValue(reply);
+    expect(await supabaseAssetStore(typed).setActive(ID, true)).toEqual(expected);
+  });
+
+  test("C1292: a site calls set_site_active and maps each refusal from its hint and detail", async () => {
+    const { typed, client } = stubClient({});
+    expect(await supabaseSiteStore(typed).setActive(ID, false)).toEqual({ ok: true });
+    expect(client.rpc).toHaveBeenLastCalledWith("set_site_active", { p_site_id: ID, p_active: false });
+
+    client.rpc.mockResolvedValue(failWith("55000", "in_term", { site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" }));
+    expect(await supabaseSiteStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "in_term", site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" });
+    client.rpc.mockResolvedValue(failWith("55000", "in_term", { site: "Tower A", number: "AG-1004", termEnd: null }));
+    expect(await supabaseSiteStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "in_term", site: "Tower A", number: "AG-1004", termEnd: null });
+    client.rpc.mockResolvedValue(failWith("55000", "changes_requested", { site: "Tower A", number: "AG-1004" }));
+    expect(await supabaseSiteStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "changes_requested", site: "Tower A", number: "AG-1004" });
+    client.rpc.mockResolvedValue(failWith("55000", "customer_inactive", { customer: "Kettle Test" }));
+    expect(await supabaseSiteStore(typed).setActive(ID, true)).toEqual({ ok: false, code: "parent_inactive", parent: "Kettle Test" });
+    client.rpc.mockResolvedValue(failWith("42501"));
+    expect(await supabaseSiteStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "forbidden" });
+    client.rpc.mockResolvedValue(failWith("P0002"));
+    expect(await supabaseSiteStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "not_found" });
+  });
+
+  test("C1298: a customer calls set_customer_active and its refusal names the blocking site", async () => {
+    const { typed, client } = stubClient({});
+    expect(await supabaseCustomerStore(typed).setActive(ID, false)).toEqual({ ok: true });
+    expect(client.rpc).toHaveBeenLastCalledWith("set_customer_active", { p_customer_id: ID, p_active: false });
+    client.rpc.mockResolvedValue(failWith("55000", "in_term", { site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" }));
+    expect(await supabaseCustomerStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "in_term", site: "Tower A", number: "AG-1004", termEnd: "2027-12-31" });
+    client.rpc.mockResolvedValue(failWith("55000", "changes_requested", { site: "Tower B", number: "AG-1005" }));
+    expect(await supabaseCustomerStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "changes_requested", site: "Tower B", number: "AG-1005" });
   });
 });

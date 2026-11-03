@@ -14,6 +14,8 @@ const asset = (patch: Partial<AssetView> = {}): AssetView => ({
   typeModel: "Condensing boiler, 1,000 MBH",
   location: "Mechanical room P1",
   source: "manual",
+  active: true,
+  replacedBy: null,
   ...patch,
 });
 
@@ -23,6 +25,8 @@ const site = (assets: AssetView[]): SiteView => ({
   address: "2150 Harbour Lane, North Vancouver, BC",
   customerId: "cust-1",
   customerName: "Harbourview Towers Strata",
+  active: true,
+  customerActive: true,
   siteContactId: "ct-1",
   contactName: "Dana Whitfield",
   assets,
@@ -201,5 +205,45 @@ describe("the site's agreement", () => {
     const out = html(createElement(NewAgreementPrompt, { state: { status: "open_exists", agreementId: "g9", number: "AG-1048" }, pending: false }));
     expect(out).toContain("AG-1048 is already in progress for this site.");
     expect(out).toMatch(/<a[^>]*href="\/agreements\/g9"/);
+  });
+});
+
+describe("inactive sites and removed assets", () => {
+  const assets = () => [
+    asset({ id: "r1", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-1", active: false, replacedBy: "RTU-2" }),
+    asset({ id: "r2", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-2" }),
+    asset({ id: "r3", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-3", active: false }),
+  ];
+  const render = (props: Partial<Parameters<typeof SiteRegisterView>[0]>, list = assets()) =>
+    html(createElement(SiteRegisterView, { site: site(list), ...props }));
+
+  test("C1302: removed assets are hidden by default; the toggle shows them and links back", () => {
+    const out = render({});
+    expect(out).toContain("RTU-2");
+    expect(out).not.toContain("RTU-1");
+    expect(out).not.toContain("RTU-3");
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1\?show=inactive"[^>]*>Show inactive<\/a>/);
+    const shown = render({ showInactive: true });
+    expect(shown).toMatch(/RTU-3[\s\S]*?>Removed</);
+    expect(shown).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Hide inactive<\/a>/);
+  });
+
+  test("C1279: a removed asset with a replacement says which unit replaced it", () => {
+    const shown = render({ showInactive: true });
+    expect(shown).toContain(">Removed · replaced by RTU-2<");
+    expect(shown).toContain(">Removed<");
+  });
+
+  test("C1303: a site whose assets are all removed says No active assets., with the toggle", () => {
+    const out = render({}, [asset({ unitNo: "B-9", active: false })]);
+    expect(out).toMatch(/No active assets\.[\s\S]*Show inactive/);
+  });
+
+  test("C1295: an inactive site shows the pill and offers no New agreement, Add asset or Import to a writer", () => {
+    const newAgreement = async () => ({ status: "idle" }) as const;
+    const out = html(createElement(SiteRegisterView, { site: { ...site(assets()), active: false }, role: "estimator", newAgreement }));
+    expect(out).toContain(">Inactive<");
+    for (const text of ["New agreement", "Add asset", "Import equipment list"]) expect(out, text).not.toContain(text);
+    expect(out).toContain("Edit site");
   });
 });
