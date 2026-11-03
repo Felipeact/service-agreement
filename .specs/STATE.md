@@ -129,12 +129,12 @@
 
 ## Handoff
 
-**Feature**: agreements-page (ROADMAP Phase 3.5 item 9), profile light, one builder
-**Where**: committed on `development`, feature base `6cac032`: `4a341fb` plan and checks, `0c58f5a` listers and filter, `c9d31f2` page, form and enabled button, `94ce6ac`, `884f5d8`, `1c05115`, `5f0a4cd` fixes and docs, then the Verifier report. No migration. Live runs C1366 and C1367 done on a dev server at port 3000 (left running); the C1367 run left AG-1058 (Saltmarsh Bakery) as a draft in the demo org
-**In progress**: nothing; the Verifier passed in round 2 (round 1 failed only on the unrun live create, since run)
-**Next step**: ROADMAP Phase 3.5 item 10 (Sites & equipment page)
-**Open, non-failing**: see `.specs/features/versioning/checks.md` Handoff. The `next start` server on port 3201 is a stale build, still running. Carried: the deactivation, proposal-expiry, renewal, term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, W7 and W8 not imported into n8n, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
-**Blockers**: none
+**Feature**: sites-page (ROADMAP Phase 3.5 item 10), profile light, one builder
+**Where**: committed on `development`, feature base `deb8619`: `6d460a5` plan and checks, `f82502e` reader, filter, page and view, `d9c3e9c` decision and context, `29ecfc6` live run, `c8697d7` precision tests, then the Verifier report. No migration. Live run on a dev server at port 3000 (left running)
+**In progress**: nothing; the Verifier passed in round 2 (round 1 failed on C1385's missing 768 px overlap record and three precision notes, since fixed)
+**Next step**: ROADMAP Phase 3.5 item 11 (Imports page)
+**Open, non-failing**: see `.specs/features/versioning/checks.md` Handoff. The `next start` server on port 3201 is a stale build, still running. Carried: the deactivation, proposal-expiry, renewal, term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, W7 and W8 not imported into n8n, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses. Added: Supabase Auth custom SMTP (Resend) answers `535 Authentication credentials invalid`, so no sign-in email is sent until the SMTP password is fixed in the dashboard; the live run used a link the owner pasted. The demo org has no inactive site, so the Inactive pill on `/sites` is proven by test only
+**Blockers**: none for the code; email sign-in is down until the SMTP password is fixed
 **Uncommitted**: none
 **Branch**: development, not pushed
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migrations through `20261104090000_versioning` applied; Vault holds `automation_hmac_secret` and `n8n_events_url`
