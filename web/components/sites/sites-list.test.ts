@@ -129,4 +129,19 @@ describe("sites list view", () => {
     expect(out).toMatch(/<a[^>]*href="\/sites"[^>]*>Clear filters<\/a>/);
     expect(out).not.toContain("No sites yet");
   });
+
+  test("C1372: a null address leaves out the address line, so only the asset count is secondary text", () => {
+    const secondary = (out: string) => out.match(/text-\[12px\] text-ink-2/g)?.length ?? 0;
+    expect(secondary(html([row()]))).toBe(2);
+    expect(secondary(html([row({ address: null })]))).toBe(1);
+  });
+
+  test("C1372: the status label is the text of its own pill", () => {
+    const out = html([row({ liveAgreement: { id: "ag1", number: "AG-1001", status: "draft" } })]);
+    expect(out).toMatch(/<span[^>]*title="In progress"[^>]*>(<span[^>]*><\/span>)?In progress<\/span>/);
+  });
+
+  test("C1384: Clear filters keeps show=inactive while inactive sites are shown", () => {
+    expect(html([], { q: "zzz", showInactive: true })).toMatch(/<a[^>]*href="\/sites\?show=inactive"[^>]*>Clear filters<\/a>/);
+  });
 });
