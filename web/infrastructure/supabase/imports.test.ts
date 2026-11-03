@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { fixedClock } from "@/infrastructure/clock";
 import type { ImportFile } from "@/domain/imports";
-import { supabaseImportJobReader, supabaseImportJobStore } from "./imports";
+import { supabaseImportHistory, supabaseImportJobReader, supabaseImportJobStore } from "./imports";
 import { stubClient, type Reply, type Sequence, type StorageReply } from "./stub-client";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
@@ -299,5 +299,87 @@ describe("ImportJobReader.forSite read columns", () => {
       ["unreadable", { status: "unreadable", reason: "too_many_rows" }],
       ["uploaded", null],
     ]);
+  });
+});
+
+describe("ImportHistory.list", () => {
+  const SITE_B = "44444444-4444-4444-8444-444444444444";
+  const base = { original_name: "a.csv", size_bytes: 5, created_by_email: null, read_error: null, table_count: null, row_count: null, extract_cursor: null, extract_total: null, committed_count: null };
+  const siteA = { id: SITE, name: "Tower A", customers: { id: "c-a", name: "Harbourview Strata" } };
+  const siteB = { id: SITE_B, name: "Annex", customers: { id: "c-b", name: "Brookhaven" } };
+  const rows = [
+    { ...base, id: "j7", status: "committed", created_at: "2026-10-27T18:00:00Z", table_count: 1, row_count: 338, extract_cursor: 4, extract_total: 4, committed_count: 336, sites: siteA },
+    { ...base, id: "j6", status: "extracted", created_at: "2026-10-27T17:00:00Z", table_count: 1, row_count: 40, extract_cursor: 1, extract_total: 1, sites: siteB },
+    { ...base, id: "j5", status: "extracting", created_at: "2026-10-27T16:00:00Z", table_count: 1, row_count: 300, extract_cursor: 2, extract_total: 3, sites: siteA },
+    { ...base, id: "j4", status: "unreadable", created_at: "2026-10-27T15:00:00Z", read_error: "no_table", sites: siteB },
+    { ...base, id: "j3", status: "parsed", created_at: "2026-10-27T14:00:00Z", table_count: 2, row_count: 15, sites: siteA },
+    { ...base, id: "j2", status: "uploaded", created_at: "2026-10-27T13:00:00Z", created_by_email: "a@example.com", sites: siteB },
+    { ...base, id: "j1", status: "uploading", created_at: "2026-10-27T12:00:00Z", sites: siteA },
+  ];
+  const counts = ok([
+    { job_id: "j7", rows: 338, unmatched: 0 },
+    { job_id: "j6", rows: 40, unmatched: 3 },
+  ]);
+  const run = async (filter: Parameters<ReturnType<typeof supabaseImportHistory>["list"]>[0], data: unknown = rows) => {
+    const stub = stubClient({ import_jobs: ok(data), import_row_counts: counts });
+    const list = await supabaseImportHistory(stub.typed).list(filter);
+    return { list, calls: stub.calls.map((call) => [call.table, call.method, call.args] as const) };
+  };
+
+  test("C1387: one row per job with its site and customer, newest first, capped at 500", async () => {
+    const { list, calls } = await run({});
+    expect(list.map((row) => row.id)).toEqual(["j7", "j6", "j5", "j4", "j3", "j2", "j1"]);
+    expect(list[5]).toEqual({
+      id: "j2",
+      originalName: "a.csv",
+      sizeBytes: 5,
+      status: "uploaded",
+      uploadedBy: "a@example.com",
+      createdAt: new Date("2026-10-27T13:00:00Z"),
+      outcome: null,
+      extraction: null,
+      site: { id: SITE_B, name: "Annex" },
+      customer: { id: "c-b", name: "Brookhaven" },
+    });
+    expect(calls).toContainEqual(["import_jobs", "order", ["created_at", { ascending: false }]]);
+    expect(calls).toContainEqual(["import_jobs", "limit", [500]]);
+    expect(String(calls.find(([table, method]) => table === "import_jobs" && method === "select")?.[2][0])).toContain("sites(");
+  });
+
+  test("C1388: the outcome fields of parsed, unreadable, extracting, extracted and committed jobs", async () => {
+    const { list } = await run({});
+    const byId = Object.fromEntries(list.map((row) => [row.id, row]));
+    expect(byId.j3.outcome).toEqual({ status: "parsed", tables: 2, rows: 15 });
+    expect(byId.j4.outcome).toEqual({ status: "unreadable", reason: "no_table" });
+    expect(byId.j5.extraction).toEqual({ status: "extracting", cursor: 2, total: 3 });
+    expect(byId.j6.extraction).toEqual({ status: "extracted", rows: 40, unmatched: 3 });
+    expect(byId.j7.committed).toEqual({ added: 336, skipped: 2 });
+  });
+
+  test.each(["uploaded", "parsed", "unreadable", "extracting", "extracted", "committed"] as const)(
+    "C1399: status %s adds eq(status) to the query",
+    async (status) => {
+      const { calls } = await run({ status });
+      expect(calls).toContainEqual(["import_jobs", "eq", ["status", status]]);
+    },
+  );
+
+  test("C1399: no status adds no status clause", async () => {
+    const { calls } = await run({});
+    expect(calls.filter(([table, , args]) => table === "import_jobs" && args[0] === "status")).toEqual([]);
+  });
+
+  test("C1400: attention adds in(status, [uploading, unreadable]) and no eq on status", async () => {
+    const { calls } = await run({ status: "attention" });
+    expect(calls).toContainEqual(["import_jobs", "in", ["status", ["uploading", "unreadable"]]]);
+    expect(calls.filter(([table, method, args]) => table === "import_jobs" && method === "eq" && args[0] === "status")).toEqual([]);
+  });
+
+  test("C1401: a site adds eq(site_id); with a status both clauses are on the query", async () => {
+    const { calls } = await run({ siteId: SITE });
+    expect(calls).toContainEqual(["import_jobs", "eq", ["site_id", SITE]]);
+    const both = await run({ siteId: SITE, status: "parsed" });
+    expect(both.calls).toContainEqual(["import_jobs", "eq", ["site_id", SITE]]);
+    expect(both.calls).toContainEqual(["import_jobs", "eq", ["status", "parsed"]]);
   });
 });

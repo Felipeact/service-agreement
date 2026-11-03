@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { contentTypeFor, formatFileSize, IMPORT_MESSAGES, validateImportFile } from ".";
+import { contentTypeFor, formatFileSize, IMPORT_MESSAGES, parseImportFilter, validateImportFile } from ".";
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -67,5 +67,26 @@ describe("formatFileSize", () => {
     [20_971_520, "20.0 MB"],
   ])("C418: %d bytes -> %s", (bytes, expected) => {
     expect(formatFileSize(bytes)).toBe(expected);
+  });
+});
+
+describe("parseImportFilter", () => {
+  const SITE_ID = "00000000-0000-4000-8000-0000000000a1";
+
+  test.each(["uploaded", "parsed", "unreadable", "extracting", "extracted", "committed", "attention"])(
+    "C1397: status %s is kept",
+    (status) => {
+      expect(parseImportFilter({ status })).toEqual({ status });
+    },
+  );
+
+  test.each([["uploading"], ["bogus"], [""], [["parsed", "extracted"]], [undefined]])("C1398: status %j is dropped", (status) => {
+    expect(parseImportFilter({ status })).toEqual({});
+  });
+
+  test("C1398: a site that is not a uuid is dropped, a uuid is kept, and both values together give both", () => {
+    expect(parseImportFilter({ site: "nope" })).toEqual({});
+    expect(parseImportFilter({ site: SITE_ID })).toEqual({ siteId: SITE_ID });
+    expect(parseImportFilter({ status: "attention", site: SITE_ID })).toEqual({ status: "attention", siteId: SITE_ID });
   });
 });

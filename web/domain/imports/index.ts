@@ -275,3 +275,26 @@ export const fixLine = (rows: number) =>
 /** The line on a committed job. */
 export const committedSummary = (added: number, skipped: number) =>
   `Added to site: ${plural(added, "asset")}${skipped > 0 ? `, ${skipped} skipped` : ""}`;
+
+/** The statuses a job can be listed by; `attention` is the jobs that need someone to act (upload not finished, file unreadable). */
+export const IMPORT_STATUS_FILTERS = ["attention", "uploaded", "parsed", "unreadable", "extracting", "extracted", "committed"] as const;
+export type ImportStatusFilter = (typeof IMPORT_STATUS_FILTERS)[number];
+
+/** The statuses `attention` stands for. */
+export const ATTENTION_STATUSES = ["uploading", "unreadable"] as const;
+
+export type ImportFilter = { status?: ImportStatusFilter; siteId?: string };
+
+type ImportParams = { status?: string | string[]; site?: string | string[] };
+
+const single = (value: string | string[] | undefined): string | undefined => (typeof value === "string" ? value : undefined);
+
+/** The filter a URL asks for; a value that is not valid is dropped, never an error (imports-page AC 11). */
+export function parseImportFilter(params: ImportParams): ImportFilter {
+  const status = single(params.status);
+  const site = single(params.site);
+  return {
+    ...(status && (IMPORT_STATUS_FILTERS as readonly string[]).includes(status) && { status: status as ImportStatusFilter }),
+    ...(site && isUuid(site) && { siteId: site }),
+  };
+}

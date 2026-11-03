@@ -1,6 +1,18 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import type { Clock, CommitImportResult, CommitView, ExtractionView, ImportJobReader, ImportJobStatus, ImportJobStore, WriteFailure } from "@/application/ports";
-import type { ImportContentType, ReadError, ReadOutcome } from "@/domain/imports";
+import type {
+  Clock,
+  CommitImportResult,
+  CommitView,
+  ExtractionView,
+  ImportHistory,
+  ImportHistoryRow,
+  ImportJobReader,
+  ImportJobStatus,
+  ImportJobStore,
+  ImportJobView,
+  WriteFailure,
+} from "@/application/ports";
+import { ATTENTION_STATUSES, type ImportContentType, type ReadError, type ReadOutcome } from "@/domain/imports";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -274,41 +286,77 @@ function extractionFrom(
   return null;
 }
 
+const JOB_COLUMNS =
+  "id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count, extract_cursor, extract_total, committed_count";
+
+type JobRow = ReadColumns & {
+  id: string;
+  original_name: string;
+  size_bytes: number;
+  created_by_email: string | null;
+  created_at: string;
+  extract_cursor: number | null;
+  extract_total: number | null;
+  committed_count: number | null;
+};
+
+/** The views of these job rows; counts are read only for finished extractions and commits, from the view so RLS and a 2,000-row job both hold. */
+async function jobViews(client: Client, jobs: JobRow[]): Promise<ImportJobView[]> {
+  const counts = new Map<string, Counts>();
+  const extracted = jobs.filter((row) => row.status === "extracted" || row.status === "committed").map((row) => row.id);
+  if (extracted.length > 0) {
+    const { data: rows, error: countError } = await client.from("import_row_counts").select("job_id, rows, unmatched").in("job_id", extracted);
+    if (countError) throw new Error(`Supabase error ${countError.code}: ${countError.message}`);
+    for (const row of rows ?? []) if (row.job_id) counts.set(row.job_id, { rows: row.rows ?? 0, unmatched: row.unmatched ?? 0 });
+  }
+
+  return jobs.map((row) => ({
+    id: row.id,
+    originalName: row.original_name,
+    sizeBytes: row.size_bytes,
+    status: row.status as ImportJobStatus,
+    uploadedBy: row.created_by_email,
+    createdAt: new Date(row.created_at),
+    outcome: outcomeFrom(row),
+    extraction: extractionFrom(row, counts.get(row.id)),
+    ...(row.status === "committed" ? { committed: commitFrom(row.committed_count, counts.get(row.id)?.rows ?? 0) } : {}),
+  }));
+}
+
 export function supabaseImportJobReader(client: Client): ImportJobReader {
   return {
     async forSite(siteId) {
       if (!UUID.test(siteId)) return [];
       const { data, error } = await client
         .from("import_jobs")
-        .select(
-          "id, original_name, size_bytes, status, created_by_email, created_at, read_error, table_count, row_count, extract_cursor, extract_total, committed_count",
-        )
+        .select(JOB_COLUMNS)
         .eq("site_id", siteId)
         .order("created_at", { ascending: false })
         .limit(ROW_CAP);
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-      const jobs = data ?? [];
+      return jobViews(client, data ?? []);
+    },
+  };
+}
 
-      // Counts only for finished extractions and commits, from the view so RLS and a 2,000-row job both hold.
-      const counts = new Map<string, Counts>();
-      const extracted = jobs.filter((row) => row.status === "extracted" || row.status === "committed").map((row) => row.id);
-      if (extracted.length > 0) {
-        const { data: rows, error: countError } = await client.from("import_row_counts").select("job_id, rows, unmatched").in("job_id", extracted);
-        if (countError) throw new Error(`Supabase error ${countError.code}: ${countError.message}`);
-        for (const row of rows ?? []) if (row.job_id) counts.set(row.job_id, { rows: row.rows ?? 0, unmatched: row.unmatched ?? 0 });
-      }
+type HistoryRow = JobRow & { sites: { id: string; name: string; customers: { id: string; name: string } } };
 
-      return jobs.map((row) => ({
-        id: row.id,
-        originalName: row.original_name,
-        sizeBytes: row.size_bytes,
-        status: row.status as ImportJobStatus,
-        uploadedBy: row.created_by_email,
-        createdAt: new Date(row.created_at),
-        outcome: outcomeFrom(row),
-        extraction: extractionFrom(row, counts.get(row.id)),
-        ...(row.status === "committed" ? { committed: commitFrom(row.committed_count, counts.get(row.id)?.rows ?? 0) } : {}),
-      }));
+export function supabaseImportHistory(client: Client): ImportHistory {
+  return {
+    async list(filter) {
+      let query = client.from("import_jobs").select(`${JOB_COLUMNS}, sites(id, name, customers(id, name))`);
+      if (filter.status === "attention") query = query.in("status", [...ATTENTION_STATUSES]);
+      else if (filter.status) query = query.eq("status", filter.status);
+      if (filter.siteId) query = query.eq("site_id", filter.siteId);
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(ROW_CAP);
+      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+
+      const jobs = (data ?? []) as unknown as HistoryRow[];
+      const views = await jobViews(client, jobs);
+      return views.map((view, index): ImportHistoryRow => {
+        const { sites } = jobs[index];
+        return { ...view, site: { id: sites.id, name: sites.name }, customer: sites.customers };
+      });
     },
   };
 }

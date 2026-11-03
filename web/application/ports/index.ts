@@ -10,7 +10,7 @@ import type {
 } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
-import type { ImportContentType, ImportFile, ReadError, ReadOutcome } from "@/domain/imports";
+import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { DomainEvent } from "@/domain/transition";
@@ -352,6 +352,14 @@ export type ImportJobView = {
 export interface ImportJobReader {
   /** The site's jobs, newest first, at most 500. */
   forSite(siteId: string): Promise<ImportJobView[]>;
+}
+
+/** One job in the Imports history: the job with the site it belongs to and that site's customer. */
+export type ImportHistoryRow = ImportJobView & { site: { id: string; name: string }; customer: { id: string; name: string } };
+
+export interface ImportHistory {
+  /** The org's jobs, newest first, at most 500; `attention` is `uploading` and `unreadable` (imports-page door 1). */
+  list(filter: ImportFilter): Promise<ImportHistoryRow[]>;
 }
 
 export type StartImportResult = { ok: true; jobId: string; signedUrl: string; contentType: ImportContentType } | { ok: false; code: WriteFailure };
