@@ -31,6 +31,7 @@ import {
   supabaseAgreementReader,
   supabaseAgreementStore,
   supabaseAgreementTermStore,
+  supabaseVersionNoteStore,
   supabaseServiceLineStore,
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
@@ -148,6 +149,7 @@ export async function getContainer() {
     agreementStore: supabaseAgreementStore(supabase),
     serviceLineStore: supabaseServiceLineStore(supabase),
     agreementTermStore: supabaseAgreementTermStore(supabase),
+    versionNoteStore: supabaseVersionNoteStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.
     sendAgreement: makeSendAgreement(agreementRepository, supabaseAgreementSender(supabase), portalTokens),
     reissueLink: makeReissueLink(supabasePortalLinkStore(supabase), portalTokens),

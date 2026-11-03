@@ -12,6 +12,7 @@ import {
   removeServiceLineAction,
   reviseAgreementAction,
   saveTermAction,
+  saveVersionNoteAction,
   sendAgreementAction,
   updateServiceLineAction,
   withdrawAgreementAction,
@@ -23,7 +24,7 @@ type AgreementProps = { agreementId: string; searchParams: PageProps<"/agreement
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
-/** `?version=<n>` as a whole number, or no version: anything else shows the current one (AC 18). */
+/** `?version=<n>` or `?compare=<n>` as a whole number, or none: anything else shows the current version, or no comparison (AC 18, 12). */
 function versionOf(value: string | undefined): number | undefined {
   return value !== undefined && /^\d+$/.test(value) ? Number(value) : undefined;
 }
@@ -35,7 +36,7 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const params = await searchParams;
-  const agreement = await agreementReader.get(agreementId, versionOf(first(params.version)));
+  const agreement = await agreementReader.get(agreementId, versionOf(first(params.version)), versionOf(first(params.compare)));
   if (!agreement) notFound();
 
   const actions: AgreementActions | undefined = canWriteRecords(member.role)
@@ -48,6 +49,7 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         send: sendAgreementAction.bind(null, agreementId),
         reissue: reissueLinkAction.bind(null, agreementId),
         saveTerm: saveTermAction.bind(null, agreementId),
+        saveNote: saveVersionNoteAction.bind(null, agreementId),
       }
     : undefined;
 

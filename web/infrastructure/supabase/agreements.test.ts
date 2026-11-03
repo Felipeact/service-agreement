@@ -111,8 +111,8 @@ describe("agreement reader", () => {
       customer: { id: "c1", name: "Harbourview Strata" },
     });
     expect(detail?.versions).toEqual([
-      { versionNo: 2, createdAt: new Date("2026-10-27T17:00:00Z") },
-      { versionNo: 1, createdAt: new Date("2026-10-20T17:00:00Z") },
+      { versionNo: 2, createdAt: new Date("2026-10-27T17:00:00Z"), reason: null, author: null, events: [] },
+      { versionNo: 1, createdAt: new Date("2026-10-20T17:00:00Z"), reason: null, author: null, events: [] },
     ]);
   });
 
@@ -404,13 +404,14 @@ describe("the link email of a sent agreement (outbox-dispatch AC 30)", () => {
     });
     const detail = await supabaseAgreementReader(stub.typed).get(AGR);
     expect(detail?.linkEmail).toEqual({ status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-10-29T17:00:00Z") });
+    // The version history reads `events` first (versioning door 3); this lookup is the last events query of the read.
     const events = stub.calls.filter((call) => call.table === "events");
-    expect(events.filter((call) => call.method === "eq").map((call) => call.args)).toEqual([
+    expect(events.filter((call) => call.method === "eq").map((call) => call.args).slice(-3)).toEqual([
       ["entity_type", "agreement"],
       ["entity_id", AGR],
       ["type", "agreement.sent"],
     ]);
-    expect(events.find((call) => call.method === "order")?.args).toEqual(["created_at", { ascending: false }]);
+    expect(events.findLast((call) => call.method === "order")?.args).toEqual(["created_at", { ascending: false }]);
     const notifications = stub.calls.filter((call) => call.table === "notifications" && call.method === "eq").map((call) => call.args);
     expect(notifications).toEqual([
       ["event_id", "evt-1"],
@@ -438,7 +439,8 @@ describe("the link email of a sent agreement (outbox-dispatch AC 30)", () => {
     const draft = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
     draft.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
     expect((await supabaseAgreementReader(draft.typed).get(AGR))?.linkEmail).toBeNull();
-    expect(draft.calls.some((call) => call.table === "notifications" || call.table === "events")).toBe(false);
+    // The version history (versioning door 3) reads `events` for every status; only the link-email lookup is the draft's to skip.
+    expect(draft.calls.some((call) => call.table === "notifications" || (call.table === "events" && call.method === "eq" && call.args[1] === "agreement.sent"))).toBe(false);
   });
 });
 
@@ -492,5 +494,122 @@ describe("the validity date on the agreement reader", () => {
   test.each([["2026-12-02", "2026-12-02"], [null, null]])("C1234: valid_until %s becomes validUntil %s", async (stored, shown) => {
     const { typed } = stubClient({ agreements: ok(row(stored)), service_lines: ok([]) });
     expect((await supabaseAgreementReader(typed).get(AGR))?.validUntil).toBe(shown);
+  });
+});
+
+describe("agreement reader, versions and their history", () => {
+  const UE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const UA = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const members = ok([
+    { user_id: UE, role: "estimator" },
+    { user_id: UA, role: "owner" },
+  ]);
+  const withVersions = (versions: Record<string, unknown>[], status = "draft") =>
+    ok({ ...agreementRow([], status), org_id: "org-1", agreement_versions: versions.map((v) => ({ created_at: "2026-10-20T17:00:00Z", contracts: [], ...v })) });
+  const event = (type: string, versionNo: number, at: string, actor: string | null = null, extra: Record<string, unknown> = {}) => ({
+    type,
+    payload: { versionNo, ...extra },
+    actor_id: actor,
+    created_at: at,
+  });
+
+  test("C1322: each version carries its reason and the role of its author, or null for both", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_by: null, reason: null },
+      { id: "v2", version_no: 2, created_by: UE, reason: "Too expensive" },
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.versions.map((v) => [v.versionNo, v.reason, v.author])).toEqual([
+      [2, "Too expensive", "estimator"],
+      [1, null, null],
+    ]);
+  });
+
+  test("C1328: a version's events are its own, oldest first, with the role that acted or the customer", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_by: UE, reason: null },
+      { id: "v2", version_no: 2, created_by: UE, reason: "Too expensive" },
+    ]);
+    const events = ok([
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.viewed", 1, "2026-10-21T10:00:00Z"),
+      event("agreement.changes_requested", 1, "2026-10-22T10:00:00Z", null, { via: "portal", reason: "Too expensive" }),
+      event("agreement.revised", 2, "2026-10-23T10:00:00Z", UE),
+      event("agreement.sent", 2, "2026-10-24T09:00:00Z", UA),
+      event("agreement.refused", 2, "2026-10-25T09:00:00Z", null, { via: "portal" }),
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    const history = (no: number) => detail?.versions.find((v) => v.versionNo === no)?.events.map((e) => [e.type, e.at.toISOString(), e.by]);
+    expect(history(1)).toEqual([
+      ["sent", "2026-10-21T09:00:00.000Z", "estimator"],
+      ["viewed", "2026-10-21T10:00:00.000Z", "customer"],
+      ["changes_requested", "2026-10-22T10:00:00.000Z", "customer"],
+    ]);
+    expect(history(2)).toEqual([
+      ["sent", "2026-10-24T09:00:00.000Z", "owner"],
+      ["refused", "2026-10-25T09:00:00.000Z", "customer"],
+    ]);
+  });
+
+  test("C1329: the sent and accepted versions are the ones the latest sent and accepted events name", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1 },
+      { id: "v2", version_no: 2 },
+    ]);
+    const all = [
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.changes_requested", 1, "2026-10-22T10:00:00Z", null, { via: "portal" }),
+      event("agreement.revised", 2, "2026-10-23T10:00:00Z", UE),
+      event("agreement.sent", 2, "2026-10-24T09:00:00Z", UE),
+      event("agreement.accepted", 2, "2026-10-25T09:00:00Z", null, { via: "portal" }),
+    ];
+    const full = stubClient({ agreements, service_lines: ok([]), events: ok(all), memberships: members });
+    expect(await supabaseAgreementReader(full.typed).get(AGR)).toMatchObject({ sentVersion: 2, acceptedVersion: 2 });
+    const early = stubClient({ agreements, service_lines: ok([]), events: ok(all.slice(0, 2)), memberships: members });
+    expect(await supabaseAgreementReader(early.typed).get(AGR)).toMatchObject({ sentVersion: 1, acceptedVersion: null });
+  });
+
+  test("C1333: two view events of one version are listed once, the first", async () => {
+    const agreements = withVersions([{ id: "v1", version_no: 1 }]);
+    const events = ok([
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.viewed", 1, "2026-10-21T10:00:00Z"),
+      event("agreement.viewed", 1, "2026-10-21T11:00:00Z"),
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.versions[0]?.events.map((e) => [e.type, e.at.toISOString()])).toEqual([
+      ["sent", "2026-10-21T09:00:00.000Z"],
+      ["viewed", "2026-10-21T10:00:00.000Z"],
+    ]);
+  });
+
+  test("C1338: get(id, 2, 1) also returns version 1's lines and total", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1 },
+      { id: "v2", version_no: 2 },
+    ]);
+    const { typed, calls } = stubClient({ agreements, service_lines: ok([line("a", 0, "2026-10-20T08:00:00Z", 4, 89250)]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR, 2, 1);
+    expect(detail?.shown.versionNo).toBe(2);
+    expect(detail?.compare).toMatchObject({ versionNo: 1, annualCents: 357000 });
+    expect(detail?.compare?.lines.map((l) => l.id)).toEqual(["a"]);
+    expect(calls).toContainEqual({ table: "service_lines", method: "eq", args: ["agreement_version_id", "v1"] });
+  });
+
+  test.each<[string, number | undefined]>([
+    ["the shown version", 2],
+    ["no version", undefined],
+    ["an unknown version", 9],
+    ["version 0", 0],
+  ])("C1338: comparing with %s gives no comparison", async (_, compareNo) => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1 },
+      { id: "v2", version_no: 2 },
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]) });
+    expect((await supabaseAgreementReader(typed).get(AGR, 2, compareNo))?.compare).toBeNull();
   });
 });

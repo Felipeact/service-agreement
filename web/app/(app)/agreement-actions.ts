@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import { validateAgreementTerm, validateServiceLine, type ServiceLineInput } from "@/domain/agreement";
+import { validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
-import type { CreateAgreementState, LineState, LinkState, MoveState, TermState } from "@/components/agreements/state";
+import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 
 const FORBIDDEN = { status: "forbidden" } as const;
@@ -93,6 +93,22 @@ export async function saveTermAction(agreementId: string, formData: FormData): P
     return { status: "saved" };
   }
   // The form checks the same bounds, so a database refusal of the values is unexpected here.
+  return { status: saved.code === "invalid" ? "unavailable" : saved.code };
+}
+
+/** Saves the staff note of the current version of a draft (versioning AC 4). */
+export async function saveVersionNoteAction(agreementId: string, formData: FormData): Promise<NoteState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  const note = String(formData.get("note") ?? "");
+  const checked = validateVersionNote(note);
+  if (!checked.ok) return { status: "invalid", errors: { note: checked.error }, values: { note } };
+  const saved = await container.versionNoteStore.save(agreementId, checked.value);
+  if (saved.ok) {
+    revalidatePath(`/agreements/${agreementId}`);
+    return { status: "saved" };
+  }
   return { status: saved.code === "invalid" ? "unavailable" : saved.code };
 }
 

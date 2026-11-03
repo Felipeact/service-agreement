@@ -34,7 +34,7 @@ let detail: AgreementDetail = {
   stage: "sent",
   site: { id: "s1", name: "Fernwood Dental, Main" },
   customer: { id: "c1", name: "Fernwood Dental" },
-  versions: [{ versionNo: 1, createdAt: new Date("2026-10-20T18:00:00Z") }],
+  versions: [{ versionNo: 1, createdAt: new Date("2026-10-20T18:00:00Z"), reason: null, author: null, events: [] }], sentVersion: null, acceptedVersion: null, compare: null,
   shown: {
     versionNo: 1,
     current: true,

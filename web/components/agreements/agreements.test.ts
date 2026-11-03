@@ -27,7 +27,7 @@ const LINES: ServiceLineView[] = [
 ];
 
 function agreement(
-  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"]; equipmentChoices?: EquipmentChoice[]; validUntil?: string | null } = {},
+  over: { status?: AgreementStatus; lines?: ServiceLineView[]; shownNo?: number; versions?: number; serviceScope?: AgreementServiceScope; portalLink?: AgreementDetail["portalLink"]; linkEmail?: AgreementDetail["linkEmail"]; equipmentChoices?: EquipmentChoice[]; validUntil?: string | null; detail?: Partial<AgreementDetail> } = {},
 ): AgreementDetail {
   const status = over.status ?? "draft";
   const count = over.versions ?? 2;
@@ -40,7 +40,10 @@ function agreement(
     stage: pipelineStage(status),
     site: { id: "s1", name: "Harbourview Towers" },
     customer: { id: "c1", name: "Harbourview Strata" },
-    versions: Array.from({ length: count }, (_, i) => ({ versionNo: count - i, createdAt: new Date(Date.UTC(2026, 9, 20 + count - i, 18)) })),
+    versions: Array.from({ length: count }, (_, i) => ({ versionNo: count - i, createdAt: new Date(Date.UTC(2026, 9, 20 + count - i, 18)), reason: null, author: null, events: [] })),
+    sentVersion: null,
+    acceptedVersion: null,
+    compare: null,
     shown: { versionNo: shownNo, current: shownNo === count, lines, annualCents: lines.reduce((t, l) => t + l.annualCents, 0) },
     editable: status === "draft" && shownNo === count,
     equipmentChoices: over.equipmentChoices ?? CHOICES,
@@ -52,6 +55,7 @@ function agreement(
     renews: null,
     renewedBy: null,
     term: { start: null, months: 12, end: null },
+    ...over.detail,
   };
 }
 
@@ -64,6 +68,7 @@ const actions: AgreementActions = {
   send: async () => ({ status: "idle" }),
   reissue: async () => ({ status: "idle" }),
   saveTerm: async () => ({ status: "idle" as const }),
+  saveNote: async () => ({ status: "idle" as const }),
 };
 
 const view = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions }));
@@ -456,5 +461,92 @@ describe("AgreementView: renewal links", () => {
     const html = render({ renews: null, renewedBy: null });
     expect(html).not.toContain("Renewal of");
     expect(html).not.toContain("Renewed by");
+  });
+});
+
+describe("the versions history and the comparison", () => {
+  const at = (day: number) => new Date(Date.UTC(2026, 9, day, 18));
+  const version = (versionNo: number, over: Partial<AgreementDetail["versions"][number]> = {}) => ({
+    versionNo,
+    createdAt: at(20 + versionNo),
+    reason: null,
+    author: null,
+    events: [],
+    ...over,
+  });
+  /** One `<li data-version>` block, cut at the next version so nested history items do not end it early. */
+  const block = (html: string, no: number) => html.split(/(?=<li[^>]*data-version=)/).find((part) => part.startsWith(`<li`) && part.includes(`data-version="${no}"`)) ?? "";
+
+  test("C1323: a reason renders next to its version, and no reason renders no reason element or placeholder", () => {
+    const html = view(agreement({ detail: { versions: [version(2, { reason: "Too expensive", author: "estimator" }), version(1)] } }));
+    expect(block(html, 2)).toContain("Too expensive");
+    expect(block(html, 2)).toContain("estimator");
+    expect(block(html, 1)).not.toContain("data-reason");
+    expect(block(html, 1)).not.toMatch(/No reason|reason:|n\/a/i);
+  });
+
+  test("C1330: Sent and Accepted mark the versions the events name, and no other", () => {
+    const html = view(agreement({ versions: 3, detail: { sentVersion: 1, acceptedVersion: 2 } }));
+    expect(block(html, 1)).toContain(">Sent<");
+    expect(block(html, 1)).not.toContain(">Accepted<");
+    expect(block(html, 2)).toContain(">Accepted<");
+    expect(block(html, 2)).not.toContain(">Sent<");
+    expect(block(html, 3)).not.toMatch(/>Sent<|>Accepted</);
+  });
+
+  test("C1331: a version without events says Not sent yet, and one with events does not", () => {
+    const html = view(
+      agreement({ detail: { versions: [version(2), version(1, { events: [{ type: "sent", at: at(21), by: "estimator" }, { type: "viewed", at: at(22), by: "customer" }] })] } }),
+    );
+    expect(block(html, 2)).toContain("Not sent yet");
+    expect(block(html, 1)).not.toContain("Not sent yet");
+    const history = text(block(html, 1));
+    expect(history).toMatch(/Sent .*estimator/);
+    expect(history).toMatch(/Viewed .*customer/);
+  });
+
+  test("C1337: identical versions say No differences", () => {
+    const html = view(agreement({ versions: 2, detail: { compare: { versionNo: 1, lines: LINES, annualCents: 387000 } } }));
+    expect(text(html)).toContain("No differences");
+  });
+
+  test("C1339: changed, removed and added lines show their values, and both totals show the signed change", () => {
+    const shown = [
+      { ...LINES[0]!, costPerVisitCents: 95000, annualCents: 380000 },
+      { id: "l3", position: 2, description: "Boiler checks", visitsPerYear: 1, costPerVisitCents: 20000, annualCents: 20000, visitMonths: [10], equipment: [{ id: "t-ahu", code: "AHU", name: "Air handling unit" }] },
+    ];
+    const html = view(agreement({ versions: 2, lines: shown, detail: { compare: { versionNo: 1, lines: LINES, annualCents: 387000 } } }));
+    const out = text(html);
+    expect(out).toContain("Changes from version 1 to version 2");
+    expect(out).toMatch(/Preventive maintenance visit.*Per visit.*\$892\.50.*\$950\.00/);
+    expect(out).toMatch(/Removed.*Filter changes.*\$150\.00/);
+    expect(out).toMatch(/Added.*Boiler checks.*\$200\.00/);
+    expect(out).toContain("$3,870.00");
+    expect(out).toContain("$4,000.00");
+    expect(out).toContain("+$130.00");
+    expect(out).not.toContain("No differences");
+  });
+
+  test("C1339: a smaller total shows a minus sign", () => {
+    const html = view(agreement({ versions: 2, lines: [LINES[0]!], detail: { compare: { versionNo: 1, lines: LINES, annualCents: 387000 } } }));
+    expect(text(html)).toContain("−$300.00");
+  });
+
+  test("C1340: the history and the comparison still render for a withdrawn agreement, with no write control", () => {
+    const html = view(
+      agreement({ status: "withdrawn", versions: 2, detail: { sentVersion: 1, compare: { versionNo: 1, lines: LINES, annualCents: 387000 } } }),
+      "estimator",
+    );
+    expect(text(html)).toContain("No differences");
+    expect(block(html, 1)).toContain(">Sent<");
+    for (const label of ["Add line", "Edit", "Remove", "Send to customer", "Save term"]) expect(has(html, label), label).toBe(false);
+  });
+
+  test("every version but the shown one links to the comparison with the shown version, and no form is rendered", () => {
+    const html = view(agreement({ versions: 3, shownNo: 3 }), "viewer");
+    expect(html).toContain('href="/agreements/g1?version=3&amp;compare=2"');
+    expect(html).toContain('href="/agreements/g1?version=3&amp;compare=1"');
+    expect(html).not.toContain('href="/agreements/g1?version=3&amp;compare=3"');
+    expect(html).not.toContain("<form");
   });
 });

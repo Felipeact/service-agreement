@@ -16,7 +16,7 @@ function agreement(term: AgreementTerm, editable = true): AgreementDetail {
     stage: editable ? "in_progress" : "sent",
     site: { id: "s1", name: "Harbourview Towers" },
     customer: { id: "c1", name: "Harbourview Strata" },
-    versions: [{ versionNo: 1, createdAt: new Date(Date.UTC(2026, 9, 20, 18)) }],
+    versions: [{ versionNo: 1, createdAt: new Date(Date.UTC(2026, 9, 20, 18)), reason: null, author: null, events: [] }], sentVersion: null, acceptedVersion: null, compare: null,
     shown: { versionNo: 1, current: true, lines: [], annualCents: 0 },
     editable,
     equipmentChoices: [],
@@ -40,6 +40,7 @@ const actions: AgreementActions = {
   send: async () => ({ status: "idle" }),
   reissue: async () => ({ status: "idle" }),
   saveTerm: async () => ({ status: "saved" }),
+  saveNote: async () => ({ status: "idle" as const }),
 };
 
 const view = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions }));

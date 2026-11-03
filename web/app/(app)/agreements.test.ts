@@ -11,6 +11,7 @@ const container = {
   agreementStore: { create: vi.fn() },
   serviceLineStore: { add: vi.fn(), update: vi.fn(), remove: vi.fn() },
   agreementTermStore: { save: vi.fn() },
+  versionNoteStore: { save: vi.fn() },
   transitionAgreement: vi.fn(),
 };
 const WRITES = [
@@ -59,7 +60,10 @@ const detail = (over: Partial<AgreementDetail> = {}): AgreementDetail => ({
   stage: "in_progress",
   site: { id: SITE, name: "Harbourview Towers" },
   customer: { id: "c1", name: "Harbourview Strata" },
-  versions: [{ versionNo: 1, createdAt: new Date("2026-10-27T17:00:00Z") }],
+  versions: [{ versionNo: 1, createdAt: new Date("2026-10-27T17:00:00Z"), reason: null, author: null, events: [] }],
+  sentVersion: null,
+  acceptedVersion: null,
+  compare: null,
   shown: {
     versionNo: 1,
     current: true,
@@ -269,13 +273,30 @@ describe("the agreement page", () => {
   test.each(["abc", "1.5", ""])("C727: ?version=%j reaches the reader as no version", async (version) => {
     container.agreementReader.get.mockResolvedValue(detail());
     await render({ version });
-    expect(container.agreementReader.get).toHaveBeenCalledWith(AGR, undefined);
+    expect(container.agreementReader.get).toHaveBeenCalledWith(AGR, undefined, undefined);
   });
 
   test("C727: ?version=1 reaches the reader as 1", async () => {
     container.agreementReader.get.mockResolvedValue(detail());
     await render({ version: "1" });
-    expect(container.agreementReader.get).toHaveBeenCalledWith(AGR, 1);
+    expect(container.agreementReader.get).toHaveBeenCalledWith(AGR, 1, undefined);
+  });
+
+  test.each(["abc", "1.5", ""])("C1338: ?compare=%j reaches the reader as no comparison", async (compare) => {
+    container.agreementReader.get.mockResolvedValue(detail());
+    await render({ version: "2", compare });
+    expect(container.agreementReader.get).toHaveBeenCalledWith(AGR, 2, undefined);
+  });
+
+  test("C1338: ?version=2&compare=1 reaches the reader as 2 and 1", async () => {
+    container.agreementReader.get.mockResolvedValue(detail());
+    await render({ version: "2", compare: "1" });
+    expect(container.agreementReader.get).toHaveBeenCalledWith(AGR, 2, 1);
+  });
+
+  test("C1332: an agreement the reader does not return is not found", async () => {
+    container.agreementReader.get.mockResolvedValue(null);
+    await expect(render({ compare: "1" })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
   test("C740: a viewer sees a draft with lines and no control", async () => {
@@ -356,5 +377,45 @@ describe("saveTermAction", () => {
     currentMember.mockResolvedValue(member("viewer"));
     expect(await actions.saveTermAction(AGR, form({ termStart: "2027-01-01", termMonths: "12" }))).toEqual({ status: "forbidden" });
     expect(container.agreementTermStore.save).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveVersionNoteAction", () => {
+  test("C1326: the note is trimmed and saved once for the agreement", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    container.versionNoteStore.save.mockResolvedValue({ ok: true });
+    expect(await actions.saveVersionNoteAction(AGR, form({ note: "  Added boiler  " }))).toEqual({ status: "saved" });
+    expect(container.versionNoteStore.save).toHaveBeenCalledExactlyOnceWith(AGR, "Added boiler");
+    expect(revalidatePath).toHaveBeenCalledWith(`/agreements/${AGR}`);
+  });
+
+  test("C1326: a 501-character note returns a field error on note with what was typed and calls no store", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    const note = "n".repeat(501);
+    expect(await actions.saveVersionNoteAction(AGR, form({ note }))).toEqual({
+      status: "invalid",
+      errors: { note: "Note must be 500 characters or fewer" },
+      values: { note },
+    });
+    expect(container.versionNoteStore.save).not.toHaveBeenCalled();
+  });
+
+  test("C1326: a 500-character note is saved", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    container.versionNoteStore.save.mockResolvedValue({ ok: true });
+    await actions.saveVersionNoteAction(AGR, form({ note: "n".repeat(500) }));
+    expect(container.versionNoteStore.save).toHaveBeenCalledExactlyOnceWith(AGR, "n".repeat(500));
+  });
+
+  test("C1326: a locked answer shows that the version can no longer change", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    container.versionNoteStore.save.mockResolvedValue({ ok: false, code: "locked" });
+    expect(await actions.saveVersionNoteAction(AGR, form({ note: "x" }))).toEqual({ status: "locked" });
+  });
+
+  test("C1326: a viewer is refused before any store call", async () => {
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await actions.saveVersionNoteAction(AGR, form({ note: "x" }))).toEqual({ status: "forbidden" });
+    expect(container.versionNoteStore.save).not.toHaveBeenCalled();
   });
 });

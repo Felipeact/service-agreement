@@ -31,7 +31,7 @@ describe("the portal PDF's schedule", () => {
       stage: "sent",
       site: { id: "s1", name: view.site.name },
       customer: { id: "c1", name: view.customer.name },
-      versions: [{ versionNo: 1, createdAt: new Date("2026-10-20T15:00:00Z") }],
+      versions: [{ versionNo: 1, createdAt: new Date("2026-10-20T15:00:00Z"), reason: null, author: null, events: [] }], sentVersion: null, acceptedVersion: null, compare: null,
       shown: {
         versionNo: 1,
         current: true,

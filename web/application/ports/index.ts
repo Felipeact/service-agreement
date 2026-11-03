@@ -454,6 +454,13 @@ export type ServiceLineView = {
   equipment: { id: string; code: string; name: string }[];
 };
 
+/** What the history of a version records: who acted is a role, or the customer (versioning AC 6). */
+export type VersionEventType = "sent" | "viewed" | "accepted" | "refused" | "changes_requested";
+export type VersionEvent = { type: VersionEventType; at: Date; by: MemberRole | "customer" | null };
+
+/** A version with the reason it exists (the customer's change request or a staff note), its author's role, and its events. */
+export type VersionView = { versionNo: number; createdAt: Date; reason: string | null; author: MemberRole | null; events: VersionEvent[] };
+
 /** An agreement as its page shows it: the version asked for, or the current one. */
 export type AgreementDetail = {
   id: string;
@@ -463,8 +470,13 @@ export type AgreementDetail = {
   stage: PipelineStage | null;
   site: { id: string; name: string };
   customer: { id: string; name: string };
-  /** Every version, newest first. */
-  versions: { versionNo: number; createdAt: Date }[];
+  /** Every version, newest first, with why it exists, who made it and what happened to it (versioning door 1). */
+  versions: VersionView[];
+  /** The version named by the latest `agreement.sent` event, and by the latest `agreement.accepted` one (versioning door 3). */
+  sentVersion: number | null;
+  acceptedVersion: number | null;
+  /** The version `?compare=` names, with its lines, or `null` when it names none other than the shown one. */
+  compare: { versionNo: number; lines: ServiceLineView[]; annualCents: number } | null;
   shown: { versionNo: number; current: boolean; lines: ServiceLineView[]; annualCents: number };
   /** The agreement is `draft` and the shown version is the current one. */
   editable: boolean;
@@ -509,8 +521,11 @@ export type LinkEmailView =
 export type AgreementServiceScope = { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
 
 export interface AgreementReader {
-  /** `null` for a malformed id, a missing row, or a row of another org. An unknown `versionNo` shows the current version. */
-  get(id: string, versionNo?: number): Promise<AgreementDetail | null>;
+  /**
+   * `null` for a malformed id, a missing row, or a row of another org. An unknown `versionNo` shows the current version.
+   * `compareNo` names a second version to read the lines of; it is ignored when it is the shown one or no version.
+   */
+  get(id: string, versionNo?: number, compareNo?: number): Promise<AgreementDetail | null>;
 }
 
 export type CreateAgreementResult =
@@ -539,6 +554,13 @@ export type AgreementTermWriteResult = { ok: true } | { ok: false; code: WriteFa
 /** The term of the current version of a draft, through `save_agreement_term` (term-dates door 3); anything else is `locked`. */
 export interface AgreementTermStore {
   save(agreementId: string, term: { start: string; months: number }): Promise<AgreementTermWriteResult>;
+}
+
+export type VersionNoteWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" | "invalid" };
+
+/** The staff note of the current version of a draft, through `save_version_note` (versioning door 1); anything else is `locked`. */
+export interface VersionNoteStore {
+  save(agreementId: string, note: string): Promise<VersionNoteWriteResult>;
 }
 
 /** Turns the content of one agreement into a PDF (agreement-pdf door 2). Rejects when it cannot render. */

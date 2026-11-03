@@ -258,7 +258,7 @@ describe("composition root", () => {
       stage: "in_progress",
       site: { id: "s1", name: "Site" },
       customer: { id: "c1", name: "Customer" },
-      versions: [{ versionNo: 1, createdAt: new Date(0) }],
+      versions: [{ versionNo: 1, createdAt: new Date(0), reason: null, author: null, events: [] }], sentVersion: null, acceptedVersion: null, compare: null,
       shown: {
         versionNo: 1,
         current: true,
@@ -296,7 +296,7 @@ describe("composition root", () => {
 
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
-    expect(body("AgreementReader")).toContain("get(id: string, versionNo?: number): Promise<AgreementDetail | null>");
+    expect(body("AgreementReader")).toContain("get(id: string, versionNo?: number, compareNo?: number): Promise<AgreementDetail | null>");
     expect(body("AgreementStore")).toContain("create(siteId: string): Promise<CreateAgreementResult>");
     for (const method of ["add(agreementId: string, value: ServiceLineValue)", "update(lineId: string, value: ServiceLineValue)", "remove(lineId: string)"]) {
       expect(body("ServiceLineStore")).toContain(method);

@@ -7,6 +7,10 @@ import { pipelineStage } from "@/domain/pipeline";
 import { isNotEmailedReason } from "@/domain/notifications";
 import type {
   AgreementReader,
+  MemberRole,
+  VersionEvent,
+  VersionEventType,
+  VersionView,
   LinkEmailView,
   AgreementServiceScope,
   AgreementStore,
@@ -14,6 +18,7 @@ import type {
   ServiceLineStore,
   ServiceLineView,
   ServiceLineWriteResult,
+  VersionNoteStore,
   WriteFailure,
 } from "@/application/ports";
 import type { ServiceLineValue } from "@/domain/agreement";
@@ -45,17 +50,31 @@ type VersionRow = {
   term_months: number;
   term_end: string | null;
   valid_until: string | null;
+  created_by: string | null;
+  reason: string | null;
   contracts: { status: string }[];
 };
 
 type AgreementRow = {
   id: string;
+  org_id: string;
   number: string | null;
   status: string;
   renews_agreement_id?: string | null;
   sites: { id: string; name: string; customers: { id: string; name: string } };
   agreement_versions: VersionRow[];
 };
+
+/** The event types the history lists, and what each is called there. */
+const EVENT_KINDS: Record<string, VersionEventType> = {
+  "agreement.sent": "sent",
+  "agreement.viewed": "viewed",
+  "agreement.accepted": "accepted",
+  "agreement.refused": "refused",
+  "agreement.changes_requested": "changes_requested",
+};
+
+type EventRow = { type: string; payload: { versionNo?: unknown; via?: unknown } | null; actor_id: string | null; created_at: string };
 
 type LinkRow = { id: string; number: string | null; renews_agreement_id: string | null };
 
@@ -157,6 +176,81 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
     return { status: "pending" };
   }
 
+  /** The lines of one version, by position and then creation time, with their annual amounts. */
+  async function linesOf(versionId: string): Promise<ServiceLineView[]> {
+    const { data: lineRows, error: lineError } = await client
+      .from("service_lines")
+      .select("id, position, description, visits_per_year, visit_months, cost_per_visit_cents, created_at, service_line_asset_types(asset_types(id, code, name))")
+      .eq("agreement_version_id", versionId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (lineError) throw new Error(`Supabase error ${lineError.code}: ${lineError.message}`);
+    return [...((lineRows ?? []) as LineRow[])]
+      .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+      .map((line) => ({
+        id: line.id,
+        position: line.position,
+        description: line.description,
+        visitsPerYear: line.visits_per_year,
+        costPerVisitCents: line.cost_per_visit_cents,
+        annualCents: lineAnnualCents(line.visits_per_year, cents(line.cost_per_visit_cents)),
+        visitMonths: [...(line.visit_months ?? [])],
+        equipment: (line.service_line_asset_types ?? [])
+          .flatMap((cover) => (cover.asset_types ? [cover.asset_types] : []))
+          .map((type) => ({ id: type.id, code: type.code, name: type.name }))
+          .sort(byName),
+      }));
+  }
+
+  /**
+   * Each version with its reason, its author's role and its sent, viewed and decided events, read from `events` by the
+   * `versionNo` in the payload (versioning door 3). A view is listed once per version, as the first one.
+   */
+  async function versionHistory(row: AgreementRow, versions: VersionRow[]) {
+    const { data: eventRows, error } = await client
+      .from("events")
+      .select("type, payload, actor_id, created_at")
+      .eq("entity_type", "agreement")
+      .eq("entity_id", row.id)
+      .in("type", Object.keys(EVENT_KINDS))
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    const events = Array.isArray(eventRows) ? (eventRows as EventRow[]) : [];
+
+    const userIds = [...new Set([...versions.map((v) => v.created_by), ...events.map((e) => e.actor_id)].filter((id): id is string => id !== null))];
+    const roles = new Map<string, MemberRole>();
+    if (userIds.length > 0) {
+      const { data: members, error: membersError } = await client.from("memberships").select("user_id, role").eq("org_id", row.org_id).in("user_id", userIds);
+      if (membersError) throw new Error(`Supabase error ${membersError.code}: ${membersError.message}`);
+      for (const member of (members ?? []) as { user_id: string; role: string }[]) roles.set(member.user_id, member.role as MemberRole);
+    }
+
+    const byVersion = new Map<number, VersionEvent[]>();
+    let sentVersion: number | null = null;
+    let acceptedVersion: number | null = null;
+    for (const event of events) {
+      const type = EVENT_KINDS[event.type];
+      const versionNo = typeof event.payload?.versionNo === "number" ? event.payload.versionNo : null;
+      if (!type || versionNo === null) continue;
+      if (type === "sent") sentVersion = versionNo;
+      if (type === "accepted") acceptedVersion = versionNo;
+      const listed = byVersion.get(versionNo) ?? [];
+      if (type === "viewed" && listed.some((e) => e.type === "viewed")) continue;
+      const by = event.actor_id === null || event.payload?.via === "portal" ? "customer" : (roles.get(event.actor_id) ?? null);
+      listed.push({ type, at: new Date(event.created_at), by });
+      byVersion.set(versionNo, listed);
+    }
+
+    const views: VersionView[] = versions.map((version) => ({
+      versionNo: version.version_no,
+      createdAt: new Date(version.created_at),
+      reason: version.reason ?? null,
+      author: !version.created_by ? null : (roles.get(version.created_by) ?? null),
+      events: byVersion.get(version.version_no) ?? [],
+    }));
+    return { versions: views, sentVersion, acceptedVersion };
+  }
+
   /**
    * The types a line of the editable version can cover: those with an asset on the site, plus those its lines already
    * cover, by name (cadence AC 8).
@@ -192,11 +286,11 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
   }
 
   return {
-    async get(id, versionNo) {
+    async get(id, versionNo, compareNo) {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("agreements")
-        .select("id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, contracts(status))")
+        .select("id, org_id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, created_by, reason, contracts(status))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -207,31 +301,10 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       const latest = versions[0];
       const shownVersion = versions.find((version) => version.version_no === versionNo) ?? latest;
 
-      let lines: ServiceLineView[] = [];
-      if (shownVersion) {
-        const { data: lineRows, error: lineError } = await client
-          .from("service_lines")
-          .select("id, position, description, visits_per_year, visit_months, cost_per_visit_cents, created_at, service_line_asset_types(asset_types(id, code, name))")
-          .eq("agreement_version_id", shownVersion.id)
-          .order("position", { ascending: true })
-          .order("created_at", { ascending: true });
-        if (lineError) throw new Error(`Supabase error ${lineError.code}: ${lineError.message}`);
-        lines = [...((lineRows ?? []) as LineRow[])]
-          .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
-          .map((line) => ({
-            id: line.id,
-            position: line.position,
-            description: line.description,
-            visitsPerYear: line.visits_per_year,
-            costPerVisitCents: line.cost_per_visit_cents,
-            annualCents: lineAnnualCents(line.visits_per_year, cents(line.cost_per_visit_cents)),
-            visitMonths: [...(line.visit_months ?? [])],
-            equipment: (line.service_line_asset_types ?? [])
-              .flatMap((cover) => (cover.asset_types ? [cover.asset_types] : []))
-              .map((type) => ({ id: type.id, code: type.code, name: type.name }))
-              .sort(byName),
-          }));
-      }
+      const lines = shownVersion ? await linesOf(shownVersion.id) : [];
+      const compared = compareNo !== undefined && compareNo !== shownVersion?.version_no ? versions.find((version) => version.version_no === compareNo) : undefined;
+      const compareLines = compared ? await linesOf(compared.id) : [];
+      const history = await versionHistory(row, versions);
 
       const status = row.status as AgreementStatus;
       const current = shownVersion !== undefined && shownVersion === latest;
@@ -244,7 +317,10 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         stage: pipelineStage(status, latest?.contracts[0]?.status as ContractStatus | undefined),
         site: { id: row.sites.id, name: row.sites.name },
         customer: { id: row.sites.customers.id, name: row.sites.customers.name },
-        versions: versions.map((version) => ({ versionNo: version.version_no, createdAt: new Date(version.created_at) })),
+        versions: history.versions,
+        sentVersion: history.sentVersion,
+        acceptedVersion: history.acceptedVersion,
+        compare: compared ? { versionNo: compared.version_no, lines: compareLines, annualCents: sumCents(compareLines.map((line) => cents(line.annualCents))) } : null,
         shown: {
           versionNo: shownVersion?.version_no ?? 1,
           current,
@@ -384,6 +460,22 @@ export function supabaseAgreementTermStore(client: Client): AgreementTermStore {
         return code ? { ok: false, code } : failure("Saving the term", error);
       } catch (cause) {
         return unavailable("Saving the term", cause);
+      }
+    },
+  };
+}
+
+/** The staff note of the current version of a draft, through `save_version_note` only (versioning door 1). */
+export function supabaseVersionNoteStore(client: Client): VersionNoteStore {
+  return {
+    async save(agreementId, note) {
+      try {
+        const { error } = await client.rpc("save_version_note", { p_agreement_id: agreementId, p_note: note });
+        if (!error) return { ok: true };
+        const code = TERM_FAILURES[error.code];
+        return code ? { ok: false, code } : failure("Saving the version note", error);
+      } catch (cause) {
+        return unavailable("Saving the version note", cause);
       }
     },
   };

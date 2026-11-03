@@ -18,8 +18,10 @@ export type Database = {
         Row: {
           agreement_id: string
           created_at: string
+          created_by: string | null
           id: string
           org_id: string
+          reason: string | null
           snapshot: Json
           term_end: string | null
           term_months: number
@@ -30,8 +32,10 @@ export type Database = {
         Insert: {
           agreement_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           org_id: string
+          reason?: string | null
           snapshot?: Json
           term_end?: string | null
           term_months?: number
@@ -42,8 +46,10 @@ export type Database = {
         Update: {
           agreement_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           org_id?: string
+          reason?: string | null
           snapshot?: Json
           term_end?: string | null
           term_months?: number
@@ -1190,6 +1196,10 @@ export type Database = {
             }
             Returns: string
           }
+      save_version_note: {
+        Args: { p_agreement_id: string; p_note: string }
+        Returns: undefined
+      }
       set_asset_active: {
         Args: { p_active: boolean; p_asset_id: string; p_replaced_by?: string }
         Returns: undefined

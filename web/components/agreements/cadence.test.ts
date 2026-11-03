@@ -61,7 +61,7 @@ function agreement(over: Partial<AgreementDetail> = {}): AgreementDetail {
     stage: "in_progress",
     site: { id: "s1", name: "Harbourview Towers" },
     customer: { id: "c1", name: "Harbourview Strata" },
-    versions: [{ versionNo: 1, createdAt: new Date(Date.UTC(2026, 9, 20, 18)) }],
+    versions: [{ versionNo: 1, createdAt: new Date(Date.UTC(2026, 9, 20, 18)), reason: null, author: null, events: [] }], sentVersion: null, acceptedVersion: null, compare: null,
     shown: { versionNo: 1, current: true, lines, annualCents: lines.reduce((t, l) => t + l.annualCents, 0) },
     editable: true,
     equipmentChoices: CHOICES,
@@ -86,6 +86,7 @@ const actions: AgreementActions = {
   send: async () => ({ status: "idle" }),
   reissue: async () => ({ status: "idle" }),
   saveTerm: async () => ({ status: "idle" as const }),
+  saveNote: async () => ({ status: "idle" as const }),
 };
 const view = (a: AgreementDetail) => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role: "estimator", actions }));
 

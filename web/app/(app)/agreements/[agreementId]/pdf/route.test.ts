@@ -33,7 +33,7 @@ function detail(over: Partial<AgreementDetail> = {}, versionNo = 1): AgreementDe
     stage: "sent",
     site: { id: "s1", name: "Fernwood Dental, Main" },
     customer: { id: "c1", name: "Fernwood Dental" },
-    versions: [{ versionNo, createdAt: new Date("2026-10-20T18:00:00Z") }],
+    versions: [{ versionNo, createdAt: new Date("2026-10-20T18:00:00Z"), reason: null, author: null, events: [] }], sentVersion: null, acceptedVersion: null, compare: null,
     shown: {
       versionNo,
       current: true,

@@ -15,6 +15,11 @@ export type TermState =
   | { status: "idle" | "saved" | "locked" | Failure }
   | { status: "invalid"; errors: Partial<Record<keyof AgreementTermInput, string>>; values: AgreementTermInput };
 
+/** What `saveVersionNoteAction` answers; `invalid` keeps what was typed (versioning AC 4). */
+export type NoteState =
+  | { status: "idle" | "saved" | "locked" | Failure }
+  | { status: "invalid"; errors: { note?: string }; values: { note: string } };
+
 /** What `reviseAgreementAction` (when it does not redirect) and `withdrawAgreementAction` answer. */
 export type MoveState = { status: "idle" | "withdrawn" | "conflict" | "invalid_transition" | Failure };
 

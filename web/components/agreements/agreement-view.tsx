@@ -12,9 +12,12 @@ import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
 import { ServiceScopeSections } from "./service-scope";
 import { LinkControls } from "./link-controls";
+import { NoteSection } from "./note-section";
 import { TermSection } from "./term-section";
+import { VersionCompare } from "./version-compare";
+import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "./visit-schedule";
-import type { LineState, LinkState, MoveState, TermState } from "./state";
+import type { LineState, LinkState, MoveState, NoteState, TermState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -26,6 +29,7 @@ export type AgreementActions = {
   send: () => Promise<LinkState>;
   reissue: () => Promise<LinkState>;
   saveTerm: (formData: FormData) => Promise<TermState>;
+  saveNote: (formData: FormData) => Promise<NoteState>;
 };
 
 type AgreementViewProps = {
@@ -120,7 +124,11 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         <LinkControls number={agreement.number} canSend={canSend} canReissue={canReissue} send={writer.send} reissue={writer.reissue} />
       )}
 
+      {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} />}
+
       <TermSection term={agreement.term} action={lineActions?.saveTerm} />
+
+      {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
 
       <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
         <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>
@@ -187,21 +195,15 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         lines={shown.lines}
       />
 
-      {agreement.versions.length > 1 && (
-        <section aria-label="Versions" className="flex flex-col gap-1">
-          <h2 className="text-[13px] font-semibold">Versions</h2>
-          <ul className="flex flex-col">
-            {agreement.versions.map((version) => (
-              <li key={version.versionNo} data-version={version.versionNo} className="flex flex-wrap items-center gap-2 text-[13px]">
-                <Link href={`/agreements/${agreement.id}?version=${version.versionNo}`} className={link}>
-                  {`Version ${version.versionNo}`}
-                </Link>
-                <span className="text-ink-2">{date.format(version.createdAt)}</span>
-                {version.versionNo === latest && <StatusPill tone="neutral" label="Current" />}
-              </li>
-            ))}
-          </ul>
-        </section>
+      {hasVersionStory(agreement.versions) && (
+        <VersionsSection
+          agreementId={agreement.id}
+          versions={agreement.versions}
+          shownNo={shown.versionNo}
+          sentVersion={agreement.sentVersion}
+          acceptedVersion={agreement.acceptedVersion}
+          comparedNo={agreement.compare?.versionNo ?? null}
+        />
       )}
     </div>
   );
