@@ -35,4 +35,15 @@ describe("/pipeline views", () => {
     expect(pipelineExpiring).not.toHaveBeenCalled();
     expect(out).toContain("No agreements yet");
   });
+
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", true],
+    ["viewer", false],
+    [undefined, false],
+  ] as const)("C1359: for role %s the board shows a New agreement link: %s", async (role, shown) => {
+    const out = renderToStaticMarkup((await PipelineForRequest({ view: undefined, role })) as ReactElement);
+    expect(/<a\b[^>]*href="\/agreements\/new"[^>]*>New agreement</.test(out)).toBe(shown);
+  });
 });

@@ -74,8 +74,10 @@ describe("PipelineView", () => {
     const html = render([]);
     expect(html).toContain("No agreements yet");
     expect(html).toContain("Agreements you create appear here by stage.");
-    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>New agreement</);
     expect(html).not.toContain("No agreements match");
+    const writer = renderToStaticMarkup(createElement(PipelineView, { cards: [], canCreate: true }));
+    expect(writer).not.toMatch(/<button[^>]*disabled[^>]*>New agreement</);
+    expect(writer).toContain(">New agreement<");
   });
 
   test("C1359: for a writer New agreement is a link to /agreements/new, on the board and on the empty board", () => {

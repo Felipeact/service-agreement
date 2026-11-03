@@ -596,6 +596,8 @@ describe("agreement lister (agreements-page)", () => {
     const { calls } = await list([], { siteId: SITE_ID });
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "site_id" && c.args[1] === SITE_ID)).toBe(true);
     expect((await list([], { siteId: SITE_ID })).rows).toEqual([]);
+    const mixed = await list([row("mine", "sent", { site_id: SITE_ID }), row("other", "sent")], { siteId: SITE_ID });
+    expect(mixed.rows.map((r) => r.id)).toEqual(["mine"]);
   });
 
   test("C1351: expiring keeps accepted agreements ending from today to today + 90 days", async () => {
