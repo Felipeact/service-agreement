@@ -131,7 +131,14 @@ begin
   perform tests.ok('C629 C630 nothing added', tests.site_assets() = before, 'an asset was added');
 end $$;
 
--- C633: deleting an imported asset keeps its row and the job's count.
+-- C633: deleting an imported asset keeps its row and the job's count. Deactivation door 2 (C1314): a member can no
+-- longer delete an asset, so the delete runs as the table owner.
+do $$
+declare a uuid := (select asset_id from public.import_rows where job_id = tests.id('jC') and position = 1);
+begin
+  perform tests.expect_error('C633 member delete refused', format('delete from public.assets where id = %L', a), '42501');
+end $$;
+reset role;
 do $$
 declare a uuid := (select asset_id from public.import_rows where job_id = tests.id('jC') and position = 1);
 begin
@@ -141,6 +148,7 @@ begin
   perform tests.ok('C633 job count', (select status = 'committed' and committed_count = 2 from public.import_jobs where id = tests.id('jC')),
     'job count changed');
 end $$;
+select tests.act_as('uE');
 
 -- C637: rows change only while their job is extracted; a discard still cascades.
 do $$ begin

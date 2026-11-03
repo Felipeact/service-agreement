@@ -47,14 +47,25 @@ declare
   a uuid := tests.id('orgA');
 begin
   foreach t in array array_remove(array_remove(array_remove(tests.tenant_tables(), 'outbox'), 'events'), 'agreement_versions') loop
-    perform tests.expect_rows('C12 update ' || t,
-      format('update public.%I set org_id = org_id where org_id = %L', t, a), 0);
-    perform tests.expect_rows('C12 delete ' || t,
-      format('delete from public.%I where org_id = %L', t, a), 0);
+    if t not in ('customers', 'sites', 'assets') then
+      perform tests.expect_rows('C12 update ' || t,
+        format('update public.%I set org_id = org_id where org_id = %L', t, a), 0);
+    end if;
+    if t <> 'assets' then
+      perform tests.expect_rows('C12 delete ' || t,
+        format('delete from public.%I where org_id = %L', t, a), 0);
+    end if;
   end loop;
   -- Only the update half moved to C817; a viewer's delete still affects nothing.
   perform tests.expect_rows('C12 delete agreement_versions',
     format('delete from public.agreement_versions where org_id = %L', a), 0);
+  -- Deactivation door 2 (C1314): customers, sites and assets grant update on named columns only, so org_id is not
+  -- updatable, and assets are never deleted; the viewer is refused outright.
+  foreach t in array array['customers', 'sites', 'assets'] loop
+    perform tests.expect_error('C12 update ' || t,
+      format('update public.%I set org_id = org_id where org_id = %L', t, a), '42501');
+  end loop;
+  perform tests.expect_error('C12 delete assets', format('delete from public.assets where org_id = %L', a), '42501');
 end $$;
 
 reset role;

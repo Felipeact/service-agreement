@@ -198,7 +198,8 @@ begin
             where t ->> 'code' = 'RTU'
               and t -> 'tasks' = '[{"description": "Replace filters", "visitMonths": null}, {"description": "Check and tension belts", "visitMonths": null}]'::jsonb),
     'the task change is not in the next scope: ' || doc::text);
-  delete from public.assets where id = tests.id('s808:CH-1');
+  -- Deactivation door 7 (C1314): a unit leaves the scope by being removed from service, not deleted.
+  perform public.set_asset_active(tests.id('s808:CH-1'), false);
   doc := public.site_service_scope(tests.id('s808'));
   perform tests.ok('C808 asset deleted',
     not exists (select 1 from jsonb_array_elements(doc -> 'types') t where t ->> 'code' = 'CHILLER'),
