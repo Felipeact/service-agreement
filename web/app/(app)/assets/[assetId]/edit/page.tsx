@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AssetForm } from "@/components/records/asset-form";
-import { DeactivateControl, ReactivateControl } from "@/components/records/active-control";
+import { DeactivateControl, ReactivateControl, replacementOptions } from "@/components/records/active-control";
 import { RecordPage } from "@/components/records/record-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
@@ -19,12 +19,7 @@ export default async function EditAssetPage({ params }: PageProps<"/assets/[asse
   const types = await listAssetTypes();
   const type = types.find((option) => option.id === asset.assetTypeId);
   const name = [type?.code ?? "Asset", asset.unitNo].filter(Boolean).join(" ");
-  // The other units still in service on this site may be named as the replacement (deactivation AC 2).
-  const replacements = asset.active
-    ? ((await siteRegister(asset.siteId))?.assets ?? [])
-        .filter((other) => other.active && other.id !== assetId)
-        .map((other) => ({ id: other.id, label: [other.typeCode, other.unitNo].filter(Boolean).join(" ") }))
-    : [];
+  const replacements = asset.active ? replacementOptions((await siteRegister(asset.siteId))?.assets ?? [], assetId) : [];
 
   return (
     <RecordPage title="Edit asset" canWrite={canWriteRecords(member.role)}>

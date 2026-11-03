@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import type { AssetView, SiteView } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatTermDate } from "@/domain/agreement/term";
@@ -11,6 +12,18 @@ export type ActiveKind = "customer" | "site" | "asset";
 
 /** Another active unit on the asset's site, offered as its replacement (deactivation AC 2). */
 export type ReplacementOption = { id: string; label: string };
+
+/** The units still in service on the asset's site, never the asset itself, as `<CODE> <unit>`. */
+export function replacementOptions(siteAssets: AssetView[], assetId: string): ReplacementOption[] {
+  return siteAssets
+    .filter((other) => other.active && other.id !== assetId)
+    .map((other) => ({ id: other.id, label: [other.typeCode, other.unitNo].filter(Boolean).join(" ") }));
+}
+
+/** The agreement a site deactivation withdraws: a draft or sent one. A `changes_requested` one blocks it instead. */
+export function withdrawnBy(live: SiteView["liveAgreement"]): string | null {
+  return live && live.status !== "changes_requested" ? live.number : null;
+}
 
 const START_LABEL: Record<ActiveKind, string> = {
   customer: "Deactivate customer",

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { DeactivateControl, ReactivateControl } from "@/components/records/active-control";
+import { DeactivateControl, ReactivateControl, withdrawnBy } from "@/components/records/active-control";
 import { RecordPage } from "@/components/records/record-form";
 import { SiteForm } from "@/components/records/site-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
@@ -31,7 +31,7 @@ export default async function EditSitePage({ params }: PageProps<"/sites/[siteId
         <DeactivateControl
           kind="site"
           name={site.name}
-          withdraws={site.liveAgreement && site.liveAgreement.status !== "changes_requested" ? site.liveAgreement.number : null}
+          withdraws={withdrawnBy(site.liveAgreement)}
           action={deactivateSiteAction.bind(null, siteId)}
         />
       ) : (

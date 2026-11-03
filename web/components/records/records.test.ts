@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { AssetFields } from "./asset-form";
 import { ContactFields } from "./contact-form";
 import { CustomerFields } from "./customer-form";
-import { DeactivatePrompt, ReactivatePrompt } from "./active-control";
+import { DeactivatePrompt, ReactivatePrompt, replacementOptions, withdrawnBy } from "./active-control";
 import { DeletePrompt } from "./delete-control";
 import { RecordPage } from "./record-form";
 import { SiteFields } from "./site-form";
@@ -175,6 +175,33 @@ describe("deactivation controls", () => {
 
   test("C1278: with no other active unit there is no Replaced by field", () => {
     expect(deactivate({ kind: "asset", name: "RTU RTU-1", confirming: true })).not.toContain("Replaced by");
+  });
+
+  test("C1278: the options are the site's other active units, never the asset itself or a removed one", () => {
+    const unit = (id: string, typeCode: string, unitNo: string | null, active = true) => ({
+      id,
+      typeCode,
+      typeName: typeCode,
+      unitNo,
+      typeModel: null,
+      location: null,
+      source: "manual" as const,
+      active,
+      replacedBy: null,
+    });
+    const site = [unit("a1", "RTU", "RTU-1"), unit("a2", "RTU", "RTU-2"), unit("a3", "RTU", "RTU-3", false), unit("a4", "MUA", null)];
+    expect(replacementOptions(site, "a1")).toEqual([
+      { id: "a2", label: "RTU RTU-2" },
+      { id: "a4", label: "MUA" },
+    ]);
+    expect(replacementOptions([unit("a1", "RTU", "RTU-1"), unit("a3", "RTU", "RTU-3", false)], "a1")).toEqual([]);
+  });
+
+  test("C1294: a draft or sent agreement is what a site deactivation withdraws; changes requested is not", () => {
+    expect(withdrawnBy({ id: "g1", number: "AG-1004", status: "draft" })).toBe("AG-1004");
+    expect(withdrawnBy({ id: "g1", number: "AG-1004", status: "sent" })).toBe("AG-1004");
+    expect(withdrawnBy({ id: "g1", number: "AG-1004", status: "changes_requested" })).toBeNull();
+    expect(withdrawnBy(null)).toBeNull();
   });
 
   test("C1294: a site asks by name and says what it withdraws", () => {
