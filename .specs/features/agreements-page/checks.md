@@ -192,3 +192,14 @@ library pages, any change to the Pipeline board's rules or `?view=expiring`.
 - Before the last commit the builder also runs `npm test`, `npm run lint` and `npx tsc --noEmit` in `web/` and reviews
   `git diff <feature base>..HEAD -- "*.test.ts"` against the Terms (only the listed assertions replaced). This is a
   hygiene gate, not a check, because a green suite settles no single claim.
+
+- **Boundary:** C1347-C1365 closed at `c9d31f2`; C1366 run live (below); C1367 partly
+- **Settled mid-build:**
+  - `site_inactive` from `create_agreement` is mapped by the existing adapter to `unavailable`, so C1364 proves the `unavailable` message (the form lists only active sites, so this is a race).
+  - The adapter applies the site filter and the newest-first order itself as well as asking the database, so its output holds under the stub.
+  - `businessDay` moved from `pipeline/page.tsx` to `lib/business-day.ts` to share it.
+  - A withdrawn row renders a neutral pill, not a Refused-stage dot (found in the live run).
+- **Live C1366:** `/agreements` at 375, 768 and 1440 px, one signed-in context: no horizontal scroll; `?status=accepted&expiring=1` lists 1 row (AG-1035, term end 2026-11-22) with the controls reflecting it. Controls and rows are at least 44 px below 1024 px (the only smaller boxes are the text labels above the selects and the 16 px checkbox inside its 44 px label); 34 px at 1440 px by design. Console: no errors.
+- **Live C1367, partly:** Pipeline "New agreement" is a link to `/agreements/new`, which shows the grouped picker and the three sites with an agreement in progress (AG-1044, AG-1057, AG-1051) as links. Pressing "Create agreement" writes a row to the demo org and was not run; it needs your go-ahead.
+- **Abandoned:** nothing.
+
