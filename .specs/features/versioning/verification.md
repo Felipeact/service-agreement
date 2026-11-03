@@ -1,71 +1,89 @@
 # Versioning verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: light
-**Diff range**: 8dbc22b..77c0581
-**Round**: 1 - full
+**Diff range**: 8dbc22b..329066e
+**Round**: 2 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-All 26 checks have a located assertion and every runnable proof is green at HEAD. The FAIL is for four precision or coverage gaps (ranked under Gate), none of which is a failing test.
+All 28 checks have a located assertion. 26 are proven by a proof I ran at HEAD 329066e. C1341 and C1344 are author-side live runs that I did not re-run (single-context rule); they were never failing and the live proofs they need are not runnable by the Verifier. Round-2 scope: the fix diff `77c0581..329066e` plus every round-1 non-PASS verdict (C1324, C1325, C1328, C1341, C1344) and the new checks C1345 and C1346. Everything else is carried from round 1 at 77c0581 and marked so.
 
-Proofs run at HEAD (from `web/`):
-- One vitest call over the 4 target files: 4 files, 240 tests passed. Every `C13xx:` name below appeared individually as passed.
-- Full `npm test`: 111 files, 2235 tests passed. `npm run lint` exit 0. `npx tsc --noEmit` exit 0. `npm run build` exit 0.
-- `npm run test:db agreement_builder`: PASS (1 passed, 0 failed). `npm run test:db rls_isolation`: PASS.
+## Round 1 history (FAIL, 22/26, at 77c0581)
+
+1. C1328 - `accepted` named in the claim but no test listed an accepted event in a version's history.
+2. C1324 and C1325 - hints `note_too_long` and `not_editable` named in the claims but not asserted (`expect_error` compares SQLSTATE only).
+3. Doors 4 and 5 had tests but no check and no Coverage row; `checks.md` counted 3 doors against 5 in the plan.
+4. C1327 runs a copy of the migration's UPDATE; C1340 uses `withdrawn` as the stand-in for an inactive site; C1341 and C1344 are author-side live runs (non-blocking notes).
+
+## Proofs run at HEAD 329066e (from `web/`)
+
+- One vitest call over `domain/agreement/version-diff.test.ts`, `infrastructure/supabase/agreements.test.ts`, `components/agreements/agreements.test.ts`, `app/(app)/agreements.test.ts` with `--reporter=verbose`: 4 files, 242 tests passed (round 1: 240; +2 = the two new reader tests). Every `C1322:`-`C1346:` vitest name below appeared individually as passed.
+- `npm test`: 111 files, 2237 passed, exit 0. `npm run lint` exit 0. `npx tsc --noEmit` exit 0.
+- `npm run test:db agreement_builder`: PASS (1 passed, 0 failed), exit 0. `npm run test:db rls_isolation`: PASS (1 passed, 0 failed), exit 0. The runner reports per recipe, not per assertion, so the `C1324 hint`, `C1325 hint`, `C1345 *` assertions are shown to exist by `rg` and are proven by the recipe passing (a failing `tests.ok` fails the recipe).
+- `npm run build` was not re-run this round (the fix touched only tests and docs, no build input); round 1 ran it at 77c0581 exit 0.
 
 ## Checks
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C1319 | revise stores customer reason and uE as author | test:db agreement_builder, exit 0 | `supabase/tests/agreement_builder.sql:770` - `created_by = tests.id('uE') and reason = 'Too expensive'` (v1 unchanged `:773`); migration `20261104090000_versioning.sql` reads the latest changes_requested payload reason into the insert | PASS |
-| C1320 | create_agreement v1 has creator, null reason | test:db agreement_builder | `agreement_builder.sql:785` - `v.created_by = tests.id('uE') and v.reason is null` (the author comes from the door-4 trigger) | PASS |
-| C1321 | authenticated cannot update a version (42501) | test:db agreement_builder | `agreement_builder.sql:794` - `expect_error('C1321 update', 'update public.agreement_versions set reason ...', '42501')`; trigger stamp `:803` `created_by = tests.id('uE')` | PASS |
-| C1322 | reader returns reason and author role per version | vitest `C1322:` passed | `infrastructure/supabase/agreements.test.ts:523` - `toEqual([[2,"Too expensive","estimator"],[1,null,null]])` | PASS |
-| C1323 | reason renders; null reason renders nothing | vitest `C1323:` passed | `components/agreements/agreements.test.ts:482` `toContain("Too expensive")`; `:484` `not.toContain("data-reason")`; `:485` no placeholder regex | PASS |
-| C1324 | note stored; 500 ok; 501 raises 23514 hint `note_too_long`; value unchanged | test:db agreement_builder | `agreement_builder.sql:812` stored `'Added boiler'`; `:817` `char_length(reason) = 500`; `:819` `expect_error(..., '23514')`; `:821` unchanged. The hint `note_too_long` is in the migration but no assertion reads it (`expect_error` compares SQLSTATE only, `fixture.sql:51-63`) | FAIL (precision gap: the claim names the hint, nothing asserts it) |
-| C1325 | non-draft raises 55000 hint `not_editable`; viewer 42501 | test:db agreement_builder | `agreement_builder.sql:832` `expect_error('C1325 sent', ..., '55000')`; `:836` `'C1325 viewer' ... '42501'`; `:841` unchanged. Hint `not_editable` is not asserted | FAIL (precision gap, same as C1324) |
-| C1326 | action trims; 501 gives field error on `note` without the writer; success calls once | vitest `C1326:` x5 passed | `app/(app)/agreements.test.ts:388` `toHaveBeenCalledExactlyOnceWith(AGR, "Added boiler")`; `:395-400` `errors: { note: "Note must be 500 characters or fewer" }` and `save not.toHaveBeenCalled()` | PASS |
-| C1327 | backfill matches events; others null; no revised event leaves created_by null | test:db agreement_builder; mcp execute_sql | `agreement_builder.sql:869` `created_by = tests.id('uE') and reason = 'Add a boiler'`; `:871` v1 null; `:873` no-events null. mcp (read-only, run by me): versions with a revised event naming them and an actor, with `created_by` null = `0`. Caveat: the SQL test runs a copy of the migration's UPDATE (`:855-867`), not the migration file, so drift between the two would not be caught | PASS (caveat) |
-| C1328 | per-version events oldest first, type/time/actor, own version only | vitest `C1328:` x2 passed | `agreements.test.ts:545-553` `history(1)` and `history(2)` `toEqual` with sent/viewed/changes_requested and sent/refused, roles and `customer`. The asserted list contains no `accepted` event, though the claim and Coverage row name it (accepted only appears as a marker in C1329) | FAIL (coverage gap: `accepted` event type not asserted in the history) |
-| C1329 | markers 2/2 on the full set; 1/null on the first two events | vitest `C1329:` x2 passed | `agreements.test.ts:569` `toMatchObject({ sentVersion: 2, acceptedVersion: 2 })`; `:571` `toMatchObject({ sentVersion: 1, acceptedVersion: null })` | PASS |
-| C1330 | Sent/Accepted markers on the right versions only | vitest `C1330:` passed | `agreements.test.ts` (components) `:490-494` `block(html,1) toContain(">Sent<")`, `not.toContain(">Accepted<")`, v2 reverse, v3 `not.toMatch(/>Sent<\|>Accepted</)` | PASS |
-| C1331 | "Not sent yet" only on a version with no events | vitest `C1331:` passed | `components/agreements/agreements.test.ts:501` `toContain("Not sent yet")`; `:502` `not.toContain("Not sent yet")` | PASS |
-| C1332 | other org / no org gets null; page calls notFound | rls_isolation PASS; vitest `C1332:` passed | `app/(app)/agreements.test.ts:299` `rejects.toThrow("NEXT_NOT_FOUND")` for a null reader. `rls_isolation.sql:96-101` C2 asserts uA sees 0 org-B rows on `agreement_versions` and `events` (loop over `tenant_tables()`); C7 asserts anon sees none (`:126-135`). Not asserted by name for uX, and the reader-returns-null link is via RLS, not a unit | PASS (note: no uB/uX-specific reader assertion) |
-| C1333 | two viewed events render one row | vitest `C1333:` passed | `agreements.test.ts:605` `toEqual([["sent",...09:00],["viewed",...10:00]])` | PASS |
-| C1334 | 3 kinds, 5 fields, only differing fields listed | vitest `C1334:` x7 passed | `domain/agreement/version-diff.test.ts:18` added/removed `toEqual`; `:38,40` per-field (description, costPerVisitCents, visitsPerYear, visitMonths, equipment) `toEqual({ field, from, to })`; `:46` single field only | PASS |
-| C1335 | reordered equipment/months not changed | vitest `C1335:` passed | `version-diff.test.ts:53` `expect(diffVersions([before],[after]).lines).toEqual([])` | PASS |
-| C1336 | totals and deltaCents -58000 | vitest `C1336:` passed | `version-diff.test.ts:60-62` `110000`, `52000`, `-58000` (the check's corrected arithmetic) | PASS |
-| C1337 | identical lines: no entries, delta 0; panel says "No differences" | vitest `C1337:` x2 passed | `version-diff.test.ts:67` `toEqual({ lines: [], totalFromCents: 100000, totalToCents: 100000, deltaCents: 0 })`; component `agreements.test.ts:510` `toContain("No differences")` | PASS |
-| C1338 | `get(id,2,1)` returns compare; null for equal, missing, unknown, non-number | vitest `C1338:` x9 passed | reader `:619` `compare toMatchObject({versionNo:1, annualCents:357000})`, `:635` null for shown, undefined, 9, 0; page `app/(app)/agreements.test.ts:288` `abc`/`1.5`/`""` reach the reader as `(AGR, 2, undefined)`; `:294` `(AGR, 2, 1)`. The "not a number" case is proven at the page layer, not the reader (the claim's wording is satisfied by the pair) | PASS |
-| C1339 | per-field old/new, removed and added lines, both totals, signed change | vitest `C1339:` x2 passed | `components/agreements/agreements.test.ts:521` `/...Per visit.*\$892\.50.*\$950\.00/`; `:522` removed; `:523` added; `:524-526` `$3,870.00`, `$4,000.00`, `+$130.00`; `:532` `−$300.00` | PASS |
-| C1340 | inactive-site agreement renders comparison and history, no write control | vitest `C1340:` passed | `agreements.test.ts:540-542` `toContain("No differences")`, `block(html,1) toContain(">Sent<")`, no write labels. The fixture is `status: "withdrawn"` as the stand-in for an inactive site; the view has no site-active logic (`agreement-view.tsx` branches on `editable`), so the claim is satisfied through status | PASS (note: proxy for "inactive site") |
-| C1341 | at 375 px no horizontal scroll, controls >= 44 px | live, not independently re-run | Author-side live run (Handoff): `scrollWidth 360 = clientWidth 360`, no control under 44 px, 768 px `753 = 753`. I checked the code only: `versions-section.tsx:8` link `min-h-11`; `version-compare.tsx:76` panel `overflow-hidden`. No rendered 44 px assertion exists in the tree | author-side live run, not independently re-run |
-| C1342 | test, lint, build, test:db exit 0 on HEAD | run by me | `npm test` 2235 passed; lint 0; tsc 0; `npm run build` 0; test:db `agreement_builder` and `rls_isolation` PASS (full `npm run test:db` not run: only these two recipes) | PASS |
-| C1343 | advisors: no new finding beyond `save_version_note` | mcp `get_advisors` security (read-only, run by me) | Only new `authenticated_security_definer_function_executable` entry is `public.save_version_note`; the rest (`save_agreement_term`, `set_*_active`, portal_*, automation_*, `outbox`, leaked passwords) are existing. The trigger function is in `private` and not listed | PASS |
-| C1344 | live as demo owner: revise, reason and author, markers, compare | live, not independently re-run | Author-side live run (Handoff): AG-1044 revised, reason and "by owner", note saved, comparison "$3,241.75 → $3,700.00", totals $19,450.50 / $22,200.00 / +$2,749.50; AG-1052/AG-1048 markers. Code side checked: reader `agreements.ts:230-262` history and markers, `version-compare.tsx` fields; matches the claimed output. Not re-run by me (single-context rule) | author-side live run, not independently re-run |
+| C1319 | revise stores customer reason and uE as author | carried from 77c0581 | `supabase/tests/agreement_builder.sql:770` `created_by = tests.id('uE') and reason = 'Too expensive'`; recipe still passes at HEAD | PASS (carried from 77c0581) |
+| C1320 | create_agreement v1 has creator, null reason | carried from 77c0581 | `agreement_builder.sql:785` `v.created_by = tests.id('uE') and v.reason is null` | PASS (carried from 77c0581) |
+| C1321 | authenticated cannot update a version (42501) | carried from 77c0581 | `agreement_builder.sql:794` `expect_error('C1321 update', ..., '42501')` | PASS (carried from 77c0581) |
+| C1322 | reader returns reason and author role per version | carried from 77c0581; vitest `C1322:` passed at HEAD | `infrastructure/supabase/agreements.test.ts:523` `toEqual([[2,"Too expensive","estimator"],[1,null,null]])` | PASS (carried from 77c0581) |
+| C1323 | reason renders; null renders nothing | carried from 77c0581 | `components/agreements/agreements.test.ts:482,484` `toContain("Too expensive")`, `not.toContain("data-reason")` | PASS (carried from 77c0581) |
+| C1324 | note stored; 500 ok; 501 raises 23514 hint `note_too_long`; value unchanged | test:db agreement_builder exit 0 (verified at 329066e) | `agreement_builder.sql:855` `tests.ok('C1324 hint', h = 'note_too_long', ...)`, where `h` is read with `get stacked diagnostics h = pg_exception_hint` after `save_version_note(tests.id('a1324'), repeat('n', 501))` (`:850`); a missing raise leaves `h` null so the assertion fails. Existing (carried): `:812` stored, `:817` 500 chars, `:819` `'23514'`, `:821` unchanged | PASS (verified at 329066e) |
+| C1325 | non-draft raises 55000 hint `not_editable`; viewer 42501 | test:db agreement_builder exit 0 (verified at 329066e) | `agreement_builder.sql:862` `tests.ok('C1325 hint', h = 'not_editable', ...)` after `save_version_note(tests.id('a1325s'), 'x')` on the sent agreement; `h := null` reset before (`:857`). Existing (carried): `:832` `'55000'`, `:836` `'42501'`, `:841` unchanged | PASS (verified at 329066e) |
+| C1326 | action trims; 501 field error on `note`; success once | carried from 77c0581; vitest `C1326:` x5 passed at HEAD | `app/(app)/agreements.test.ts:388` `toHaveBeenCalledExactlyOnceWith(AGR, "Added boiler")`; `:395-400` `errors: { note: ... }` | PASS (carried from 77c0581) |
+| C1327 | backfill matches events; others null | carried from 77c0581 | `agreement_builder.sql:869` `created_by = tests.id('uE') and reason = 'Add a boiler'`; mcp count 0 (round 1). Caveat unchanged: the SQL test runs a copy of the migration's UPDATE | PASS (carried from 77c0581, caveat) |
+| C1328 | per-version events oldest first, type/time/actor, own version only; accepted listed | vitest `C1328:` x4 passed (verified at 329066e) | NEW `agreements.test.ts:589` test `C1328: an accepted event is listed in its version's history with the customer who accepted`; asserts `:597` `expect(detail?.versions[0]?.events.map((e) => [e.type, e.by])).toEqual([["sent","estimator"],["accepted","customer"]])`. Existing: `:545-553` `history(1)`/`history(2)` sent/viewed/changes_requested and sent/refused; `:584-585` no-versionNo history. All five event types (sent, viewed, accepted, refused, changes_requested) now appear in an asserted list | PASS (verified at 329066e) |
+| C1329 | markers 2/2 on full set; 1/null on the first two | vitest `C1329:` x3 passed at HEAD | `agreements.test.ts:569` `toMatchObject({ sentVersion: 2, acceptedVersion: 2 })`; `:571` `{ sentVersion: 1, acceptedVersion: null }`; `:621` older-than-every-version `{ sentVersion: null, versions: [{ events: [] }] }` | PASS (carried from 77c0581) |
+| C1330 | Sent/Accepted markers on right versions only | carried from 77c0581 | `components/agreements/agreements.test.ts:490-494` `toContain(">Sent<")`, `not.toContain(">Accepted<")` | PASS (carried from 77c0581) |
+| C1331 | "Not sent yet" only with no events | carried from 77c0581 | `components/agreements/agreements.test.ts:501-502` | PASS (carried from 77c0581) |
+| C1332 | other org / no org null; page notFound | carried from 77c0581; rls_isolation PASS at HEAD | `app/(app)/agreements.test.ts:299` `rejects.toThrow("NEXT_NOT_FOUND")`; `rls_isolation.sql:96-101` | PASS (carried from 77c0581) |
+| C1333 | two viewed events render one row | carried from 77c0581 | `agreements.test.ts:605` (line moved to about `:624-630` at HEAD) `toEqual([["sent",...],["viewed",...]])` | PASS (carried from 77c0581) |
+| C1334 | 3 kinds, 5 fields | carried from 77c0581; vitest x7 passed | `domain/agreement/version-diff.test.ts:18,38,40,46` | PASS (carried from 77c0581) |
+| C1335 | reordered equipment/months not changed | carried from 77c0581 | `version-diff.test.ts:53` `lines).toEqual([])` | PASS (carried from 77c0581) |
+| C1336 | totals, delta -58000 | carried from 77c0581 | `version-diff.test.ts:60-62` | PASS (carried from 77c0581) |
+| C1337 | identical lines: no entries; "No differences" | carried from 77c0581 | `version-diff.test.ts:67`; `components/agreements/agreements.test.ts:510` | PASS (carried from 77c0581) |
+| C1338 | compare returned; null for equal/missing/unknown/non-number | carried from 77c0581 | `agreements.test.ts` reader `compare toMatchObject({versionNo:1, annualCents:357000})`; `app/(app)/agreements.test.ts:288,294` | PASS (carried from 77c0581) |
+| C1339 | per-field old/new, totals, signed change | carried from 77c0581 | `components/agreements/agreements.test.ts:521-526,532` | PASS (carried from 77c0581) |
+| C1340 | withdrawn-agreement stand-in renders comparison and history, no write control | carried from 77c0581 | `components/agreements/agreements.test.ts:540-542`; note: status is a proxy for "inactive site" | PASS (carried from 77c0581, proxy note) |
+| C1341 | at 375 px no horizontal scroll, controls >= 44 px | author-side live run, not independently re-run | Code check at HEAD: `versions-section.tsx:8` `min-h-11` link, `version-compare.tsx:76` `overflow-hidden` (unchanged by the fix: `git diff 77c0581..329066e --stat` lists only 4 spec/test files). Author evidence in checks.md Handoff: `scrollWidth 360 = clientWidth 360`, no link or button under 44 px, 768 px `753 = 753`. No rendered 44 px assertion exists in the tree | PASS (author-side live run as checks.md defines "live"; not independently re-run by the Verifier) |
+| C1342 | test, lint, build, test:db exit 0 on HEAD | run by me (verified at 329066e) | `npm test` 2237 passed; lint 0; tsc 0; test:db `agreement_builder` and `rls_isolation` PASS; build carried from 77c0581 (no build input changed) | PASS (verified at 329066e) |
+| C1343 | advisors: no new finding beyond `save_version_note` | carried from 77c0581 | mcp `get_advisors` result in round 1; the fix touched no migration | PASS (carried from 77c0581) |
+| C1344 | live as demo owner: revise, reason, author, markers, compare | author-side live run, not independently re-run | Code side (carried): reader history and markers, `version-compare.tsx`. Author evidence in Handoff: AG-1044 revised, reason and "by owner", comparison "$3,241.75 -> $3,700.00", totals $19,450.50 / $22,200.00 / +$2,749.50, AG-1052 and AG-1048 markers. Not re-run by me | PASS (author-side live run as checks.md defines "live"; not independently re-run by the Verifier) |
+| C1345 | door 4: signed-in insert stamped `auth.uid()`; no user keeps the named value | test:db agreement_builder exit 0 (verified at 329066e) | NEW `agreement_builder.sql:877` `tests.ok('C1345 no user', (select created_by = tests.id('uA') ...where id = tests.id('a1345:v7'))` (insert at `:869` names uA with no claims, `reset role` and empty jwt claims); `:879` `tests.ok('C1345 spoof', (select created_by = tests.id('uE') ... where id = tests.id('a1345:v8'))` after `act_as('uE')` insert naming uA at `:872-873`. Trigger: `supabase/migrations/20261104090000_versioning.sql:7-19` `if auth.uid() is not null then new.created_by := auth.uid();` on `before insert` for each row; both branches match the two assertions | PASS (verified at 329066e) |
+| C1346 | door 5: no-versionNo event takes the newest version at event time; older than all is on none; latest such sent/accepted sets the marker | vitest `C1346:` passed, plus `C1328:` and `C1329:` cases (verified at 329066e) | NEW `agreements.test.ts:603` `C1346`: `:612` `expect(detail?.acceptedVersion).toBe(2)`; `:613` v2 events `toEqual([["accepted","owner"]])`; `:614` v1 `events).toEqual([])` (accepted event with `{from,to}` payload, 2026-10-24, versions created 10-20 and 10-23). Cases named by the check: `:584-586` `C1328:` no-versionNo sent events land on v1 and v2 and `sentVersion` 2; `:621` `C1329:` event before every version `{ sentVersion: null, versions: [{ events: [] }] }`. Implementation `agreements.ts:83-88` `versionOfEvent`: payload `versionNo` else `Math.max` of `version_no` over versions with `created_at <= event time`, null when none. Boundary equality (`created_at == event time`) is not asserted (see gap 2) | PASS (verified at 329066e) |
 
 ## Coverage
 
-Not recomputed (light). Gaps found while reading the plan against checks.md:
+Not recomputed (light). Rows checked against the plan:
 
-| Plan item | Finding |
+| Plan item | Finding (verified at 329066e) |
 | --- | --- |
-| Landing door 5 (events with no `versionNo` fall back to the newest version at event time) | Has no check id and no Coverage row; `checks.md` says "3 one-way doors" while the plan lists 5. Tests exist and pass under the C1328 and C1329 names (`agreements.test.ts:574-594`: later and earlier event fallback, and a sent event older than every version not listed), but they are not claimed by any check |
-| Landing door 4 (`before insert` trigger stamps `created_by`) | No check claims it. It is asserted in `agreement_builder.sql:798-804` (`C1321 author`, a direct insert naming uA is stamped uE) and indirectly by C1319/C1320. The `auth.uid()` null branch (definer or owner inserts keep a given value) is not asserted |
-| `GET /agreements/[agreementId]` 404 | Covered: C1332 (`agreements.test.ts:299`) and the existing C741 |
-| AC 1-15 | Every criterion has a check: AC1 C1319, AC2 C1320, AC3 C1322/C1323, AC4 C1324-C1326, AC5 C1327, AC6 C1328/C1333, AC7 C1329/C1330, AC8 C1331, AC9 C1332, AC10 C1334/C1335/C1338/C1339, AC11 C1336/C1339, AC12 C1338, AC13 C1337, AC14 C1340, AC15 C1341 |
+| Door 4 (trigger stamps `created_by`) | Round-1 gap closed: `checks.md` Coverage row `door 4: author stamped by the database (2)` maps signed-in insert and no-user-keeps-value to C1345, both asserted (`agreement_builder.sql:877,879`) |
+| Door 5 (event with no `versionNo`) | Round-1 gap closed: row `door 5 (3)` maps newest-at-time, older-than-every-version and staff-written decision to C1346; each has a located test (`agreements.test.ts:584-586`, `:621`, `:612-614`) |
+| Door count | `checks.md` header now says 5 one-way doors, matching the plan's 5 (door 1, 2, 3, 4, 5) |
+| History event types (5) | Row names accepted C1328; now backed by `agreements.test.ts:597` (sent, viewed, accepted, refused, changes_requested each appear in an asserted list) |
+| `save_version_note` outcomes (4) | Hints now asserted: `agreement_builder.sql:855,862` |
+| AC 1-15 | Carried from 77c0581: every criterion has a check (AC1 C1319 ... AC15 C1341) |
 
-Swept existing re-read: the `existing` constraints the Swept rows cite are present. C1321 relies on AD-060 (no update grant on `agreement_versions`, proven by the `42501` assertion). `save_version_note` locks the row `for update` before the draft check (migration) and is refused for non-drafts (C1325). Each writer runs in a single transaction. Sampling and level: the diff and domain checks are table-driven; the status-code, route and shape claims (C1319, C1324, C1325, C1332, C1338) each cross a boundary (database or page plus reader).
+Swept existing: carried from 77c0581 (the fix touched no migration, RPC or grant).
 
-Superseded earlier assertions (`git diff 8dbc22b..HEAD` over the three files): adapted, not weakened, with one judgement call. The C1032 "a draft reads no notification" test now bars `notifications` and the `agreement.sent` lookup (`call.args[1] === "agreement.sent"`) but no longer every `events` read; the history read of `events` is now by design for every status, so the narrowing is justified. The events `eq` filters assertion became `.slice(-3)` and the `order` assertion `findLast`, both still pinning the same values. C727 page tests and composition C748 now carry the new signature (`get(id, versionNo?, compareNo?)`); the version fixtures gained fields.
+## Fix diff review (77c0581..329066e)
+
+`git diff 77c0581..329066e --stat`: `.specs/features/versioning/checks.md`, `.specs/features/versioning/verification.md`, `supabase/tests/agreement_builder.sql` (+40 -2), `web/infrastructure/supabase/agreements.test.ts` (+28). No production code changed.
+- No assertion weakened: the two removed lines in `agreement_builder.sql` are the file header comment (extended with C1345); `agreements.test.ts` has additions only.
+- No approved check edited: `checks.md` changes are the count line (26 -> 28 checks, 3 -> 5 doors), the new section "Doors found while building" with C1345 and C1346, two Coverage rows, and a Handoff paragraph. C1319-C1344 text is byte-identical.
 
 ## Gate
 
-`npm test` (web/) - 111 files, 2235 passed, 0 failed. `npm run lint`, `npx tsc --noEmit`, `npm run build` exit 0. test:db `agreement_builder` and `rls_isolation` PASS.
+`npm test` (web/) - 111 files, 2237 passed, 0 failed. `npm run lint` exit 0, `npx tsc --noEmit` exit 0. `npm run test:db agreement_builder` PASS, `npm run test:db rls_isolation` PASS. Target vitest call: 242 passed, 0 failed.
 
-Ranked gaps:
-1. C1328 - `accepted` is named in the claim and the Coverage row but no test asserts an accepted event in a version's history list - `infrastructure/supabase/agreements.test.ts:545-553`.
-2. C1324 and C1325 - hints `note_too_long` and `not_editable` are in the claims but not asserted; `tests.expect_error` checks SQLSTATE only - `agreement_builder.sql:819,832`.
-3. Doors 4 and 5 (the trigger and the time-based event fallback) have tests but no check and no Coverage row; `checks.md` counts 3 doors against 5 in the plan.
-4. C1327's SQL test replicates the migration's UPDATE rather than running the migration file (drift risk); the mcp count of 0 supports it for the live data.
-5. C1340 uses a withdrawn status as the proxy for an inactive site; C1341 and C1344 are author-side live runs, not independently re-run.
+Should C1341 and C1344 hold the verdict? No. They were author-side live runs in round 1 and the same evidence stands; the code they rely on is unchanged by the fix diff, the author's recorded numbers are specific and consistent with the code (`min-h-11`, `overflow-hidden`, reader fields), and the fix introduced no UI change. They remain an unproven-by-Verifier residual, stated rather than hidden.
+
+Residual notes (non-blocking):
+1. C1341 has no rendered 44 px or `scrollWidth` assertion in the tree; it rests on the live run and two class names.
+2. C1346 does not assert the boundary where an event's time equals a version's `created_at` (`<=` in `agreements.ts:86`).
+3. C1327's SQL test runs a copy of the migration's UPDATE (live count 0 from round 1 supports it).
+4. C1340 uses `withdrawn` as a proxy for an inactive site.

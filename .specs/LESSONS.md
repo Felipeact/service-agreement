@@ -182,6 +182,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C1296, supabase/tests/record_forms.sql (sql tests)
 - last seen: 2026-11-03T17:57:31Z
 
+### L-029 - Read the real event payload (the writing RPC or a live row) before deriving anything from events.payload: agreement.sent carries no versionNo, and unit tests built on an assumed payload passed anyway.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `supabase events, infrastructure/supabase` · harmful: 0
+- features: versioning
+- evidence: checks.md C1329 / agreements.ts versionOfEvent (supabase events, infrastructure/supabase)
+- last seen: 2026-11-03T19:54:53Z
+
+### L-030 - When a check names a hint or message, assert the hint text; tests.expect_error compares the SQLSTATE only.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `supabase/tests` · harmful: 0
+- features: versioning
+- evidence: verification.md round 1 C1324/C1325 (supabase/tests)
+- last seen: 2026-11-03T19:54:53Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

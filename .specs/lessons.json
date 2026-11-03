@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 29,
+  "next_id": 31,
   "lessons": [
     {
       "id": "L-001",
@@ -508,6 +508,42 @@
       ],
       "created": "2026-11-03T17:57:31Z",
       "last_seen": "2026-11-03T17:57:31Z"
+    },
+    {
+      "id": "L-029",
+      "key": "ac_gap::read the real event payload the writing rpc or a live row before deriving anything from events payload agreement sent carries no versionno and unit tests built on an assumed payload passed anyway",
+      "text": "Read the real event payload (the writing RPC or a live row) before deriving anything from events.payload: agreement.sent carries no versionNo, and unit tests built on an assumed payload passed anyway.",
+      "signal": "ac_gap",
+      "scope": "supabase events, infrastructure/supabase",
+      "status": "candidate",
+      "features": [
+        "versioning"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C1329 / agreements.ts versionOfEvent (supabase events, infrastructure/supabase)"
+      ],
+      "created": "2026-11-03T19:54:53Z",
+      "last_seen": "2026-11-03T19:54:53Z"
+    },
+    {
+      "id": "L-030",
+      "key": "ac_gap::when a check names a hint or message assert the hint text tests expect error compares the sqlstate only",
+      "text": "When a check names a hint or message, assert the hint text; tests.expect_error compares the SQLSTATE only.",
+      "signal": "ac_gap",
+      "scope": "supabase/tests",
+      "status": "candidate",
+      "features": [
+        "versioning"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md round 1 C1324/C1325 (supabase/tests)"
+      ],
+      "created": "2026-11-03T19:54:53Z",
+      "last_seen": "2026-11-03T19:54:53Z"
     }
   ]
 }
