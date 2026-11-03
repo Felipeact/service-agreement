@@ -129,8 +129,8 @@
 ## Handoff
 
 **Feature**: agreements-page (ROADMAP Phase 3.5 item 9), profile light, one builder
-**Where**: committed on `development`, feature base `6cac032`: `4a341fb` plan and checks, `0c58f5a` listers and filter, `c9d31f2` page, form and enabled button, then the docs and Verifier commits. No migration. Live run C1366 done on a dev server at port 3000 (left running); C1367 create step not run (writes a row to the demo org, awaiting go-ahead)
-**In progress**: Verifier dispatch over `6cac032..HEAD`
+**Where**: committed on `development`, feature base `6cac032`: `4a341fb` plan and checks, `0c58f5a` listers and filter, `c9d31f2` page, form and enabled button, `94ce6ac`, `884f5d8`, `1c05115`, `5f0a4cd` fixes and docs, then the Verifier report. No migration. Live runs C1366 and C1367 done on a dev server at port 3000 (left running); the C1367 run left AG-1058 (Saltmarsh Bakery) as a draft in the demo org
+**In progress**: nothing; the Verifier passed in round 2 (round 1 failed only on the unrun live create, since run)
 **Next step**: ROADMAP Phase 3.5 item 10 (Sites & equipment page)
 **Open, non-failing**: see `.specs/features/versioning/checks.md` Handoff. The `next start` server on port 3201 is a stale build, still running. Carried: the deactivation, proposal-expiry, renewal, term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, W7 and W8 not imported into n8n, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses
 **Blockers**: none
