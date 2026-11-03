@@ -200,3 +200,5 @@ Proof: pw@375x812, pw@768x1024, pw@1440x900 /pipeline: `browser_console_messages
 - **Boundary:** C1-C32, C35 closed at `web@4d293fa`; C33-C34 closed in the outer docs commit. Author proof run used the already-running dev server on `http://localhost:3100` (a pre-existing `next dev` for this `web/` dir held the lock), so `localhost:3000` in the http/pw proofs reads as that port
 - **Settled mid-build:** TextInput, Select and the field error state moved to Phase 1 (user choice); plan AC 18 narrowed to SearchInput, AC 19 dropped and later criteria renumbered before checks were written
 - **Abandoned:** `redirect()` in `app/page.tsx` - replaced by a `next.config.ts` redirect, whose 307 is documented; curly quotes in the no-match message - C27 requires straight quotes
+
+> Superseded 2026-11-03 by `agreements-page` (ROADMAP Phase 3.5 item 9): the claim that Pipeline's "New agreement" is disabled (C17 and C21) no longer holds. It is an enabled link to `/agreements/new` for owner, admin and estimator, and absent for viewer. The tests that asserted it were replaced in the same commit; this file is kept as the record of what was built then.

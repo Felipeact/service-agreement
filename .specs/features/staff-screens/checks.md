@@ -431,3 +431,4 @@ Proof: `mcp get_advisors(type: "security")` - same lint names as before the buil
 - **Settled mid-build:** C120 now says three contracts (the plan's "two" could not give two completed agreements); the singular "Updated 1 day ago" in C113; the settings reader and writer take the member's `orgId` (a user in several orgs would otherwise see all of them); `demo_seed.sql` C17 changed from 0 to 12 agreements, superseding the catalog-seed claim; 44px touch height added to in-row links after the preview probe found 15-20px links
 - **Abandoned:** nothing
 
+> Superseded 2026-11-03 by `agreements-page` (ROADMAP Phase 3.5 item 9): the claim that Pipeline's "New agreement" is disabled (C118) no longer holds. It is an enabled link to `/agreements/new` for owner, admin and estimator, and absent for viewer. The tests that asserted it were replaced in the same commit; this file is kept as the record of what was built then.
