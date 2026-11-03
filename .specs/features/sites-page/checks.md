@@ -184,3 +184,12 @@ export, a cross-site asset table, schema or RLS changes.
 - Plan `Flow` is kept true in the build: the inactive link is built in the view (not `ShowInactiveToggle`, which
   drops other query parameters), the customer filter options come from the existing `listCustomers`, and rows link
   with separate site, customer and agreement links because a link cannot contain a link.
+
+- **Boundary:** C1368-C1384 closed at `f82502e`; C1385 and C1386 run live (below)
+- **Settled mid-build:**
+  - The Show/Hide inactive link is built in the view, not `ShowInactiveToggle`, so it keeps `q` and `customer`; the customer filter options come from the existing `listCustomers`; rows carry separate site, customer and agreement links (a link cannot contain a link). Plan `Flow` updated in `f82502e`.
+  - C1382's first test asserted the form's attribute order; it was made order-independent (same claim, still fails if the method or action is wrong).
+  - A site with no assets shows `No equipment` and `0 assets` (C1373, C1372).
+- **Live C1386 (1440 px, one signed-in context):** the sidebar "Sites & equipment" is a link to `/sites` and carries `aria-current="page"` there. The demo org lists 17 sites of 13 customers with equipment (`RTU ×16`, `BOILER ×1 +5 more`, `No equipment` for the Validation sites) and live agreements AG-1044, AG-1051, AG-1057 and AG-1058 (In progress). Through the form, `customer=Brookhaven` gave 2 rows, adding `q=exhibition` gave 1 (`Exhibition Plaza`), "Show inactive" kept both (`/sites?q=exhibition&customer=...&show=inactive`) and "Hide inactive" linked back without `show`; `q=zzzz-none` showed "No sites match" and "Clear filters" went to `/sites?show=inactive`, listing all 17. The demo org has no inactive site, so the Inactive pill was not seen live (C1383 proves it). Console: no errors.
+- **Live C1385:** `/sites` at 375, 768 and 1440 px: no horizontal scroll (scrollWidth equals clientWidth at each), 17 rows each. At 375 and 768 px every control and row link is at least 44 px high; at 1440 px the controls are 34 px and the "Show inactive" text link 19 px, the same desktop sizing as Agreements. Screenshots at 375 and 1440 px show no overlap.
+- **Abandoned:** nothing.
