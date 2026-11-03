@@ -76,6 +76,17 @@ const EVENT_KINDS: Record<string, VersionEventType> = {
 
 type EventRow = { type: string; payload: { versionNo?: unknown; via?: unknown } | null; actor_id: string | null; created_at: string };
 
+/**
+ * The version an event is about (versioning door 5): the `versionNo` in its payload, else the newest version that
+ * existed when it was written. `agreement.sent` carries no `versionNo`, and `events` cannot be backfilled.
+ */
+function versionOfEvent(event: EventRow, versions: VersionRow[]): number | null {
+  if (typeof event.payload?.versionNo === "number") return event.payload.versionNo;
+  const when = new Date(event.created_at).getTime();
+  const existing = versions.filter((version) => new Date(version.created_at).getTime() <= when);
+  return existing.length === 0 ? null : Math.max(...existing.map((version) => version.version_no));
+}
+
 type LinkRow = { id: string; number: string | null; renews_agreement_id: string | null };
 
 type CoveredType = { id: string; code: string; name: string };
@@ -230,7 +241,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
     let acceptedVersion: number | null = null;
     for (const event of events) {
       const type = EVENT_KINDS[event.type];
-      const versionNo = typeof event.payload?.versionNo === "number" ? event.payload.versionNo : null;
+      const versionNo = versionOfEvent(event, versions);
       if (!type || versionNo === null) continue;
       if (type === "sent") sentVersion = versionNo;
       if (type === "accepted") acceptedVersion = versionNo;

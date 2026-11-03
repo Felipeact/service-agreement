@@ -571,6 +571,28 @@ describe("agreement reader, versions and their history", () => {
     expect(await supabaseAgreementReader(early.typed).get(AGR)).toMatchObject({ sentVersion: 1, acceptedVersion: null });
   });
 
+  test("C1328: an event with no versionNo belongs to the newest version that existed when it was written", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" },
+      { id: "v2", version_no: 2, created_at: "2026-10-23T17:00:00Z" },
+    ]);
+    const noVersion = (type: string, at: string, actor: string | null) => ({ type, payload: { from: "draft", to: "sent" }, actor_id: actor, created_at: at });
+    const events = ok([noVersion("agreement.sent", "2026-10-21T09:00:00Z", UE), noVersion("agreement.sent", "2026-10-24T09:00:00Z", UA)]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    const history = (no: number) => detail?.versions.find((v) => v.versionNo === no)?.events.map((e) => [e.type, e.by]);
+    expect(history(1)).toEqual([["sent", "estimator"]]);
+    expect(history(2)).toEqual([["sent", "owner"]]);
+    expect(detail).toMatchObject({ sentVersion: 2, acceptedVersion: null });
+  });
+
+  test("C1329: a sent event written before the first version existed is not listed", async () => {
+    const agreements = withVersions([{ id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" }]);
+    const events = ok([{ type: "agreement.sent", payload: {}, actor_id: null, created_at: "2026-10-19T09:00:00Z" }]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    expect(await supabaseAgreementReader(typed).get(AGR)).toMatchObject({ sentVersion: null, versions: [{ events: [] }] });
+  });
+
   test("C1333: two view events of one version are listed once, the first", async () => {
     const agreements = withVersions([{ id: "v1", version_no: 1 }]);
     const events = ok([
