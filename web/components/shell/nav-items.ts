@@ -9,7 +9,7 @@ export const MAIN_NAV: NavItem[] = [
   { label: "Agreements", href: "/agreements" },
   { label: "Customers", href: "/customers" },
   { label: "Sites & equipment", href: "/sites" },
-  { label: "Imports" },
+  { label: "Imports", href: "/imports" },
   { label: "Task library" },
 ];
 

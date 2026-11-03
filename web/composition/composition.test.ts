@@ -112,6 +112,12 @@ describe("composition root", () => {
     }
   });
 
+  test("C1396: getContainer() exposes listImportHistory", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    expect(typeof (await getContainer()).listImportHistory).toBe("function");
+  });
+
   test("C433: the ports export ImportJobStore with start, confirmUploaded and discard", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = ports.match(/export interface ImportJobStore \{([\s\S]*?)\n\}/)?.[1] ?? "";

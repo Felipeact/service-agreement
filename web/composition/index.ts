@@ -36,7 +36,7 @@ import {
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
-import { supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
+import { supabaseImportHistory, supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
 import {
   supabaseAgreementSender,
   supabasePortalDecider,
@@ -142,6 +142,7 @@ export async function getContainer() {
     setSiteActive: siteStore.setActive,
     setAssetActive: assetStore.setActive,
     listImportJobs: supabaseImportJobReader(supabase).forSite,
+    listImportHistory: supabaseImportHistory(supabase).list,
     startImport: importJobs.start,
     confirmImportUpload: importJobs.confirmUploaded,
     discardImport: importJobs.discard,

@@ -7,7 +7,7 @@ import { ExtractControl } from "./extract-control";
 import { ReadFileControl } from "./read-file-control";
 import type { DiscardState, ExtractState, ReadState } from "./state";
 
-const STATUS_LABELS: Record<ImportJobStatus, string> = {
+export const STATUS_LABELS: Record<ImportJobStatus, string> = {
   uploaded: "Uploaded",
   uploading: "Upload not finished",
   parsed: "Read",
@@ -18,14 +18,14 @@ const STATUS_LABELS: Record<ImportJobStatus, string> = {
 };
 
 /** Jobs whose rows can be opened in the review grid. */
-const REVIEWABLE = new Set<ImportJobStatus>(["extracted", "committed"]);
+export const REVIEWABLE = new Set<ImportJobStatus>(["extracted", "committed"]);
 
-const ATTENTION = new Set<ImportJobStatus>(["uploading", "unreadable"]);
+export const ATTENTION = new Set<ImportJobStatus>(["uploading", "unreadable"]);
 
-const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
+export const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
 /** What the read found, or why it could not read the file; nothing before a read. */
-function outcomeLine(job: ImportJobView): string | null {
+export function outcomeLine(job: ImportJobView): string | null {
   if (job.committed) return committedSummary(job.committed.added, job.committed.skipped);
   if (job.extraction?.status === "extracting") return `${job.extraction.cursor} of ${job.extraction.total}`;
   if (job.extraction?.status === "extracted") return extractionSummary(job.extraction.rows, job.extraction.unmatched);
