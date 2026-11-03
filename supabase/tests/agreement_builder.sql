@@ -1,4 +1,4 @@
--- agreement-builder: C704, C706-C709, C712, C717, C730, C735, C736, C738, C742, C751; term-dates C1136-C1140, C1144. Run after fixture.sql in the same
+-- agreement-builder: C704, C706-C709, C712, C717, C730, C735, C736, C738, C742, C751; term-dates C1136-C1140, C1144; versioning C1319-C1321, C1324, C1325, C1327. Run after fixture.sql in the same
 -- execute_sql call (npm run test:db agreement_builder). Fixture: agrA (draft, versions 1 and 2) on siteA, agrB on siteB.
 -- Setup runs as the table owner with no signed-in user, so the line trigger stands aside (door 4).
 
@@ -753,6 +753,125 @@ begin
       and not exists (select 1 from public.events where payload ->> 'renewsAgreementId' = tests.id('r1187')::text)
       and not exists (select 1 from public.notifications where agreement_id = tests.id('r1187')), 'A renewed with ' || s || ' open');
   end loop;
+end $$;
+
+-- versioning C1319: a revision carries the change request's reason and the revising member as its author.
+reset role;
+select set_config('request.jwt.claims', '', true);
+select tests.ab_agr('a1319', 'changes_requested');
+insert into public.events (org_id, entity_type, entity_id, type, payload)
+values (tests.id('orgA'), 'agreement', tests.id('a1319'), 'agreement.changes_requested',
+        '{"reason": "Too expensive", "versionNo": 1}');
+select tests.act_as('uE');
+select public.apply_agreement_transition(tests.id('a1319'), 'changes_requested', 'draft', 'agreement.revised', '{"versionNo": 2}');
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1319 version 2', (select created_by = tests.id('uE') and reason = 'Too expensive'
+    from public.agreement_versions where agreement_id = tests.id('a1319') and version_no = 2),
+    'version 2 has no author or reason');
+  perform tests.ok('C1319 version 1', (select created_by is null and reason is null
+    from public.agreement_versions where id = tests.id('a1319:v1')), 'version 1 was changed');
+end $$;
+
+-- versioning C1320: a new agreement's version 1 has its creator and no reason.
+select tests.ab_site('s1320');
+select tests.act_as('uE');
+create temp table c1320 as select public.create_agreement(tests.id('s1320')) as id;
+grant select on c1320 to authenticated;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1320 version 1', (select v.created_by = tests.id('uE') and v.reason is null
+    from public.agreement_versions v join c1320 on c1320.id = v.agreement_id where v.version_no = 1),
+    'version 1 has the wrong author or a reason');
+end $$;
+
+-- versioning C1321: no direct update of a version, and a direct insert cannot name another author.
+select tests.ab_agr('a1321', 'draft');
+select tests.act_as('uA');
+do $$ begin
+  perform tests.expect_error('C1321 update', format('update public.agreement_versions set reason = %L where id = %L',
+    'x', tests.id('a1321:v1')), '42501');
+end $$;
+select tests.act_as('uE');
+insert into public.agreement_versions (id, org_id, agreement_id, version_no, created_by)
+values (tests.id('a1321:v9'), tests.id('orgA'), tests.id('a1321'), 9, tests.id('uA'));
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1321 author', (select created_by = tests.id('uE') from public.agreement_versions
+    where id = tests.id('a1321:v9')), 'a direct insert named another author');
+end $$;
+
+-- versioning C1324: the note of a draft's current version, with its 500-character bound.
+select tests.ab_agr('a1324', 'draft');
+select tests.act_as('uE');
+select public.save_version_note(tests.id('a1324'), '  Added boiler  ');
+do $$ begin
+  perform tests.ok('C1324 stored', (select reason = 'Added boiler' from public.agreement_versions
+    where id = tests.id('a1324:v1')), 'the note was not stored trimmed');
+end $$;
+select public.save_version_note(tests.id('a1324'), repeat('n', 500));
+do $$ begin
+  perform tests.ok('C1324 500', (select char_length(reason) = 500 from public.agreement_versions
+    where id = tests.id('a1324:v1')), 'a 500-character note was not stored');
+  perform tests.expect_error('C1324 501', format('select public.save_version_note(%L, repeat(%L, 501))',
+    tests.id('a1324'), 'n'), '23514');
+  perform tests.ok('C1324 unchanged', (select char_length(reason) = 500 from public.agreement_versions
+    where id = tests.id('a1324:v1')), 'a refused note changed the stored one');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- versioning C1325: only a draft takes a note, and a viewer takes none.
+select tests.ab_agr('a1325s', 'sent');
+select tests.ab_agr('a1325d', 'draft');
+select tests.act_as('uE');
+do $$ begin
+  perform tests.expect_error('C1325 sent', format('select public.save_version_note(%L, %L)', tests.id('a1325s'), 'x'), '55000');
+end $$;
+select tests.act_as('uV');
+do $$ begin
+  perform tests.expect_error('C1325 viewer', format('select public.save_version_note(%L, %L)', tests.id('a1325d'), 'x'), '42501');
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+do $$ begin
+  perform tests.ok('C1325 unchanged', (select reason is null from public.agreement_versions
+    where id = tests.id('a1325d:v1')), 'a refused note was stored');
+end $$;
+
+-- versioning C1327: the backfill (the migration's statement, run over rows built as they were before it).
+select tests.ab_agr('a1327', 'draft');
+select tests.ab_version('a1327', 2);
+select tests.ab_agr('a1327n', 'sent');
+insert into public.events (org_id, entity_type, entity_id, type, payload, actor_id)
+values (tests.id('orgA'), 'agreement', tests.id('a1327'), 'agreement.changes_requested',
+        '{"reason": "Old request", "versionNo": 7}', null),
+       (tests.id('orgA'), 'agreement', tests.id('a1327'), 'agreement.changes_requested',
+        '{"reason": "Add a boiler", "versionNo": 1}', null),
+       (tests.id('orgA'), 'agreement', tests.id('a1327'), 'agreement.revised', '{"versionNo": 2}', tests.id('uE'));
+update public.agreement_versions v
+set created_by = r.actor_id,
+    reason = (
+      select c.payload ->> 'reason'
+      from public.events c
+      where c.entity_type = 'agreement' and c.entity_id = v.agreement_id and c.type = 'agreement.changes_requested'
+        and c.created_at <= r.created_at
+      order by (c.payload ->> 'versionNo' = (v.version_no - 1)::text) desc, c.created_at desc
+      limit 1
+    )
+from public.events r
+where r.entity_type = 'agreement' and r.entity_id = v.agreement_id and r.type = 'agreement.revised'
+  and r.payload ->> 'versionNo' = v.version_no::text;
+do $$ begin
+  perform tests.ok('C1327 revision', (select created_by = tests.id('uE') and reason = 'Add a boiler'
+    from public.agreement_versions where id = tests.id('a1327:v2')), 'the revision was not backfilled');
+  perform tests.ok('C1327 version 1', (select created_by is null and reason is null
+    from public.agreement_versions where id = tests.id('a1327:v1')), 'version 1 was backfilled');
+  perform tests.ok('C1327 no events', (select created_by is null and reason is null
+    from public.agreement_versions where id = tests.id('a1327n:v1')), 'a version with no events was backfilled');
 end $$;
 
 rollback;
