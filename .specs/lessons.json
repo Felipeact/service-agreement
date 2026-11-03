@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 26,
+  "next_id": 29,
   "lessons": [
     {
       "id": "L-001",
@@ -454,6 +454,60 @@
       ],
       "created": "2026-11-02T22:58:05Z",
       "last_seen": "2026-11-02T22:58:05Z"
+    },
+    {
+      "id": "L-026",
+      "key": "ac_gap::put a filter or decision a page computes for a component into a named function and test it there a component test fed pre filtered props cannot fail on it",
+      "text": "Put a filter or decision a page computes for a component into a named function and test it there; a component test fed pre-filtered props cannot fail on it",
+      "signal": "ac_gap",
+      "scope": "app pages",
+      "status": "candidate",
+      "features": [
+        "deactivation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1278 (round 1), web/app/(app)/assets/[assetId]/edit/page.tsx:25 (app pages)"
+      ],
+      "created": "2026-11-03T17:57:30Z",
+      "last_seen": "2026-11-03T17:57:30Z"
+    },
+    {
+      "id": "L-027",
+      "key": "spec_precision_gap::give each branch of a status dependent label its own asserted case not only the one the live run happens to cross",
+      "text": "Give each branch of a status-dependent label its own asserted case, not only the one the live run happens to cross",
+      "signal": "spec_precision_gap",
+      "scope": "components",
+      "status": "candidate",
+      "features": [
+        "deactivation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1294, web/app/(app)/sites/[siteId]/edit/page.tsx:34 (components)"
+      ],
+      "created": "2026-11-03T17:57:30Z",
+      "last_seen": "2026-11-03T17:57:30Z"
+    },
+    {
+      "id": "L-028",
+      "key": "spec_precision_gap::when a check says per c n assert every side effect c n asserts not only the status change",
+      "text": "When a check says per C<n>, assert every side effect C<n> asserts, not only the status change",
+      "signal": "spec_precision_gap",
+      "scope": "sql tests",
+      "status": "candidate",
+      "features": [
+        "deactivation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C1296, supabase/tests/record_forms.sql (sql tests)"
+      ],
+      "created": "2026-11-03T17:57:31Z",
+      "last_seen": "2026-11-03T17:57:31Z"
     }
   ]
 }

@@ -164,6 +164,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C1231 - supabase/tests/customer_portal.sql:937 (supabase/tests)
 - last seen: 2026-11-02T22:58:05Z
 
+### L-026 - Put a filter or decision a page computes for a component into a named function and test it there; a component test fed pre-filtered props cannot fail on it
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `app pages` · harmful: 0
+- features: deactivation
+- evidence: C1278 (round 1), web/app/(app)/assets/[assetId]/edit/page.tsx:25 (app pages)
+- last seen: 2026-11-03T17:57:30Z
+
+### L-027 - Give each branch of a status-dependent label its own asserted case, not only the one the live run happens to cross
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `components` · harmful: 0
+- features: deactivation
+- evidence: C1294, web/app/(app)/sites/[siteId]/edit/page.tsx:34 (components)
+- last seen: 2026-11-03T17:57:30Z
+
+### L-028 - When a check says per C<n>, assert every side effect C<n> asserts, not only the status change
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `sql tests` · harmful: 0
+- features: deactivation
+- evidence: C1296, supabase/tests/record_forms.sql (sql tests)
+- last seen: 2026-11-03T17:57:31Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
