@@ -164,7 +164,11 @@ export type CustomerSummary = {
   assetCount: number;
 };
 
-export type ContactView = { id: string; name: string; email: string | null; phone: string | null };
+/** What a contact is for: billing (the customer's), or approver / site contact of the named site (contact-roles door 1). */
+export type ContactRole = { kind: "billing" } | { kind: "approver" | "site"; site: string };
+
+/** `roles` is always set by the customer reader; absent only in hand-built fixtures. */
+export type ContactView = { id: string; name: string; email: string | null; phone: string | null; roles?: ContactRole[] };
 
 export type CustomerSiteView = {
   id: string;
@@ -189,6 +193,8 @@ export type CustomerDetail = {
   id: string;
   name: string;
   active: boolean;
+  /** The customer's billing contact; null when none. */
+  billingContactId?: string | null;
   contacts: ContactView[];
   sites: CustomerSiteView[];
   agreements: CustomerAgreementView[];
@@ -228,6 +234,9 @@ export type SiteView = {
   customerActive: boolean;
   siteContactId: string | null;
   contactName: string | null;
+  /** The contact customer emails go to, before the site contact; null when none (contact-roles door 2). */
+  approverContactId?: string | null;
+  approverName?: string | null;
   assets: AssetView[];
   /** The site's agreement in `draft`, `sent` or `changes_requested`, if any (agreement-builder door 2). */
   liveAgreement: { id: string; number: string; status: AgreementStatus } | null;

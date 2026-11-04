@@ -264,3 +264,40 @@ describe("inactive customers and sites", () => {
     expect(out).toContain("Add contact");
   });
 });
+
+describe("contact role labels", () => {
+  type Person = CustomerDetail["contacts"][number];
+  const person = (id: string, name: string, roles: Person["roles"]): Person => ({ id, name, email: null, phone: null, roles });
+  const withContacts = (contacts: Person[]): CustomerDetail => ({ ...populated, contacts });
+
+  test("C1452: the billing contact is labelled Billing", () => {
+    const out = detailAs("viewer", withContacts([person("1", "Avery", [{ kind: "billing" }])]));
+    expect(out).toMatch(/Avery[\s\S]*>Billing</);
+  });
+
+  test("C1453: an approver and a site contact are labelled with the site they serve", () => {
+    const out = detailAs(
+      "viewer",
+      withContacts([
+        person("1", "Avery", [
+          { kind: "approver", site: "Tower A" },
+          { kind: "site", site: "Tower B" },
+        ]),
+      ]),
+    );
+    expect(out).toContain("Approver · Tower A");
+    expect(out).toContain("Site · Tower B");
+  });
+
+  test("C1454: a contact with no role shows no label", () => {
+    const out = detailAs("viewer", withContacts([person("1", "Avery", [])]));
+    for (const label of ["Billing", "Approver ·", "Site ·"]) expect(out).not.toContain(label);
+  });
+
+  test("C1455: a viewer sees the labels and no Add contact or edit link", () => {
+    const out = detailAs("viewer", withContacts([person("1", "Avery", [{ kind: "billing" }])]));
+    expect(out).toContain(">Billing<");
+    expect(out).not.toContain("Add contact");
+    expect(out).not.toContain("/contacts/");
+  });
+});

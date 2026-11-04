@@ -10,7 +10,7 @@ import type {
   WriteFailure,
   WriteResult,
 } from "@/application/ports";
-import type { AssetValue, ContactValue, SiteValue } from "@/domain/records";
+import type { AssetValue, ContactValue, CustomerValue, SiteValue } from "@/domain/records";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -88,7 +88,16 @@ async function setActive(what: string, run: RpcCall): Promise<SetActiveResult> {
 }
 
 const contactRow = (value: ContactValue) => ({ name: value.name, email: value.email, phone: value.phone });
-const siteRow = (value: SiteValue) => ({ name: value.name, address: value.address, site_contact_id: value.siteContactId });
+const siteRow = (value: SiteValue) => ({
+  name: value.name,
+  address: value.address,
+  site_contact_id: value.siteContactId,
+  ...(value.approverContactId !== undefined && { approver_contact_id: value.approverContactId }),
+});
+const customerRow = (value: CustomerValue) => ({
+  name: value.name,
+  ...(value.billingContactId !== undefined && { billing_contact_id: value.billingContactId }),
+});
 const assetRow = (value: AssetValue) => ({
   asset_type_id: value.assetTypeId,
   unit_no: value.unitNo,
@@ -102,7 +111,7 @@ export function supabaseCustomerStore(client: Client): CustomerStore {
       return created(await write("Creating a customer", "create", () => client.from("customers").insert({ org_id: orgId, name: value.name }).select("id")));
     },
     async update(id, value) {
-      return updated(await write("Updating a customer", "update", () => client.from("customers").update({ name: value.name }).eq("id", id).select("id")));
+      return updated(await write("Updating a customer", "update", () => client.from("customers").update(customerRow(value)).eq("id", id).select("id")));
     },
     async setActive(id, active) {
       return setActive("Changing a customer's status", () => client.rpc("set_customer_active", { p_customer_id: id, p_active: active }));

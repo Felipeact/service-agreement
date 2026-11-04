@@ -805,3 +805,41 @@ describe("site directory (sites-page)", () => {
     expect(out.find((r) => r.id === "gone")?.assetCount).toBe(1);
   });
 });
+
+describe("contact roles in readers", () => {
+  const withRoles = () => ({
+    ...siteWithAgreements(),
+    billing_contact_id: "c-late",
+    sites: siteWithAgreements().sites.map((site) => ({ ...site, approver_contact_id: site.id === "s-late" ? "c-late" : "c-early" })),
+  });
+
+  test("C1450: each contact carries the roles it holds, with the site name for approver and site", async () => {
+    const detail = await supabaseCustomerDirectory(stubClient({ customers: ok(withRoles()) }).typed).detail(ID);
+    const roles = Object.fromEntries((detail?.contacts ?? []).map((c) => [c.id, c.roles]));
+    expect(roles["c-late"]).toEqual([{ kind: "billing" }, { kind: "approver", site: "Late site" }]);
+    expect(roles["c-early"]).toEqual([{ kind: "site", site: "Late site" }]);
+  });
+
+  test("C1451: the site register returns the approver's id and name, both null when none", async () => {
+    const row = {
+      id: ID,
+      name: "Site",
+      address: null,
+      customer_id: "cust",
+      site_contact_id: "c1",
+      approver_contact_id: "c2",
+      customers: {
+        name: "Customer",
+        contacts: [
+          { id: "c1", name: "Dana" },
+          { id: "c2", name: "Avery" },
+        ],
+      },
+      assets: [],
+    };
+    const withApprover = await supabaseSiteRegister(stubClient({ sites: ok(row) }).typed).get(ID);
+    expect(withApprover).toMatchObject({ approverContactId: "c2", approverName: "Avery", contactName: "Dana" });
+    const without = await supabaseSiteRegister(stubClient({ sites: ok({ ...row, approver_contact_id: null }) }).typed).get(ID);
+    expect(without).toMatchObject({ approverContactId: null, approverName: null });
+  });
+});

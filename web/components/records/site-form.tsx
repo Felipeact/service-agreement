@@ -26,17 +26,28 @@ type FieldsProps = {
 export function SiteFields({ values, state, contacts, ...form }: FieldsProps) {
   const errors = fieldErrors(state);
   const byName = [...contacts].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  const options = byName.map((contact) => (
+    <option key={contact.id} value={contact.id}>
+      {contact.name}
+    </option>
+  ));
   return (
     <RecordForm status={state.status} {...form}>
       <TextInput id="name" name="name" label="Site name" defaultValue={values.name} error={errors.name} />
       <TextInput id="address" name="address" label="Address" defaultValue={values.address} error={errors.address} autoComplete="street-address" />
       <Select id="siteContactId" name="siteContactId" label="Site contact" defaultValue={values.siteContactId} error={errors.siteContactId}>
         <option value="">No site contact</option>
-        {byName.map((contact) => (
-          <option key={contact.id} value={contact.id}>
-            {contact.name}
-          </option>
-        ))}
+        {options}
+      </Select>
+      <Select
+        id="approverContactId"
+        name="approverContactId"
+        label="Approver"
+        defaultValue={values.approverContactId ?? ""}
+        error={errors.approverContactId}
+      >
+        <option value="">No approver</option>
+        {options}
       </Select>
     </RecordForm>
   );

@@ -21,7 +21,7 @@ export default async function EditSitePage({ params }: PageProps<"/sites/[siteId
   return (
     <RecordPage title="Edit site" canWrite={canWriteRecords(member.role)}>
       <SiteForm
-        initial={{ name: site.name, address: site.address ?? "", siteContactId: site.siteContactId ?? "" }}
+        initial={{ name: site.name, address: site.address ?? "", siteContactId: site.siteContactId ?? "", approverContactId: site.approverContactId ?? "" }}
         contacts={customer.contacts}
         submitLabel="Save changes"
         cancelHref={cancelHrefFor("edit-site", { customerId: site.customerId })}

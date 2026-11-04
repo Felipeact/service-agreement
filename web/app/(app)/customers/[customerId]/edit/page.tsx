@@ -20,7 +20,8 @@ export default async function EditCustomerPage({ params }: PageProps<"/customers
   return (
     <RecordPage title="Edit customer" canWrite={canWriteRecords(member.role)}>
       <CustomerForm
-        initial={{ name: customer.name }}
+        initial={{ name: customer.name, billingContactId: customer.billingContactId ?? "" }}
+        contacts={customer.contacts}
         submitLabel="Save changes"
         cancelHref={cancelHrefFor("edit-customer", { customerId })}
         action={updateCustomerAction.bind(null, customerId)}

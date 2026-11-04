@@ -240,8 +240,8 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
       const { data, error } = await client
         .from("customers")
         .select(
-          `id, name, deactivated_at, contacts(id, name, email, phone, created_at),
-           sites(id, name, address, site_contact_id, created_at, deactivated_at, assets(deactivated_at), agreements(${AGREEMENT_COLUMNS}))`,
+          `id, name, deactivated_at, billing_contact_id, contacts(id, name, email, phone, created_at),
+           sites(id, name, address, site_contact_id, approver_contact_id, created_at, deactivated_at, assets(deactivated_at), agreements(${AGREEMENT_COLUMNS}))`,
         )
         .eq("id", id)
         .maybeSingle();
@@ -252,12 +252,14 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
         id: string;
         name: string;
         deactivated_at: string | null;
+        billing_contact_id?: string | null;
         contacts: ContactRow[];
         sites: {
           id: string;
           name: string;
           address: string | null;
           site_contact_id: string | null;
+          approver_contact_id?: string | null;
           created_at: string;
           deactivated_at: string | null;
           assets: Inactive[];
@@ -290,7 +292,20 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
         id: row.id,
         name: row.name,
         active: isActive(row),
-        contacts: contacts.map(({ id: contactId, name, email, phone }) => ({ id: contactId, name, email, phone })),
+        billingContactId: row.billing_contact_id ?? null,
+        contacts: contacts.map(({ id: contactId, name, email, phone }) => ({
+          id: contactId,
+          name,
+          email,
+          phone,
+          roles: [
+            ...(row.billing_contact_id === contactId ? [{ kind: "billing" as const }] : []),
+            ...sites.filter(isActive).flatMap((site) => [
+              ...(site.approver_contact_id === contactId ? [{ kind: "approver" as const, site: site.name }] : []),
+              ...(site.site_contact_id === contactId ? [{ kind: "site" as const, site: site.name }] : []),
+            ]),
+          ],
+        })),
         sites: sites.map((site) => ({
           id: site.id,
           name: site.name,
@@ -326,7 +341,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
       const { data, error } = await client
         .from("sites")
         .select(
-          `id, name, address, customer_id, site_contact_id, deactivated_at,
+          `id, name, address, customer_id, site_contact_id, approver_contact_id, deactivated_at,
            customers(name, deactivated_at, contacts(id, name)),
            assets(id, unit_no, type_model, location, source, deactivated_at, replaced_by_asset_id, asset_types(code, name)),
            agreements(id, number, status)`,
@@ -343,6 +358,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         address: string | null;
         customer_id: string;
         site_contact_id: string | null;
+        approver_contact_id?: string | null;
         deactivated_at: string | null;
         customers: { name: string; deactivated_at: string | null; contacts: { id: string; name: string }[] };
         assets: {
@@ -370,6 +386,8 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         customerActive: isActive(row.customers),
         siteContactId: row.site_contact_id,
         contactName: row.customers.contacts.find((contact) => contact.id === row.site_contact_id)?.name ?? null,
+        approverContactId: row.approver_contact_id ?? null,
+        approverName: row.customers.contacts.find((contact) => contact.id === row.approver_contact_id)?.name ?? null,
         assets: row.assets.map<AssetView>((asset) => ({
           id: asset.id,
           typeCode: asset.asset_types.code,

@@ -19,7 +19,7 @@ export default async function NewSitePage({ params }: PageProps<"/customers/[cus
   return (
     <RecordPage title="New site" canWrite={canWriteRecords(member.role)}>
       <SiteForm
-        initial={{ name: "", address: "", siteContactId: "" }}
+        initial={{ name: "", address: "", siteContactId: "", approverContactId: "" }}
         contacts={customer.contacts}
         submitLabel="Add site"
         cancelHref={cancelHrefFor("new-site", { customerId })}

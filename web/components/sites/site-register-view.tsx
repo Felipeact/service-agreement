@@ -93,7 +93,7 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
           }
         />
         <p className="text-[13px] text-ink-2">
-          {value(site.address)} · Site contact: {value(site.contactName)}
+          {value(site.address)} · Site contact: {value(site.contactName)} · Approver: {value(site.approverName ?? null)}
         </p>
         {site.liveAgreement ? (
           <p className="text-[13px] text-ink-2">

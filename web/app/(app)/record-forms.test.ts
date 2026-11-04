@@ -408,3 +408,27 @@ describe("deactivation actions", () => {
     expect(storeCalls()).toBe(0);
   });
 });
+
+describe("contact role actions", () => {
+  const OUTSIDER = "66666666-6666-4666-8666-666666666666";
+  const REFUSED = "Choose a contact of this customer";
+
+  test("C1461: a site save naming an approver outside the customer's contacts is invalid and saves nothing", async () => {
+    const fields = siteForm({ approverContactId: OUTSIDER });
+    expect(await actions.updateSiteAction(SITE, IDLE, fields)).toEqual({
+      status: "invalid",
+      errors: { approverContactId: REFUSED },
+      values: { name: "Tower A", address: "1 Main St", siteContactId: CONTACT, approverContactId: OUTSIDER },
+    });
+    expect(storeCalls()).toBe(0);
+  });
+
+  test("C1462: a customer save naming a billing contact outside the customer's contacts is invalid and saves nothing", async () => {
+    expect(await actions.updateCustomerAction(CUSTOMER, IDLE, form({ name: "Acme", billingContactId: OUTSIDER }))).toEqual({
+      status: "invalid",
+      errors: { billingContactId: REFUSED },
+      values: { name: "Acme", billingContactId: OUTSIDER },
+    });
+    expect(storeCalls()).toBe(0);
+  });
+});

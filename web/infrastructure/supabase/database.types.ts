@@ -369,6 +369,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          billing_contact_id: string | null
           created_at: string
           deactivated_at: string | null
           deactivated_by: string | null
@@ -377,6 +378,7 @@ export type Database = {
           org_id: string
         }
         Insert: {
+          billing_contact_id?: string | null
           created_at?: string
           deactivated_at?: string | null
           deactivated_by?: string | null
@@ -385,6 +387,7 @@ export type Database = {
           org_id: string
         }
         Update: {
+          billing_contact_id?: string | null
           created_at?: string
           deactivated_at?: string | null
           deactivated_by?: string | null
@@ -393,6 +396,13 @@ export type Database = {
           org_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customers_billing_contact_fkey"
+            columns: ["billing_contact_id", "id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id", "customer_id"]
+          },
           {
             foreignKeyName: "customers_org_id_fkey"
             columns: ["org_id"]
@@ -1006,6 +1016,7 @@ export type Database = {
       sites: {
         Row: {
           address: string | null
+          approver_contact_id: string | null
           created_at: string
           customer_id: string
           deactivated_at: string | null
@@ -1017,6 +1028,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          approver_contact_id?: string | null
           created_at?: string
           customer_id: string
           deactivated_at?: string | null
@@ -1028,6 +1040,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          approver_contact_id?: string | null
           created_at?: string
           customer_id?: string
           deactivated_at?: string | null
@@ -1038,6 +1051,13 @@ export type Database = {
           site_contact_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sites_approver_contact_fkey"
+            columns: ["approver_contact_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id", "customer_id"]
+          },
           {
             foreignKeyName: "sites_customer_id_org_id_fkey"
             columns: ["customer_id", "org_id"]

@@ -1283,5 +1283,90 @@ begin
     and (tests.od_notif(n.idempotency_key)).provider_message_id = 're_w8', 'the sent row changed');
 end $$;
 
+
+-- Contact roles (.specs/features/contact-roles/checks.md): C1468-C1474. A site's approver is who a customer email goes to,
+-- else its site contact. tests.cr_approver gives site <name>:site an approver with p_email.
+create function tests.cr_approver(p_name text, p_email text) returns void
+language plpgsql as $$
+begin
+  insert into public.contacts (id, org_id, customer_id, name, email)
+  values (tests.id(p_name || ':ap'), tests.id('orgA'), tests.id('custA'), 'Approver ' || p_name, p_email);
+  update public.sites set approver_contact_id = tests.id(p_name || ':ap') where id = tests.id(p_name || ':site');
+end $$;
+
+-- C1468, C1469, C1474: the link email and the day-3 reminder go to the approver alone, even when the site contact has an email.
+select tests.od_sent('cr68', 'site@customer.ca');
+select tests.cr_approver('cr68', 'approver@customer.ca');
+do $$
+declare
+  l jsonb := tests.od_claim(tests.od_w1('cr68', 'link'));
+  d jsonb := tests.od_claim(tests.od_w1('cr68', 'day3'));
+begin
+  perform tests.ok('C1468', l ->> 'decision' = 'send' and tests.od_msg(l) -> 'to' = '["approver@customer.ca"]', 'link ' || l::text);
+  perform tests.ok('C1469', d ->> 'decision' = 'send' and tests.od_msg(d) -> 'to' = '["approver@customer.ca"]', 'reminder ' || d::text);
+  perform tests.ok('C1474 link', (tests.od_notif(tests.od_w1('cr68', 'link') ->> 'idempotencyKey')).recipients = array['approver@customer.ca'],
+    'link recipients were not exactly the approver');
+  perform tests.ok('C1474 reminder', (tests.od_notif(tests.od_w1('cr68', 'day3') ->> 'idempotencyKey')).recipients = array['approver@customer.ca'],
+    'reminder recipients were not exactly the approver');
+end $$;
+
+-- C1471: no approver, or an approver without an email, sends the link and the reminder to the site contact.
+select tests.od_sent('cr71a', 'site@customer.ca');
+select tests.od_sent('cr71b', 'site@customer.ca');
+select tests.cr_approver('cr71b', '  ');
+do $$
+declare
+  n text;
+  l jsonb;
+  d jsonb;
+begin
+  foreach n in array array['cr71a', 'cr71b'] loop
+    l := tests.od_claim(tests.od_w1(n, 'link'));
+    d := tests.od_claim(tests.od_w1(n, 'day3'));
+    perform tests.ok('C1471 link ' || n, l ->> 'decision' = 'send' and tests.od_msg(l) -> 'to' = '["site@customer.ca"]', 'link ' || l::text);
+    perform tests.ok('C1471 reminder ' || n, d ->> 'decision' = 'send' and tests.od_msg(d) -> 'to' = '["site@customer.ca"]', 'reminder ' || d::text);
+  end loop;
+end $$;
+
+-- C1473: no usable email anywhere skips the link and the reminder with no_recipient.
+select tests.od_sent('cr73', null, 'A', 'uE', false);
+select tests.cr_approver('cr73', null);
+do $$
+declare
+  suffix text;
+  r jsonb;
+begin
+  foreach suffix in array array['link', 'day3'] loop
+    r := tests.od_claim(tests.od_w1('cr73', suffix));
+    perform tests.ok('C1473 ' || suffix, r ->> 'decision' = 'skip' and r ->> 'reason' = 'no_recipient' and jsonb_array_length(r -> 'messages') = 0
+      and (tests.od_notif(tests.od_w1('cr73', suffix) ->> 'idempotencyKey')).skip_reason = 'no_recipient', suffix || ': ' || r::text);
+  end loop;
+end $$;
+
+-- C1470, C1472, C1473: one W7 run renews three due agreements. The approver's gets the notice at the approver, the one with
+-- no approver at its site contact, the one with no email anywhere is skipped with no_recipient.
+update public.notifications set status = 'sent', sent_at = now() where kind in ('customer_renewal', 'staff_renewal');
+select tests.od_due('cr70');
+select tests.cr_approver('cr70', 'approver@customer.ca');
+select tests.od_due('cr72', 'A', 'site@customer.ca');
+select tests.od_due('cr73r', 'A', null);
+select tests.cr_approver('cr73r', null);
+insert into tests.od_r select 'C1470', tests.od_claim(tests.od_w7(current_date));
+do $$
+declare
+  res jsonb := (select result from tests.od_r where label = 'C1470');
+  mine jsonb;
+  skipped public.notifications;
+begin
+  select m into mine from jsonb_array_elements(res -> 'messages') m where m -> 'renews' ->> 'number' = 'AG-cr70';
+  perform tests.ok('C1470', mine ->> 'kind' = 'customer_renewal' and mine -> 'to' = '["approver@customer.ca"]', 'message ' || coalesce(mine::text, 'none'));
+  select m into mine from jsonb_array_elements(res -> 'messages') m where m -> 'renews' ->> 'number' = 'AG-cr72';
+  perform tests.ok('C1472', mine ->> 'kind' = 'customer_renewal' and mine -> 'to' = '["site@customer.ca"]', 'message ' || coalesce(mine::text, 'none'));
+  select * into skipped from public.notifications where idempotency_key = 'w7:' || (tests.rn_of(tests.id('cr73r'))).id || ':customer';
+  perform tests.ok('C1473 renewal', skipped.status = 'skipped' and skipped.skip_reason = 'no_recipient'
+    and not exists (select 1 from jsonb_array_elements(res -> 'messages') m where m -> 'renews' ->> 'number' = 'AG-cr73r'),
+    'the renewal without an address was not skipped: ' || coalesce(skipped.status, 'no row'));
+end $$;
+
 rollback;
 select 'outbox_dispatch: pass' as result;

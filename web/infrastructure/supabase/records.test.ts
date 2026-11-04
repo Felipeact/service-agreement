@@ -173,3 +173,45 @@ describe("status writers", () => {
     expect(await supabaseCustomerStore(typed).setActive(ID, false)).toEqual({ ok: false, code: "changes_requested", site: "Tower B", number: "AG-1005" });
   });
 });
+
+describe("contact role writes", () => {
+  const siteWithApprover: SiteValue = { name: "Tower A", address: null, siteContactId: PARENT, approverContactId: ID };
+
+  test("C1446: a site update sends exactly name, address, site_contact_id and approver_contact_id for that id", async () => {
+    const { typed, calls } = stubClient({ sites: ok([{ id: ID }]) });
+    expect(await supabaseSiteStore(typed).update(ID, siteWithApprover)).toEqual({ ok: true });
+
+    const update = calls.find((call) => call.method === "update");
+    expect(update?.args[0]).toEqual({ name: "Tower A", address: null, site_contact_id: PARENT, approver_contact_id: ID });
+    expect(calls).toContainEqual({ table: "sites", method: "eq", args: ["id", ID] });
+  });
+
+  test("C1447: a site insert carries the org, customer and all four fields", async () => {
+    const { typed, calls } = stubClient({ sites: ok([{ id: ID }]) });
+    expect(await supabaseSiteStore(typed).create(ORG, PARENT, siteWithApprover)).toEqual({ ok: true, id: ID });
+
+    expect(calls.find((call) => call.method === "insert")?.args[0]).toEqual({
+      org_id: ORG,
+      customer_id: PARENT,
+      name: "Tower A",
+      address: null,
+      site_contact_id: PARENT,
+      approver_contact_id: ID,
+    });
+  });
+
+  test("C1448: a customer update sends exactly name and billing_contact_id for that id", async () => {
+    const { typed, calls } = stubClient({ customers: ok([{ id: ID }]) });
+    expect(await supabaseCustomerStore(typed).update(ID, { name: "Acme", billingContactId: PARENT })).toEqual({ ok: true });
+
+    expect(calls.find((call) => call.method === "update")?.args[0]).toEqual({ name: "Acme", billing_contact_id: PARENT });
+    expect(calls).toContainEqual({ table: "customers", method: "eq", args: ["id", ID] });
+  });
+
+  test("C1449: a customer insert still carries only org_id and name", async () => {
+    const { typed, calls } = stubClient({ customers: ok([{ id: ID }]) });
+    expect(await supabaseCustomerStore(typed).create(ORG, { name: "Acme" })).toEqual({ ok: true, id: ID });
+
+    expect(calls.find((call) => call.method === "insert")?.args[0]).toEqual({ org_id: ORG, name: "Acme" });
+  });
+});

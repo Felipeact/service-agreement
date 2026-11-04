@@ -247,3 +247,49 @@ describe("deactivation controls", () => {
     for (const text of ["Deactivate customer", "Deactivate site", "Remove from service", "Reactivate"]) expect(viewer, text).not.toContain(text);
   });
 });
+
+describe("contact role fields", () => {
+  const zed = { id: "c-zed", name: "Zed" };
+  const amy = { id: "c-amy", name: "Amy" };
+  const idle = { status: "idle" } as const;
+  const siteWith = (patch: Partial<Parameters<typeof SiteFields>[0]>) =>
+    html(createElement(SiteFields, { values: { ...site, approverContactId: "" }, state: idle, contacts: [zed, amy], ...form, ...patch }));
+
+  test("C1457: the approver list is No approver, then the customer's contacts by name, with the saved one selected", () => {
+    const out = siteWith({ values: { ...site, approverContactId: "c-zed" } });
+    expect(options(out, "approverContactId")).toEqual([
+      { value: "", selected: false, text: "No approver" },
+      { value: "c-amy", selected: false, text: "Amy" },
+      { value: "c-zed", selected: true, text: "Zed" },
+    ]);
+    expect(out).toMatch(/<select[^>]*name="approverContactId"/);
+  });
+
+  test("C1458: with no contacts the approver list holds only No approver", () => {
+    expect(options(siteWith({ contacts: [] }), "approverContactId")).toEqual([{ value: "", selected: true, text: "No approver" }]);
+  });
+
+  test("C1459: a refused approver shows the message under the field", () => {
+    const message = "Choose a contact of this customer";
+    const state = { status: "invalid", errors: { approverContactId: message }, values: { ...site, approverContactId: "x" } } as const;
+    const out = siteWith({ state });
+    expect(out.match(/<select[^>]*id="approverContactId"[^>]*>/)?.[0]).toContain('aria-invalid="true"');
+    expect(out).toMatch(new RegExp(`<p[^>]*id="approverContactId-error"[^>]*>${message}</p>`));
+  });
+
+  test("C1460: given contacts the customer form offers a billing contact; given none it offers no such select", () => {
+    const withContacts = html(
+      createElement(CustomerFields, { values: { name: "Acme", billingContactId: "c-amy" }, state: idle, contacts: [zed, amy], ...form }),
+    );
+    expect(options(withContacts, "billingContactId")).toEqual([
+      { value: "", selected: false, text: "No billing contact" },
+      { value: "c-amy", selected: true, text: "Amy" },
+      { value: "c-zed", selected: false, text: "Zed" },
+    ]);
+    expect(withContacts).toMatch(/<select[^>]*name="billingContactId"/);
+    for (const contacts of [undefined, []]) {
+      const out = html(createElement(CustomerFields, { values: { name: "Acme" }, state: idle, contacts, ...form }));
+      expect(out).not.toContain("billingContactId");
+    }
+  });
+});

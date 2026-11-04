@@ -5,14 +5,15 @@ export type FieldErrors<Field extends string> = Partial<Record<Field, string>>;
 
 export type Validation<Value, Field extends string> = { ok: true; value: Value } | { ok: false; errors: FieldErrors<Field> };
 
-export type CustomerInput = { name: string };
-export type CustomerValue = { name: string };
+/** `billingContactId` is absent where the form offers no choice (a new customer has no contacts yet). */
+export type CustomerInput = { name: string; billingContactId?: string };
+export type CustomerValue = { name: string; billingContactId?: string | null };
 
 export type ContactInput = { name: string; email: string; phone: string };
 export type ContactValue = { name: string; email: string | null; phone: string | null };
 
-export type SiteInput = { name: string; address: string; siteContactId: string };
-export type SiteValue = { name: string; address: string | null; siteContactId: string | null };
+export type SiteInput = { name: string; address: string; siteContactId: string; approverContactId?: string };
+export type SiteValue = { name: string; address: string | null; siteContactId: string | null; approverContactId?: string | null };
 
 export type AssetInput = { assetTypeId: string; unitNo: string; typeModel: string; location: string };
 export type AssetValue = { assetTypeId: string; unitNo: string | null; typeModel: string | null; location: string | null };
@@ -35,10 +36,22 @@ function result<Value, F extends string>(value: Value, errors: FieldErrors<F>): 
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, value };
 }
 
-export function validateCustomer(input: CustomerInput): Validation<CustomerValue, keyof CustomerInput> {
+const NOT_THIS_CUSTOMERS = "Choose a contact of this customer";
+
+/** A contact chosen for a role: blank is none, anything not in `allowedContactIds` is refused. */
+function roleContact<F extends string>(raw: string, allowedContactIds: readonly string[], errors: FieldErrors<F>, field: F): string | null {
+  const id = raw.trim();
+  if (id !== "" && !allowedContactIds.includes(id)) errors[field] = NOT_THIS_CUSTOMERS;
+  return id === "" ? null : id;
+}
+
+/** `allowedContactIds` are the customer's contacts, for the billing contact; a new customer has none. */
+export function validateCustomer(input: CustomerInput, allowedContactIds: readonly string[] = []): Validation<CustomerValue, keyof CustomerInput> {
   const errors: FieldErrors<keyof CustomerInput> = {};
   const name = requiredText(input.name, 120, "Customer name must be 1 to 120 characters", errors, "name");
-  return result({ name }, errors);
+  if (input.billingContactId === undefined) return result({ name }, errors);
+  const billingContactId = roleContact(input.billingContactId, allowedContactIds, errors, "billingContactId");
+  return result({ name, billingContactId }, errors);
 }
 
 export function validateContact(input: ContactInput): Validation<ContactValue, keyof ContactInput> {
@@ -55,9 +68,10 @@ export function validateSite(input: SiteInput, allowedContactIds: readonly strin
   const errors: FieldErrors<keyof SiteInput> = {};
   const name = requiredText(input.name, 120, "Site name must be 1 to 120 characters", errors, "name");
   const address = optionalText(input.address, 300, "Address", errors, "address");
-  const siteContactId = input.siteContactId.trim();
-  if (siteContactId !== "" && !allowedContactIds.includes(siteContactId)) errors.siteContactId = "Choose a contact of this customer";
-  return result({ name, address, siteContactId: siteContactId === "" ? null : siteContactId }, errors);
+  const siteContactId = roleContact(input.siteContactId, allowedContactIds, errors, "siteContactId");
+  if (input.approverContactId === undefined) return result({ name, address, siteContactId }, errors);
+  const approverContactId = roleContact(input.approverContactId, allowedContactIds, errors, "approverContactId");
+  return result({ name, address, siteContactId, approverContactId }, errors);
 }
 
 /** `allowedTypeIds` are the org's asset types; any other id is refused. */

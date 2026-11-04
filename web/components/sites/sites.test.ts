@@ -247,3 +247,13 @@ describe("inactive sites and removed assets", () => {
     expect(out).toContain("Edit site");
   });
 });
+
+describe("site register approver", () => {
+  const withApprover = (approverName: string | null) =>
+    html(createElement(SiteRegisterView, { site: { ...site([asset()]), approverContactId: approverName ? "ct-2" : null, approverName } }));
+
+  test("C1456: the header shows Approver: <name>, or a dash when there is none", () => {
+    expect(withApprover("Avery Chen")).toContain("Approver: Avery Chen");
+    expect(withApprover(null)).toMatch(/Approver: (<span[^>]*>)?-/);
+  });
+});

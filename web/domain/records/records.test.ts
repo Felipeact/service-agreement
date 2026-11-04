@@ -141,3 +141,46 @@ describe("parseSiteFilter", () => {
     expect(parseSiteFilter({ q: "a", customer: CUSTOMER, show: "inactive" })).toEqual({ q: "a", customerId: CUSTOMER, showInactive: true });
   });
 });
+
+describe("contact roles", () => {
+  const APPROVER = "11111111-1111-4111-8111-111111111111";
+  const OTHER = "22222222-2222-4222-8222-222222222222";
+  const site = { name: "Tower A", address: "", siteContactId: "", approverContactId: "" };
+  const REFUSED = "Choose a contact of this customer";
+
+  test("C1440: an approver among the customer's contacts is kept", () => {
+    expect(validateSite({ ...site, approverContactId: APPROVER }, [APPROVER, OTHER])).toMatchObject({
+      ok: true,
+      value: { approverContactId: APPROVER },
+    });
+  });
+
+  test("C1441: a blank approver is stored as null", () => {
+    expect(validateSite({ ...site, approverContactId: "  " }, [APPROVER])).toMatchObject({ ok: true, value: { approverContactId: null } });
+  });
+
+  test("C1442: an approver that is not one of the customer's contacts is refused", () => {
+    expect(validateSite({ ...site, approverContactId: OTHER }, [APPROVER])).toEqual({ ok: false, errors: { approverContactId: REFUSED } });
+  });
+
+  test("C1443: a billing contact among the customer's contacts is kept", () => {
+    expect(validateCustomer({ name: "Acme", billingContactId: APPROVER }, [APPROVER])).toEqual({
+      ok: true,
+      value: { name: "Acme", billingContactId: APPROVER },
+    });
+  });
+
+  test("C1444: a blank billing contact is stored as null", () => {
+    expect(validateCustomer({ name: "Acme", billingContactId: "" }, [APPROVER])).toEqual({
+      ok: true,
+      value: { name: "Acme", billingContactId: null },
+    });
+  });
+
+  test("C1445: a billing contact that is not one of the customer's contacts is refused", () => {
+    expect(validateCustomer({ name: "Acme", billingContactId: OTHER }, [APPROVER])).toEqual({
+      ok: false,
+      errors: { billingContactId: REFUSED },
+    });
+  });
+});

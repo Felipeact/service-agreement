@@ -27,7 +27,11 @@ async function writer() {
 
 // Only these fields are read: ids and org come from the route and the member, never from the form (AC 35).
 const text = (formData: FormData, name: string) => String(formData.get(name) ?? "");
-const readCustomer = (formData: FormData): CustomerInput => ({ name: text(formData, "name") });
+// A role is read only when the form offered it, so a form without the select leaves the stored role alone.
+const readCustomer = (formData: FormData): CustomerInput => ({
+  name: text(formData, "name"),
+  ...(formData.has("billingContactId") && { billingContactId: text(formData, "billingContactId") }),
+});
 const readContact = (formData: FormData): ContactInput => ({
   name: text(formData, "name"),
   email: text(formData, "email"),
@@ -37,6 +41,7 @@ const readSite = (formData: FormData): SiteInput => ({
   name: text(formData, "name"),
   address: text(formData, "address"),
   siteContactId: text(formData, "siteContactId"),
+  ...(formData.has("approverContactId") && { approverContactId: text(formData, "approverContactId") }),
 });
 const readAsset = (formData: FormData): AssetInput => ({
   assetTypeId: text(formData, "assetTypeId"),
@@ -68,7 +73,9 @@ export async function updateCustomerAction(
   const values = readCustomer(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
-  const checked = validateCustomer(values);
+  const customer = values.billingContactId === undefined ? null : await ctx.container.customerDetail(customerId);
+  if (values.billingContactId !== undefined && !customer) return { status: "not_found", values };
+  const checked = validateCustomer(values, customer?.contacts.map((contact) => contact.id));
   if (!checked.ok) return { status: "invalid", errors: checked.errors, values };
   const saved = await ctx.container.updateCustomer(customerId, checked.value);
   if (!saved.ok) return refused(saved.code, values);
