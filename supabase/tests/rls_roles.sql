@@ -46,7 +46,7 @@ declare
   t text;
   a uuid := tests.id('orgA');
 begin
-  foreach t in array array_remove(array_remove(array_remove(tests.tenant_tables(), 'outbox'), 'events'), 'agreement_versions') loop
+  foreach t in array array_remove(array_remove(array_remove(array_remove(tests.tenant_tables(), 'outbox'), 'events'), 'agreement_versions'), 'memberships') loop
     if t not in ('customers', 'sites', 'assets') then
       perform tests.expect_rows('C12 update ' || t,
         format('update public.%I set org_id = org_id where org_id = %L', t, a), 0);
@@ -66,6 +66,9 @@ begin
       format('update public.%I set org_id = org_id where org_id = %L', t, a), '42501');
   end loop;
   perform tests.expect_error('C12 delete assets', format('delete from public.assets where org_id = %L', a), '42501');
+  -- members-page C1541: memberships leaves the loop the same way; its writers are the member RPCs, so a viewer is refused outright.
+  perform tests.expect_error('C12 update memberships', format('update public.memberships set org_id = org_id where org_id = %L', a), '42501');
+  perform tests.expect_error('C12 delete memberships', format('delete from public.memberships where org_id = %L', a), '42501');
 end $$;
 
 reset role;
@@ -87,10 +90,11 @@ begin
   perform tests.expect_rows('C14 org_settings update',
     format('update public.org_settings set tax_note = ''x'' where org_id = %L', a), 0);
   perform tests.expect_error('C14 memberships insert', tests.insert_sql('memberships', 'A'), '42501');
-  perform tests.expect_rows('C14 memberships update',
-    format('update public.memberships set role = ''owner'' where org_id = %L', a), 0);
-  perform tests.expect_rows('C14 memberships delete',
-    format('delete from public.memberships where org_id = %L', a), 0);
+  -- members-page C1541: members have no write privilege on memberships any more (the writers are the four RPCs).
+  perform tests.expect_error('C14 memberships update',
+    format('update public.memberships set role = ''owner'' where org_id = %L', a), '42501');
+  perform tests.expect_error('C14 memberships delete',
+    format('delete from public.memberships where org_id = %L', a), '42501');
 end $$;
 
 reset role;
@@ -100,7 +104,8 @@ select tests.act_as('uA');
 do $$ begin
   perform tests.expect_rows('C15 org_settings update',
     format('update public.org_settings set tax_note = ''GST 5%%'' where org_id = %L', tests.id('orgA')), 1);
-  perform tests.expect_rows('C15 memberships insert', tests.insert_sql('memberships', 'A'), 1);
+  -- members-page C1541: not even an owner inserts a membership directly; invitations and accept_invitations do.
+  perform tests.expect_error('C15 memberships insert', tests.insert_sql('memberships', 'A'), '42501');
 end $$;
 
 reset role;

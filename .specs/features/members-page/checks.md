@@ -262,9 +262,10 @@ their org and no other; an owner and an admin select their org's `invitations` a
 Proof: `npm run test:db members` (assertions labelled `C1540`)
 
 **C1541** - `rls_roles.sql` asserts the new behaviour where it asserted the old: C14's viewer `memberships` update and
-delete now expect `42501` instead of 0 rows, and C15's owner `memberships` insert expects `42501` instead of 1 row; every
-other assertion of the file is unchanged (plan Impact)
-Proof: `npm run test:db rls_roles` in `web/`
+delete, and C12's loop over the tenant tables for `memberships`, now expect `42501` instead of 0 rows, and C15's owner
+`memberships` insert expects `42501` instead of 1 row; every other assertion of the file is unchanged. `rls_isolation.sql`
+C35 lists `invitations` among the public tables (21) (plan Impact; C12 and C35 were found while building, see Handoff)
+Proof: `npm run test:db rls_roles` and `npm run test:db rls_isolation` in `web/`
 
 **C1542** - `MemberAdmin` calls the rpc named for each operation (`create_invitation`, `revoke_invitation`,
 `set_member_role`, `remove_member`) with the `p_` arguments, never a table write, and maps `23505` hint `already_member`,
