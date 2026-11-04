@@ -50,6 +50,22 @@ describe("GET /auth/confirm", () => {
   });
 
   test.each([
+    ["verified", { ok: true } as const, "/pipeline"],
+    ["refused", { ok: false, code: "invalid_link" } as const, "/login"],
+  ])("C12: behind a proxy the redirect (%s) stays on the public host, not the container's", async (_label, result, pathname) => {
+    vi.stubEnv("APP_BASE_URL", "");
+    verifyEmailLink.mockResolvedValue(result);
+    const request = new NextRequest("http://localhost:8080/auth/confirm?token_hash=abc&type=email", {
+      headers: { "x-forwarded-host": "web.up.railway.app", "x-forwarded-proto": "https" },
+    });
+    const next = location(await GET(request));
+
+    expect(next.origin).toBe("https://web.up.railway.app");
+    expect(next.pathname).toBe(pathname);
+    vi.unstubAllEnvs();
+  });
+
+  test.each([
     ["verified", { ok: true } as const, "?token_hash=abc&type=email"],
     ["refused", { ok: false, code: "invalid_link" } as const, "?token_hash=abc&type=email"],
     ["no token_hash", { ok: true } as const, "?type=email"],
