@@ -197,7 +197,7 @@ Stage colours appear only as an 8px dot beside the stage label (column headers, 
 
 **Breakpoints** (Tailwind defaults): mobile below 768px, tablet 768-1023px (`md`), desktop 1024px and up (`lg`). The page header's control row also goes horizontal from 640px (`sm`).
 
-**Shell.** On desktop the shell is a two-column grid: a sticky, full-height white **sidebar** (232px, 1px Hairline right edge, 12px side padding) and the work area. The sidebar holds the product name, then Pipeline, Agreements, Customers, Sites & equipment, Imports, Task library, with Settings pinned to the bottom above a Hairline divider. Items without a page yet render disabled in Slate Secondary. Below 1024px the sidebar is replaced by a sticky 56px white top bar with a 44px menu button that opens a **drawer**: a 264px white panel from the left over an Ink 40% backdrop, a modal dialog with focus moved to its close button, closed by Escape, the backdrop or navigating, with focus returned to the menu button.
+**Shell.** On desktop the shell is a two-column grid: a sticky, full-height white **sidebar** (232px, 1px Hairline right edge, 12px side padding) and the work area. The sidebar holds the product name, then Pipeline, Agreements, Customers, Sites & equipment, Imports, Task library, with Settings pinned to the bottom above a Hairline divider. Items without a page render disabled in Slate Secondary (none today). Below 1024px the sidebar is replaced by a sticky 56px white top bar with a 44px menu button that opens a **drawer**: a 264px white panel from the left over an Ink 40% backdrop, a modal dialog with focus moved to its close button, closed by Escape, the backdrop or navigating, with focus returned to the menu button.
 
 **Work area.** Cool Ground, with horizontal padding 16px (mobile), 20px (tablet), 28px (desktop) and 20px vertical. Each page opens with a **page header**: the title (and an optional badge) on the left, then search/filters and the single primary action on the right; it stacks vertically on mobile.
 
@@ -272,7 +272,7 @@ Quiet, familiar, and exact. Every control is a native element styled with role t
 Every focusable element gets the global `:focus-visible` treatment: a 2px solid Action Blue outline with a 2px offset. Components do not override it.
 
 ### Navigation
-- **Sidebar items:** 500 weight at 13px, 10px padding, 6px radius, 2px apart; resting in Nav Ink with a Cool Ground hover; the active item (`aria-current="page"`) in Action Blue on Action Tint; items without a page are disabled in Slate Secondary (today only Task library).
+- **Sidebar items:** 500 weight at 13px, 10px padding, 6px radius, 2px apart; resting in Nav Ink with a Cool Ground hover; the active item (`aria-current="page"`) in Action Blue on Action Tint; items without a page are disabled in Slate Secondary (none today).
 - **Mobile and tablet:** the top bar and drawer described in Layout; drawer items are 44px tall.
 - **Stage tabs (mobile pipeline):** 44px, 6px radius, 1px border; unselected white with Hairline border and Ink label, count in Slate Secondary; selected Action Tint with Action Blue border, label and count.
 

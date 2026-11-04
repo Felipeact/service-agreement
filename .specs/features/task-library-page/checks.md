@@ -248,3 +248,16 @@ Proof: live, recorded in the Handoff (author-side Playwright, one signed-in cont
   C1435 to C1437) and the live checks stay open.
 - Before the last commit the builder also runs `npm test`, `npm run lint` and `npx tsc --noEmit` in `web/` and reviews
   `git diff <feature base>..HEAD -- "*.test.ts"` against the Terms. This is a hygiene gate, not a check.
+
+- **Boundary:** C1407-C1437 closed at `537929e` (`dc59d0b` domain, store, function and SQL test; `efaf893` month grid; `b2b1429` page, action, sidebar; `537929e` SQL cross-org fix, plus the C1435 grants assertion in the docs commit); C1438 and C1439 ran live (below)
+- **Settled mid-build:**
+  - Door 3 (`save_task_library_type`) was found while writing the checks: AC 15 cannot hold with a client-side delete then insert. It is a `Landing` row, and `Flow` and `Impact` were corrected in the same commit that added it. AD-124.
+  - The migration was applied by the owner in the Supabase SQL editor, because `apply_migration` was declined twice by the permission layer. It is therefore not in the project's migration list; it was confirmed on the project with a `pg_proc` query (security invoker, `authenticated` may execute, `anon` may not), and C1435 now asserts that.
+  - C1435's "another org" case uses `BOILER`, a code only org A has: the fixture gives org B its own `RTU`, so org B's owner `uB` legitimately saved that one. `uB` is an owner, not an admin; both pass `has_org_role(owner, admin)`.
+  - C1416 names `/task-library?type=RTU`, but `usePathname` never carries a query string. `SidebarNav` now ignores any `?` suffix so the check holds as written.
+  - Replaced assertions, besides the nav ones the plan authorised: the `test:db` runner pins in `scripts/test-db/runner.test.ts` count one more recipe (20 recipes over 22 SQL files; `19 passed, 1 failed` in the failing-recipe case), and `task_library` is listed after `cadence`.
+  - UI behaviours not in a check: unchecking "All visits" selects the type's default months, and clearing a task's last month returns it to "All visits", so a row is never in an invalid empty state.
+  - The `next dev` server on port 3000 served a stale container (`listTaskLibrary is not a function`) and was restarted with the owner's go-ahead; the new one is left running.
+- **Live C1439 (1440 px, one signed-in context, demo owner):** `/task-library` lists 40 types, RTU selected through `?type=RTU`. Semi-annual preset plus a new task "Cooling start-up (live check)" on Mar-May saved with "Saved." and survived a reload (defaults 4 and 10, 11 tasks, last task `[3,4,5]`). A blank description gave "Describe the task in 1 to 200 characters" and "Fix the highlighted fields", and a reload showed nothing had been saved. RTU was then restored to its original 10 tasks and months 3, 6, 9, 12, and checked after a reload. Console: no errors after the restart.
+- **Live C1438:** 375, 768 and 1440 px: no horizontal scroll (scrollWidth equals clientWidth at each); at 375 and 768 px none of 227 controls and links is under 44 px and none overlaps; at 1440 px controls are 34 px, the same desktop sizing as Sites and Imports.
+- **Abandoned:** nothing.

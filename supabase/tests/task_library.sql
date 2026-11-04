@@ -95,6 +95,11 @@ begin
     and tests.tl_months(tests.id('typeA')) = '{4,10}'
     and tests.tl_tasks(tests.id('tl:boiler')) = '0:Check flue:null' and tests.tl_months(tests.id('tl:boiler')) = '{10}',
     'a refused call changed RTU or BOILER');
+  -- C1435: the function is a security invoker; signed-in users may run it and anon may not.
+  perform tests.ok('C1435 grants', has_function_privilege('authenticated', 'public.save_task_library_type(text, smallint[], jsonb)', 'execute')
+    and not has_function_privilege('anon', 'public.save_task_library_type(text, smallint[], jsonb)', 'execute')
+    and not (select prosecdef from pg_proc where oid = 'public.save_task_library_type(text, smallint[], jsonb)'::regprocedure),
+    'grants or security mode of save_task_library_type are wrong');
   -- C1436: the sent version's snapshot is byte-identical after all the saves above.
   perform tests.ok('C1436 snapshot', (select md5(snapshot::text) from public.agreement_versions where id = tests.id('tl-sent:v1'))
     = (select digest from tests.tl_before), 'a sent version''s snapshot changed');
