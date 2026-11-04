@@ -119,8 +119,7 @@ Next.js 16 (App Router), React 19, Tailwind 4 in `web/`; Supabase (Postgres with
 | 2 | No customers or usage data | Success measures cannot be baselined; candidate measures only |
 | 3 | E-signature validity per province is assumed from research, not legal review | Blocks go-live of Phase 4 for real contracts |
 | 4 | Staff sign-in on the hosted app needs its URL in the Supabase Auth redirect list | Blocks staff using the hosted app |
-| 5 | n8n workflows W7 and W8 are written but not imported into the hosted n8n instance | Renewal and expiry emails do not run live |
-| 6 | The "proposal template" named as the catalog source is not in the repo | Catalog was seeded from the roadmap description |
+| 5 | The "proposal template" named as the catalog source is not in the repo | Catalog was seeded from the roadmap description |
 
 ## 10. Sources
 
