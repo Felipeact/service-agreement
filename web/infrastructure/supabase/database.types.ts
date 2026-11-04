@@ -1176,6 +1176,14 @@ export type Database = {
         }
         Returns: string
       }
+      save_task_library_type: {
+        Args: {
+          p_default_months: number[]
+          p_tasks: Json
+          p_type_code: string
+        }
+        Returns: undefined
+      }
       send_agreement:
         | {
             Args: {

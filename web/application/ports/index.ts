@@ -13,6 +13,7 @@ import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
+import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
 import type { DomainEvent } from "@/domain/transition";
 import type { NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
@@ -798,4 +799,16 @@ export type EmailSendResult = { ok: true; providerMessageId: string } | { ok: fa
 
 export interface EmailSender {
   send(message: EmailMessage): Promise<EmailSendResult>;
+}
+
+export interface TaskLibraryReader {
+  /** The org's equipment types by name, each with its default visit months and its tasks in position order, at most 500 (task-library-page door 1). */
+  list(): Promise<LibraryType[]>;
+}
+
+export type SaveLibraryResult = { ok: true } | { ok: false; code: WriteFailure };
+
+export interface TaskLibraryStore {
+  /** Replaces the type's default months and its whole checklist in one transaction (task-library-page doors 2 and 3). */
+  save(typeCode: string, value: TaskLibraryValue): Promise<SaveLibraryResult>;
 }
