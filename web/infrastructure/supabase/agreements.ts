@@ -1,5 +1,15 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { LIVE_STATUSES, parseServiceScope, parseTerms, type AgreementStatus, type AgreementTerms, type EquipmentChoice } from "@/domain/agreement";
+import {
+  LIVE_STATUSES,
+  TIMELINE_EVENT_TYPES,
+  buildTimeline,
+  parseServiceScope,
+  parseTerms,
+  type AgreementStatus,
+  type AgreementTerms,
+  type EquipmentChoice,
+  type TimelineSource,
+} from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
@@ -74,7 +84,7 @@ const EVENT_KINDS: Record<string, VersionEventType> = {
   "agreement.changes_requested": "changes_requested",
 };
 
-type EventRow = { type: string; payload: { versionNo?: unknown; via?: unknown } | null; actor_id: string | null; created_at: string };
+type EventRow = { type: string; payload: { versionNo?: unknown; via?: unknown; [key: string]: unknown } | null; actor_id: string | null; created_at: string };
 
 /**
  * The version an event is about (versioning door 5): the `versionNo` in its payload, else the newest version that
@@ -215,7 +225,8 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
 
   /**
    * Each version with its reason, its author's role and its sent, viewed and decided events, read from `events` by the
-   * `versionNo` in the payload (versioning door 3). A view is listed once per version, as the first one.
+   * `versionNo` in the payload (versioning door 3). A view is listed once per version, as the first one. The same read
+   * feeds the agreement's activity timeline, which takes every event of the ten types it lists (activity-timeline).
    */
   async function versionHistory(row: AgreementRow, versions: VersionRow[]) {
     const { data: eventRows, error } = await client
@@ -223,7 +234,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       .select("type, payload, actor_id, created_at")
       .eq("entity_type", "agreement")
       .eq("entity_id", row.id)
-      .in("type", Object.keys(EVENT_KINDS))
+      .in("type", TIMELINE_EVENT_TYPES)
       .order("created_at", { ascending: true });
     if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
     const events = Array.isArray(eventRows) ? (eventRows as EventRow[]) : [];
@@ -259,7 +270,22 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       author: !version.created_by ? null : (roles.get(version.created_by) ?? null),
       events: byVersion.get(version.version_no) ?? [],
     }));
-    return { versions: views, sentVersion, acceptedVersion };
+    const sources: TimelineSource[] = events.map((event) => ({
+      type: event.type,
+      at: new Date(event.created_at),
+      versionNo: versionOfEvent(event, versions),
+      hasActor: event.actor_id !== null,
+      actorRole: event.actor_id === null ? null : (roles.get(event.actor_id) ?? null),
+      payload: event.payload ?? {},
+    }));
+    const first = versions.find((version) => version.version_no === 1);
+    const created = first ? { at: new Date(first.created_at), authorRole: first.created_by ? (roles.get(first.created_by) ?? null) : null } : null;
+    return {
+      versions: views,
+      sentVersion,
+      acceptedVersion,
+      timeline: (renews: { id: string; number: string } | null) => buildTimeline({ events: sources, created, renews }),
+    };
   }
 
   /**
@@ -321,6 +347,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       const current = shownVersion !== undefined && shownVersion === latest;
       const editable = status === "draft" && current;
       const { serviceScope, terms } = await recorded(row.sites.id, shownVersion?.id, editable);
+      const links = await renewalLinks(row.id, row.renews_agreement_id ?? null);
       return {
         id: row.id,
         number: row.number ?? "",
@@ -331,6 +358,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         versions: history.versions,
         sentVersion: history.sentVersion,
         acceptedVersion: history.acceptedVersion,
+        timeline: history.timeline(links.renews),
         compare: compared ? { versionNo: compared.version_no, lines: compareLines, annualCents: sumCents(compareLines.map((line) => cents(line.annualCents))) } : null,
         shown: {
           versionNo: shownVersion?.version_no ?? 1,
@@ -346,7 +374,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         validUntil: shownVersion?.valid_until ?? null,
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
-        ...(await renewalLinks(row.id, row.renews_agreement_id ?? null)),
+        ...links,
       };
     },
   };

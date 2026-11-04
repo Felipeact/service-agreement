@@ -663,3 +663,101 @@ describe("agreement reader, versions and their history", () => {
     expect((await supabaseAgreementReader(typed).get(AGR, 2, compareNo))?.compare).toBeNull();
   });
 });
+
+describe("agreement reader: the activity timeline", () => {
+  const UE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const UA = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const GONE = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const OLD = "66666666-6666-4666-8666-666666666666";
+  const members = ok([
+    { user_id: UE, role: "estimator" },
+    { user_id: UA, role: "owner" },
+  ]);
+  const withVersions = (versions: Record<string, unknown>[], status = "draft") =>
+    ok({ ...agreementRow([], status), org_id: "org-1", agreement_versions: versions.map((v) => ({ created_at: "2026-10-20T17:00:00Z", contracts: [], ...v })) });
+  const row = (type: string, at: string, actor: string | null = null, payload: Record<string, unknown> = {}) => ({ type, payload, actor_id: actor, created_at: at });
+  const TWO = [
+    { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z", created_by: UE },
+    { id: "v2", version_no: 2, created_at: "2026-10-23T17:00:00Z", created_by: UE },
+  ];
+
+  test("C1483: the timeline has an entry per event of the ten types across versions, and the Versions history keeps its five", async () => {
+    const events = ok([
+      row("agreement.sent", "2026-10-21T09:00:00Z", UE, { from: "draft", to: "sent" }),
+      row("agreement.viewed", "2026-10-21T10:00:00Z", null, { versionNo: 1 }),
+      row("agreement.changes_requested", "2026-10-22T10:00:00Z", null, { versionNo: 1, via: "portal", reason: "Too expensive" }),
+      row("agreement.revised", "2026-10-23T17:00:00Z", UE, { versionNo: 2 }),
+      row("agreement.sent", "2026-10-24T09:00:00Z", UA, { from: "draft", to: "sent" }),
+      row("agreement.refused", "2026-10-25T09:00:00Z", null, { versionNo: 2, via: "portal", reason: "No" }),
+      row("agreement.accepted", "2026-10-26T09:00:00Z", null, { versionNo: 2, via: "portal" }),
+      row("agreement.expired", "2026-10-27T09:00:00Z", null, { versionNo: 2, validUntil: "2026-10-26" }),
+      row("agreement.withdrawn", "2026-10-28T09:00:00Z", UA, { via: "deactivation" }),
+      row("agreement.renewed", "2026-10-29T09:00:00Z", null, {}),
+      row("agreement.renewal_drafted", "2026-10-30T09:00:00Z", null, {}),
+      row("contract.completed", "2026-10-31T09:00:00Z"),
+    ]);
+    const { typed, calls } = stubClient({ agreements: withVersions(TWO), service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.map((e) => [e.type, e.versionNo])).toEqual([
+      ["renewal_drafted", 2],
+      ["renewed", 2],
+      ["withdrawn", 2],
+      ["expired", 2],
+      ["accepted", 2],
+      ["refused", 2],
+      ["sent", 2],
+      ["revised", 2],
+      ["changes_requested", 1],
+      ["viewed", 1],
+      ["sent", 1],
+      ["created", 1],
+    ]);
+    const asked = calls.find((call) => call.table === "events" && call.method === "in");
+    expect(asked?.args[1]).toEqual(expect.arrayContaining(["agreement.expired", "agreement.withdrawn", "agreement.renewed", "agreement.renewal_drafted", "agreement.revised"]));
+    expect(asked?.args[1]).not.toContain("contract.completed");
+    const history = detail?.versions.flatMap((v) => v.events.map((e) => e.type)).sort();
+    expect(history).toEqual(["accepted", "changes_requested", "refused", "sent", "sent", "viewed"]);
+  });
+
+  test("C1486: an actor shows the member's role, and one no longer a member shows no actor", async () => {
+    const events = ok([row("agreement.sent", "2026-10-21T09:00:00Z", UA), row("agreement.withdrawn", "2026-10-22T09:00:00Z", GONE)]);
+    const { typed } = stubClient({ agreements: withVersions(TWO.slice(0, 1)), service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.map((e) => [e.type, e.by])).toEqual([
+      ["withdrawn", null],
+      ["sent", "owner"],
+      ["created", "estimator"],
+    ]);
+  });
+
+  test("C1489: a renewal names the agreement this one renews only when the event points at it", async () => {
+    const main = { ...(withVersions(TWO.slice(0, 1)).data as object), renews_agreement_id: OLD, status: "accepted" };
+    const link = ok({ id: OLD, number: "AG-1004", renews_agreement_id: null });
+    const none = ok(null);
+    const events = ok([
+      row("agreement.renewed", "2026-10-21T09:00:00Z", null, { renewsAgreementId: OLD }),
+      row("agreement.renewal_drafted", "2026-10-22T09:00:00Z", null, { renewsAgreementId: "someone-else" }),
+    ]);
+    const { typed } = stubClient({ agreements: { sequence: [ok(main), link, none] }, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.filter((e) => e.type !== "created").map((e) => [e.type, e.detail])).toEqual([
+      ["renewal_drafted", null],
+      ["renewed", "Renews AG-1004"],
+    ]);
+    const unreadable = stubClient({ agreements: { sequence: [ok(main), none, none] }, service_lines: ok([]), events, memberships: members });
+    const bare = await supabaseAgreementReader(unreadable.typed).get(AGR);
+    expect(bare?.timeline?.map((e) => e.detail)).toEqual([null, null, null]);
+  });
+
+  test("C1490: one version and no events give a timeline of exactly Created", async () => {
+    const { typed } = stubClient({ agreements: withVersions(TWO.slice(0, 1)), service_lines: ok([]), events: ok([]), memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.map((e) => [e.type, e.label, e.at.toISOString(), e.by])).toEqual([["created", "Created", "2026-10-20T17:00:00.000Z", "estimator"]]);
+  });
+
+  test("C1494: a failed events read rejects the whole read", async () => {
+    const events: Reply = { data: null, error: { code: "XX000", message: "boom" } };
+    const { typed } = stubClient({ agreements: withVersions(TWO.slice(0, 1)), service_lines: ok([]), events, memberships: members });
+    await expect(supabaseAgreementReader(typed).get(AGR)).rejects.toThrow(/XX000/);
+  });
+});

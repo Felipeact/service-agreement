@@ -120,7 +120,7 @@ Proof: live (Playwright at 1440 and 768 px, one signed-in context), result in th
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
 | event types listed (10) | sent C1478 · viewed C1478 · accepted C1478 · refused C1478 · changes_requested C1478 · revised C1478 · expired C1478 · withdrawn C1478 · renewed C1478 · renewal_drafted C1478 | - |
-| entries read by the reader (11) | all ten C1483 · created C1479, C1490 | - |
+| entries read by the reader (2) | the ten event types C1483 · created C1479, C1490 | - |
 | actor kinds (4) | member role C1485, C1486 · customer via portal C1485 · customer on a viewed C1485 · automatic C1485 | - |
 | entry details (4) | reason C1487 · site deactivated C1488 · valid until C1489 · renews C1489 | - |
 | ordering cases (3) | newest first C1481 · tie reversed C1481 · created last on a tie C1481 | - |
@@ -158,3 +158,10 @@ history, filtering and paging.
 - Mechanism: one builder (under the budget, no ask)
 - No migration, so nothing is applied to `gnxebrtcpbujhvcamtoe`. The live run C1496 reads demo data and, to make a refused
   and revised agreement, may decide one demo agreement; that is the only mutation and is owed an ask if the data lacks one.
+
+- **Boundary:** C1478-C1496 closed at the build commit that carries this paragraph (feature base `8d798db`)
+- **Proof runs (2026-11-04):** `npm test` 2500 passed; `npm run lint`, `npx tsc --noEmit` and `npm run build` clean; `npm run test:db` 21 passed, 0 failed (no SQL change, regression only).
+- **C1493 and C1496 (live, one signed-in context, `next start` on port 3210 from the new build, because the existing dev server on port 3000 did not pick up the change and was not stopped):** AG-1044 at 1440 px showed Created, Viewed by customer, Changes requested with the customer's reason "Please add a spring visit", and New version created (Version 2, owner); at 768 px `scrollWidth 753 = clientWidth 753`; at 375 px `360 = 360`, and with the reason replaced in the DOM by a 463-character string the page stayed `360 = 360` and the section's right edge was 344. AG-1052 showed Created, Sent to customer (owner), two Viewed by customer, Accepted (customer); AG-1056 (withdrawn) showed Withdrawn (owner) and Created. No console errors or warnings. The section has no link or button, so there is no touch target to measure. The 463-character reason was a DOM substitution, not stored data, since no demo agreement carries a long reason.
+- **Settled mid-build:** (1) `AgreementDetail.timeline` is optional in the type so the ten fixtures that build an `AgreementDetail` need no edit, as contact-roles did; the reader always sets it and the view skips an absent or empty one. (2) The check C1483's "ten types" are asked of the database in one `in` list shared with the Versions history; the history still keeps its five through `EVENT_KINDS`. (3) A `viewed` event with no actor reads `customer` (checks Terms).
+- **Abandoned:** a second `events` query for the timeline, since the history's read already fetches the rows.
+- **Not seen live:** an `expired`, `renewed` or `renewal_drafted` entry, a refusal reason and "site deactivated" on real data; the demo rows hold none. They are proven by C1478, C1485, C1487-C1489 only.

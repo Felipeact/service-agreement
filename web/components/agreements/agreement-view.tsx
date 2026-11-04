@@ -15,6 +15,7 @@ import { LinkControls } from "./link-controls";
 import { NoteSection } from "./note-section";
 import { TermSection } from "./term-section";
 import { VersionCompare } from "./version-compare";
+import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "./visit-schedule";
 import type { LineState, LinkState, MoveState, NoteState, TermState } from "./state";
@@ -205,6 +206,8 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
           comparedNo={agreement.compare?.versionNo ?? null}
         />
       )}
+
+      {agreement.timeline && agreement.timeline.length > 0 && <ActivitySection timeline={agreement.timeline} />}
     </div>
   );
 }

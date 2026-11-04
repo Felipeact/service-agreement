@@ -550,3 +550,59 @@ describe("the versions history and the comparison", () => {
     expect(html).not.toContain("<form");
   });
 });
+
+describe("the activity timeline", () => {
+  const entry = (over: Partial<NonNullable<AgreementDetail["timeline"]>[number]>): NonNullable<AgreementDetail["timeline"]>[number] => ({
+    type: "sent",
+    label: "Sent to customer",
+    at: new Date(Date.UTC(2026, 9, 21, 17, 30)),
+    versionNo: 1,
+    by: "estimator",
+    reason: null,
+    detail: null,
+    ...over,
+  });
+  const section = (html: string) => html.split(/(?=<section)/).find((part) => part.includes('aria-label="Activity"')) ?? "";
+  const CREATED = entry({ type: "created", label: "Created", at: new Date(Date.UTC(2026, 9, 20, 16, 0)), by: "owner" });
+
+  test("C1484: entries read newest first, each with its label, version and Vancouver time", () => {
+    const timeline = [
+      entry({ type: "accepted", label: "Accepted", at: new Date(Date.UTC(2026, 9, 25, 20, 5)), versionNo: 2, by: "customer" }),
+      entry({}),
+      CREATED,
+    ];
+    const out = text(section(view(agreement({ detail: { timeline } }))));
+    expect(out.indexOf("Accepted")).toBeGreaterThan(-1);
+    expect(out.indexOf("Accepted")).toBeLessThan(out.indexOf("Sent to customer"));
+    expect(out.indexOf("Sent to customer")).toBeLessThan(out.indexOf("Created"));
+    expect(out).toContain("Version 2");
+    expect(out).toContain("Oct 21, 2026");
+    expect(out).toMatch(/10:30\s?a\.m\./);
+    expect(out).toMatch(/Oct 25, 2026.*1:05\s?p\.m\./);
+    expect(out).toContain("customer");
+  });
+
+  test("C1487: a reason renders in full, wrapped, and an entry without one renders no reason element", () => {
+    const long = "Too expensive. ".repeat(27).trim();
+    expect(long.length).toBeGreaterThan(400);
+    const timeline = [entry({ type: "refused", label: "Refused", by: "customer", reason: long }), entry({}), CREATED];
+    const html = section(view(agreement({ detail: { timeline } })));
+    expect(text(html)).toContain(long);
+    expect(html).toMatch(/data-reason[^>]*class="[^"]*break-words|class="[^"]*break-words[^"]*"[^>]*data-reason/);
+    expect(html.match(/data-reason/g)).toHaveLength(1);
+  });
+
+  test("C1490: an agreement with only Created still shows the Activity section with that entry", () => {
+    const out = text(section(view(agreement({ versions: 1, detail: { timeline: [CREATED] } }))));
+    expect(out).toContain("Activity");
+    expect(out).toContain("Created");
+    expect(out).toContain("owner");
+  });
+
+  test("C1492: a withdrawn agreement renders its Activity entries and no write control", () => {
+    const timeline = [entry({ type: "withdrawn", label: "Withdrawn · site deactivated", by: "owner" }), entry({}), CREATED];
+    const html = view(agreement({ status: "withdrawn", detail: { timeline } }), "estimator");
+    expect(text(section(html))).toContain("Withdrawn · site deactivated");
+    for (const label of ["Add line", "Edit", "Remove", "Send to customer", "Save term"]) expect(has(html, label), label).toBe(false);
+  });
+});

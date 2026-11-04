@@ -157,7 +157,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Imports page: import job history
 - [x] Task library page: view and edit checklists and default months per equipment type
 - [x] Contact roles: site, billing and approver
-- [ ] Agreement activity timeline from `events`
+- [x] Agreement activity timeline from `events`
 - [ ] Members page: invite and set roles (owner, admin, estimator, viewer)
 - [ ] Global search across customers, sites and unit numbers
 

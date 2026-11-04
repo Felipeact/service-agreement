@@ -130,15 +130,15 @@
 | AD-124 | The Task library page is `/task-library` (`?type=<code>`; `pickType` falls back to the first type). The library is read through `TaskLibraryReader.list()` and written through `TaskLibraryStore.save(typeCode, value)`; a save replaces a type's default months and its whole checklist in one transaction, `public.save_task_library_type(p_type_code, p_default_months, p_tasks jsonb)` (security invoker, owner/admin, raises `42501`, `P0002`, `23514`, advisory lock per type). The 40-task and 200-character caps are domain rules, not SQL. Edits reach drafts at once (`site_service_scope` reads the library live) and never a sent version (AD-060); `AssetTypeCatalog` keeps its `{id, code, name}` contract (task-library-page doors 1 to 3) | supabase-js has no transaction, so a client-side delete then insert could lose a checklist; tasks have no stable key, so per-row edits are not safe | active | 2026-11-04 |
 | AD-125 | A role is a nullable composite FK to a contact of the same customer: `sites.approver_contact_id` `(approver_contact_id, customer_id)` and `customers.billing_contact_id` `(billing_contact_id, id)`, both against `contacts (id, customer_id)`; members update them through column grants. Because `customers` and `contacts` now join by two FKs, every embed of a customer's contacts is written `contacts!contacts_customer_id_org_id_fkey(...)` | the FK keeps a role inside one customer (AD-003); an unhinted embed fails with PGRST201 and the pages crash, which no stub-client test shows | active | 2026-11-04 |
 | AD-126 | `private.customer_recipient(p_site_id uuid) returns text` (sql, stable, security definer, `search_path = ''`, no grant to `anon` or `authenticated`) is the only place that picks a customer email address: the site's approver, else its site contact, trimmed, null when neither has an email. `automation_claim` (link, reminder) and `claim_renewals` (`customer_renewal`) call it; staff notifications use `org_managers` | the next role or the Phase 4 contract email changes one function, not each inline join | active | 2026-11-04 |
+| AD-127 | An agreement's activity timeline is derived from `events` at read and never stored: the pure `buildTimeline` (`web/domain/agreement/timeline.ts`) takes the events of ten `agreement.*` types plus version 1's creation and returns `TimelineEntry[]` newest first (a tie keeps the later write first); `AgreementDetail.timeline` is optional in the type. The actor is a role, `customer` (`via: portal`, or a `viewed` with no actor, AD-069) or `automatic` (no actor); a departed member shows none. The same `events` query feeds the Versions history (AD-118) | an event is the source of truth (AD-017); a copy would drift | active | 2026-11-04 |
 
 ## Handoff
 
-**Feature**: contact-roles (ROADMAP Phase 3.5 item 13), profile light, one builder
-**Where**: on `development`, feature base `cacbf4e`: `187a3dd` plan and checks, `35e41ef` migration, code and tests, then the live-run fixes and docs commit, `176854c` live-run fixes and docs, then the Verifier report (round 1, PASS, 38/38)
-**In progress**: nothing; ROADMAP item 13 is ticked
-**Next step**: ROADMAP Phase 3.5 item 14 (Agreement activity timeline from `events`)
-**Open, non-failing**: see `.specs/features/contact-roles/checks.md` Handoff. `ContactView.roles` and `SiteView.approver*` are optional in the types so older fixtures compile; the readers always set them
-**Blockers**: none. The SMTP password is fixed and the hosted URL is in the Supabase Auth redirect list (owner, 2026-11-04); the magic-link template and the Resend domain `felipeviana.com` are confirmed too. Still to watch: the first scheduled W7 and W8 runs at 08:00 America/Vancouver
-**Uncommitted**: none
-**Branch**: development, pushed to origin; Railway `web` redeployed 2026-11-04
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migrations through `20261104203234_contact_roles` applied (`apply_migration` worked after the owner approved it); Vault holds `automation_hmac_secret` and `n8n_events_url`
+**Feature**: activity-timeline (ROADMAP Phase 3.5 item 14), profile light, one builder
+**Where**: on `development`, feature base `8d798db` (plan and checks); the build commit follows, then the Verifier report
+**In progress**: Verifier round 1
+**Next step**: ROADMAP Phase 3.5 item 15 (Members page: invite and set roles)
+**Blockers**: none. Still to watch: the first scheduled W7 and W8 runs at 08:00 America/Vancouver
+**Uncommitted**: none after the build commit
+**Branch**: development; nothing pushed for this feature
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. No migration for this feature; the last is `20261104203234_contact_roles`

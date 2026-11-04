@@ -7,6 +7,7 @@ import type {
   EquipmentChoice,
   ScopeType,
   ServiceLineValue,
+  TimelineEntry,
 } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
@@ -547,6 +548,11 @@ export type AgreementDetail = {
   /** The version named by the latest `agreement.sent` event, and by the latest `agreement.accepted` one (versioning door 3). */
   sentVersion: number | null;
   acceptedVersion: number | null;
+  /**
+   * Everything that happened to the agreement across its versions, newest first (activity-timeline). Optional in the
+   * type so older fixtures compile; the reader always sets it.
+   */
+  timeline?: TimelineEntry[];
   /** The version `?compare=` names, with its lines, or `null` when it names none other than the shown one. */
   compare: { versionNo: number; lines: ServiceLineView[]; annualCents: number } | null;
   shown: { versionNo: number; current: boolean; lines: ServiceLineView[]; annualCents: number };
