@@ -116,10 +116,8 @@ Next.js 16 (App Router), React 19, Tailwind 4 in `web/`; Supabase (Postgres with
 | # | Question or risk | Effect until answered |
 | --- | --- | --- |
 | 1 | Product name, brand, plans and pricing are undecided | Blocks Phase 5 and any public launch |
-| 2 | No customers or usage data | Success measures cannot be baselined; candidate measures only |
-| 3 | E-signature validity per province is assumed from research, not legal review | Blocks go-live of Phase 4 for real contracts |
-| 4 | Staff sign-in on the hosted app needs its URL in the Supabase Auth redirect list | Blocks staff using the hosted app |
-| 5 | The "proposal template" named as the catalog source is not in the repo | Catalog was seeded from the roadmap description |
+| 2 | No customers or usage data | Success measures cannot be baselined; candidate measures only. Deferred until the app is done |
+| 3 | The "proposal template" named as the catalog source is not in the repo | Catalog was seeded from the roadmap description. Not needed for now |
 
 ## 10. Sources
 
