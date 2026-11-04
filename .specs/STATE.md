@@ -131,11 +131,11 @@
 
 ## Handoff
 
-**Feature**: imports-page (ROADMAP Phase 3.5 item 11), profile light, one builder
-**Where**: committed on `development`, feature base `deb8619`: `6d460a5` plan and checks, `f82502e` reader, filter, page and view, `d9c3e9c` decision and context, `29ecfc6` live run, `c8697d7` precision tests, then the Verifier report. No migration. Live run on a dev server at port 3000 (left running)
-**In progress**: nothing; the Verifier passed in round 2 (round 1 failed on C1385's missing 768 px overlap record and three precision notes, since fixed)
-**Next step**: ROADMAP Phase 3.5 item 12 (Task library page)
-**Open, non-failing**: see `.specs/features/versioning/checks.md` Handoff. The `next start` server on port 3201 is a stale build, still running. Carried: the deactivation, proposal-expiry, renewal, term-dates, seasonal-tasks and pipeline-site-cards Verifier notes, outbox-dispatch open question 4, W7 and W8 not imported into n8n, the Railway URL missing from the Supabase Auth redirect list, `seed.sql` never resets statuses. Added: Supabase Auth custom SMTP (Resend) answers `535 Authentication credentials invalid`, so no sign-in email is sent until the SMTP password is fixed in the dashboard; the live run used a link the owner pasted. The demo org has no inactive site, so the Inactive pill on `/sites` is proven by test only
+**Feature**: task-library-page (ROADMAP Phase 3.5 item 12), profile light, one builder
+**Where**: committed on `development`, feature base `d9aab38`: `7640f79` plan and checks, `dc59d0b` domain, store, function and SQL test, `efaf893` month grid, `b2b1429` page, action and sidebar, `537929e` SQL cross-org fix, `7c5db14` docs and live run, `bd8621b` sidebar live record, then the Verifier report. One migration, `20261104120000_task_library`, applied by the owner in the Supabase SQL editor (not in the project's migration list). The dev server on port 3000 was restarted and is left running
+**In progress**: nothing; the Verifier passed in round 2 (round 1 failed on C1439's unrecorded live sidebar state, since recorded)
+**Next step**: ROADMAP Phase 3.5 item 13 (Contact roles: site, billing and approver)
+**Open, non-failing**: see `.specs/features/task-library-page/checks.md` Handoff and the previous list in `.specs/features/imports-page/checks.md`. Added: `SidebarNav` ignores a `?` suffix only to satisfy C1416's input; the `apply_migration` tool was declined by the permission layer, so future migrations may need the owner to apply them. Precision notes: C1432 and C1433 assert `status` but not `values`, and no action test runs as admin
 **Blockers**: none for the code; email sign-in is down until the SMTP password is fixed
 **Uncommitted**: none
 **Branch**: development, not pushed

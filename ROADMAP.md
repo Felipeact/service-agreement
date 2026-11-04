@@ -155,7 +155,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Agreements page: list with filters (status, site, expiring); enable the New agreement button on Pipeline
 - [x] Sites & equipment page: every site across customers
 - [x] Imports page: import job history
-- [ ] Task library page: view and edit checklists and default months per equipment type
+- [x] Task library page: view and edit checklists and default months per equipment type
 - [ ] Contact roles: site, billing and approver
 - [ ] Agreement activity timeline from `events`
 - [ ] Members page: invite and set roles (owner, admin, estimator, viewer)
