@@ -7,6 +7,7 @@ The shared knowledge base for agents. Read this first, before searching the code
 Other sources:
 - [ROADMAP.md](ROADMAP.md): modules (M1–M17), phases, stack, status model, n8n workflows.
 - [PRODUCT.md](PRODUCT.md): users, positioning, constraints, product principles.
+- [PRD.md](PRD.md): product requirements: problem, goal, scope by module, rules, non-functional requirements, delivery status, open risks.
 - [DESIGN.md](DESIGN.md): visual system and UI rules.
 
 ---
