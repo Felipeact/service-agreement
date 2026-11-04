@@ -45,6 +45,7 @@ export const RECIPES: Recipe[] = [
   plain("customer_portal"),
   plain("outbox_dispatch"),
   plain("cadence"),
+  plain("task_library"),
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
 ];
 

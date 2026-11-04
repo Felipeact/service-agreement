@@ -20,14 +20,12 @@ describe("navigation", () => {
     expect(hrefOf(label)).toBe(href);
   });
 
-  test("C1393: Imports links to /imports and Task library has no page yet", () => {
+  test("C1393: Imports links to /imports", () => {
     expect(hrefOf("Imports")).toBe("/imports");
-    expect(hrefOf("Task library")).toBeUndefined();
   });
 
-  test.each(["Task library"])("C156: %s has no page yet", (label) => {
-    expect([...MAIN_NAV, ...FOOTER_NAV].some((item) => item.label === label)).toBe(true);
-    expect(hrefOf(label)).toBeUndefined();
+  test("C1415: Task library links to /task-library", () => {
+    expect(hrefOf("Task library")).toBe("/task-library");
   });
 
   test.each([
@@ -64,6 +62,20 @@ describe("navigation", () => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
     const link = /<a\b[^>]*href="\/imports"[^>]*>Imports<\/a>/.exec(html)?.[0] ?? "";
+    expect(link).not.toBe("");
+    expect(link.includes('aria-current="page"')).toBe(current);
+  });
+
+  test.each([
+    ["/task-library", true],
+    ["/task-library?type=RTU", true],
+    ["/pipeline", false],
+    ["/sites", false],
+    ["/imports", false],
+  ])("C1416: on %s the Task library item is current: %s", (path, current) => {
+    pathname = path;
+    const html = renderToStaticMarkup(createElement(SidebarNav, {}));
+    const link = /<a\b[^>]*href="\/task-library"[^>]*>Task library<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });

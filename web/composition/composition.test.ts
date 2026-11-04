@@ -118,6 +118,13 @@ describe("composition root", () => {
     expect(typeof (await getContainer()).listImportHistory).toBe("function");
   });
 
+  test("C1412: getContainer() exposes listTaskLibrary and saveTaskLibraryType", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    for (const name of ["listTaskLibrary", "saveTaskLibraryType"] as const) expect(typeof container[name], name).toBe("function");
+  });
+
   test("C433: the ports export ImportJobStore with start, confirmUploaded and discard", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = ports.match(/export interface ImportJobStore \{([\s\S]*?)\n\}/)?.[1] ?? "";

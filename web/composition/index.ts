@@ -36,6 +36,7 @@ import {
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
+import { supabaseTaskLibraryReader, supabaseTaskLibraryStore } from "@/infrastructure/supabase/task-library";
 import { supabaseImportHistory, supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
 import {
   supabaseAgreementSender,
@@ -129,6 +130,8 @@ export async function getContainer() {
     contactForEdit: customers.contact,
     assetForEdit: sites.asset,
     listAssetTypes: supabaseAssetTypeCatalog(supabase).list,
+    listTaskLibrary: supabaseTaskLibraryReader(supabase).list,
+    saveTaskLibraryType: supabaseTaskLibraryStore(supabase).save,
     createCustomer: customerStore.create,
     updateCustomer: customerStore.update,
     createContact: contactStore.create,

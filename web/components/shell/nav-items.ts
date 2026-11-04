@@ -10,7 +10,7 @@ export const MAIN_NAV: NavItem[] = [
   { label: "Customers", href: "/customers" },
   { label: "Sites & equipment", href: "/sites" },
   { label: "Imports", href: "/imports" },
-  { label: "Task library" },
+  { label: "Task library", href: "/task-library" },
 ];
 
 export const FOOTER_NAV: NavItem[] = [{ label: "Settings", href: "/settings" }];

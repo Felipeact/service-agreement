@@ -15,7 +15,8 @@ function NavEntry({ item, pathname, onNavigate }: { item: NavItem; pathname: str
       </span>
     );
   }
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const path = pathname.split("?")[0];
+  const active = path === item.href || path.startsWith(`${item.href}/`);
   return (
     <Link
       href={item.href}
