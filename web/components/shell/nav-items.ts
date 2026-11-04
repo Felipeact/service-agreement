@@ -13,4 +13,7 @@ export const MAIN_NAV: NavItem[] = [
   { label: "Task library", href: "/task-library" },
 ];
 
-export const FOOTER_NAV: NavItem[] = [{ label: "Settings", href: "/settings" }];
+export const FOOTER_NAV: NavItem[] = [
+  { label: "Settings", href: "/settings" },
+  { label: "Members", href: "/members" },
+];

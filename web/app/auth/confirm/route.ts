@@ -11,9 +11,16 @@ export async function GET(request: NextRequest) {
   const target = new URL(publicOrigin(request.nextUrl, request.headers, process.env.APP_BASE_URL));
 
   if (tokenHash && type === "email") {
-    const { verifyEmailLink } = await getContainer();
+    const { verifyEmailLink, acceptInvitations } = await getContainer();
     const result = await verifyEmailLink(tokenHash);
     if (result.ok) {
+      // First sign-in of an invited person: the invitation becomes a membership (members-page door 3). A failure here
+      // must not undo the sign-in; the person lands on "No workspace" and can sign in again.
+      try {
+        await acceptInvitations();
+      } catch (cause) {
+        console.error(`Accepting invitations failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+      }
       target.pathname = "/pipeline";
       return NextResponse.redirect(target);
     }

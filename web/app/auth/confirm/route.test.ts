@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { EmailLinkResult } from "@/application/ports";
 
 const verifyEmailLink = vi.fn<(tokenHash: string) => Promise<EmailLinkResult>>();
-vi.mock("@/composition", () => ({ getContainer: async () => ({ verifyEmailLink }) }));
+const acceptInvitations = vi.fn<() => Promise<number>>();
+vi.mock("@/composition", () => ({ getContainer: async () => ({ verifyEmailLink, acceptInvitations }) }));
 
 const { GET } = await import("./route");
 
@@ -12,6 +13,8 @@ const location = (response: Response) => new URL(response.headers.get("location"
 
 beforeEach(() => {
   verifyEmailLink.mockReset();
+  acceptInvitations.mockReset();
+  acceptInvitations.mockResolvedValue(0);
 });
 
 describe("GET /auth/confirm", () => {
@@ -75,5 +78,48 @@ describe("GET /auth/confirm", () => {
     verifyEmailLink.mockResolvedValue(result);
     const response = await confirm(query);
     expect(location(response).searchParams.has("token_hash")).toBe(false);
+  });
+
+  test("C1527: a valid link verifies, then accepts invitations once, then lands on /pipeline", async () => {
+    const order: string[] = [];
+    verifyEmailLink.mockImplementation(async () => {
+      order.push("verify");
+      return { ok: true };
+    });
+    acceptInvitations.mockImplementation(async () => {
+      order.push("accept");
+      return 1;
+    });
+    const response = await confirm("?token_hash=abc&type=email");
+
+    expect(order).toEqual(["verify", "accept"]);
+    expect(acceptInvitations).toHaveBeenCalledTimes(1);
+    expect(location(response).pathname).toBe("/pipeline");
+  });
+
+  test.each([
+    ["a refused link", "?token_hash=abc&type=email", { ok: false, code: "invalid_link" } as const],
+    ["no token_hash", "?type=email", { ok: true } as const],
+    ["type=magiclink", "?token_hash=abc&type=magiclink", { ok: true } as const],
+  ])("C1527: %s never accepts anything and goes to /login", async (_label, query, result) => {
+    verifyEmailLink.mockResolvedValue(result);
+    const response = await confirm(query);
+
+    expect(acceptInvitations).not.toHaveBeenCalled();
+    expect(location(response).pathname).toBe("/login");
+  });
+
+  test.each([
+    ["answers 0", async () => 0],
+    ["throws", async () => Promise.reject(new Error("rpc down"))],
+  ])("C1527: when accepting %s the person still lands on /pipeline", async (_label, accept) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    verifyEmailLink.mockResolvedValue({ ok: true });
+    acceptInvitations.mockImplementation(accept);
+    const response = await confirm("?token_hash=abc&type=email");
+
+    expect(location(response).pathname).toBe("/pipeline");
+    expect(location(response).searchParams.has("token_hash")).toBe(false);
+    log.mockRestore();
   });
 });

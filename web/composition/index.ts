@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import {
   makeDecidePortal,
+  makeInviteMember,
   makeExtractImport,
   makeNotify,
   makeReadImport,
@@ -37,6 +38,7 @@ import {
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseTaskLibraryReader, supabaseTaskLibraryStore } from "@/infrastructure/supabase/task-library";
+import { supabaseInvitationAcceptor, supabaseInvitationLinkSender, supabaseMemberAdmin, supabaseMemberRoster } from "@/infrastructure/supabase/members";
 import { supabaseImportHistory, supabaseImportJobReader, supabaseImportJobStore } from "@/infrastructure/supabase/imports";
 import {
   supabaseAgreementSender,
@@ -91,6 +93,10 @@ export async function getContainer() {
   });
 
   const auth = supabaseAuthGateway(supabase);
+  // Inviting must not touch the inviter's session: this client keeps no cookies and no token (members-page Flow hop 4).
+  const invitationSender = supabaseInvitationLinkSender(createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } }));
+  const memberAdmin = supabaseMemberAdmin(supabase);
+  const memberRoster = supabaseMemberRoster(supabase);
   const members = supabaseMemberDirectory(supabase);
   const pipeline = supabasePipelineReader(supabase, systemClock);
   const customers = supabaseCustomerDirectory(supabase);
@@ -132,6 +138,13 @@ export async function getContainer() {
     listAssetTypes: supabaseAssetTypeCatalog(supabase).list,
     listTaskLibrary: supabaseTaskLibraryReader(supabase).list,
     saveTaskLibraryType: supabaseTaskLibraryStore(supabase).save,
+    listMembers: memberRoster.members,
+    listInvitations: memberRoster.invitations,
+    inviteMember: makeInviteMember(memberAdmin, invitationSender),
+    revokeInvitation: memberAdmin.revoke,
+    setMemberRole: memberAdmin.setRole,
+    removeMember: memberAdmin.remove,
+    acceptInvitations: supabaseInvitationAcceptor(supabase).acceptInvitations,
     createCustomer: customerStore.create,
     updateCustomer: customerStore.update,
     createContact: contactStore.create,

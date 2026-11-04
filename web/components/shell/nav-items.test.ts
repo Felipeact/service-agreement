@@ -79,4 +79,22 @@ describe("navigation", () => {
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
+
+  test("C1504: Members links to /members and comes after Settings in the footer navigation", () => {
+    expect(hrefOf("Members")).toBe("/members");
+    expect(FOOTER_NAV.map((item) => item.label)).toEqual(["Settings", "Members"]);
+  });
+
+  test.each([
+    ["/members", true],
+    ["/settings", false],
+    ["/pipeline", false],
+    ["/task-library", false],
+  ])("C1504: on %s the Members item is current: %s", (path, current) => {
+    pathname = path;
+    const html = renderToStaticMarkup(createElement(SidebarNav, {}));
+    const link = /<a\b[^>]*href="\/members"[^>]*>Members<\/a>/.exec(html)?.[0] ?? "";
+    expect(link).not.toBe("");
+    expect(link.includes('aria-current="page"')).toBe(current);
+  });
 });

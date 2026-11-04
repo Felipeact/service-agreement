@@ -827,3 +827,41 @@ export interface TaskLibraryStore {
   /** Replaces the type's default months and its whole checklist in one transaction (task-library-page doors 2 and 3). */
   save(typeCode: string, value: TaskLibraryValue): Promise<SaveLibraryResult>;
 }
+
+/** One member of the signed-in member's org, as the roster lists them (members-page door 4). */
+export type MemberRow = { userId: string; email: string; role: MemberRole; joinedAt: Date };
+
+/** An invitation not yet accepted, expired ones included (members-page door 1). */
+export type InvitationRow = { id: string; email: string; role: MemberRole; invitedAt: Date; expiresAt: Date };
+
+export interface MemberRoster {
+  /** Every member of the org, owner first, at most 500. Throws on an unexpected error. */
+  members(): Promise<MemberRow[]>;
+  /** Pending invitations, newest first, at most 500; refused to anyone but an owner or admin. Throws on an error. */
+  invitations(): Promise<InvitationRow[]>;
+}
+
+/** Why a membership write was refused; `unavailable` is anything unexpected, already logged. */
+export type MemberFailure = "forbidden" | "not_found" | "unavailable" | "owner_only" | "last_owner" | "self" | "already_member" | "invalid";
+
+export type InviteResult = { ok: true; id: string } | { ok: false; code: Extract<MemberFailure, "invalid" | "already_member" | "owner_only" | "forbidden" | "unavailable"> };
+export type RevokeResult = { ok: true } | { ok: false; code: Extract<MemberFailure, "not_found" | "forbidden" | "unavailable"> };
+export type ChangeMemberResult = { ok: true } | { ok: false; code: Extract<MemberFailure, "owner_only" | "last_owner" | "self" | "not_found" | "forbidden" | "unavailable"> };
+
+/** The only writers of memberships and invitations: one rpc each, the rules live in the database (members-page door 4). */
+export interface MemberAdmin {
+  invite(email: string, role: MemberRole): Promise<InviteResult>;
+  revoke(invitationId: string): Promise<RevokeResult>;
+  setRole(userId: string, role: MemberRole): Promise<ChangeMemberResult>;
+  remove(userId: string): Promise<ChangeMemberResult>;
+}
+
+/** Asks Supabase Auth to email a sign-in link and create the login if it does not exist (members-page Flow hop 4). */
+export interface InvitationLinkSender {
+  send(email: string): Promise<{ ok: true } | { ok: false; code: "rate_limited" | "unavailable" }>;
+}
+
+/** Turns the signed-in user's live invitation into a membership; the number accepted, 0 when none (door 3). Never throws. */
+export interface InvitationAcceptor {
+  acceptInvitations(): Promise<number>;
+}

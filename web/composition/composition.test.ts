@@ -17,6 +17,15 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ getAll: () => [], set: () => {} }),
 }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
+// Both clients call through; the wrappers only record how getContainer built them (C1517).
+vi.mock("@supabase/supabase-js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@supabase/supabase-js")>();
+  return { ...actual, createClient: vi.fn(actual.createClient) };
+});
+vi.mock("@supabase/ssr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@supabase/ssr")>();
+  return { ...actual, createServerClient: vi.fn(actual.createServerClient) };
+});
 
 const URL_KEY = "NEXT_PUBLIC_SUPABASE_URL";
 const PUBLISHABLE_KEY = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY";
@@ -47,6 +56,26 @@ describe("composition root", () => {
     expect(typeof container.transitionAgreement).toBe("function");
     expect(typeof container.transitionContract).toBe("function");
     expect(container.clock.now()).toBeInstanceOf(Date);
+  });
+
+  test("C1517: the invitation sender gets its own client with no session and no refresh, and the cookie client is built apart", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { createClient } = await import("@supabase/supabase-js");
+    const { createServerClient } = await import("@supabase/ssr");
+    vi.mocked(createClient).mockClear();
+    vi.mocked(createServerClient).mockClear();
+
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+
+    expect(createClient).toHaveBeenCalledTimes(1);
+    expect(createClient).toHaveBeenCalledWith("https://example.supabase.co", "sb_publishable_test", { auth: { persistSession: false, autoRefreshToken: false } });
+    expect(createServerClient).toHaveBeenCalledTimes(1);
+    const [, , options] = vi.mocked(createServerClient).mock.calls[0];
+    expect(typeof (options as { cookies: { getAll: unknown } }).cookies.getAll).toBe("function");
+    for (const name of ["inviteMember", "revokeInvitation", "setMemberRole", "removeMember", "listMembers", "listInvitations", "acceptInvitations"] as const) {
+      expect(typeof container[name], name).toBe("function");
+    }
   });
 
   test("C27: getContainer() wires the sign-in link, link verification, sign out and the current member", async () => {

@@ -620,6 +620,50 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          org_id: string
+          role: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          invited_by?: string | null
+          org_id: string
+          role: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          org_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           created_at: string
@@ -1109,6 +1153,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invitations: { Args: never; Returns: number }
       apply_agreement_transition: {
         Args: {
           p_agreement_id: string
@@ -1144,6 +1189,26 @@ export type Database = {
       }
       commit_import: { Args: { p_job_id: string }; Returns: number }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
+      create_invitation: { Args: { p_email: string; p_role: string }; Returns: string }
+      list_invitations: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          role: string
+        }[]
+      }
+      list_members: {
+        Args: never
+        Returns: {
+          email: string
+          joined_at: string
+          role: string
+          user_id: string
+        }[]
+      }
       portal_decide: {
         Args: {
           p_event_type: string
@@ -1177,6 +1242,8 @@ export type Database = {
             }
             Returns: string
           }
+      remove_member: { Args: { p_user_id: string }; Returns: undefined }
+      revoke_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
       save_agreement_term: {
         Args: {
           p_agreement_id: string
@@ -1204,6 +1271,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_version_note: {
+        Args: { p_agreement_id: string; p_note: string }
+        Returns: undefined
+      }
       send_agreement:
         | {
             Args: {
@@ -1224,10 +1295,6 @@ export type Database = {
             }
             Returns: string
           }
-      save_version_note: {
-        Args: { p_agreement_id: string; p_note: string }
-        Returns: undefined
-      }
       set_asset_active: {
         Args: { p_active: boolean; p_asset_id: string; p_replaced_by?: string }
         Returns: undefined
@@ -1236,6 +1303,7 @@ export type Database = {
         Args: { p_active: boolean; p_customer_id: string }
         Returns: string[]
       }
+      set_member_role: { Args: { p_role: string; p_user_id: string }; Returns: undefined }
       set_site_active: {
         Args: { p_active: boolean; p_site_id: string }
         Returns: string[]

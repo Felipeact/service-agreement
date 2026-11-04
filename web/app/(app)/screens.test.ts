@@ -46,6 +46,13 @@ describe("screen states", () => {
     expect(html).toMatch(/<p[^>]*role="status"[^>]*>Loading…<\/p>/);
   });
 
+  test("C1545: /members shows its Members header and a Loading… status, like the other app pages", async () => {
+    const { default: Loading } = await import("./members/loading");
+    const html = renderToStaticMarkup(createElement(Loading));
+    expect(html).toMatch(/<h1[^>]*>Members<\/h1>/);
+    expect(html).toMatch(/<p[^>]*role="status"[^>]*>Loading…<\/p>/);
+  });
+
   test("C103: the error boundary says so and Try again calls reset once", () => {
     const reset = vi.fn();
     const tree = AppError({ error: new Error("boom"), reset }) as ReactElement<{ children: ReactElement<{ onClick: () => void }> }>;
