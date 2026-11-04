@@ -3,14 +3,13 @@
 import { useActionState, useState } from "react";
 import {
   MONTH_PRESETS,
-  MONTH_SHORT,
-  PRESET_LABELS,
   prefillMonths,
   type EquipmentChoice,
   type MonthPreset,
   type ServiceLineInput,
 } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
+import { MonthGrid, monthBox as box, monthChoice as choice } from "@/components/ui/month-grid";
 import { TextInput } from "@/components/ui/text-input";
 import { messageFor, type LineState } from "./state";
 
@@ -36,13 +35,6 @@ type LineFormProps = {
 };
 
 const legend = "text-[13px] font-medium text-ink";
-const box = "size-4 shrink-0 accent-action";
-/** A checkbox and its label as one 44px target (34px on desktop); a checked one wears the action tint. */
-const choice =
-  "flex min-h-11 cursor-pointer items-center gap-1.5 rounded-control border border-hairline bg-surface text-[13px] text-ink has-[:checked]:border-action has-[:checked]:bg-action-tint lg:min-h-[34px]";
-
-const PRESETS = Object.keys(MONTH_PRESETS) as MonthPreset[];
-
 /** Description, visit months, equipment covered and cost per visit; each field's message sits under it. */
 export function LineForm({
   idPrefix,
@@ -110,40 +102,15 @@ export function LineForm({
         )}
       </fieldset>
 
-      <fieldset className="flex flex-col gap-1.5" aria-describedby={errors.visitMonths ? monthsError : undefined}>
-        <legend className={`${legend} mb-1.5`}>Visit months</legend>
-        <div className="flex flex-wrap gap-1.5">
-          {PRESETS.map((preset) => (
-            <Button key={preset} onClick={() => onPreset?.(preset)}>
-              {PRESET_LABELS[preset]}
-            </Button>
-          ))}
-        </div>
-        <div className="grid grid-cols-6 gap-1.5 md:grid-cols-12">
-          {MONTH_SHORT.map((label, index) => {
-            const month = index + 1;
-            return (
-              // Below md a cell is about 44px wide, so the box sits above its month instead of beside it.
-              <label key={label} className={`${choice} flex-col justify-center gap-0.5 md:flex-row md:gap-1.5`}>
-                <input
-                  type="checkbox"
-                  name="visitMonths"
-                  value={month}
-                  checked={checked.includes(month)}
-                  onChange={() => onToggleMonth?.(month)}
-                  className={box}
-                />
-                {label}
-              </label>
-            );
-          })}
-        </div>
-        {errors.visitMonths && (
-          <p id={monthsError} className="text-[12px] font-medium text-danger">
-            {errors.visitMonths}
-          </p>
-        )}
-      </fieldset>
+      <MonthGrid
+        name="visitMonths"
+        legend="Visit months"
+        checked={checked}
+        onToggle={onToggleMonth}
+        onPreset={onPreset}
+        error={errors.visitMonths}
+        errorId={monthsError}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" variant="primary" disabled={pending}>
