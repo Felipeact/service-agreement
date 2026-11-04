@@ -82,8 +82,9 @@ end $$;
 select tests.act_as('uB');
 do $$
 begin
+  -- Org B has its own RTU, so aim at BOILER, a code only org A has.
   perform tests.expect_error('C1435 other org',
-    $q$select public.save_task_library_type('RTU', '{1}', '[]'::jsonb)$q$, 'P0002');
+    $q$select public.save_task_library_type('BOILER', '{1}', '[]'::jsonb)$q$, 'P0002');
 end $$;
 
 reset role;
@@ -91,8 +92,13 @@ select set_config('request.jwt.claims', '', true);
 do $$
 begin
   perform tests.ok('C1435 nothing changed', tests.tl_tasks(tests.id('typeA')) = '0:A:null | 1:B:{3,4}'
-    and tests.tl_months(tests.id('typeA')) = '{4,10}', 'a refused call changed RTU');
+    and tests.tl_months(tests.id('typeA')) = '{4,10}'
+    and tests.tl_tasks(tests.id('tl:boiler')) = '0:Check flue:null' and tests.tl_months(tests.id('tl:boiler')) = '{10}',
+    'a refused call changed RTU or BOILER');
   -- C1436: the sent version's snapshot is byte-identical after all the saves above.
   perform tests.ok('C1436 snapshot', (select md5(snapshot::text) from public.agreement_versions where id = tests.id('tl-sent:v1'))
     = (select digest from tests.tl_before), 'a sent version''s snapshot changed');
 end $$;
+
+rollback;
+select 'task_library: pass' as result;
