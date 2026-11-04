@@ -139,10 +139,10 @@
 ## Handoff
 
 **Feature**: members-page (ROADMAP Phase 3.5 item 15), profile light, one builder
-**Where**: on `development`, feature base `3c995ef` (plan and checks); build commits `960937f` (database) and `5c3bb57` (app); docs commit follows, then the Verifier report
-**In progress**: C1497-C1546 and C1550, C1551 proven; C1547 and C1549 (browser) and C1548 (invite email, needs the dashboard settings) are not run yet
-**Next step**: live browser pass as the demo owner, then dispatch the Verifier over `3c995ef..HEAD`; then tick ROADMAP item 15
-**Blockers**: none for the browser pass. C1548 needs sign-ups on, the Before User Created hook registered and the Confirm signup template link set (plan Open question 1), and an address to invite
-**Uncommitted**: CONTEXT.md and STATE.md (this edit)
+**Where**: on `development`, feature base `3c995ef`; build commits `960937f` (database) and `5c3bb57` (app); verifier round 1 `fd5e4cc` (FAIL, test gaps since closed); live notes `a919d7c` and the commit after it
+**In progress**: C1497-C1546, C1550 and C1551 proven; C1547 and the layout half of C1549 seen live; C1548 and the interactive half of C1549 not run. Verifier round 1 is FAIL, round 2 (scoped: the live checks and the gaps closed in `fd5e4cc`) not dispatched
+**Next step**: set the Supabase Confirm signup template link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`; then have the pending invitee (`marianereisviana@gmail.com`, Viewer, expires 2026-11-18, login already created) request a link at `/login`, check the membership appears, change the role, remove the member after Cancel and Confirm; then Verifier round 2; then tick ROADMAP item 15
+**Blockers**: the Confirm signup template (owner's dashboard); the owner chose to skip it for now (2026-11-05). Done by the owner: sign-ups on, the hook registered, Auth SMTP sender on the verified domain (Resend)
+**Uncommitted**: none
 **Branch**: development; nothing pushed
-**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor, so the project's migration history does not list it; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`
+**Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor and is still not in the project's migration history; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`
