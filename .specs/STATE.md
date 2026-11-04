@@ -136,7 +136,7 @@
 
 **Feature**: activity-timeline (ROADMAP Phase 3.5 item 14), profile light, one builder
 **Where**: on `development`, feature base `8d798db` (plan and checks); the build commit follows, then the Verifier report
-**In progress**: Verifier round 1
+**In progress**: nothing; Verifier round 1 PASS (19/19)
 **Next step**: ROADMAP Phase 3.5 item 15 (Members page: invite and set roles)
 **Blockers**: none. Still to watch: the first scheduled W7 and W8 runs at 08:00 America/Vancouver
 **Uncommitted**: none after the build commit
