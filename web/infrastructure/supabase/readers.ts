@@ -208,7 +208,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
     async list() {
       const { data, error } = await client
         .from("customers")
-        .select("id, name, deactivated_at, contacts(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at))")
+        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at))")
         .order("name")
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
@@ -240,7 +240,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
       const { data, error } = await client
         .from("customers")
         .select(
-          `id, name, deactivated_at, billing_contact_id, contacts(id, name, email, phone, created_at),
+          `id, name, deactivated_at, billing_contact_id, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at),
            sites(id, name, address, site_contact_id, approver_contact_id, created_at, deactivated_at, assets(deactivated_at), agreements(${AGREEMENT_COLUMNS}))`,
         )
         .eq("id", id)
@@ -342,7 +342,7 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
         .from("sites")
         .select(
           `id, name, address, customer_id, site_contact_id, approver_contact_id, deactivated_at,
-           customers(name, deactivated_at, contacts(id, name)),
+           customers(name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name)),
            assets(id, unit_no, type_model, location, source, deactivated_at, replaced_by_asset_id, asset_types(code, name)),
            agreements(id, number, status)`,
         )

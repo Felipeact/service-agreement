@@ -1,4 +1,4 @@
-import type { MemberRole } from "@/application/ports";
+import type { MemberRole, SiteView } from "@/application/ports";
 import type { FieldErrors } from "@/domain/records";
 
 /** What a record form shows after a submit; `invalid` and the failures keep what was typed. */
@@ -54,4 +54,10 @@ export function shownValues<Input>(state: RecordFormState<Input>, initial: Input
 
 export function fieldErrors<Input>(state: RecordFormState<Input>): FieldErrors<keyof Input & string> {
   return state.status === "invalid" ? state.errors : {};
+}
+
+// Here and not in active-control.tsx: a server page calls it, and a function of a "use client" file cannot be called there.
+/** The agreement a site deactivation withdraws: a draft or sent one. A `changes_requested` one blocks it instead. */
+export function withdrawnBy(live: SiteView["liveAgreement"]): string | null {
+  return live && live.status !== "changes_requested" ? live.number : null;
 }

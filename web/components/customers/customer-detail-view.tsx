@@ -76,11 +76,15 @@ export function CustomerDetailView({
           <li key={contact.id} className={ROW}>
             <span className="font-semibold md:w-56">
               {contact.name}
-              {(contact.roles ?? []).map((role) => (
-                <span key={role.kind === "billing" ? "billing" : `${role.kind}:${role.site}`} className="ml-2 text-[12px] font-medium text-ink-2">
-                  {role.kind === "billing" ? "Billing" : `${role.kind === "approver" ? "Approver" : "Site"} · ${role.site}`}
+              {(contact.roles ?? []).length > 0 && (
+                <span className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] font-medium text-ink-2">
+                  {(contact.roles ?? []).map((role) => (
+                    <span key={role.kind === "billing" ? "billing" : `${role.kind}:${role.site}`}>
+                      {role.kind === "billing" ? "Billing" : `${role.kind === "approver" ? "Approver" : "Site"} · ${role.site}`}
+                    </span>
+                  ))}
                 </span>
-              ))}
+              )}
             </span>
             <span className="text-ink-2 md:w-72">
               <ContactLink href={`mailto:${contact.email}`} text={contact.email} />

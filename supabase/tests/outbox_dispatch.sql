@@ -1345,7 +1345,8 @@ end $$;
 
 -- C1470, C1472, C1473: one W7 run renews three due agreements. The approver's gets the notice at the approver, the one with
 -- no approver at its site contact, the one with no email anywhere is skipped with no_recipient.
-update public.notifications set status = 'sent', sent_at = now() where kind in ('customer_renewal', 'staff_renewal');
+update public.notifications set status = 'sent', sent_at = now()
+where kind in ('customer_renewal', 'staff_renewal') and status in ('claimed', 'failed');
 select tests.od_due('cr70');
 select tests.cr_approver('cr70', 'approver@customer.ca');
 select tests.od_due('cr72', 'A', 'site@customer.ca');

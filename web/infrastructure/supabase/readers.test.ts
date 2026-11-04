@@ -843,3 +843,22 @@ describe("contact roles in readers", () => {
     expect(without).toMatchObject({ approverContactId: null, approverName: null });
   });
 });
+
+describe("customers to contacts embeds", () => {
+  const HINT = "contacts!contacts_customer_id_org_id_fkey(";
+
+  test("every query that embeds a customer's contacts names the foreign key (customers also point at their billing contact)", async () => {
+    const selects = async (table: string, reply: unknown, run: (typed: ReturnType<typeof stubClient>["typed"]) => Promise<unknown>) => {
+      const { typed, calls } = stubClient({ [table]: ok(reply) });
+      await run(typed);
+      return String(calls.find((call) => call.method === "select")?.args[0]);
+    };
+    expect(await selects("customers", [], (typed) => supabaseCustomerDirectory(typed).list())).toContain(HINT);
+    expect(await selects("customers", siteWithAgreements(), (typed) => supabaseCustomerDirectory(typed).detail(ID))).toContain(HINT);
+    expect(
+      await selects("sites", { id: ID, name: "S", address: null, customer_id: "c", site_contact_id: null, customers: { name: "C", contacts: [] }, assets: [] }, (typed) =>
+        supabaseSiteRegister(typed).get(ID),
+      ),
+    ).toContain(HINT);
+  });
+});

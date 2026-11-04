@@ -49,6 +49,7 @@ None - nothing consumed outside. Server actions keep their form-state contract (
 | --- | --- | --- |
 | 1. Roles as nullable composite FKs | `sites.approver_contact_id uuid`, FK `(approver_contact_id, customer_id) -> contacts (id, customer_id)`; `customers.billing_contact_id uuid`, FK `(billing_contact_id, id) -> contacts (id, customer_id)`; both `on delete` default (restrict) | a `contact_roles (contact_id, role, site_id)` join table - it allows several approvers per site and a per-site billing contact, which nothing here needs, and it cannot enforce "at most one" without a partial unique index per role |
 | 2. One recipient resolver | `private.customer_recipient(p_site_id uuid) returns text`, `stable`, `security definer`, `search_path = ''`, `nullif(btrim(email), '')` of approver else site contact, null when neither has an email | patching the two inline joins separately - the next role change would need an edit in each and they would drift |
+| 3. Customer-to-contact embeds name their FK (added while building) | `contacts!contacts_customer_id_org_id_fkey(...)` in every PostgREST select that embeds a customer's contacts | leaving the embed implicit - `customers` now has two FKs to `contacts`, PostgREST answers PGRST201 and every customer page fails; found live, not by the stub-client tests |
 
 - A role with a blank email falls through to the next role, then to `no_recipient` (existing skip reason). No new skip reason.
 - Nothing else is hard to reverse. Role labels and ordering in the UI are placement.

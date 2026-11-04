@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { AssetView, SiteView } from "@/application/ports";
+import type { AssetView } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatTermDate } from "@/domain/agreement/term";
@@ -18,11 +18,6 @@ export function replacementOptions(siteAssets: AssetView[], assetId: string): Re
   return siteAssets
     .filter((other) => other.active && other.id !== assetId)
     .map((other) => ({ id: other.id, label: [other.typeCode, other.unitNo].filter(Boolean).join(" ") }));
-}
-
-/** The agreement a site deactivation withdraws: a draft or sent one. A `changes_requested` one blocks it instead. */
-export function withdrawnBy(live: SiteView["liveAgreement"]): string | null {
-  return live && live.status !== "changes_requested" ? live.number : null;
 }
 
 const START_LABEL: Record<ActiveKind, string> = {

@@ -4,11 +4,11 @@ import { describe, expect, test } from "vitest";
 import { AssetFields } from "./asset-form";
 import { ContactFields } from "./contact-form";
 import { CustomerFields } from "./customer-form";
-import { DeactivatePrompt, ReactivatePrompt, replacementOptions, withdrawnBy } from "./active-control";
+import { DeactivatePrompt, ReactivatePrompt, replacementOptions } from "./active-control";
 import { DeletePrompt } from "./delete-control";
 import { RecordPage } from "./record-form";
 import { SiteFields } from "./site-form";
-import { cancelHrefFor, canWriteRecords, type ActiveState, type DeleteState, type RecordFormKind } from "./state";
+import { cancelHrefFor, canWriteRecords, withdrawnBy, type ActiveState, type DeleteState, type RecordFormKind } from "./state";
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 const form = { pending: false, submitLabel: "Save changes", cancelHref: "/customers" };
