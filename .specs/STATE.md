@@ -138,7 +138,7 @@
 **In progress**: nothing; ROADMAP item 13 is ticked
 **Next step**: ROADMAP Phase 3.5 item 14 (Agreement activity timeline from `events`)
 **Open, non-failing**: see `.specs/features/contact-roles/checks.md` Handoff. `ContactView.roles` and `SiteView.approver*` are optional in the types so older fixtures compile; the readers always set them
-**Blockers**: none for the code; email sign-in is down until the SMTP password is fixed
+**Blockers**: none for the code; email sign-in is down until the SMTP password is fixed. W7 and W8 still need importing into the live n8n (owner sign-in required)
 **Uncommitted**: none
-**Branch**: development, not pushed
+**Branch**: development, pushed to origin; Railway `web` redeployed 2026-11-04
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`, `ca-central-1`. Migrations through `20261104203234_contact_roles` applied (`apply_migration` worked after the owner approved it); Vault holds `automation_hmac_secret` and `n8n_events_url`
