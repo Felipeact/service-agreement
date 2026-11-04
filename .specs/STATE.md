@@ -134,8 +134,8 @@
 ## Handoff
 
 **Feature**: contact-roles (ROADMAP Phase 3.5 item 13), profile light, one builder
-**Where**: on `development`, feature base `cacbf4e`: `187a3dd` plan and checks, `35e41ef` migration, code and tests, then the live-run fixes and docs commit, then the Verifier report
-**In progress**: the Verifier (fresh sub-agent) over `cacbf4e..HEAD`; ROADMAP item 13 is ticked only when it passes
+**Where**: on `development`, feature base `cacbf4e`: `187a3dd` plan and checks, `35e41ef` migration, code and tests, then the live-run fixes and docs commit, `176854c` live-run fixes and docs, then the Verifier report (round 1, PASS, 38/38)
+**In progress**: nothing; ROADMAP item 13 is ticked
 **Next step**: ROADMAP Phase 3.5 item 14 (Agreement activity timeline from `events`)
 **Open, non-failing**: see `.specs/features/contact-roles/checks.md` Handoff. `ContactView.roles` and `SiteView.approver*` are optional in the types so older fixtures compile; the readers always set them
 **Blockers**: none for the code; email sign-in is down until the SMTP password is fixed
