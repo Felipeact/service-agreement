@@ -143,7 +143,9 @@ describe("invitation controls", () => {
       expect(markup, id).toMatch(/<button[^>]*>Revoke<\/button>/);
       for (const label of ["Resend", "Revoke"]) {
         const button = new RegExp(`<button[^>]*>${label}</button>`).exec(markup)?.[0] ?? "";
-        expect(button, `${id} ${label}`).toMatch(/class="[^"]*\bh-11\b/);
+        const classes = (/class="([^"]*)"/.exec(button)?.[1] ?? "").split(" ");
+        // The exact token: `sm:h-11` or `lg:h-11` alone would not make the touch target 44 px on a phone.
+        expect(classes, `${id} ${label}`).toContain("h-11");
       }
     }
   });
@@ -173,6 +175,7 @@ describe("invite form", () => {
     const alert = new RegExp(`<p role="${role}"[^>]*>([^<]*)</p>`).exec(html)?.[1] ?? "";
     expect(alert.length).toBeGreaterThan(0);
     if (message) expect(alert).toBe(message);
+    if (status === "forbidden") expect(alert).toContain("owners and admins");
   });
 
   test("C1519: the eight messages are distinct", () => {

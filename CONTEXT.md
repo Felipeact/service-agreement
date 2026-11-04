@@ -243,6 +243,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
   - `rls_enabled_no_policy` on `public.outbox`: on purpose. No user role may read or write the outbox; only `private.enqueue_outbox` writes it (AD-016).
   - `auth_leaked_password_protection`: staff sign in by magic link only, so no password is ever set or checked.
   - `anon_security_definer_function_executable` and `authenticated_security_definer_function_executable`, one each for `portal_view`, `portal_record_view` and `portal_decide` (6): the customer link opens without a login, and a signed-in member may open one too (customer-portal door 2).
+  - `authenticated_security_definer_function_executable` for the seven members-page functions `accept_invitations`, `create_invitation`, `list_invitations`, `list_members`, `remove_member`, `revoke_invitation` and `set_member_role` (7, checked 2026-11-05: `anon` stays at 5, `authenticated` went from 10 to 17): signed-in members call them through RPC and each checks the caller itself (AD-131). The hook `private.hook_before_user_created`, `private.current_org` and `private.check_member_change` are not exposed and raise no finding.
 
 ---
 

@@ -310,6 +310,10 @@ do $$ begin
   perform tests.ok('C1526 execute', has_function_privilege('supabase_auth_admin', 'private.hook_before_user_created(jsonb)', 'execute'), 'supabase_auth_admin cannot run the hook');
   perform tests.ok('C1526 usage', has_schema_privilege('supabase_auth_admin', 'private', 'usage'), 'no usage on private');
   perform tests.ok('C1526 no table grant', not has_table_privilege('supabase_auth_admin', 'public.invitations', 'select'), 'supabase_auth_admin can read invitations');
+  perform tests.ok('C1526 security definer', (select prosecdef from pg_proc where oid = 'private.hook_before_user_created(jsonb)'::regprocedure),
+    'the hook is not security definer, so supabase_auth_admin could not read invitations through it');
+  perform tests.ok('C1526 empty search_path', (select proconfig from pg_proc where oid = 'private.hook_before_user_created(jsonb)'::regprocedure) = array['search_path=""'],
+    'the hook has no empty search_path');
   perform tests.ok('C1526 anon closed', not has_function_privilege('anon', 'private.hook_before_user_created(jsonb)', 'execute'), 'anon can run the hook');
 end $$;
 
@@ -409,19 +413,54 @@ do $$ begin
   perform tests.m_expect('C1538 other org set', format('select public.set_member_role(%L, ''viewer'')', tests.id('mn')), 'P0002:');
   perform tests.m_expect('C1538 other org remove', format('select public.remove_member(%L)', tests.id('mn')), 'P0002:');
   perform tests.m_expect('C1538 unknown', format('select public.remove_member(%L)', tests.id('nobody')), 'P0002:');
+  perform tests.m_expect('C1538 unknown set', format('select public.set_member_role(%L, ''viewer'')', tests.id('nobody')), 'P0002:');
   perform tests.ok('C1538 other org kept', tests.m_role('orgN', 'mn') = 'owner', 'the other org changed');
 end $$;
 
--- C1539: the members lock is held once a write returns, and a demoted owner can no longer act as one.
-do $$
-declare
-  v_key bigint := hashtext('members:' || tests.id('orgM')::text)::bigint;
-begin
-  perform public.set_member_role(tests.id('mo2'), 'admin');
-  perform tests.ok('C1539 lock held', exists (
+reset role;
+select set_config('request.jwt.claims', '', true);
+insert into auth.users (id, email, aud, role)
+select tests.id(u), u || '@members.test', 'authenticated', 'authenticated'
+from unnest(array['lk1', 'lk2', 'lk3', 'lv1', 'lv2']) as u;
+-- C1539: the members lock, one fresh org per writer. An advisory transaction lock lives until the transaction ends, so
+-- each writer gets an org no earlier call touched: the lock is absent before the call and held after it.
+insert into public.orgs (id, name) values (tests.id('orgL1'), 'Lock one (test)'), (tests.id('orgL2'), 'Lock two (test)'), (tests.id('orgL3'), 'Lock three (test)');
+insert into public.memberships (org_id, user_id, role) values
+  (tests.id('orgL1'), tests.id('lk1'), 'owner'), (tests.id('orgL1'), tests.id('lv1'), 'viewer'),
+  (tests.id('orgL2'), tests.id('lk2'), 'owner'), (tests.id('orgL2'), tests.id('lv2'), 'viewer'),
+  (tests.id('orgL3'), tests.id('lk3'), 'owner');
+create function tests.m_lock_held(p_org text) returns boolean
+language sql as $$
+  select exists (
     select 1 from pg_locks
-    where locktype = 'advisory' and pid = pg_backend_pid() and granted and ((classid::bigint << 32) | objid::bigint) = v_key),
-    'no advisory lock for the org');
+    where locktype = 'advisory' and pid = pg_backend_pid() and granted
+      and ((classid::bigint << 32) | objid::bigint) = hashtext('members:' || tests.id(p_org)::text)::bigint)
+$$;
+grant execute on function tests.m_lock_held(text) to anon, authenticated;
+
+select tests.act_as('lk1');
+do $$ begin
+  perform tests.ok('C1539 set_member_role: no lock before', not tests.m_lock_held('orgL1'), 'the lock was already held');
+  perform public.set_member_role(tests.id('lv1'), 'estimator');
+  perform tests.ok('C1539 set_member_role: lock held', tests.m_lock_held('orgL1'), 'set_member_role took no advisory lock for the org');
+end $$;
+select tests.act_as('lk2');
+do $$ begin
+  perform tests.ok('C1539 remove_member: no lock before', not tests.m_lock_held('orgL2'), 'the lock was already held');
+  perform public.remove_member(tests.id('lv2'));
+  perform tests.ok('C1539 remove_member: lock held', tests.m_lock_held('orgL2'), 'remove_member took no advisory lock for the org');
+end $$;
+select tests.act_as('lk3');
+do $$ begin
+  perform tests.ok('C1539 create_invitation: no lock before', not tests.m_lock_held('orgL3'), 'the lock was already held');
+  perform public.create_invitation('lock3@x.test', 'viewer');
+  perform tests.ok('C1539 create_invitation: lock held', tests.m_lock_held('orgL3'), 'create_invitation took no advisory lock for the org');
+end $$;
+
+-- C1539, serialised state: after one owner demotes the other, the demoted one can no longer act as an owner.
+select tests.act_as('mo1');
+do $$ begin
+  perform public.set_member_role(tests.id('mo2'), 'admin');
 end $$;
 select tests.act_as('mo2');
 do $$ begin
