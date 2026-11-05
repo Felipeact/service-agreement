@@ -1,26 +1,26 @@
 # Contract generation verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: light
-**Diff range**: f80ad4d..13cad3d646cbeccb0a8a5ad763392574789eff77
-**Round**: 2 - scoped
+**Diff range**: f80ad4d..2de7f8a403147f3c1efd825dac633547add14968
+**Round**: 3 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-Round 2 is scoped by the fix diff `a138450..13cad3d` (commits `964eb4e` tests and `13cad3d` docs) and by the two round 1 verdicts that were not PASS (C1601, C1650). Every proof was re-run in full at `13cad3d`.
+Round 3 is scoped to C1650, the only verdict that was not PASS in round 2. `git diff 13cad3d..2de7f8a --stat` shows only `.specs/features/contract-generation/checks.md` (+1 Handoff line) and this report. `git diff 13cad3d..HEAD --stat -- web supabase` is empty: no code, test or migration moved. So every proof result and every citation outside C1650 is carried from 13cad3d, where the full gate was re-run (round 2). C1650 was re-judged at 2de7f8a, with a fresh read-only select.
 
-Result: 54 of 55 checks are proven with located evidence. C1601 is now proven. C1650 still fails on one clause the owner did not waive: at 375 and 768 px the agreement page was never measured while it showed the Generate button and the confirm step.
+Result: 55 of 55 checks are proven with located evidence.
 
-Proof runs (verified at 13cad3d):
+Proof runs (carried from 13cad3d; no code changed since):
 - **V** = `cd web && npx vitest run infrastructure/supabase/contracts.test.ts components/agreements/contract-state.test.ts "app/(app)/contract-actions.test.ts" infrastructure/supabase/agreements.test.ts components/agreements/agreements.test.ts "app/(app)/agreements/[agreementId]/page.test.ts" domain/contract/parties.test.ts components/contracts/contracts.test.ts "app/(app)/contracts/[contractId]/page.test.ts" "app/(app)/contracts/[contractId]/pdf/route.test.ts" domain/contract/document.test.ts infrastructure/documents/contract-pdf.test.ts composition/contract-pdf.test.ts boundaries.test.ts composition/composition.test.ts infrastructure/documents --reporter=verbose`: exit 0, 19 files, 472 passed. Every check id C1619..C1648 appears in the verbose output with a check mark (for example C1641 x5, including the new accent test, and C1643 x2).
 - **D** = `cd web && npm run test:db`: exit 0, `23 passed, 0 failed`, including `PASS transitions`, `PASS rls_roles`, `PASS domain_constraints` and `PASS demo_seed`.
 
 ## Binding sources
 
-none (the plan marks no source binding). Carried from a138450; the fix did not touch the plan.
+none (the plan marks no source binding). Carried from 13cad3d.
 
 ## Checks
 
-Proofs verified at 13cad3d. Citations refreshed for every file in `git diff a138450..HEAD --stat`: `supabase/tests/transitions.sql`, `web/boundaries.test.ts`, `web/composition/composition.test.ts`, `web/composition/contract-pdf.test.ts`, `web/infrastructure/documents/contract-pdf.test.ts`, `web/infrastructure/supabase/contracts.test.ts` and `checks.md`. Assertion judgments for files the fix did not touch are carried from a138450.
+C1650 verified at 2de7f8a. Every other row is carried from 13cad3d, where its proofs were verified. Citations refreshed for every file in `git diff a138450..HEAD --stat`: `supabase/tests/transitions.sql`, `web/boundaries.test.ts`, `web/composition/composition.test.ts`, `web/composition/contract-pdf.test.ts`, `web/infrastructure/documents/contract-pdf.test.ts`, `web/infrastructure/supabase/contracts.test.ts` and `checks.md`. Assertion judgments for files the fix did not touch are carried from a138450.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
@@ -76,19 +76,19 @@ Proofs verified at 13cad3d. Citations refreshed for every file in `git diff a138
 | C1646 | real route and real renderer | V | `web/composition/contract-pdf.test.ts:87` - filename; `:89` `"%PDF-"`; `:93-94` `"ServiceContract"`, `"PatLee"`; `:95` `toContain(clause.replace(/\s+/g, ""))` for every clause, in full | PASS |
 | C1647 | ContractRenderer body is exactly one method; DocumentRenderer pinned; no react | V | `web/boundaries.test.ts:84` - `expect(contract.trim()).toBe("renderContract(document: ContractDocument): Promise<Uint8Array>;")`; DocumentRenderer contains renderAgreement and not renderContract; no react import | PASS |
 | C1648 | container wiring; generateContract reaches no other store | V | `web/composition/composition.test.ts:71` - `toContain("contractStore: supabaseContractStore(supabase)")`; `:78` `expect([...reached].sort()).toEqual(["contractStore", "currentMember"])` over the `container.<name>` uses in `contract-actions.ts` | PASS |
-| C1649 | advisors | mcp `get_advisors` security (carried from a138450) | verified by recorded evidence at a138450: anon 5 (neither contract function), authenticated 19 including `public.contract_signer` and `public.create_contract`, which matches `.specs/features/contract-generation/checks.md:422`. The fix touched no SQL function | PASS |
-| C1650 | live run at 375/768/1440 with touch: Generate shown, confirm creates nothing, lands on the contract, Contract line, PDF, no horizontal scroll, controls >= 44 px at 375/768, no console error; contract deleted afterwards | live, author-side; Verifier read-only `select` at 13cad3d | `.specs/features/contract-generation/checks.md:425` records the run (contract id, count 3 then 4, 7,154-byte `AG-1035-contract.pdf`). `:430` records the owner's two decisions: touch measured by size, not emulated, and the row deleted by `execute_sql`, with resulting counts 3 / 0 / 0. The Verifier's select agrees: 3 contracts, 0 contract events, 0 contracts with `parties = '{}'`, 0 rows and 0 events for `70b2d79a-48e4-4d45-990a-8810d23b379f`. Still unmet: the Generate button and the confirm step (`Generate contract` submit, `Cancel`) were only on screen at 1440 px. At 375 and 768 px the agreement page was measured after the contract existed, with no button. So "every control at least 44 px tall on 375 and 768" and "no page scrolls horizontally" are unproven for that state, and the owner's decisions did not waive it | FAIL |
+| C1649 | advisors | mcp `get_advisors` security (carried from 13cad3d, recorded at a138450) | verified by recorded evidence at a138450: anon 5 (neither contract function), authenticated 19 including `public.contract_signer` and `public.create_contract`, which matches `.specs/features/contract-generation/checks.md:422`. The fix touched no SQL function | PASS |
+| C1650 | live run at 375/768/1440 with touch: Generate shown, confirm creates nothing, lands on the contract, Contract line, PDF, no horizontal scroll, controls >= 44 px at 375/768, no console error; contract deleted afterwards | live, author-side; verified by recorded evidence at 2de7f8a, plus a Verifier read-only `select` | Each clause has a concrete recorded value:<br>- The 1440 px walk, `.specs/features/contract-generation/checks.md:425`: Generate, then confirm with count still 3, then `/contracts/70b2d79a-48e4-4d45-990a-8810d23b379f` with 4 contracts and 1 `contract.pending_signature` event. Then `Contract: Pending signature · Open contract` with no button, `AG-1035-contract.pdf` returned 200 at 7,154 bytes starting `%PDF-`, and no console error after the fix.<br>- The contract and agreement pages after generation, `:425`: no horizontal scroll at 375/768/1440, controls at least 44 px at 375/768.<br>- The Generate button and confirm state, `:430`: `scrollWidth` 360/753 against `innerWidth` 375/768, submit 44 px, Cancel 44 px, confirm text with signer, term and total, nothing written.<br>- The owner's decisions, `:429`: touch measured by size, not emulated (a recorded, owner-approved deviation from the check's wording), and the run's contract deleted.<br>The Verifier's select at 2de7f8a agrees: 3 contracts, 0 contract events, 0 with `parties = '{}'` | PASS |
 | C1651 | npm test, tsc, lint, test:db all pass | `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run test:db` at 13cad3d | `npm test`: 144 files, 2855 passed, exit 0; tsc exit 0; lint exit 0; test:db `23 passed, 0 failed` | PASS |
 
 ## Swept existing re-read
 
-Carried from a138450; the fix touched neither cited file region.
+Carried from 13cad3d (itself carried from a138450); no code moved since.
 - RLS select on `contracts` for every role: `supabase/tests/rls_roles.sql:26-27` loops `tests.tenant_tables()`, which includes `'contracts'` (`supabase/tests/fixture.sql:15-16`).
 - The contract transition assertions: `supabase/tests/transitions.sql:36`, `:220`, `:246` (above the fix's first changed line, 381) still pass.
 
 ## Existing tests the feature touched
 
-Verified at 13cad3d. The fix diff `a138450..HEAD` only strengthens assertions:
+Carried from 13cad3d; `13cad3d..2de7f8a` changes no test. The fix diff `a138450..13cad3d` only strengthens assertions:
 - `versionNo` 1 became 2 on a two-version fixture.
 - C1604 now strips comments before comparing positions.
 - C1608 gained an assertion.
@@ -100,12 +100,14 @@ Verified at 13cad3d. The fix diff `a138450..HEAD` only strengthens assertions:
 
 No assertion was removed or loosened. The C1646 change from `"Service Contract"` to `"ServiceContract"` is a whitespace-free match of the same text.
 
-## Round 1 gaps, re-judged at 13cad3d
+## Round 1 gaps, re-judged
+
+Rows 1 and 3-11 are carried from 13cad3d. Row 2 was re-judged at 2de7f8a.
 
 | # | Round 1 gap | Status |
 | --- | --- | --- |
 | 1 | C1601 versionNo 1 vs 2 | closed - `supabase/tests/transitions.sql:382-383,391` |
-| 2 | C1650 touch not emulated; row not deleted; flow only at 1440 | touch: waived by the owner (`checks.md:430`); deletion: done and confirmed by select; flow at 375/768: **open** |
+| 2 | C1650 touch not emulated; row not deleted; flow only at 1440 | closed - touch waived by the owner (`checks.md:429`); deletion done and confirmed by select; the Generate and confirm state measured at 375/768 (`checks.md:430`) |
 | 3 | C1604 comments could satisfy the lock-order check | closed - `transitions.sql:443` strips `--` comments. The runtime two-session race (AC 8) remains a disclosed structural limit, stated in the check, not a defect |
 | 4 | C1647 contains instead of exact | closed - `web/boundaries.test.ts:84` |
 | 5 | C1648 key-name proxy | closed - `web/composition/composition.test.ts:78` reads the action source |
@@ -118,14 +120,19 @@ No assertion was removed or loosened. The C1646 change from `"Service Contract"`
 
 ## Gaps
 
-1. **C1650 (FAIL)**: the pre-contract state of the agreement page was never measured at 375 or 768 px. That state is the `Generate contract` button and the confirm step with its `Generate contract` submit and `Cancel`. The check requires no horizontal scroll and controls at least 44 px tall at those widths, but the Handoff (`.specs/features/contract-generation/checks.md:425`) shows the flow only at 1440 px. The later 375 and 768 px measurements came after the contract existed. The owner's decisions (`checks.md:430`) cover touch emulation and the deletion only. Two things would close it: a re-run of the press-and-confirm steps at 375 and 768 px (that needs another generate-and-delete with the owner's go-ahead), or an owner waiver recorded in the Handoff.
+No gap fails the feature. These remain, all on PASS rows:
+1. **C1650 (PASS, recorded evidence)**: the proof is an author-side live run, not a committed test, and touch was measured by size rather than emulated. The owner approved both (`.specs/features/contract-generation/checks.md:429`). AC 23 therefore has no automated regression proof.
 2. **C1604 (PASS, disclosed limit)**: AC 8's two-session race is proven structurally only (`supabase/tests/transitions.sql:443-450`).
 3. **C1633 (PASS, minor)**: the role parameter is unused (`web/components/contracts/contracts.test.ts:117`).
 4. **C1643/C1646 (PASS, minor)**: the clause matches ignore whitespace (`web/infrastructure/documents/contract-pdf.test.ts:141`, `web/composition/contract-pdf.test.ts:95`).
 
 ## Gate
 
-Verified at 13cad3d:
+Verified at 2de7f8a:
+- `git diff 13cad3d..HEAD --stat -- web supabase` - empty (only `.specs` files changed)
+- mcp `execute_sql` (read-only select) - contracts 3, contract events 0, `parties = '{}'` 0
+
+Carried from 13cad3d (no code changed since):
 - `npx vitest run <16 contract paths> --reporter=verbose` - 19 files, 472 passed, 0 failed
 - `npm test` - 144 files, 2855 passed, 0 failed
 - `npx tsc --noEmit` - exit 0

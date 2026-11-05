@@ -194,6 +194,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md round 1 C1324/C1325 (supabase/tests)
 - last seen: 2026-11-03T19:54:53Z
 
+### L-031 - When a check names a concrete value that depends on the fixture (versionNo 2), build the fixture so a hard-coded default cannot produce it, and assert that value.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `supabase/tests` · harmful: 0
+- features: contract-generation
+- evidence: C1601 transitions.sql:388 (round 1) (supabase/tests)
+- last seen: 2026-11-05T20:32:26Z
+
+### L-032 - A static-markup test cannot see the server and client boundary: run every new Server Component page once in the real app before calling it done, and never call a function exported from a use-client file in a server component.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `web/ui` · harmful: 0
+- features: contract-generation
+- evidence: live run 2026-11-05, contract page crash (termSummary from a use-client file) (web/ui)
+- last seen: 2026-11-05T20:32:27Z
+
+### L-033 - When a check says exactly the body, assert equality of the trimmed body, not toContain, or a second method on the port still passes.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `lint-boundaries` · harmful: 0
+- features: contract-generation
+- evidence: C1647 web/boundaries.test.ts:83 (round 1) (lint-boundaries)
+- last seen: 2026-11-05T20:32:27Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

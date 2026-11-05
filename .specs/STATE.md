@@ -146,11 +146,12 @@
 
 ## Handoff
 
-**Feature**: global-search (ROADMAP Phase 3.5 item 16) - DONE. Profile light, one builder; Verifier round 2 PASS (45 of 45, `validate_verification.py` exit 0)
-**Where**: on `development`, feature base `55c7464`; plan `d0fd052`, checks `1402a1a`, build `374aedf` `c1ddb31`, test gaps closed `e8ca71e`, report `.specs/features/global-search/verification.md`
-**Known, not a check**: in `components/search/search-view.tsx` the site and equipment detail line does not wrap an unbroken 250-character customer name or address at 375 px; the list clips it and the page never scrolls (AC 20 holds). A `[overflow-wrap:anywhere]` on the detail spans would fix it
+**Feature**: contract-generation (ROADMAP Phase 4 item 1) - DONE. Profile light, one builder; Verifier round 3 PASS (55 of 55, `validate_verification.py` exit 0; round 1 failed C1601 and C1650, round 2 C1650)
+**Where**: on `development`, feature base `f80ad4d`; plan `1e1fe36`, checks `53c3407`, database `89f6008`, web `91cfa98`, client-boundary fix and docs `a138450`, test gaps closed `964eb4e`, report `.specs/features/contract-generation/verification.md`
+**Known, not a check**: the two-session race behind AC 8 is proven structurally (lock order and the unique constraint), not with two sessions; touch was measured by size and clicked, not emulated (owner accepted, 2026-11-05). Open for go-live: the tenant's counsel has not read the six generated clauses (`successive 12 months terms` reads awkwardly and is pinned by C1639)
 **Branch**: development; nothing pushed
-**Local servers**: none running (the dev server on port 3000 was stopped on 2026-11-05; start it with `npm run dev` in `web/`)
-**Production**: `web` redeployed 2026-11-05 (deployment `65e584e6`) with Members (including the role-select fix) and global search.
+**Local servers**: a dev server was already running on port 3000 and was left as found
+**Production**: not redeployed. The Supabase project has migration `20261105194705_contract_generation` applied (owner's go-ahead); the Railway `web` service does not have the contract pages yet
+**Next**: ROADMAP Phase 4 item 2, `SignatureProvider` with a DocuSeal adapter and embedded signing (a void or declined contract still holds the version's unique slot, so regeneration needs `unique (agreement_version_id)` relaxed to a partial index first)
 **Members page (item 15)**: DONE for now. Accepted on production; role change, Cancel on remove and the fix proven by the session; Confirm remove, Resend, Revoke and the uninvited-address 403 run by the owner by hand. Verifier round 1 FAIL (test gaps, closed); round 2 not dispatched at the owner's call
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor and is still not in the project's migration history; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`
