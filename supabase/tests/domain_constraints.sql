@@ -289,5 +289,21 @@ begin
   perform tests.expect_rows('C1232 null', format('update public.agreement_versions set valid_until = null where id = %L', v), 1);
 end $$;
 
+-- Contract generation C1614: parties is a jsonb object, `{}` by default, never null.
+do $$
+declare
+  a uuid := tests.id('c1220');
+  c uuid;
+begin
+  insert into public.contracts (org_id, agreement_version_id) values (a, tests.id('c1232:v1')) returning id into c;
+  perform tests.ok('C1614 default', (select parties from public.contracts where id = c) = '{}'::jsonb, 'parties does not default to {}');
+  perform tests.expect_error('C1614 null', format('update public.contracts set parties = null where id = %L', c), '23502');
+  perform tests.expect_error('C1614 array', format('update public.contracts set parties = ''[]'' where id = %L', c), '23514');
+  perform tests.expect_error('C1614 string', format('update public.contracts set parties = ''"x"'' where id = %L', c), '23514');
+  perform tests.expect_error('C1614 number', format('update public.contracts set parties = ''1'' where id = %L', c), '23514');
+  perform tests.expect_rows('C1614 object', format('update public.contracts set parties = ''{"schema": 1}'' where id = %L', c), 1);
+  perform tests.expect_rows('C1614 empty object', format('update public.contracts set parties = ''{}'' where id = %L', c), 1);
+end $$;
+
 rollback;
 select 'domain_constraints: pass' as result;

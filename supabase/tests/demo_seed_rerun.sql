@@ -80,5 +80,14 @@ do $$ begin
     = (select count(*) from public.agreements where org_id = tests.demo()), 'the demo agreement count changed');
 end $$;
 
+-- C1617 (contract-generation): the second run fills a contract with no parties and keeps one that has them.
+do $$ begin
+  perform tests.ok('C1617 refilled', (select parties ->> 'schema' from public.contracts where id = md5('demo:contract:7')::uuid) = '1'
+    and (select parties -> 'contractor' ->> 'legalName' from public.contracts where id = md5('demo:contract:7')::uuid)
+      = (select legal_name from public.org_settings where org_id = tests.demo()), 'the second run did not fill an empty contract');
+  perform tests.ok('C1617 kept', (select parties ->> 'marker' from public.contracts where id = md5('demo:contract:9')::uuid) = 'true',
+    'the second run overwrote the parties of a contract that had them');
+end $$;
+
 rollback;
 select 'demo_seed: pass' as result;

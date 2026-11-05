@@ -334,6 +334,7 @@ export type Database = {
           created_at: string
           id: string
           org_id: string
+          parties: Json
           status: string
         }
         Insert: {
@@ -341,6 +342,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id: string
+          parties?: Json
           status?: string
         }
         Update: {
@@ -348,6 +350,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id?: string
+          parties?: Json
           status?: string
         }
         Relationships: [
@@ -1188,7 +1191,9 @@ export type Database = {
         Returns: undefined
       }
       commit_import: { Args: { p_job_id: string }; Returns: number }
+      contract_signer: { Args: { p_site_id: string }; Returns: Json }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
+      create_contract: { Args: { p_agreement_id: string }; Returns: string }
       create_invitation: { Args: { p_email: string; p_role: string }; Returns: string }
       list_invitations: {
         Args: never

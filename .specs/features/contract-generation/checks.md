@@ -417,3 +417,7 @@ Known level gaps, recorded here instead of hidden:
 - C1650 is an author-side live run, not a committed test (AGENTS.md).
 - Applying the migration to the project is a production change: it needs the owner's explicit go-ahead before `apply_migration`, and the
   SQL proofs pass only after it. The demo contract the live run creates is deleted by SQL only with a second go-ahead.
+
+- **Boundary:** C1597-C1618 closed at the commit that adds `20261105194705_contract_generation.sql`; `npm run test:db` ends 23 passed, 0 failed. The migration was applied to the project with the owner's go-ahead on 2026-11-05; the file carries the version `apply_migration` recorded (AD-006).
+- **Advisors (C1649):** before 5 anon and 17 authenticated findings, after 5 and 19; the two new ones are `public.contract_signer` and `public.create_contract` (authenticated, security definer). No other change.
+- **Settled mid-build:** C1614's block uses the C1220 org (`tests.id('orgA')` has no row at that point in `domain_constraints.sql`) and the version of the C1232 agreement; the claim is unchanged.

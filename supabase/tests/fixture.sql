@@ -62,6 +62,23 @@ begin
   raise exception '%: expected SQLSTATE %, statement succeeded', p_label, p_state;
 end $$;
 
+-- Runs p_sql and requires it to fail with exactly p_state and the error hint p_hint; expect_error compares the SQLSTATE only.
+create function tests.expect_hint(p_label text, p_sql text, p_state text, p_hint text) returns void
+language plpgsql as $$
+declare v_hint text;
+begin
+  begin
+    execute p_sql;
+  exception when others then
+    get stacked diagnostics v_hint = pg_exception_hint;
+    if sqlstate = p_state and v_hint is not distinct from p_hint then
+      return;
+    end if;
+    raise exception '%: expected SQLSTATE % with hint %, got % with hint % (%)', p_label, p_state, p_hint, sqlstate, v_hint, sqlerrm;
+  end;
+  raise exception '%: expected SQLSTATE %, statement succeeded', p_label, p_state;
+end $$;
+
 -- Runs p_sql and requires it to succeed affecting exactly p_rows rows.
 create function tests.expect_rows(p_label text, p_sql text, p_rows bigint) returns void
 language plpgsql as $$

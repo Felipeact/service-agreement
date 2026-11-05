@@ -160,6 +160,14 @@ from demo_agreements
 where contract is not null
 on conflict (id) do nothing;
 
+-- Contract generation (door 1): a demo contract that records no parties gets them from the settings as they stand; one that
+-- already has them keeps them, as the snapshot backfill below keeps a recorded scope.
+update public.contracts c
+set parties = private.contract_parties(a.site_id)
+from public.agreement_versions v
+join public.agreements a on a.id = v.agreement_id and a.org_id = v.org_id
+where v.id = c.agreement_version_id and v.org_id = c.org_id and c.org_id = '00000000-0000-4000-8000-00000000de30' and c.parties = '{}';
+
 -- Service included (.specs/features/service-included, door 5): a demo version that is no longer editable records its
 -- site's scope, as if it had been sent today. Drafts stay live, and a version that already holds one keeps it.
 update public.agreement_versions v

@@ -250,6 +250,408 @@ begin
     'a refused call wrote something');
 end $$;
 
+-- Contract generation (.specs/features/contract-generation/checks.md): C1597-C1618.
+update public.org_settings set address = '1 Main St', phone = '604-555-0100' where org_id = tests.id('orgA');
+
+-- An accepted org A agreement <p_name> from tests.rn_agreement on its own site (address '2 Dock Rd'). Its site contact is
+-- 'Pat <p_name>' with p_email (none when null). p_approver adds an approver 'Avery': '-' none, null a null email, else the email.
+create function tests.cg_accepted(p_name text, p_email text default 'pat@customer.ca', p_approver text default '-')
+returns uuid
+language plpgsql as $$
+declare
+  a uuid := tests.rn_agreement(p_name, 'A', '2027-01-01',
+    '{"cpiCapPct": 5, "cpiRenegotiationThresholdPct": 5, "renewalNoticeDays": 30}'::jsonb, p_email);
+begin
+  update public.sites set address = '2 Dock Rd' where id = tests.id(p_name || ':site');
+  if p_approver is distinct from '-' then
+    insert into public.contacts (id, org_id, customer_id, name, email)
+    values (tests.id(p_name || ':ap'), tests.id('orgA'), tests.id('custA'), 'Avery', p_approver);
+    update public.sites set approver_contact_id = tests.id(p_name || ':ap') where id = tests.id(p_name || ':site');
+  end if;
+  return a;
+end $$;
+
+-- contracts | events | outbox of org A, read past RLS.
+create function tests.cg_state() returns text
+language sql security definer as $$
+  select concat_ws('|',
+    (select count(*) from public.contracts where org_id = tests.id('orgA')),
+    (select count(*) from public.events where org_id = tests.id('orgA')),
+    (select count(*) from public.outbox where org_id = tests.id('orgA')))
+$$;
+
+-- The contract of the highest version of agreement <p_name>, read past RLS.
+create function tests.cg_contract(p_name text) returns public.contracts
+language sql security definer as $$
+  select c.* from public.contracts c
+  where c.agreement_version_id = tests.latest_version(tests.id(p_name))
+$$;
+
+grant execute on all functions in schema tests to anon, authenticated;
+
+-- C1597: the contract is for the highest version, in pending_signature, in the caller's org.
+do $$
+declare a uuid; c uuid;
+begin
+  a := tests.cg_accepted('cg1');
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start, term_months)
+  values (tests.id('cg1:v2'), tests.id('orgA'), a, 2, '2027-02-01', 12);
+  perform tests.act_as('uE');
+  c := public.create_contract(a);
+  reset role;
+  perform tests.ok('C1597 id', c is not null, 'no contract id returned');
+  perform tests.ok('C1597 one row', (select count(*) from public.contracts k join public.agreement_versions v on v.id = k.agreement_version_id
+                                      where v.agreement_id = a) = 1, 'not exactly one contract for the agreement');
+  perform tests.ok('C1597 version', (select agreement_version_id from public.contracts where id = c) = tests.id('cg1:v2'),
+    'the contract is not on the highest version');
+  perform tests.ok('C1597 status', (select status from public.contracts where id = c) = 'pending_signature', 'status is not pending_signature');
+  perform tests.ok('C1597 org', (select org_id from public.contracts where id = c) = tests.id('orgA'), 'wrong org');
+end $$;
+
+-- C1598: the parties literal, with an approver; then with nothing set the three keys stay present and null.
+do $$
+declare a uuid; b uuid;
+begin
+  a := tests.cg_accepted('cg2a', 'pat@customer.ca', 'avery@customer.ca');
+  perform tests.act_as('uE');
+  perform public.create_contract(a);
+  reset role;
+  perform tests.ok('C1598 literal', (tests.cg_contract('cg2a')).parties = jsonb_build_object(
+    'schema', 1,
+    'contractor', jsonb_build_object('legalName', 'Legal A', 'address', '1 Main St', 'phone', '604-555-0100'),
+    'customer', jsonb_build_object('name', 'Customer A'),
+    'site', jsonb_build_object('name', 'Harbour Plant cg2a', 'address', '2 Dock Rd'),
+    'signer', jsonb_build_object('name', 'Avery', 'email', 'avery@customer.ca')), 'parties differ from the literal');
+
+  b := tests.cg_accepted('cg2f');
+  update public.org_settings set address = null, phone = null where org_id = tests.id('orgA');
+  update public.sites set address = null where id = tests.id('cg2f:site');
+  perform tests.act_as('uE');
+  perform public.create_contract(b);
+  reset role;
+  perform tests.ok('C1598 nulls', (tests.cg_contract('cg2f')).parties = jsonb_build_object(
+    'schema', 1,
+    'contractor', jsonb_build_object('legalName', 'Legal A', 'address', null::text, 'phone', null::text),
+    'customer', jsonb_build_object('name', 'Customer A'),
+    'site', jsonb_build_object('name', 'Harbour Plant cg2f', 'address', null::text),
+    'signer', jsonb_build_object('name', 'Pat cg2f', 'email', 'pat@customer.ca')), 'unset keys are not present and null');
+  update public.org_settings set address = '1 Main St', phone = '604-555-0100' where org_id = tests.id('orgA');
+end $$;
+
+-- C1599: who signs.
+do $$
+declare
+  c record;
+  a uuid;
+begin
+  for c in select * from (values
+    ('cg3a', 'pat@customer.ca', 'avery@customer.ca', 'Avery', 'avery@customer.ca'),
+    ('cg3b', 'pat@customer.ca', null,                'Pat cg3b', 'pat@customer.ca'),
+    ('cg3c', 'pat@customer.ca', '   ',               'Pat cg3c', 'pat@customer.ca'),
+    ('cg3d', 'pat@customer.ca', '-',                 'Pat cg3d', 'pat@customer.ca'),
+    ('cg3e', null,              'avery@customer.ca', 'Avery', 'avery@customer.ca')
+  ) as t (name, site_email, approver, want_name, want_email)
+  loop
+    a := tests.cg_accepted(c.name, c.site_email, c.approver);
+    perform tests.act_as('uE');
+    perform public.create_contract(a);
+    reset role;
+    perform tests.ok('C1599 ' || c.name, (tests.cg_contract(c.name)).parties -> 'signer'
+      = jsonb_build_object('name', c.want_name, 'email', c.want_email), 'wrong signer for ' || c.name);
+  end loop;
+end $$;
+
+-- C1600: the recipient is still the trimmed email of the same contact.
+do $$
+declare a uuid;
+begin
+  perform tests.cg_accepted('cg4a', 'pat@customer.ca', '  avery@customer.ca ');
+  perform tests.ok('C1600 trimmed', private.customer_recipient(tests.id('cg4a:site')) = 'avery@customer.ca', 'approver email not trimmed');
+  perform tests.cg_accepted('cg4b', null);
+  perform tests.ok('C1600 neither', private.customer_recipient(tests.id('cg4b:site')) is null, 'a site with no contact has a recipient');
+  perform tests.cg_accepted('cg4c', 'pat@customer.ca', '  ');
+  perform tests.ok('C1600 fallback', private.customer_recipient(tests.id('cg4c:site')) = 'pat@customer.ca', 'a blank approver email did not fall back');
+end $$;
+
+-- C1601: one contract.pending_signature event by the caller, and no outbox row.
+do $$
+declare a uuid; c uuid; before_outbox bigint; e record;
+begin
+  a := tests.cg_accepted('cg5');
+  before_outbox := (select count(*) from public.outbox where org_id = tests.id('orgA'));
+  perform tests.act_as('uE');
+  c := public.create_contract(a);
+  reset role;
+  perform tests.ok('C1601 one event', (select count(*) from public.events where entity_id = c) = 1, 'not exactly one event');
+  select * into e from public.events where entity_id = c;
+  perform tests.ok('C1601 entity', e.entity_type = 'contract' and e.type = 'contract.pending_signature', 'wrong entity or type');
+  perform tests.ok('C1601 payload', e.payload = jsonb_build_object('from', null::text, 'to', 'pending_signature', 'versionNo', 1), 'wrong payload: ' || e.payload::text);
+  perform tests.ok('C1601 actor', e.actor_id = tests.id('uE'), 'wrong actor');
+  perform tests.ok('C1601 no outbox', (select count(*) from public.outbox where org_id = tests.id('orgA')) = before_outbox, 'an outbox row was written');
+end $$;
+
+-- C1602: later edits to the settings, customer, site and contact do not move the parties.
+do $$
+declare a uuid; before_parties jsonb;
+begin
+  a := tests.cg_accepted('cg6');
+  perform tests.act_as('uE');
+  perform public.create_contract(a);
+  reset role;
+  before_parties := (tests.cg_contract('cg6')).parties;
+  update public.org_settings set legal_name = 'Changed Ltd.', address = 'Elsewhere', phone = '1' where org_id = tests.id('orgA');
+  update public.customers set name = 'Renamed customer' where id = tests.id('custA');
+  update public.sites set name = 'Renamed site', address = 'Elsewhere 9' where id = tests.id('cg6:site');
+  update public.contacts set name = 'Someone else', email = 'else@customer.ca' where id = tests.id('cg6:ct');
+  perform tests.ok('C1602 frozen', (tests.cg_contract('cg6')).parties = before_parties, 'the parties followed a later edit');
+  update public.org_settings set legal_name = 'Legal A', address = '1 Main St', phone = '604-555-0100' where org_id = tests.id('orgA');
+  update public.customers set name = 'Customer A' where id = tests.id('custA');
+end $$;
+
+-- C1603: a repeat returns the same contract and writes nothing; a signed contract is not reset.
+do $$
+declare a uuid; c uuid; again uuid; state_after_first text;
+begin
+  a := tests.cg_accepted('cg7');
+  perform tests.act_as('uE');
+  c := public.create_contract(a);
+  reset role;
+  state_after_first := tests.cg_state();
+  perform tests.act_as('uE');
+  again := public.create_contract(a);
+  reset role;
+  perform tests.ok('C1603 same id', again = c, 'a repeat returned another id');
+  perform tests.ok('C1603 nothing written', tests.cg_state() = state_after_first, 'a repeat wrote something');
+  update public.contracts set status = 'client_signed' where id = c;
+  perform tests.act_as('uE');
+  again := public.create_contract(a);
+  reset role;
+  perform tests.ok('C1603 signed', again = c and (select status from public.contracts where id = c) = 'client_signed',
+    'a repeat changed a signed contract');
+  perform tests.ok('C1603 one event', (select count(*) from public.events where entity_id = c and type = 'contract.pending_signature') = 1,
+    'a second pending_signature event');
+end $$;
+
+-- C1604: the agreement is locked before the contract is read, and a second contract for a version cannot exist.
+do $$
+declare def text;
+begin
+  def := pg_get_functiondef('public.create_contract(uuid)'::regprocedure);
+  perform tests.ok('C1604 lock order', position('for update' in def) > 0 and position('for update' in def) < position('from public.contracts' in def),
+    'the agreement is not locked before the contract is read');
+  perform tests.ok('C1604 unique', exists (
+    select 1 from pg_constraint k where k.conrelid = 'public.contracts'::regclass and k.contype = 'u'
+      and k.conkey = array[(select attnum from pg_attribute where attrelid = 'public.contracts'::regclass and attname = 'agreement_version_id')]),
+    'no unique constraint on contracts (agreement_version_id)');
+  perform tests.expect_error('C1604 second contract',
+    format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', tests.id('orgA'), tests.id('cg7:v1')), '23505');
+end $$;
+
+-- C1605: only an accepted agreement.
+do $$
+declare s text; a uuid; before_state text;
+begin
+  foreach s in array array['draft', 'sent', 'refused', 'changes_requested', 'expired', 'withdrawn'] loop
+    a := tests.cg_accepted('cg8' || s);
+    update public.agreements set status = s where id = a;
+    before_state := tests.cg_state();
+    perform tests.act_as('uE');
+    perform tests.expect_hint('C1605 ' || s, format('select public.create_contract(%L)', a), '55000', 'not_accepted');
+    reset role;
+    perform tests.ok('C1605 wrote nothing ' || s, tests.cg_state() = before_state, 'a refusal wrote something');
+  end loop;
+end $$;
+
+-- C1606: an automatic renewal is refused; a renegotiated renewal the customer accepted is not.
+do $$
+declare a uuid; b uuid; before_state text;
+begin
+  a := tests.cg_accepted('cg9a');
+  insert into public.events (org_id, entity_type, entity_id, type, payload)
+  values (tests.id('orgA'), 'agreement', a, 'agreement.renewed', '{}');
+  before_state := tests.cg_state();
+  perform tests.act_as('uE');
+  perform tests.expect_hint('C1606 renewed', format('select public.create_contract(%L)', a), '55000', 'auto_renewal');
+  reset role;
+  perform tests.ok('C1606 wrote nothing', tests.cg_state() = before_state, 'a refusal wrote something');
+
+  b := tests.cg_accepted('cg9b');
+  insert into public.events (org_id, entity_type, entity_id, type, payload) values
+    (tests.id('orgA'), 'agreement', b, 'agreement.renewal_drafted', '{}'),
+    (tests.id('orgA'), 'agreement', b, 'agreement.sent', '{}'),
+    (tests.id('orgA'), 'agreement', b, 'agreement.accepted', '{}');
+  perform tests.act_as('uE');
+  perform tests.ok('C1606 renegotiated', public.create_contract(b) is not null, 'a renegotiated renewal was refused');
+  reset role;
+end $$;
+
+-- C1607: an inactive site.
+do $$
+declare a uuid; before_state text;
+begin
+  a := tests.cg_accepted('cg10');
+  update public.sites set deactivated_at = now(), deactivated_by = tests.id('uA') where id = tests.id('cg10:site');
+  before_state := tests.cg_state();
+  perform tests.act_as('uE');
+  perform tests.expect_hint('C1607', format('select public.create_contract(%L)', a), '55000', 'site_inactive');
+  reset role;
+  perform tests.ok('C1607 wrote nothing', tests.cg_state() = before_state, 'a refusal wrote something');
+end $$;
+
+-- C1608: no term start on the highest version.
+do $$
+declare a uuid; b uuid; before_state text;
+begin
+  a := tests.cg_accepted('cg11a');
+  update public.agreement_versions set term_start = null where id = tests.id('cg11a:v1');
+  before_state := tests.cg_state();
+  perform tests.act_as('uE');
+  perform tests.expect_hint('C1608 none', format('select public.create_contract(%L)', a), '55000', 'no_term_start');
+  reset role;
+
+  b := tests.cg_accepted('cg11b');
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start) values (tests.id('cg11b:v2'), tests.id('orgA'), b, 2, null);
+  before_state := tests.cg_state();
+  perform tests.act_as('uE');
+  perform tests.expect_hint('C1608 highest', format('select public.create_contract(%L)', b), '55000', 'no_term_start');
+  reset role;
+  perform tests.ok('C1608 wrote nothing', tests.cg_state() = before_state, 'a refusal wrote something');
+end $$;
+
+-- C1609: nobody with an email to sign.
+do $$
+declare a uuid; before_state text;
+begin
+  perform tests.cg_accepted('cg12a', null);
+  perform tests.cg_accepted('cg12b');
+  update public.contacts set email = null where id = tests.id('cg12b:ct');
+  perform tests.cg_accepted('cg12c', '  ', '  ');
+  before_state := tests.cg_state();
+  perform tests.act_as('uE');
+  perform tests.expect_hint('C1609 no contact', format('select public.create_contract(%L)', tests.id('cg12a')), '55000', 'no_signer');
+  perform tests.expect_hint('C1609 null email', format('select public.create_contract(%L)', tests.id('cg12b')), '55000', 'no_signer');
+  perform tests.expect_hint('C1609 blank emails', format('select public.create_contract(%L)', tests.id('cg12c')), '55000', 'no_signer');
+  reset role;
+  perform tests.ok('C1609 wrote nothing', tests.cg_state() = before_state, 'a refusal wrote something');
+end $$;
+
+-- C1610: who may call.
+do $$
+declare a uuid; before_state text;
+begin
+  perform tests.cg_accepted('cg13a');
+  perform tests.cg_accepted('cg13b');
+  a := tests.cg_accepted('cg13c');
+  perform tests.act_as('uA');
+  perform tests.ok('C1610 owner', public.create_contract(tests.id('cg13a')) is not null, 'an owner was refused');
+  reset role;
+  perform tests.act_as('uD');
+  perform tests.ok('C1610 admin', public.create_contract(tests.id('cg13b')) is not null, 'an admin was refused');
+  reset role;
+  before_state := tests.cg_state();
+  perform tests.act_as('uV');
+  perform tests.expect_error('C1610 viewer', format('select public.create_contract(%L)', a), '42501');
+  reset role;
+  perform tests.act_as('uB');
+  perform tests.expect_error('C1610 other org', format('select public.create_contract(%L)', a), 'P0002');
+  perform tests.expect_error('C1610 unknown', format('select public.create_contract(%L)', tests.id('no-such-agreement')), 'P0002');
+  reset role;
+  perform tests.act_as_anon();
+  perform tests.expect_error('C1610 anon', format('select public.create_contract(%L)', a), '42501');
+  reset role;
+  perform tests.ok('C1610 wrote nothing', tests.cg_state() = before_state, 'a refused caller wrote something');
+end $$;
+
+-- C1611: when two refusals apply, the earlier hint wins.
+do $$
+declare a uuid;
+begin
+  a := tests.cg_accepted('cg14a');
+  update public.agreements set status = 'draft' where id = a;
+  update public.sites set deactivated_at = now(), deactivated_by = tests.id('uA') where id = tests.id('cg14a:site');
+
+  perform tests.cg_accepted('cg14b');
+  insert into public.events (org_id, entity_type, entity_id, type, payload) values (tests.id('orgA'), 'agreement', tests.id('cg14b'), 'agreement.renewed', '{}');
+  update public.sites set deactivated_at = now(), deactivated_by = tests.id('uA') where id = tests.id('cg14b:site');
+
+  perform tests.cg_accepted('cg14c');
+  update public.sites set deactivated_at = now(), deactivated_by = tests.id('uA') where id = tests.id('cg14c:site');
+  update public.agreement_versions set term_start = null where id = tests.id('cg14c:v1');
+
+  perform tests.cg_accepted('cg14d', null);
+  update public.agreement_versions set term_start = null where id = tests.id('cg14d:v1');
+
+  perform tests.act_as('uE');
+  perform tests.expect_hint('C1611 draft+inactive', format('select public.create_contract(%L)', tests.id('cg14a')), '55000', 'not_accepted');
+  perform tests.expect_hint('C1611 renewed+inactive', format('select public.create_contract(%L)', tests.id('cg14b')), '55000', 'auto_renewal');
+  perform tests.expect_hint('C1611 inactive+no start', format('select public.create_contract(%L)', tests.id('cg14c')), '55000', 'site_inactive');
+  perform tests.expect_hint('C1611 no start+no signer', format('select public.create_contract(%L)', tests.id('cg14d')), '55000', 'no_term_start');
+  reset role;
+end $$;
+
+-- C1612: the table takes no direct insert, delete or update of anything but the status.
+do $$
+declare c uuid := (tests.cg_contract('cg1')).id;
+begin
+  perform tests.act_as('uA');
+  perform tests.expect_error('C1612 insert', format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', tests.id('orgA'), tests.id('cg1:v1')), '42501');
+  perform tests.expect_error('C1612 delete', format('delete from public.contracts where id = %L', c), '42501');
+  perform tests.expect_error('C1612 parties', format('update public.contracts set parties = ''{}'' where id = %L', c), '42501');
+  perform tests.expect_error('C1612 org_id', format('update public.contracts set org_id = org_id where id = %L', c), '42501');
+  perform tests.expect_error('C1612 agreement_version_id', format('update public.contracts set agreement_version_id = agreement_version_id where id = %L', c), '42501');
+  perform tests.expect_rows('C1612 status', format('update public.contracts set status = ''client_signed'' where id = %L and status = ''pending_signature''', c), 1);
+  reset role;
+  perform tests.act_as('uE');
+  perform tests.expect_error('C1612 estimator insert', format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', tests.id('orgA'), tests.id('cg1:v1')), '42501');
+  reset role;
+end $$;
+
+-- C1615: definer, empty search_path, who may execute.
+do $$
+declare f regprocedure;
+begin
+  foreach f in array array['public.create_contract(uuid)'::regprocedure, 'public.contract_signer(uuid)'::regprocedure] loop
+    perform tests.ok('C1615 definer ' || f::text, (select prosecdef and proconfig @> array['search_path=""'] from pg_proc where oid = f), 'not security definer with an empty search_path');
+    perform tests.ok('C1615 authenticated ' || f::text, has_function_privilege('authenticated', f, 'execute'), 'authenticated cannot execute');
+    perform tests.ok('C1615 anon ' || f::text, not has_function_privilege('anon', f, 'execute'), 'anon can execute');
+  end loop;
+  foreach f in array array['private.customer_signer(uuid)'::regprocedure, 'private.customer_recipient(uuid)'::regprocedure, 'private.contract_parties(uuid)'::regprocedure] loop
+    perform tests.ok('C1615 private ' || f::text, not has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute'),
+      'a caller can execute a private function');
+  end loop;
+end $$;
+
+-- C1616: the signer before a contract exists.
+do $$
+declare noone uuid;
+begin
+  perform tests.cg_accepted('cg15', null);
+  noone := tests.id('cg15:site');
+  perform tests.act_as('uE');
+  perform tests.ok('C1616 signer', public.contract_signer(tests.id('cg1:site')) = jsonb_build_object('name', 'Pat cg1', 'email', 'pat@customer.ca'), 'wrong signer');
+  perform tests.ok('C1616 other org', public.contract_signer(tests.id('siteB')) is null, 'another org signer leaked');
+  perform tests.ok('C1616 nobody', public.contract_signer(noone) is null, 'a site with no emailed contact has a signer');
+  reset role;
+  perform tests.act_as_anon();
+  perform tests.expect_error('C1616 anon', format('select public.contract_signer(%L)', tests.id('cg1:site')), '42501');
+  reset role;
+end $$;
+
+-- C1618: a generated contract keeps its site from being deactivated, even when the term is over.
+do $$
+declare a uuid; b uuid;
+begin
+  a := tests.cg_accepted('cg16a');
+  update public.agreement_versions set term_start = '2020-01-01' where id = tests.id('cg16a:v1');
+  b := tests.cg_accepted('cg16b');
+  update public.agreement_versions set term_start = '2020-01-01' where id = tests.id('cg16b:v1');
+  perform tests.act_as('uE');
+  perform public.create_contract(b);
+  perform tests.ok('C1618 no contract', public.set_site_active(tests.id('cg16a:site'), false) is not null, 'a site without a contract could not be deactivated');
+  perform tests.expect_hint('C1618 contract', format('select public.set_site_active(%L, false)', tests.id('cg16b:site')), '55000', 'in_term');
+  reset role;
+end $$;
+
 reset role;
 rollback;
 select 'transitions: pass' as result;

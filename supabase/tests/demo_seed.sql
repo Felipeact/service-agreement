@@ -248,3 +248,24 @@ do $$ begin
     select 1 from public.agreements a join public.agreement_versions v on v.agreement_id = a.id
     where a.org_id = tests.demo() and a.status = 'accepted' and v.term_start is not null), 'no accepted demo agreement has a term');
 end $$;
+
+-- C1617 (contract-generation): every demo contract records its parties after the first run.
+do $$ begin
+  perform tests.ok('C1617 count', (select count(*) from public.contracts where org_id = tests.demo()) = 3, 'not 3 demo contracts');
+  perform tests.ok('C1617 filled', not exists (select 1 from public.contracts where org_id = tests.demo() and parties = '{}'), 'a demo contract records no parties');
+  perform tests.ok('C1617 content', not exists (
+    select 1 from public.contracts c
+    join public.agreement_versions v on v.id = c.agreement_version_id
+    join public.agreements a on a.id = v.agreement_id
+    join public.sites st on st.id = a.site_id
+    join public.customers cu on cu.id = st.customer_id
+    where c.org_id = tests.demo()
+      and not (c.parties ->> 'schema' = '1'
+           and c.parties -> 'contractor' ->> 'legalName' = (select legal_name from public.org_settings where org_id = tests.demo())
+           and c.parties -> 'customer' ->> 'name' = cu.name
+           and c.parties -> 'site' ->> 'name' = st.name)), 'a demo contract has other parties than its site');
+end $$;
+
+-- C1617: one contract loses its parties and one holds a marker before the second run.
+update public.contracts set parties = '{}' where id = md5('demo:contract:7')::uuid;
+update public.contracts set parties = '{"schema": 1, "marker": true}' where id = md5('demo:contract:9')::uuid;
