@@ -159,7 +159,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Contact roles: site, billing and approver
 - [x] Agreement activity timeline from `events`
 - [ ] Members page: invite and set roles (owner, admin, estimator, viewer)
-- [ ] Global search across customers, sites and unit numbers
+- [x] Global search across customers, sites and unit numbers
 
 ### Phase 4: Contract & e-signature
 - [ ] Contract generated from the accepted agreement version

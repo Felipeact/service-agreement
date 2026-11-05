@@ -140,12 +140,10 @@
 
 ## Handoff
 
-**Feature**: global-search (ROADMAP Phase 3.5 item 16), profile light, one builder
-**Where**: on `development`, feature base `55c7464`; plan `d0fd052`, checks `1402a1a`; the build is committed after them (see `git log`)
-**In progress**: C1552-C1596 all run and green at `4197c8d` (vitest 2680, lint, tsc, build, `test:db` 23 passed after the owner applied migration `20261105210000_global_search`; advisors show no `search_records` finding; live run at 1440 and 375 px done). Verifier dispatched next over `55c7464..HEAD`
-**Next step**: the Verifier's report; fix any gap it finds; then tick ROADMAP item 16
-**Blockers**: none for global search. The members-page item is still open for a separate reason: the Confirm signup template (see below)
-**Uncommitted**: none after the final docs commit
+**Feature**: global-search (ROADMAP Phase 3.5 item 16) - DONE. Profile light, one builder; Verifier round 2 PASS (45 of 45, `validate_verification.py` exit 0)
+**Where**: on `development`, feature base `55c7464`; plan `d0fd052`, checks `1402a1a`, build `374aedf` `c1ddb31`, test gaps closed `e8ca71e`, report `.specs/features/global-search/verification.md`
+**Known, not a check**: in `components/search/search-view.tsx` the site and equipment detail line does not wrap an unbroken 250-character customer name or address at 375 px; the list clips it and the page never scrolls (AC 20 holds). A `[overflow-wrap:anywhere]` on the detail spans would fix it
 **Branch**: development; nothing pushed
+**Local servers**: none running (the dev server on port 3000 was stopped on 2026-11-05; start it with `npm run dev` in `web/`)
 **Members page (item 15), unchanged**: C1547 and the layout half of C1549 seen live; C1548 and the interactive half of C1549 not run; Verifier round 2 not dispatched. Needs the Supabase Confirm signup template link `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`, then the pending invitee (`marianereisviana@gmail.com`, Viewer, expires 2026-11-18) requests a link at `/login`; then change the role, remove the member after Cancel and Confirm, and run round 2
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor and is still not in the project's migration history; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`
