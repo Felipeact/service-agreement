@@ -162,7 +162,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Global search across customers, sites and unit numbers
 
 ### Phase 4: Contract & e-signature
-- [ ] Contract generated from the accepted agreement version
+- [x] Contract generated from the accepted agreement version
 - [ ] `SignatureProvider` with a DocuSeal adapter and embedded signing
 - [ ] Verified DocuSeal webhook, storage of the signed PDF and audit log
 - [ ] n8n W2 and W4

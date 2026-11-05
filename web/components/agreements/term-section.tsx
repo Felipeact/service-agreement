@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { formatTermDate, termMonthsLabel, type AgreementTerm } from "@/domain/agreement";
+import { termSummary, type AgreementTerm } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import { messageFor, type TermState } from "./state";
@@ -11,12 +11,6 @@ type TermSectionProps = {
   /** The save action of a writer on the current version of a draft; without it the term is read-only. */
   action?: (formData: FormData) => Promise<TermState>;
 };
-
-/** The term as staff read it: dates and length, or that the start is still missing (term-dates AC 8, 12). */
-export function termSummary(term: AgreementTerm): string {
-  if (term.start === null || term.end === null) return `Start date not set · ${termMonthsLabel(term.months)}`;
-  return `Term: ${formatTermDate(term.start)} – ${formatTermDate(term.end)} · ${termMonthsLabel(term.months)}`;
-}
 
 const IDLE: TermState = { status: "idle" };
 

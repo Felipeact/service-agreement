@@ -54,6 +54,12 @@ export function formatTermDate(iso: string): string {
 
 export const termMonthsLabel = (months: number) => `${months} ${months === 1 ? "month" : "months"}`;
 
+/** The term as staff read it: dates and length, or that the start is still missing (term-dates AC 8, 12). */
+export function termSummary(term: AgreementTerm): string {
+  if (term.start === null || term.end === null) return `Start date not set · ${termMonthsLabel(term.months)}`;
+  return `Term: ${formatTermDate(term.start)} – ${formatTermDate(term.end)} · ${termMonthsLabel(term.months)}`;
+}
+
 /**
  * The term as the PDF and the customer page print it (term-dates AC 18, 19). The current draft may not have a start
  * yet; a frozen version without one was sent before terms existed.

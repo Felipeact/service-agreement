@@ -1,11 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { AgreementTerm } from "@/domain/agreement";
+import { termSummary, type AgreementTerm } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
 import { formatCadExact } from "@/lib/money";
 import { contractMessageFor, type GenerateContractState } from "./contract-state";
-import { termSummary } from "./term-section";
 
 type PromptProps = {
   /** Who would sign, or `null` when nobody on the site has an email. */

@@ -2,11 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AgreementDetail, ContractDetail } from "@/application/ports";
 import { LineRow } from "@/components/agreements/line-row";
-import { termSummary } from "@/components/agreements/term-section";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { termsOf, visitSchedule } from "@/domain/agreement";
+import { termsOf, termSummary, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
 import { formatCadExact } from "@/lib/money";
 
