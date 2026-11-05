@@ -23,7 +23,7 @@ export function RoleFields({ member, state, pending, formAction }: { member: Mem
   return (
     <form action={formAction} className="flex flex-col gap-2 sm:flex-row sm:items-end">
       <input type="hidden" name="userId" value={member.userId} />
-      <Select id={`role-${member.userId}`} name="role" label="Role" defaultValue={member.role} className="sm:w-40">
+      <Select key={member.role} id={`role-${member.userId}`} name="role" label="Role" defaultValue={member.role} className="sm:w-40">
         {ROLES.map((role) => (
           <option key={role} value={role}>
             {ROLE_LABELS[role]}
