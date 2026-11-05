@@ -5,6 +5,7 @@ import {
   supabaseAssetTypeCatalog,
   supabaseCustomerDirectory,
   supabasePipelineReader,
+  supabaseRecordSearch,
   supabaseSiteDirectory,
   supabaseSiteLister,
   supabaseSiteRegister,
@@ -860,5 +861,68 @@ describe("customers to contacts embeds", () => {
         supabaseSiteRegister(typed).get(ID),
       ),
     ).toContain(HINT);
+  });
+});
+
+describe("record search", () => {
+  const hit = (kind: string, n: number, patch: Record<string, unknown> = {}) => ({
+    kind,
+    id: `${kind}-${n}`,
+    title: `${kind} ${n}`,
+    customer_name: `Customer ${n}`,
+    site_id: kind === "customer" ? null : `site-${n}`,
+    site_name: kind === "customer" ? null : `Site ${n}`,
+    address: kind === "site" ? `${n} Main St` : null,
+    type_name: kind === "asset" ? "Rooftop unit" : null,
+    ...patch,
+  });
+  const search = async (rows: unknown, text = "q") => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue(ok(rows) as never);
+    return { client, results: await supabaseRecordSearch(typed).search(text) };
+  };
+
+  test("C1571: one rpc call to search_records with the text and a limit of 26", async () => {
+    const { client } = await search([], "harb");
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(client.rpc).toHaveBeenCalledWith("search_records", { p_query: "harb", p_limit: 26 });
+  });
+
+  test("C1572: rows are sorted into customers, sites and equipment by kind, keep their order, and map to camel-case fields", async () => {
+    const { results } = await search([hit("asset", 1), hit("customer", 1), hit("site", 1), hit("customer", 2), hit("site", 2)]);
+    expect(results.customers.hits).toEqual([
+      { id: "customer-1", name: "customer 1" },
+      { id: "customer-2", name: "customer 2" },
+    ]);
+    expect(results.sites.hits).toEqual([
+      { id: "site-1", name: "site 1", customerName: "Customer 1", address: "1 Main St" },
+      { id: "site-2", name: "site 2", customerName: "Customer 2", address: "2 Main St" },
+    ]);
+    expect(results.equipment.hits).toEqual([
+      { id: "asset-1", siteId: "site-1", unitNo: "asset 1", typeName: "Rooftop unit", siteName: "Site 1", customerName: "Customer 1" },
+    ]);
+  });
+
+  test("C1572: a site without an address maps to a null address", async () => {
+    const { results } = await search([hit("site", 1, { address: null })]);
+    expect(results.sites.hits[0].address).toBeNull();
+  });
+
+  test("C1573: 26 rows of a kind keep 25 and set more; exactly 25 keep 25 and do not; the other kinds are judged on their own rows", async () => {
+    const many = (kind: string, count: number) => Array.from({ length: count }, (_, i) => hit(kind, i + 1));
+    const over = await search([...many("customer", 26), ...many("site", 25), ...many("asset", 3)]);
+    expect(over.results.customers.hits).toHaveLength(25);
+    expect(over.results.customers.hits[24].id).toBe("customer-25");
+    expect(over.results.customers.more).toBe(true);
+    expect(over.results.sites.hits).toHaveLength(25);
+    expect(over.results.sites.more).toBe(false);
+    expect(over.results.equipment.hits).toHaveLength(3);
+    expect(over.results.equipment.more).toBe(false);
+  });
+
+  test("C1574: an rpc error throws an Error that carries the Supabase code", async () => {
+    const { client, typed } = stubClient({});
+    client.rpc.mockResolvedValue(fail("XX000") as never);
+    await expect(supabaseRecordSearch(typed).search("q")).rejects.toThrow("XX000");
   });
 });

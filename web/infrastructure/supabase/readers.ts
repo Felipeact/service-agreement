@@ -15,13 +15,15 @@ import type {
   CustomerSummary,
   PipelineCard,
   PipelineReader,
+  RecordSearch,
+  SearchResults,
   SiteDirectory,
   SiteListRow,
   SiteLister,
   SiteOption,
   SiteRegister,
 } from "@/application/ports";
-import type { SiteFilter } from "@/domain/records";
+import { SEARCH_GROUP_LIMIT, type SiteFilter } from "@/domain/records";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -564,6 +566,33 @@ export function supabaseSiteDirectory(client: Client): SiteDirectory {
         .filter((row) => filter.showInactive || row.active)
         .filter((row) => !text || [row.name, row.address ?? "", row.customer].some((field) => field.toLowerCase().includes(text)))
         .sort((a, b) => byName(a.customer, b.customer) || byName(a.name, b.name));
+    },
+  };
+}
+
+/** Customers, sites and units that match a typed text, through `public.search_records` (global-search door 1). */
+export function supabaseRecordSearch(client: Client): RecordSearch {
+  return {
+    async search(query: string) {
+      const { data, error } = await client.rpc("search_records", { p_query: query, p_limit: SEARCH_GROUP_LIMIT + 1 });
+      if (error) throw unexpected(error);
+      const results: SearchResults = {
+        customers: { hits: [], more: false },
+        sites: { hits: [], more: false },
+        equipment: { hits: [], more: false },
+      };
+      for (const row of data ?? []) {
+        const group = row.kind === "customer" ? results.customers : row.kind === "site" ? results.sites : row.kind === "asset" ? results.equipment : null;
+        if (!group) continue;
+        if (group.hits.length === SEARCH_GROUP_LIMIT) {
+          group.more = true;
+          continue;
+        }
+        if (row.kind === "customer") results.customers.hits.push({ id: row.id, name: row.title });
+        else if (row.kind === "site") results.sites.hits.push({ id: row.id, name: row.title, customerName: row.customer_name, address: row.address });
+        else results.equipment.hits.push({ id: row.id, siteId: row.site_id, unitNo: row.title, typeName: row.type_name, siteName: row.site_name, customerName: row.customer_name });
+      }
+      return results;
     },
   };
 }

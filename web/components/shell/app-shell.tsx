@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { SearchInput } from "@/components/ui/search-input";
+import { SEARCH_MAX } from "@/domain/records";
 import { SidebarAccount } from "./sidebar-account";
 import { SidebarNav } from "./sidebar-nav";
 
@@ -45,6 +48,9 @@ export function AppShell({ children, orgName, email, signOut }: AppShellProps) {
           <div className="text-[15px] font-bold">{PRODUCT_NAME}</div>
           <div className="truncate pt-0.5 text-[12px] text-ink-2">{orgName}</div>
         </div>
+        <form method="get" action="/search" role="search" className="px-0.5 pb-3">
+          <SearchInput label="Search" name="q" placeholder="Search" maxLength={SEARCH_MAX} />
+        </form>
         <SidebarNav footer={<SidebarAccount email={email} signOut={signOut} />} />
       </aside>
 
@@ -62,6 +68,16 @@ export function AppShell({ children, orgName, email, signOut }: AppShellProps) {
           </svg>
         </button>
         <span className="text-[15px] font-bold">{PRODUCT_NAME}</span>
+        <Link
+          href="/search"
+          aria-label="Search"
+          className="ml-auto inline-flex size-11 items-center justify-center rounded-control text-ink hover:bg-ground"
+        >
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <circle cx="7" cy="7" r="4.75" />
+            <path d="m10.5 10.5 3.5 3.5" strokeLinecap="round" />
+          </svg>
+        </Link>
       </div>
 
       {drawerOpen && (

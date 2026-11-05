@@ -53,6 +53,14 @@ describe("screen states", () => {
     expect(html).toMatch(/<p[^>]*role="status"[^>]*>Loading…<\/p>/);
   });
 
+  test("C1580: /search shows its Search header, an aria-busy wrapper and a Loading… status, like the other app pages", async () => {
+    const { default: Loading } = await import("./search/loading");
+    const html = renderToStaticMarkup(createElement(Loading));
+    expect(html).toMatch(/<h1[^>]*>Search<\/h1>/);
+    expect(html).toMatch(/<p[^>]*role="status"[^>]*>Loading…<\/p>/);
+    expect(html).toMatch(/^<div[^>]*aria-busy="true"/);
+  });
+
   test("C103: the error boundary says so and Try again calls reset once", () => {
     const reset = vi.fn();
     const tree = AppError({ error: new Error("boom"), reset }) as ReactElement<{ children: ReactElement<{ onClick: () => void }> }>;

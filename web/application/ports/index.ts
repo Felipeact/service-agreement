@@ -152,6 +152,25 @@ export interface SiteDirectory {
   list(filter: SiteFilter): Promise<SiteListRow[]>;
 }
 
+/** A customer, site or unit the global search found (global-search door 1). */
+export type SearchCustomer = { id: string; name: string };
+export type SearchSite = { id: string; name: string; customerName: string; address: string | null };
+export type SearchUnit = { id: string; siteId: string; unitNo: string; typeName: string; siteName: string; customerName: string };
+
+/** At most `SEARCH_GROUP_LIMIT` hits; `more` is true when a further one matched. */
+export type SearchGroup<T> = { hits: T[]; more: boolean };
+
+export type SearchResults = {
+  customers: SearchGroup<SearchCustomer>;
+  sites: SearchGroup<SearchSite>;
+  equipment: SearchGroup<SearchUnit>;
+};
+
+export interface RecordSearch {
+  /** Active customers, sites and units whose name, address or unit number contains `query`, in the caller's org. */
+  search(query: string): Promise<SearchResults>;
+}
+
 export type CustomerSummary = {
   id: string;
   name: string;

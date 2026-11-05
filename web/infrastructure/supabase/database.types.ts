@@ -1275,6 +1275,19 @@ export type Database = {
         Args: { p_agreement_id: string; p_note: string }
         Returns: undefined
       }
+      search_records: {
+        Args: { p_limit: number; p_query: string }
+        Returns: {
+          address: string
+          customer_name: string
+          id: string
+          kind: string
+          site_id: string
+          site_name: string
+          title: string
+          type_name: string
+        }[]
+      }
       send_agreement:
         | {
             Args: {

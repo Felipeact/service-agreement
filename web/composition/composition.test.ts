@@ -78,6 +78,27 @@ describe("composition root", () => {
     }
   });
 
+  test("C1575: getContainer() exposes searchRecords, built on the session client and not on the key-less invitation client", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { createClient } = await import("@supabase/supabase-js");
+    const { createServerClient } = await import("@supabase/ssr");
+    vi.mocked(createClient).mockClear();
+    vi.mocked(createServerClient).mockClear();
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.searchRecords).toBe("function");
+    // The only supabase-js client is the invitation sender's (AD-131); search must come from the cookie client.
+    expect(createClient).toHaveBeenCalledTimes(1);
+    expect(createServerClient).toHaveBeenCalledTimes(1);
+    const serverClient = vi.mocked(createServerClient).mock.results[0].value as { rpc: (...args: unknown[]) => unknown };
+    const rpc = vi.spyOn(serverClient, "rpc").mockResolvedValue({ data: [], error: null } as never);
+    const plainClient = vi.mocked(createClient).mock.results[0].value as { rpc: (...args: unknown[]) => unknown };
+    const plainRpc = vi.spyOn(plainClient, "rpc");
+    await container.searchRecords("x");
+    expect(rpc).toHaveBeenCalledWith("search_records", expect.anything());
+    expect(plainRpc).not.toHaveBeenCalled();
+  });
+
   test("C27: getContainer() wires the sign-in link, link verification, sign out and the current member", async () => {
     setEnv("https://example.supabase.co", "sb_publishable_test");
     const { getContainer } = await import("./index");

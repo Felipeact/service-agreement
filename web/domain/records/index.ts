@@ -90,6 +90,15 @@ export function showInactive(params: { show?: string | string[] }): boolean {
   return params.show === "inactive";
 }
 
+/** The most characters of a global search (global-search door 2) and the most rows one group shows (AC 12). */
+export const SEARCH_MAX = 100;
+export const SEARCH_GROUP_LIMIT = 25;
+
+/** The text `/search?q=` asks for: trimmed, cut to `SEARCH_MAX`, trimmed again; "" when there is none (global-search AC 17). */
+export function parseSearchQuery(params: { q?: string | string[] }): string {
+  return typeof params.q === "string" ? params.q.trim().slice(0, SEARCH_MAX).trim() : "";
+}
+
 /** What the Sites & equipment page asks of the list; each member is optional (sites-page door 1). */
 export type SiteFilter = { q?: string; customerId?: string; showInactive?: boolean };
 
