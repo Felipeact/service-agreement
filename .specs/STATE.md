@@ -142,9 +142,9 @@
 
 **Feature**: global-search (ROADMAP Phase 3.5 item 16), profile light, one builder
 **Where**: on `development`, feature base `55c7464`; plan `d0fd052`, checks `1402a1a`; the build is committed after them (see `git log`)
-**In progress**: C1552-C1591 and C1596 are written and the vitest ones are green locally (`npm test` 2680 passed, lint, `tsc` and `next build` clean, `/search` in the route table). **Not run: the SQL proofs C1552-C1569** (recipe `search`, `supabase/tests/search.sql`), the advisors check C1594 and the live checks C1593 and C1595, because migration `20261105210000_global_search` is not applied to the project. Verifier not dispatched
-**Next step**: with the owner's go-ahead, apply the migration to project `gnxebrtcpbujhvcamtoe` (SQL editor, or `supabase migration repair --status applied 20261105120000` then `supabase db push`); run `npm run test:db search` and `npm run test:db`; run the advisors; run C1593 and C1595 live in one signed-in context; dispatch the Verifier over `55c7464..HEAD`; tick ROADMAP item 16
-**Blockers**: plan Open question 1 (the migration reaches the project). The members-page item is still open for a separate reason: the Confirm signup template (see below)
+**In progress**: C1552-C1596 all run and green at `4197c8d` (vitest 2680, lint, tsc, build, `test:db` 23 passed after the owner applied migration `20261105210000_global_search`; advisors show no `search_records` finding; live run at 1440 and 375 px done). Verifier dispatched next over `55c7464..HEAD`
+**Next step**: the Verifier's report; fix any gap it finds; then tick ROADMAP item 16
+**Blockers**: none for global search. The members-page item is still open for a separate reason: the Confirm signup template (see below)
 **Uncommitted**: none after the final docs commit
 **Branch**: development; nothing pushed
 **Members page (item 15), unchanged**: C1547 and the layout half of C1549 seen live; C1548 and the interactive half of C1549 not run; Verifier round 2 not dispatched. Needs the Supabase Confirm signup template link `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`, then the pending invitee (`marianereisviana@gmail.com`, Viewer, expires 2026-11-18) requests a link at `/login`; then change the role, remove the member after Cancel and Confirm, and run round 2
