@@ -145,6 +145,6 @@
 **Known, not a check**: in `components/search/search-view.tsx` the site and equipment detail line does not wrap an unbroken 250-character customer name or address at 375 px; the list clips it and the page never scrolls (AC 20 holds). A `[overflow-wrap:anywhere]` on the detail spans would fix it
 **Branch**: development; nothing pushed
 **Local servers**: none running (the dev server on port 3000 was stopped on 2026-11-05; start it with `npm run dev` in `web/`)
-**Production**: `web` redeployed 2026-11-05 (deployment `d2b8b4e6`) with Members and global search; the owner is testing the Members invite flow there.
-**Members page (item 15)**: live path proven on 2026-11-05 (invitee accepted on production; role change round trip; Cancel on remove). Open: Confirm remove, Resend, Revoke and the hook's 403 for an uninvited address (C1548, C1549), Verifier round 2, the ROADMAP tick. A select-after-save fix (`member-controls.tsx`) is committed locally and not yet deployed to production
+**Production**: `web` redeployed 2026-11-05 (deployment `65e584e6`) with Members (including the role-select fix) and global search.
+**Members page (item 15)**: DONE for now. Accepted on production; role change, Cancel on remove and the fix proven by the session; Confirm remove, Resend, Revoke and the uninvited-address 403 run by the owner by hand. Verifier round 1 FAIL (test gaps, closed); round 2 not dispatched at the owner's call
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor and is still not in the project's migration history; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`

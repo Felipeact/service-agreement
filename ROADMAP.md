@@ -158,7 +158,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Task library page: view and edit checklists and default months per equipment type
 - [x] Contact roles: site, billing and approver
 - [x] Agreement activity timeline from `events`
-- [ ] Members page: invite and set roles (owner, admin, estimator, viewer)
+- [x] Members page: invite and set roles (owner, admin, estimator, viewer). Live halves accepted as owner-run (2026-11-05); Verifier round 1 failed on test gaps that were closed, round 2 not run
 - [x] Global search across customers, sites and unit numbers
 
 ### Phase 4: Contract & e-signature
