@@ -285,3 +285,7 @@ trigram or full-text index.
 - Owed an ask when reached: (1) applying the migration to `gnxebrtcpbujhvcamtoe` (a remote schema change; the `sql` proofs, the
   advisors check C1594 and the live checks C1593 and C1595 need it; plan Open question 1); (2) nothing else is outward-facing:
   the live run sends no email and writes no row.
+
+- **Boundary:** C1570-C1591 and C1596 closed by green vitest proofs, C1592 (except `test:db`) run on the working tree: `npm test` 2680 passed, `npm run lint`, `npx tsc --noEmit` and `npm run build` clean, `/search` in the route table. **Open:** C1552-C1569 (SQL recipe `search`, written, not run), C1592's `npm run test:db`, C1593, C1594 and C1595: all need migration `20261105210000_global_search` applied to the project (plan Open question 1).
+- **Settled mid-build:** (1) `runner.test.ts` counts moved 22 -> 23 recipes and 24 -> 25 files, and the recipe list gained `search`, as members-page did. (2) `loading.tsx` wraps `PageLoading` in a `div aria-busy="true"` so AC 19 and C1580 hold with the existing `role="status"` line. (3) `database.types.ts` was hand-edited for `search_records` (the CLI generator needs the applied function) and should match the generated file in content. (4) `next typegen` was run to refresh route types for `/search`.
+- **Abandoned:** nothing.
