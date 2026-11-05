@@ -27,6 +27,11 @@ describe("proxy matcher", () => {
     expect(matches(url)).toBe(true);
   });
 
+  test("C1578: the matcher runs the proxy for /search, with or without a query, so a signed-out request is redirected before the page", () => {
+    expect(matches("/search")).toBe(true);
+    expect(matches("/search?q=tower")).toBe(true);
+  });
+
   test("C856: the matcher runs the proxy for an agreement's PDF, so a signed-out request never reaches the route", () => {
     expect(matches("/agreements/11111111-1111-4111-8111-111111111111/pdf")).toBe(true);
     expect(matches("/agreements/11111111-1111-4111-8111-111111111111/pdf?version=2")).toBe(true);

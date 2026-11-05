@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/pipeline" }));
 const { AppShell } = await import("./app-shell");
 
 const html = renderToStaticMarkup(
-  createElement(AppShell, { orgName: "Org", email: "u@x.test", signOut: async () => {}, children: createElement("p", null, "body") }),
+  createElement(AppShell, { orgName: "Org", email: "u@x.test", signOut: async () => {} } as ComponentProps<typeof AppShell>, createElement("p", null, "body")),
 );
 
 const tag = (source: string, pattern: RegExp) => source.match(pattern)?.[0] ?? "";
@@ -29,6 +29,11 @@ describe("shell search entries", () => {
     expect(link).toContain('aria-label="Search"');
     expect(link).toMatch(/class="(?:[^"]*\s)?size-11(?:\s[^"]*)?"/);
     expect(html.indexOf(link)).toBeGreaterThan(html.indexOf("</aside>"));
+    const start = html.indexOf('<div class="sticky top-0 z-10');
+    expect(start).toBeGreaterThan(-1);
+    const topBar = html.slice(start, html.indexOf("</div>", start));
+    expect(tag(topBar, /<div[^>]*>/)).toContain("lg:hidden");
+    expect(topBar).toContain(link);
     expect(tag(html, /<aside[^>]*>/)).toMatch(/class="[^"]*\bhidden\b[^"]*\blg:flex\b/);
   });
 

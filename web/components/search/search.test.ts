@@ -71,6 +71,14 @@ describe("search results", () => {
     const row = render("x", results({ customers: group([{ id: "c1", name: evil }]) }));
     expect(row).not.toContain("<img");
     expect(row).toContain("&lt;img src=x onerror=alert(1)&gt;");
+
+    const siteRow = render("x", results({ sites: group([site({ name: evil, customerName: evil, address: evil })]) }));
+    expect(siteRow).not.toContain("<img");
+    expect(siteRow.match(/&lt;img src=x onerror=alert\(1\)&gt;/g)).toHaveLength(3);
+
+    const unitRow = render("x", results({ equipment: group([{ ...unit, unitNo: evil, typeName: evil, siteName: evil, customerName: evil }]) }));
+    expect(unitRow).not.toContain("<img");
+    expect(unitRow.match(/&lt;img src=x onerror=alert\(1\)&gt;/g)).toHaveLength(4);
   });
 
   test("C1588: the form is a GET to /search with a search input named q, prefilled with the text, labelled Search, and a Search button", () => {

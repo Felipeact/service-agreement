@@ -911,6 +911,9 @@ describe("record search", () => {
   test("C1573: 26 rows of a kind keep 25 and set more; exactly 25 keep 25 and do not; the other kinds are judged on their own rows", async () => {
     const many = (kind: string, count: number) => Array.from({ length: count }, (_, i) => hit(kind, i + 1));
     const over = await search([...many("customer", 26), ...many("site", 25), ...many("asset", 3)]);
+    // The group cap is one less than the limit asked of the database, so a 26th row is how "more" is known.
+    const asked = (over.client.rpc.mock.calls[0][1] as { p_limit: number }).p_limit;
+    expect(over.results.customers.hits).toHaveLength(asked - 1);
     expect(over.results.customers.hits).toHaveLength(25);
     expect(over.results.customers.hits[24].id).toBe("customer-25");
     expect(over.results.customers.more).toBe(true);

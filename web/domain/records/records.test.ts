@@ -189,6 +189,7 @@ describe("parseSearchQuery", () => {
   test("C1570: the text is trimmed, cut to its first 100 characters and trimmed again; a missing, array or blank value is empty; other parameters are ignored", () => {
     expect(parseSearchQuery({ q: "  tower  " })).toBe("tower");
     expect(parseSearchQuery({ q: "a".repeat(120) })).toBe("a".repeat(100));
+    expect(parseSearchQuery({ q: `   ${"a".repeat(120)}` })).toBe("a".repeat(100));
     expect(parseSearchQuery({ q: `${"a".repeat(98)}   ${"b".repeat(20)}` })).toBe("a".repeat(98));
     expect(parseSearchQuery({})).toBe("");
     expect(parseSearchQuery({ q: ["a", "b"] })).toBe("");

@@ -108,6 +108,8 @@ end $$;
 do $$
 begin
   perform tests.ok('C1556 unit', tests.sr_titles('rtu-3', 'asset') = 'RTU-3', 'rtu-3: ' || coalesce(tests.sr_titles('rtu-3', 'asset'), 'none'));
+  perform tests.ok('C1556 null unit never a hit', tests.sr_titles('rtu', 'asset') = 'RTU-1|RTU-3',
+    'rtu: ' || coalesce(tests.sr_titles('rtu', 'asset'), 'none'));
   perform tests.ok('C1556 no null title', (select count(*) from public.search_records('rtu', 50) r where r.title is null) = 0,
     'a hit has a null title');
   perform tests.ok('C1556 kind', (select min(r.kind) from public.search_records('rtu-3', 50) r) = 'asset', 'the kind is not asset');
@@ -225,6 +227,8 @@ begin
     perform tests.act_as(u);
     perform tests.ok('C1568 ' || u, tests.sr_titles('harb', 'customer') = 'Harbourview Strata' and tests.sr_titles('harb', 'customer') = expected,
       u || ' got ' || coalesce(tests.sr_titles('harb', 'customer'), 'none'));
+    perform tests.ok('C1568 sites ' || u, tests.sr_titles('tower', 'site') = 'North Tower', u || ' sites: ' || coalesce(tests.sr_titles('tower', 'site'), 'none'));
+    perform tests.ok('C1568 units ' || u, tests.sr_titles('rtu-3', 'asset') = 'RTU-3', u || ' units: ' || coalesce(tests.sr_titles('rtu-3', 'asset'), 'none'));
   end loop;
 end $$;
 
