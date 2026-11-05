@@ -1,0 +1,805 @@
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "./agreements";
+import { stubClient, type Reply } from "./stub-client";
+
+const AGR = "11111111-1111-4111-8111-111111111111";
+const SITE = "33333333-3333-4333-8333-333333333333";
+const LINE = "44444444-4444-4444-8444-444444444444";
+const TYPE = "55555555-5555-4555-8555-555555555555";
+const VALUE = { description: "Preventive maintenance visit", visitMonths: [3, 6, 9, 12], costPerVisitCents: 89250, assetTypeIds: [TYPE] };
+
+const ok = (data: unknown): Reply => ({ data, error: null });
+const fail = (code: string): Reply => ({ data: null, error: { code, message: `boom ${code}` } });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+const agreementRow = (versions: { id: string; version_no: number; created_at?: string }[], status = "draft") => ({
+  id: AGR,
+  number: "AG-1052",
+  status,
+  sites: { id: "s1", name: "Harbourview Towers", customers: { id: "c1", name: "Harbourview Strata" } },
+  agreement_versions: versions.map((version) => ({ created_at: "2026-10-27T17:00:00Z", contracts: [], ...version })),
+});
+
+const MONTHS_FOR: Record<number, number[]> = { 2: [4, 10], 4: [3, 6, 9, 12] };
+
+const line = (id: string, position: number, created_at: string, visits = 4, cost = 89250) => ({
+  id,
+  position,
+  description: `Line ${id}`,
+  visits_per_year: visits,
+  visit_months: MONTHS_FOR[visits],
+  cost_per_visit_cents: cost,
+  created_at,
+  service_line_asset_types: [{ asset_types: { id: TYPE, code: "RTU", name: "Rooftop unit" } }],
+});
+
+describe("agreement reader", () => {
+  const TWO = agreementRow([
+    { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" },
+    { id: "v2", version_no: 2, created_at: "2026-10-27T17:00:00Z" },
+  ]);
+
+  test("C714: lines come back by position, then by creation time", async () => {
+    const rows = [
+      line("p2", 2, "2026-10-27T08:00:00Z"),
+      line("p0", 0, "2026-10-27T11:00:00Z"),
+      line("p1-late", 1, "2026-10-27T10:00:00Z"),
+      line("p1-early", 1, "2026-10-27T09:00:00Z"),
+    ];
+    const { typed } = stubClient({ agreements: ok(TWO), service_lines: ok(rows) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.shown.lines.map((l) => l.id)).toEqual(["p0", "p1-early", "p1-late", "p2"]);
+  });
+
+  test("C725: each line's annual amount is visits x cost, and the version's is their sum", async () => {
+    const rows = [line("a", 0, "2026-10-27T08:00:00Z", 4, 89250), line("b", 1, "2026-10-27T09:00:00Z", 2, 15000)];
+    const { typed } = stubClient({ agreements: ok(TWO), service_lines: ok(rows) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.shown.lines.map((l) => l.annualCents)).toEqual([357000, 30000]);
+    expect(detail?.shown.annualCents).toBe(387000);
+    expect(detail?.shown.lines[0]).toEqual({
+      id: "a",
+      position: 0,
+      description: "Line a",
+      visitsPerYear: 4,
+      costPerVisitCents: 89250,
+      annualCents: 357000,
+      visitMonths: [3, 6, 9, 12],
+      equipment: [{ id: TYPE, code: "RTU", name: "Rooftop unit" }],
+    });
+  });
+
+  test("C725: a version with no lines totals 0", async () => {
+    const { typed } = stubClient({ agreements: ok(TWO), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.shown).toMatchObject({ lines: [], annualCents: 0 });
+  });
+
+  test("C727: get(id, 1) shows version 1, not current, with version 1's lines", async () => {
+    const { typed, calls } = stubClient({ agreements: ok(TWO), service_lines: ok([line("a", 0, "2026-10-20T08:00:00Z")]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR, 1);
+    expect(detail?.shown).toMatchObject({ versionNo: 1, current: false });
+    expect(detail?.shown.lines.map((l) => l.id)).toEqual(["a"]);
+    expect(detail?.editable).toBe(false);
+    expect(calls).toContainEqual({ table: "service_lines", method: "eq", args: ["agreement_version_id", "v1"] });
+  });
+
+  test.each<[string, number | undefined]>([
+    ["no version", undefined],
+    ["version 9", 9],
+    ["version 0", 0],
+  ])("C727: %s shows the current version 2", async (_, versionNo) => {
+    const { typed, calls } = stubClient({ agreements: ok(TWO), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR, versionNo);
+    expect(detail?.shown).toMatchObject({ versionNo: 2, current: true });
+    expect(detail?.editable).toBe(true);
+    expect(calls).toContainEqual({ table: "service_lines", method: "eq", args: ["agreement_version_id", "v2"] });
+  });
+
+  test("the detail carries the number, status, stage, site, customer and versions newest first", async () => {
+    const { typed } = stubClient({ agreements: ok(TWO), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail).toMatchObject({
+      id: AGR,
+      number: "AG-1052",
+      status: "draft",
+      stage: "in_progress",
+      site: { id: "s1", name: "Harbourview Towers" },
+      customer: { id: "c1", name: "Harbourview Strata" },
+    });
+    expect(detail?.versions).toEqual([
+      { versionNo: 2, createdAt: new Date("2026-10-27T17:00:00Z"), reason: null, author: null, events: [] },
+      { versionNo: 1, createdAt: new Date("2026-10-20T17:00:00Z"), reason: null, author: null, events: [] },
+    ]);
+  });
+
+  test("a sent agreement's current version is not editable", async () => {
+    const { typed } = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }], "sent")), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(typed).get(AGR))?.editable).toBe(false);
+  });
+
+  test("C741: a malformed id is null without a query, and no row is null", async () => {
+    const malformed = stubClient({});
+    expect(await supabaseAgreementReader(malformed.typed).get("abc")).toBeNull();
+    expect(malformed.calls).toHaveLength(0);
+    expect(await supabaseAgreementReader(stubClient({ agreements: ok(null) }).typed).get(AGR)).toBeNull();
+  });
+
+  test("an unexpected read error throws", async () => {
+    await expect(supabaseAgreementReader(stubClient({ agreements: fail("XX000") }).typed).get(AGR)).rejects.toThrow("XX000");
+  });
+});
+
+describe("agreement store", () => {
+  function storeWith(rpcReply: Reply, agreements: Reply = ok(null)) {
+    const stub = stubClient({ agreements });
+    stub.client.rpc.mockResolvedValue(rpcReply);
+    return { ...stub, store: supabaseAgreementStore(stub.typed) };
+  }
+
+  test("C704: create calls create_agreement with the site id and returns the new id", async () => {
+    const { store, client } = storeWith(ok(AGR));
+    expect(await store.create(SITE)).toEqual({ ok: true, id: AGR });
+    expect(client.rpc).toHaveBeenCalledWith("create_agreement", { p_site_id: SITE });
+  });
+
+  test.each<[string, Reply, Reply, unknown, number]>([
+    ["23505", fail("23505"), ok({ id: "live-1", number: "AG-1048" }), { ok: false, code: "open_exists", agreementId: "live-1", number: "AG-1048" }, 0],
+    ["P0002", fail("P0002"), ok(null), { ok: false, code: "not_found" }, 0],
+    ["42501", fail("42501"), ok(null), { ok: false, code: "forbidden" }, 0],
+    ["XX000", fail("XX000"), ok(null), { ok: false, code: "unavailable" }, 1],
+  ])("C710: create maps %s", async (_, rpcReply, liveRead, expected, logged) => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { store, calls } = storeWith(rpcReply, liveRead);
+    expect(await store.create(SITE)).toEqual(expected);
+    expect(error).toHaveBeenCalledTimes(logged);
+    if (rpcReply.error?.code === "23505") {
+      expect(calls).toContainEqual({ table: "agreements", method: "eq", args: ["site_id", SITE] });
+      expect(calls).toContainEqual({ table: "agreements", method: "in", args: ["status", ["draft", "sent", "changes_requested"]] });
+    }
+  });
+
+  test.each<[string, () => ReturnType<typeof storeWith>]>([
+    ["a thrown rpc", () => {
+      const stub = storeWith(ok(null));
+      stub.client.rpc.mockRejectedValue(new Error("network down"));
+      return stub;
+    }],
+    ["a failed read of the live agreement", () => storeWith(fail("23505"), fail("XX000"))],
+  ])("C744: create answers unavailable with one console.error after %s", async (_, make) => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await make().store.create(SITE)).toEqual({ ok: false, code: "unavailable" });
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("service line store", () => {
+  /** The update reads the line's agreement first (the RPC takes it); RLS hides other orgs' lines. */
+  const LINE_ROW = ok([{ id: LINE, agreement_versions: { agreement_id: AGR } }]);
+  const ARGS = {
+    p_agreement_id: AGR,
+    p_description: "Preventive maintenance visit",
+    p_visit_months: [3, 6, 9, 12],
+    p_cost_per_visit_cents: 89250,
+    p_asset_type_ids: [TYPE],
+  };
+
+  function storeWith(rpcReply: Reply, tables: Record<string, Reply> = {}) {
+    const stub = stubClient(tables);
+    stub.client.rpc.mockResolvedValue(rpcReply);
+    return { ...stub, store: supabaseServiceLineStore(stub.typed) };
+  }
+
+  test("C719: add calls save_service_line with a null line id and answers the id it returns", async () => {
+    const { store, client, calls } = storeWith(ok("new-line"));
+    expect(await store.add(AGR, VALUE)).toEqual({ ok: true, id: "new-line" });
+    expect(client.rpc.mock.calls).toEqual([["save_service_line", { ...ARGS, p_line_id: null }]]);
+    expect(calls.filter((call) => call.method === "insert")).toHaveLength(0);
+  });
+
+  test("C722: a 54000 from the add is too_many", async () => {
+    const { store } = storeWith(fail("54000"));
+    expect(await store.add(AGR, VALUE)).toEqual({ ok: false, code: "too_many" });
+  });
+
+  test("C737: add, update and remove map 55000 to locked", async () => {
+    expect(await storeWith(fail("55000")).store.add(AGR, VALUE)).toEqual({ ok: false, code: "locked" });
+    expect(await storeWith(fail("55000"), { service_lines: LINE_ROW }).store.update(LINE, VALUE)).toEqual({ ok: false, code: "locked" });
+    const write = stubClient({ service_lines: fail("55000") });
+    expect(await supabaseServiceLineStore(write.typed).remove(LINE)).toEqual({ ok: false, code: "locked" });
+  });
+
+  test("C724: update calls save_service_line with the line's id, and update and remove answer ok", async () => {
+    const { typed, client, calls } = stubClient({ service_lines: LINE_ROW });
+    client.rpc.mockResolvedValue(ok(LINE));
+    expect(await supabaseServiceLineStore(typed).update(LINE, VALUE)).toEqual({ ok: true });
+    expect(client.rpc.mock.calls).toEqual([["save_service_line", { ...ARGS, p_line_id: LINE }]]);
+    expect(await supabaseServiceLineStore(typed).remove(LINE)).toEqual({ ok: true });
+    expect(calls).toContainEqual({ table: "service_lines", method: "delete", args: [] });
+    expect(calls.filter((call) => call.method === "eq")).toEqual([
+      { table: "service_lines", method: "eq", args: ["id", LINE] },
+      { table: "service_lines", method: "eq", args: ["id", LINE] },
+    ]);
+  });
+
+  test("C741: a P0002 from add or update is not_found; update and remove of an id matching no row are not_found", async () => {
+    expect(await storeWith(fail("P0002")).store.add(AGR, VALUE)).toEqual({ ok: false, code: "not_found" });
+    expect(await storeWith(fail("P0002"), { service_lines: LINE_ROW }).store.update(LINE, VALUE)).toEqual({ ok: false, code: "not_found" });
+    const none = stubClient({ service_lines: ok([]) });
+    expect(await supabaseServiceLineStore(none.typed).update(LINE, VALUE)).toEqual({ ok: false, code: "not_found" });
+    expect(none.client.rpc).not.toHaveBeenCalled();
+    expect(await supabaseServiceLineStore(none.typed).remove(LINE)).toEqual({ ok: false, code: "not_found" });
+  });
+
+  test("a 42501 is forbidden", async () => {
+    const { store } = storeWith(fail("42501"), { service_lines: LINE_ROW });
+    expect(await store.update(LINE, VALUE)).toEqual({ ok: false, code: "forbidden" });
+  });
+
+  test.each<[string, () => Promise<unknown>]>([
+    ["add, on an rpc error", () => storeWith(fail("XX000")).store.add(AGR, VALUE)],
+    ["update, on an rpc error", () => storeWith(fail("XX000"), { service_lines: LINE_ROW }).store.update(LINE, VALUE)],
+    ["update, on the line read", () => storeWith(ok(LINE), { service_lines: fail("XX000") }).store.update(LINE, VALUE)],
+    ["remove", () => supabaseServiceLineStore(stubClient({ service_lines: fail("XX000") }).typed).remove(LINE)],
+    ["a thrown add", () => {
+      const stub = storeWith(ok(null));
+      stub.client.rpc.mockRejectedValue(new Error("network down"));
+      return stub.store.add(AGR, VALUE);
+    }],
+    ["a thrown update", () => {
+      const stub = storeWith(ok(null), { service_lines: LINE_ROW });
+      stub.client.rpc.mockRejectedValue(new Error("network down"));
+      return stub.store.update(LINE, VALUE);
+    }],
+  ])("C744: %s fails as unavailable with exactly one console.error", async (_, run) => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await run()).toEqual({ ok: false, code: "unavailable" });
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("agreement reader: the service scope", () => {
+  const SCOPE = {
+    schema: 1,
+    types: [{ code: "RTU", name: "Rooftop unit", tasks: ["Replace filters"], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }],
+  };
+  const TYPES = [{ code: "RTU", name: "Rooftop unit", tasks: [{ description: "Replace filters", visitMonths: null }], assets: [{ unitNo: "RTU-1", typeModel: null, location: "Roof" }] }];
+  const TAKEN = "2026-10-27T18:00:00+00:00";
+  const versions = [
+    { id: "v1", version_no: 1 },
+    { id: "v2", version_no: 2 },
+  ];
+
+  test("C804: the current version of a draft reads the live scope of its site", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow(versions)), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(ok(SCOPE));
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(stub.client.rpc).toHaveBeenCalledTimes(1);
+    expect(stub.client.rpc).toHaveBeenCalledWith("site_service_scope", { p_site_id: "s1" });
+    expect(detail?.serviceScope).toEqual({ source: "live", takenAt: null, types: TYPES });
+    expect(stub.calls.some((call) => call.table === "agreement_versions")).toBe(false);
+  });
+
+  test.each<[string, string, number | undefined, string]>([
+    ["version 1 of a draft", "draft", 1, "v1"],
+    ["the current version of a sent agreement", "sent", undefined, "v2"],
+  ])("C804: %s reads its own snapshot, without the live scope", async (_, status, versionNo, versionId) => {
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, status)),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { ...SCOPE, takenAt: TAKEN } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR, versionNo);
+    expect(stub.client.rpc).not.toHaveBeenCalled();
+    expect(stub.calls).toContainEqual({ table: "agreement_versions", method: "eq", args: ["id", versionId] });
+    expect(detail?.serviceScope).toEqual({ source: "frozen", takenAt: new Date(TAKEN), types: TYPES });
+  });
+
+  test("C804: a frozen version holding {} was not recorded, and nothing is logged", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stub = stubClient({ agreements: ok(agreementRow(versions, "sent")), service_lines: ok([]), agreement_versions: ok({ snapshot: {} }) });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("C804: a malformed snapshot was not recorded, and is logged once", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, "sent")),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { schema: 1, types: 3 } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+
+  test("C1110: a snapshot of schema 3 was not recorded", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, "sent")),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { schema: 3, types: [] } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "not_recorded" });
+  });
+
+  test("C804: an error from the live scope rejects", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow(versions)), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(fail("XX000"));
+    await expect(supabaseAgreementReader(stub.typed).get(AGR)).rejects.toThrow("XX000");
+  });
+});
+
+describe("agreement reader: terms and the customer link", () => {
+  const TERMS = { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null };
+  const SNAPSHOT = { schema: 1, types: [], takenAt: "2026-10-27T18:00:00+00:00", terms: TERMS };
+  const sent = agreementRow([{ id: "v1", version_no: 1 }], "sent");
+
+  test("C936: a frozen version returns the terms of its snapshot", async () => {
+    const stub = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.terms).toEqual({ ...TERMS, renewalNoticeDays: null, cpiRenegotiationThresholdPct: null });
+  });
+
+  test("C936: the editable version has no terms and its snapshot is not read", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.terms).toBeNull();
+    expect(stub.calls.some((call) => call.table === "agreement_versions")).toBe(false);
+  });
+
+  test("C936: a frozen version whose snapshot has no terms, or malformed ones, gets null", async () => {
+    for (const snapshot of [{ schema: 1, types: [], takenAt: SNAPSHOT.takenAt }, { ...SNAPSHOT, terms: [TERMS] }]) {
+      const stub = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot }) });
+      expect((await supabaseAgreementReader(stub.typed).get(AGR))?.terms).toBeNull();
+    }
+  });
+
+  test("C905: a sent agreement's current version reads the live link's first view", async () => {
+    const stub = stubClient({
+      agreements: ok(sent),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: SNAPSHOT }),
+      portal_links: ok({ first_viewed_at: "2026-10-28T09:00:00Z" }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.portalLink).toEqual({ firstViewedAt: new Date("2026-10-28T09:00:00Z") });
+    expect(stub.calls.filter((call) => call.table === "portal_links" && call.method === "is")[0].args).toEqual(["revoked_at", null]);
+  });
+
+  test("C905: a live link nobody opened has a null first view, and no live link gives null", async () => {
+    const unopened = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }), portal_links: ok({ first_viewed_at: null }) });
+    expect((await supabaseAgreementReader(unopened.typed).get(AGR))?.portalLink).toEqual({ firstViewedAt: null });
+    const none = stubClient({ agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
+    expect((await supabaseAgreementReader(none.typed).get(AGR))?.portalLink).toBeNull();
+  });
+
+  test("C905: a draft, or a past version of a sent agreement, reads no link", async () => {
+    const draft = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    draft.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
+    await supabaseAgreementReader(draft.typed).get(AGR);
+    const past = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }, { id: "v2", version_no: 2 }], "sent")), service_lines: ok([]), agreement_versions: ok({ snapshot: SNAPSHOT }) });
+    await supabaseAgreementReader(past.typed).get(AGR, 1);
+    expect(draft.calls.some((call) => call.table === "portal_links")).toBe(false);
+    expect(past.calls.some((call) => call.table === "portal_links")).toBe(false);
+  });
+});
+
+describe("the link email of a sent agreement (outbox-dispatch AC 30)", () => {
+  const sent = agreementRow([{ id: "v1", version_no: 1 }], "sent");
+  const base = { agreements: ok(sent), service_lines: ok([]), agreement_versions: ok({ snapshot: { schema: 1, types: [], takenAt: "2026-10-27T18:00:00+00:00" } }) };
+
+  test("C1032: the reader asks for the customer_link notification of the latest agreement.sent event", async () => {
+    const stub = stubClient({
+      ...base,
+      events: ok({ id: "evt-1" }),
+      notifications: ok({ status: "sent", skip_reason: null, recipients: ["pat@customer.ca"], sent_at: "2026-10-29T17:00:00Z" }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.linkEmail).toEqual({ status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-10-29T17:00:00Z") });
+    // The version history reads `events` first (versioning door 3); this lookup is the last events query of the read.
+    const events = stub.calls.filter((call) => call.table === "events");
+    expect(events.filter((call) => call.method === "eq").map((call) => call.args).slice(-3)).toEqual([
+      ["entity_type", "agreement"],
+      ["entity_id", AGR],
+      ["type", "agreement.sent"],
+    ]);
+    expect(events.findLast((call) => call.method === "order")?.args).toEqual(["created_at", { ascending: false }]);
+    const notifications = stub.calls.filter((call) => call.table === "notifications" && call.method === "eq").map((call) => call.args);
+    expect(notifications).toEqual([
+      ["event_id", "evt-1"],
+      ["kind", "customer_link"],
+    ]);
+  });
+
+  test.each([
+    [{ status: "skipped", skip_reason: "no_recipient" }, { status: "not_sent", reason: "no_recipient" }],
+    [{ status: "skipped", skip_reason: "reserved_domain" }, { status: "not_sent", reason: "reserved_domain" }],
+    [{ status: "failed", skip_reason: null }, { status: "not_sent", reason: "failed" }],
+    [{ status: "claimed", skip_reason: null }, { status: "pending" }],
+    [null, { status: "pending" }],
+  ])("C1032: notification %j reads as %j", async (row, expected) => {
+    const stub = stubClient({ ...base, events: ok({ id: "evt-1" }), notifications: ok(row && { ...row, recipients: [], sent_at: null }) });
+    expect((await supabaseAgreementReader(stub.typed).get(AGR))?.linkEmail).toEqual(expected);
+  });
+
+  test("C1032 (extra): a no_link_secret skip reads as not_sent with that reason", async () => {
+    const stub = stubClient({ ...base, events: ok({ id: "evt-1" }), notifications: ok({ status: "skipped", skip_reason: "no_link_secret", recipients: [], sent_at: null }) });
+    expect((await supabaseAgreementReader(stub.typed).get(AGR))?.linkEmail).toEqual({ status: "not_sent", reason: "no_link_secret" });
+  });
+
+  test("C1032: a draft reads no notification", async () => {
+    const draft = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    draft.client.rpc.mockResolvedValue(ok({ schema: 1, types: [] }));
+    expect((await supabaseAgreementReader(draft.typed).get(AGR))?.linkEmail).toBeNull();
+    // The version history (versioning door 3) reads `events` for every status; only the link-email lookup is the draft's to skip.
+    expect(draft.calls.some((call) => call.table === "notifications" || (call.table === "events" && call.method === "eq" && call.args[1] === "agreement.sent"))).toBe(false);
+  });
+});
+
+describe("agreement reader: renewal links (renewal door 1)", () => {
+  const OLD = "66666666-6666-4666-8666-666666666666";
+  const NEW = "77777777-7777-4777-8777-777777777777";
+  const main = (renews: string | null) => ({ ...agreementRow([{ id: "v1", version_no: 1 }], "accepted"), renews_agreement_id: renews });
+
+  test("C1204: renews comes from renews_agreement_id, renewedBy from the agreement that renews this one", async () => {
+    const { typed, calls } = stubClient({
+      agreements: {
+        sequence: [
+          ok(main(OLD)),
+          ok({ id: OLD, number: "AG-1004", renews_agreement_id: null }),
+          ok({ id: NEW, number: "AG-1013", renews_agreement_id: AGR }),
+        ],
+      },
+      service_lines: ok([]),
+    });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.renews).toEqual({ id: OLD, number: "AG-1004" });
+    expect(detail?.renewedBy).toEqual({ id: NEW, number: "AG-1013" });
+    const eqs = calls.filter((call) => call.table === "agreements" && call.method === "eq").map((call) => call.args);
+    expect(eqs).toContainEqual(["id", OLD]);
+    expect(eqs).toContainEqual(["renews_agreement_id", AGR]);
+  });
+
+  test("C1204: both are null when nothing links", async () => {
+    const { typed } = stubClient({
+      agreements: { sequence: [ok(main(null)), ok(null)] },
+      service_lines: ok([]),
+    });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.renews).toBeNull();
+    expect(detail?.renewedBy).toBeNull();
+  });
+});
+
+describe("the validity date on the agreement reader", () => {
+  const row = (validUntil: string | null) => ({
+    id: AGR,
+    number: "AG-1052",
+    status: "sent",
+    sites: { id: "s1", name: "Harbourview Towers", customers: { id: "c1", name: "Harbourview Strata" } },
+    agreement_versions: [{
+      id: "v1", version_no: 1, created_at: "2026-10-27T17:00:00Z", contracts: [],
+      term_start: "2027-01-01", term_months: 12, term_end: "2027-12-31", valid_until: validUntil,
+    }],
+  });
+
+  test.each([["2026-12-02", "2026-12-02"], [null, null]])("C1234: valid_until %s becomes validUntil %s", async (stored, shown) => {
+    const { typed } = stubClient({ agreements: ok(row(stored)), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(typed).get(AGR))?.validUntil).toBe(shown);
+  });
+});
+
+describe("agreement reader, versions and their history", () => {
+  const UE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const UA = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const members = ok([
+    { user_id: UE, role: "estimator" },
+    { user_id: UA, role: "owner" },
+  ]);
+  const withVersions = (versions: Record<string, unknown>[], status = "draft") =>
+    ok({ ...agreementRow([], status), org_id: "org-1", agreement_versions: versions.map((v) => ({ created_at: "2026-10-20T17:00:00Z", contracts: [], ...v })) });
+  const event = (type: string, versionNo: number, at: string, actor: string | null = null, extra: Record<string, unknown> = {}) => ({
+    type,
+    payload: { versionNo, ...extra },
+    actor_id: actor,
+    created_at: at,
+  });
+
+  test("C1322: each version carries its reason and the role of its author, or null for both", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_by: null, reason: null },
+      { id: "v2", version_no: 2, created_by: UE, reason: "Too expensive" },
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.versions.map((v) => [v.versionNo, v.reason, v.author])).toEqual([
+      [2, "Too expensive", "estimator"],
+      [1, null, null],
+    ]);
+  });
+
+  test("C1328: a version's events are its own, oldest first, with the role that acted or the customer", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_by: UE, reason: null },
+      { id: "v2", version_no: 2, created_by: UE, reason: "Too expensive" },
+    ]);
+    const events = ok([
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.viewed", 1, "2026-10-21T10:00:00Z"),
+      event("agreement.changes_requested", 1, "2026-10-22T10:00:00Z", null, { via: "portal", reason: "Too expensive" }),
+      event("agreement.revised", 2, "2026-10-23T10:00:00Z", UE),
+      event("agreement.sent", 2, "2026-10-24T09:00:00Z", UA),
+      event("agreement.refused", 2, "2026-10-25T09:00:00Z", null, { via: "portal" }),
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    const history = (no: number) => detail?.versions.find((v) => v.versionNo === no)?.events.map((e) => [e.type, e.at.toISOString(), e.by]);
+    expect(history(1)).toEqual([
+      ["sent", "2026-10-21T09:00:00.000Z", "estimator"],
+      ["viewed", "2026-10-21T10:00:00.000Z", "customer"],
+      ["changes_requested", "2026-10-22T10:00:00.000Z", "customer"],
+    ]);
+    expect(history(2)).toEqual([
+      ["sent", "2026-10-24T09:00:00.000Z", "owner"],
+      ["refused", "2026-10-25T09:00:00.000Z", "customer"],
+    ]);
+  });
+
+  test("C1329: the sent and accepted versions are the ones the latest sent and accepted events name", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1 },
+      { id: "v2", version_no: 2 },
+    ]);
+    const all = [
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.changes_requested", 1, "2026-10-22T10:00:00Z", null, { via: "portal" }),
+      event("agreement.revised", 2, "2026-10-23T10:00:00Z", UE),
+      event("agreement.sent", 2, "2026-10-24T09:00:00Z", UE),
+      event("agreement.accepted", 2, "2026-10-25T09:00:00Z", null, { via: "portal" }),
+    ];
+    const full = stubClient({ agreements, service_lines: ok([]), events: ok(all), memberships: members });
+    expect(await supabaseAgreementReader(full.typed).get(AGR)).toMatchObject({ sentVersion: 2, acceptedVersion: 2 });
+    const early = stubClient({ agreements, service_lines: ok([]), events: ok(all.slice(0, 2)), memberships: members });
+    expect(await supabaseAgreementReader(early.typed).get(AGR)).toMatchObject({ sentVersion: 1, acceptedVersion: null });
+  });
+
+  test("C1328: an event with no versionNo belongs to the newest version that existed when it was written", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" },
+      { id: "v2", version_no: 2, created_at: "2026-10-23T17:00:00Z" },
+    ]);
+    const noVersion = (type: string, at: string, actor: string | null) => ({ type, payload: { from: "draft", to: "sent" }, actor_id: actor, created_at: at });
+    const events = ok([noVersion("agreement.sent", "2026-10-21T09:00:00Z", UE), noVersion("agreement.sent", "2026-10-24T09:00:00Z", UA)]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    const history = (no: number) => detail?.versions.find((v) => v.versionNo === no)?.events.map((e) => [e.type, e.by]);
+    expect(history(1)).toEqual([["sent", "estimator"]]);
+    expect(history(2)).toEqual([["sent", "owner"]]);
+    expect(detail).toMatchObject({ sentVersion: 2, acceptedVersion: null });
+  });
+
+  test("C1328: an accepted event is listed in its version's history with the customer who accepted", async () => {
+    const agreements = withVersions([{ id: "v1", version_no: 1 }]);
+    const events = ok([
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.accepted", 1, "2026-10-22T09:00:00Z", null, { via: "portal" }),
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.versions[0]?.events.map((e) => [e.type, e.by])).toEqual([
+      ["sent", "estimator"],
+      ["accepted", "customer"],
+    ]);
+  });
+
+  test("C1346: a staff-written decision with no versionNo takes the newest version that existed, and is the accepted one", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" },
+      { id: "v2", version_no: 2, created_at: "2026-10-23T17:00:00Z" },
+    ]);
+    const bare = { from: "sent", to: "accepted" };
+    const events = ok([{ type: "agreement.accepted", payload: bare, actor_id: UA, created_at: "2026-10-24T09:00:00Z" }]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.acceptedVersion).toBe(2);
+    expect(detail?.versions.find((v) => v.versionNo === 2)?.events.map((e) => [e.type, e.by])).toEqual([["accepted", "owner"]]);
+    expect(detail?.versions.find((v) => v.versionNo === 1)?.events).toEqual([]);
+  });
+
+  test("C1329: a sent event written before the first version existed is not listed", async () => {
+    const agreements = withVersions([{ id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z" }]);
+    const events = ok([{ type: "agreement.sent", payload: {}, actor_id: null, created_at: "2026-10-19T09:00:00Z" }]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    expect(await supabaseAgreementReader(typed).get(AGR)).toMatchObject({ sentVersion: null, versions: [{ events: [] }] });
+  });
+
+  test("C1333: two view events of one version are listed once, the first", async () => {
+    const agreements = withVersions([{ id: "v1", version_no: 1 }]);
+    const events = ok([
+      event("agreement.sent", 1, "2026-10-21T09:00:00Z", UE),
+      event("agreement.viewed", 1, "2026-10-21T10:00:00Z"),
+      event("agreement.viewed", 1, "2026-10-21T11:00:00Z"),
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.versions[0]?.events.map((e) => [e.type, e.at.toISOString()])).toEqual([
+      ["sent", "2026-10-21T09:00:00.000Z"],
+      ["viewed", "2026-10-21T10:00:00.000Z"],
+    ]);
+  });
+
+  test("C1338: get(id, 2, 1) also returns version 1's lines and total", async () => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1 },
+      { id: "v2", version_no: 2 },
+    ]);
+    const { typed, calls } = stubClient({ agreements, service_lines: ok([line("a", 0, "2026-10-20T08:00:00Z", 4, 89250)]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR, 2, 1);
+    expect(detail?.shown.versionNo).toBe(2);
+    expect(detail?.compare).toMatchObject({ versionNo: 1, annualCents: 357000 });
+    expect(detail?.compare?.lines.map((l) => l.id)).toEqual(["a"]);
+    expect(calls).toContainEqual({ table: "service_lines", method: "eq", args: ["agreement_version_id", "v1"] });
+  });
+
+  test.each<[string, number | undefined]>([
+    ["the shown version", 2],
+    ["no version", undefined],
+    ["an unknown version", 9],
+    ["version 0", 0],
+  ])("C1338: comparing with %s gives no comparison", async (_, compareNo) => {
+    const agreements = withVersions([
+      { id: "v1", version_no: 1 },
+      { id: "v2", version_no: 2 },
+    ]);
+    const { typed } = stubClient({ agreements, service_lines: ok([]) });
+    expect((await supabaseAgreementReader(typed).get(AGR, 2, compareNo))?.compare).toBeNull();
+  });
+});
+
+describe("agreement reader: the activity timeline", () => {
+  const UE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const UA = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const GONE = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const OLD = "66666666-6666-4666-8666-666666666666";
+  const members = ok([
+    { user_id: UE, role: "estimator" },
+    { user_id: UA, role: "owner" },
+  ]);
+  const withVersions = (versions: Record<string, unknown>[], status = "draft") =>
+    ok({ ...agreementRow([], status), org_id: "org-1", agreement_versions: versions.map((v) => ({ created_at: "2026-10-20T17:00:00Z", contracts: [], ...v })) });
+  const row = (type: string, at: string, actor: string | null = null, payload: Record<string, unknown> = {}) => ({ type, payload, actor_id: actor, created_at: at });
+  const TWO = [
+    { id: "v1", version_no: 1, created_at: "2026-10-20T17:00:00Z", created_by: UE },
+    { id: "v2", version_no: 2, created_at: "2026-10-23T17:00:00Z", created_by: UE },
+  ];
+
+  test("C1483: the timeline has an entry per event of the ten types across versions, and the Versions history keeps its five", async () => {
+    const events = ok([
+      row("agreement.sent", "2026-10-21T09:00:00Z", UE, { from: "draft", to: "sent" }),
+      row("agreement.viewed", "2026-10-21T10:00:00Z", null, { versionNo: 1 }),
+      row("agreement.changes_requested", "2026-10-22T10:00:00Z", null, { versionNo: 1, via: "portal", reason: "Too expensive" }),
+      row("agreement.revised", "2026-10-23T17:00:00Z", UE, { versionNo: 2 }),
+      row("agreement.sent", "2026-10-24T09:00:00Z", UA, { from: "draft", to: "sent" }),
+      row("agreement.refused", "2026-10-25T09:00:00Z", null, { versionNo: 2, via: "portal", reason: "No" }),
+      row("agreement.accepted", "2026-10-26T09:00:00Z", null, { versionNo: 2, via: "portal" }),
+      row("agreement.expired", "2026-10-27T09:00:00Z", null, { versionNo: 2, validUntil: "2026-10-26" }),
+      row("agreement.withdrawn", "2026-10-28T09:00:00Z", UA, { via: "deactivation" }),
+      row("agreement.renewed", "2026-10-29T09:00:00Z", null, {}),
+      row("agreement.renewal_drafted", "2026-10-30T09:00:00Z", null, {}),
+      row("contract.completed", "2026-10-31T09:00:00Z"),
+    ]);
+    const { typed, calls } = stubClient({ agreements: withVersions(TWO), service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.map((e) => [e.type, e.versionNo])).toEqual([
+      ["renewal_drafted", 2],
+      ["renewed", 2],
+      ["withdrawn", 2],
+      ["expired", 2],
+      ["accepted", 2],
+      ["refused", 2],
+      ["sent", 2],
+      ["revised", 2],
+      ["changes_requested", 1],
+      ["viewed", 1],
+      ["sent", 1],
+      ["created", 1],
+    ]);
+    const asked = calls.find((call) => call.table === "events" && call.method === "in");
+    expect(asked?.args[1]).toEqual(expect.arrayContaining(["agreement.expired", "agreement.withdrawn", "agreement.renewed", "agreement.renewal_drafted", "agreement.revised"]));
+    expect(asked?.args[1]).not.toContain("contract.completed");
+    const history = detail?.versions.flatMap((v) => v.events.map((e) => e.type)).sort();
+    expect(history).toEqual(["accepted", "changes_requested", "refused", "sent", "sent", "viewed"]);
+  });
+
+  test("C1486: an actor shows the member's role, and one no longer a member shows no actor", async () => {
+    const events = ok([row("agreement.sent", "2026-10-21T09:00:00Z", UA), row("agreement.withdrawn", "2026-10-22T09:00:00Z", GONE)]);
+    const { typed } = stubClient({ agreements: withVersions(TWO.slice(0, 1)), service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.map((e) => [e.type, e.by])).toEqual([
+      ["withdrawn", null],
+      ["sent", "owner"],
+      ["created", "estimator"],
+    ]);
+  });
+
+  test("C1489: a renewal names the agreement this one renews only when the event points at it", async () => {
+    const main = { ...(withVersions(TWO.slice(0, 1)).data as object), renews_agreement_id: OLD, status: "accepted" };
+    const link = ok({ id: OLD, number: "AG-1004", renews_agreement_id: null });
+    const none = ok(null);
+    const events = ok([
+      row("agreement.renewed", "2026-10-21T09:00:00Z", null, { renewsAgreementId: OLD }),
+      row("agreement.renewal_drafted", "2026-10-22T09:00:00Z", null, { renewsAgreementId: "someone-else" }),
+    ]);
+    const { typed } = stubClient({ agreements: { sequence: [ok(main), link, none] }, service_lines: ok([]), events, memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.filter((e) => e.type !== "created").map((e) => [e.type, e.detail])).toEqual([
+      ["renewal_drafted", null],
+      ["renewed", "Renews AG-1004"],
+    ]);
+    const unreadable = stubClient({ agreements: { sequence: [ok(main), none, none] }, service_lines: ok([]), events, memberships: members });
+    const bare = await supabaseAgreementReader(unreadable.typed).get(AGR);
+    expect(bare?.timeline?.map((e) => e.detail)).toEqual([null, null, null]);
+  });
+
+  test("C1490: one version and no events give a timeline of exactly Created", async () => {
+    const { typed } = stubClient({ agreements: withVersions(TWO.slice(0, 1)), service_lines: ok([]), events: ok([]), memberships: members });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(detail?.timeline?.map((e) => [e.type, e.label, e.at.toISOString(), e.by])).toEqual([["created", "Created", "2026-10-20T17:00:00.000Z", "estimator"]]);
+  });
+
+  test("C1494: a failed events read rejects the whole read", async () => {
+    const events: Reply = { data: null, error: { code: "XX000", message: "boom" } };
+    const { typed } = stubClient({ agreements: withVersions(TWO.slice(0, 1)), service_lines: ok([]), events, memberships: members });
+    await expect(supabaseAgreementReader(typed).get(AGR)).rejects.toThrow(/XX000/);
+  });
+});
+
+describe("agreement reader: contract and signer", () => {
+  const withContracts = (status: string, contracts: { id: string; status: string }[]) =>
+    agreementRow([{ id: "v1", version_no: 1, contracts } as never], status);
+  const SIGNER = { name: "Pat Lee", email: "pat@example.com" };
+
+  test("C1622: the latest version's contract comes back as { id, status }, and none as null", async () => {
+    const withOne = stubClient({ agreements: ok(withContracts("accepted", [{ id: "con-1", status: "client_signed" }])), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(withOne.typed).get(AGR))?.contract).toEqual({ id: "con-1", status: "client_signed" });
+    const none = stubClient({ agreements: ok(withContracts("accepted", [])), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(none.typed).get(AGR))?.contract).toBeNull();
+  });
+
+  test("C1622: contract_signer is read with the site id for an accepted agreement with no contract, and the signer comes back", async () => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts("accepted", [])), service_lines: ok([]) });
+    client.rpc.mockResolvedValue({ data: SIGNER, error: null });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(client.rpc).toHaveBeenCalledWith("contract_signer", { p_site_id: "s1" });
+    expect(detail?.signer).toEqual(SIGNER);
+  });
+
+  test("C1622: a null from contract_signer is signer: null", async () => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts("accepted", [])), service_lines: ok([]) });
+    client.rpc.mockResolvedValue({ data: null, error: null });
+    expect((await supabaseAgreementReader(typed).get(AGR))?.signer).toBeNull();
+  });
+
+  test.each(["draft", "sent", "refused", "changes_requested", "expired", "withdrawn"])("C1622: a %s agreement never asks for a signer", async (status) => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts(status, [])), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(client.rpc).not.toHaveBeenCalledWith("contract_signer", expect.anything());
+    expect(detail?.signer).toBeNull();
+  });
+
+  test("C1622: an accepted agreement that has a contract never asks for a signer", async () => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts("accepted", [{ id: "con-1", status: "pending_signature" }])), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(client.rpc).not.toHaveBeenCalledWith("contract_signer", expect.anything());
+    expect(detail?.signer).toBeNull();
+  });
+});

@@ -1,0 +1,93 @@
+-- catalog-seed S3, second run: C19. Runs after demo_seed.sql and a second copy of the seed body.
+
+-- C19
+do $$
+declare r record;
+begin
+  perform tests.ok('C19 rows', (select count(*) from tests.demo_counts) = 17, 'count snapshot is not 17 tables');
+  for r in select t, n from tests.demo_counts loop
+    perform tests.ok('C19 ' || r.t,
+      r.n = case r.t
+              when 'orgs' then (select count(*) from public.orgs where id = tests.demo())
+              else tests.count(format('select count(*) from public.%I where org_id = %L', r.t, tests.demo()))
+            end,
+      'count changed on the second run');
+  end loop;
+end $$;
+
+-- C821 (service-included): the second run changes no snapshot.
+do $$ begin
+  perform tests.ok('C821 rerun',
+    not exists (select 1 from tests.demo_snapshots s join public.agreement_versions v on v.id = s.id
+                where v.snapshot::text <> s.snapshot),
+    'a snapshot changed on the second run');
+  perform tests.ok('C821 guard',
+    (select snapshot ->> 'takenAt' from public.agreement_versions where id = md5('demo:version:4')::uuid) = '2026-01-01T00:00:00+00:00',
+    'the second run overwrote a version that already held a scope');
+end $$;
+
+-- C937 (customer-portal): terms already in a snapshot do not follow the settings on a re-run.
+do $$ begin
+  perform tests.ok('C937 kept',
+    (select snapshot -> 'terms' ->> 'repairDiscountPct' from public.agreement_versions where id = md5('demo:version:4')::uuid) = '99',
+    'the second run overwrote the terms of a version that already had them');
+  perform tests.ok('C937 still complete',
+    not exists (select 1 from public.agreement_versions v join public.agreements a on a.id = v.agreement_id
+                where v.org_id = tests.demo() and not (v.snapshot ? 'terms')
+                  and not (a.status = 'draft' and v.version_no = (select max(w.version_no) from public.agreement_versions w where w.agreement_id = a.id))),
+    'a frozen demo version has no terms after the second run');
+end $$;
+
+-- C1094 (cadence): the second run changes no line's months or coverage, and adds no line.
+do $$ begin
+  perform tests.ok('C1094 rerun lines',
+    (select count(*) from public.service_lines where org_id = tests.demo()) = (select count(*) from tests.demo_cadence),
+    'the second run changed the number of demo lines');
+  perform tests.ok('C1094 rerun',
+    not exists (select 1 from tests.demo_cadence d join public.service_lines l on l.id = d.id
+                where l.visit_months::text <> d.months
+                   or (select coalesce(array_agg(c.asset_type_id order by c.asset_type_id)::text, '{}')
+                       from public.service_line_asset_types c where c.service_line_id = l.id) <> d.cover),
+    'the second run changed a demo line''s months or coverage');
+  perform tests.ok('C1094 rerun coverage rows',
+    (select count(*) from public.service_line_asset_types where org_id = tests.demo())
+    = (select coalesce(sum(cardinality(cover::uuid[])), 0) from tests.demo_cadence),
+    'the second run changed the number of demo coverage rows');
+end $$;
+
+-- C1104 (seasonal-tasks): the second run leaves every demo task as it was.
+do $$ begin
+  perform tests.ok('C1104 rerun',
+    (select md5(coalesce(string_agg(k.id::text || ':' || k.description || ':' || coalesce(k.visit_months::text, 'null'), ',' order by k.id), ''))
+     from public.asset_type_tasks k where k.org_id = tests.demo()) = (select h from tests.demo_tasks),
+    'the second run changed a demo task');
+end $$;
+
+-- C1158 (term-dates): the second run changes no demo version.
+do $$ begin
+  perform tests.ok('C1158 rerun',
+    (select h from tests.demo_versions) = (select md5(coalesce(string_agg(v::text, ',' order by v.id), ''))
+                                           from public.agreement_versions v where v.org_id = tests.demo()),
+    'the second run changed a demo version');
+end $$;
+
+-- C1215 (renewal): the second run moves no term start and adds no agreement.
+do $$ begin
+  perform tests.ok('C1215 versions unchanged', (select h from tests.demo_versions) = (
+    select md5(coalesce(string_agg(v::text, ',' order by v.id), '')) from public.agreement_versions v where v.org_id = tests.demo()),
+    'a demo version changed on the second run');
+  perform tests.ok('C1215 agreements unchanged', (select n from tests.demo_counts where t = 'agreements')
+    = (select count(*) from public.agreements where org_id = tests.demo()), 'the demo agreement count changed');
+end $$;
+
+-- C1617 (contract-generation): the second run fills a contract with no parties and keeps one that has them.
+do $$ begin
+  perform tests.ok('C1617 refilled', (select parties ->> 'schema' from public.contracts where id = md5('demo:contract:7')::uuid) = '1'
+    and (select parties -> 'contractor' ->> 'legalName' from public.contracts where id = md5('demo:contract:7')::uuid)
+      = (select legal_name from public.org_settings where org_id = tests.demo()), 'the second run did not fill an empty contract');
+  perform tests.ok('C1617 kept', (select parties ->> 'marker' from public.contracts where id = md5('demo:contract:9')::uuid) = 'true',
+    'the second run overwrote the parties of a contract that had them');
+end $$;
+
+rollback;
+select 'demo_seed: pass' as result;

@@ -1,0 +1,232 @@
+import { createHmac } from "node:crypto";
+import { NextRequest } from "next/server";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { AutomationCallbacks, EmailSender, NotificationMessage } from "@/application/ports";
+import { makeNotify } from "@/application/use-cases";
+
+const EVENT = "11111111-1111-4111-8111-111111111111";
+const AGR = "22222222-2222-4222-8222-222222222222";
+
+const claim = vi.fn<AutomationCallbacks["claim"]>();
+const complete = vi.fn<AutomationCallbacks["complete"]>();
+const send = vi.fn<EmailSender["send"]>();
+const getAutomationContainer = vi.fn(async () => ({
+  notify: makeNotify({ claim, complete }, { send }, { unseal: (sealed: string) => sealed }, "https://agreements.northwind.ca"),
+}));
+vi.mock("@/composition", () => ({ getAutomationContainer }));
+
+const { POST } = await import("./route");
+
+const BODY = JSON.stringify({ idempotencyKey: `w1:${EVENT}:link`, kind: "customer_link", eventId: EVENT, agreementId: AGR, executionId: "exec-1" });
+
+function signed(body = BODY, at = Math.floor(Date.now() / 1000)) {
+  const timestamp = String(at);
+  return { "X-SA-Timestamp": timestamp, "X-SA-Signature": `sha256=${createHmac("sha256", "test-secret").update(`${timestamp}.${body}`).digest("hex")}` };
+}
+
+const call = (headers: Record<string, string>, body = BODY) =>
+  POST(new NextRequest("http://localhost:3000/api/automation/notify", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body }));
+
+const message: NotificationMessage = {
+  notificationId: "n1",
+  kind: "customer_link",
+  to: ["pat@customer.ca"],
+  replyTo: null,
+  tenant: { legalName: "Northwind Mechanical Ltd.", phone: null, accent: null },
+  agreement: { id: AGR, number: "AG-1052" },
+  site: { name: "Harbourview Towers" },
+  annualCents: 387000,
+  tokenSealed: "U-FVzrQONnE0OeSkuG3mDhLni8aAqblTz4-KLseYCj4",
+  reminder: null,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  claim.mockResolvedValue({ ok: true, decision: "send", messages: [message] });
+  complete.mockResolvedValue();
+  send.mockResolvedValue({ ok: true, providerMessageId: "re_1" });
+});
+
+describe("POST /api/automation/notify", () => {
+  const { "X-SA-Timestamp": ts, "X-SA-Signature": sig } = signed();
+  test.each([
+    ["no X-SA-Timestamp", { "X-SA-Signature": sig }],
+    ["no X-SA-Signature", { "X-SA-Timestamp": ts }],
+    ["a timestamp that is not 1 to 12 digits", { "X-SA-Timestamp": "12a", "X-SA-Signature": sig }],
+    ["a signature with bad hex", { "X-SA-Timestamp": ts, "X-SA-Signature": "sha256=XYZ" }],
+    ["a signature with another prefix", { "X-SA-Timestamp": ts, "X-SA-Signature": `md5=${"a".repeat(64)}` }],
+  ])("C1010: %s is 401 without calling claim", async (_label, headers) => {
+    const response = await call(headers);
+    expect(response.status).toBe(401);
+    expect(claim).toHaveBeenCalledTimes(0);
+    expect(getAutomationContainer).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1011: a claim refused as unauthorized (42501) is 401", async () => {
+    claim.mockResolvedValue({ ok: false, code: "unauthorized" });
+    expect((await call(signed())).status).toBe(401);
+    expect(send).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1011: the raw body and both headers reach claim unchanged", async () => {
+    const headers = signed();
+    await call(headers);
+    expect(claim).toHaveBeenCalledWith({ body: BODY, timestamp: headers["X-SA-Timestamp"], signature: headers["X-SA-Signature"] });
+  });
+
+  test("C1012: a claim refused as malformed (22023) is 400", async () => {
+    claim.mockResolvedValue({ ok: false, code: "malformed" });
+    expect((await call(signed("not json"), "not json")).status).toBe(400);
+    expect(send).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1014: a duplicate is 200 with outcome duplicate and nothing is sent", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "duplicate" });
+    const response = await call(signed());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "duplicate" });
+    expect(send).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1015: a claim in flight is 409 and nothing is sent", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "in_flight" });
+    expect((await call(signed())).status).toBe(409);
+    expect(send).toHaveBeenCalledTimes(0);
+  });
+
+  test.each(["unavailable", "rejected"] as const)("C1016: a provider %s is 503 after completing failed", async (code) => {
+    send.mockResolvedValue({ ok: false, code });
+    expect((await call(signed())).status).toBe(503);
+    expect(complete.mock.calls[0][1]).toEqual([{ id: "n1", outcome: "failed", error: code }]);
+  });
+
+  test("C1017: an unknown event (P0002) is 404", async () => {
+    claim.mockResolvedValue({ ok: false, code: "not_found" });
+    expect((await call(signed())).status).toBe(404);
+  });
+
+  test("C1017: an unexpected claim error is 503 and its cause is logged", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cause = new Error("automation_claim failed: XX000 boom");
+    claim.mockRejectedValue(cause);
+    expect((await call(signed())).status).toBe(503);
+    expect(log).toHaveBeenCalledWith(expect.any(String), cause);
+    log.mockRestore();
+  });
+
+  test("C1043: a successful complete answers 200 with outcome sent", async () => {
+    const response = await call(signed());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "sent" });
+    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ body: BODY }), [{ id: "n1", outcome: "sent", providerMessageId: "re_1" }]);
+  });
+
+  test("C1038: every answer carries Cache-Control: no-store", async () => {
+    const answers = [await call({}), await call(signed())];
+    claim.mockResolvedValue({ ok: false, code: "malformed" });
+    answers.push(await call(signed()));
+    claim.mockRejectedValue(new Error("down"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    answers.push(await call(signed()));
+    for (const response of answers) expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+});
+
+describe("POST /api/automation/notify, renewal_daily", () => {
+  const W7 = JSON.stringify({ idempotencyKey: "w7:2027-12-01", kind: "renewal_daily", executionId: "exec-7" });
+  const renewal: NotificationMessage = {
+    notificationId: "n7",
+    kind: "customer_renewal",
+    idempotencyKey: "w7:r1:customer",
+    to: ["pat@customer.ca"],
+    tenant: { legalName: "Northwind Mechanical Ltd.", phone: null, accent: null },
+    agreement: { id: AGR, number: "AG-1013" },
+    renews: { number: "AG-1004" },
+    site: { name: "Harbourview Towers" },
+    oldAnnualCents: 119999,
+    annualCents: 123839,
+    appliedPct: 3.2,
+    term: { start: "2028-01-01", end: "2028-12-31", months: 12 },
+  };
+  const post = () => call(signed(W7), W7);
+
+  test("C1199: messages that all send are 200 sent", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [renewal] });
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "sent" });
+  });
+
+  test("C1199: a duplicate is 200 duplicate", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "duplicate" });
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "duplicate" });
+  });
+
+  test.each([
+    ["22023", "malformed", 400],
+    ["42501", "unauthorized", 401],
+  ] as const)("C1199: a claim refused with %s answers its status", async (_sqlstate, code, status) => {
+    claim.mockResolvedValue({ ok: false, code });
+    expect((await post()).status).toBe(status);
+    expect(send).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1199: a claim in flight is 409", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "in_flight" });
+    expect((await post()).status).toBe(409);
+  });
+
+  test("C1199: a provider outage is 503", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [renewal] });
+    send.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect((await post()).status).toBe(503);
+  });
+});
+
+describe("POST /api/automation/notify for W8", () => {
+  const W8 = JSON.stringify({ kind: "expiry_daily", idempotencyKey: "w8:2026-12-03", executionId: "exec-8" });
+  const expired: NotificationMessage = {
+    notificationId: "n8",
+    kind: "staff_expired",
+    idempotencyKey: "w8:e1",
+    to: ["estimator@northwind.ca"],
+    tenant: { legalName: "Northwind Mechanical Ltd.", phone: null, accent: null },
+    agreement: { id: AGR, number: "AG-1004" },
+    customer: { name: "Acme Holdings" },
+    site: { name: "Plant 2" },
+    validUntil: "2026-12-02",
+  };
+  const post = (headers: Record<string, string> = signed(W8)) => call(headers, W8);
+
+  test("C1269: no X-SA-Signature is 401", async () => {
+    expect((await post({ "X-SA-Timestamp": signed(W8)["X-SA-Timestamp"] })).status).toBe(401);
+    expect(claim).toHaveBeenCalledTimes(0);
+  });
+
+  test("C1269: a claim refused as malformed (22023) is 400", async () => {
+    claim.mockResolvedValue({ ok: false, code: "malformed" });
+    expect((await post()).status).toBe(400);
+  });
+
+  test("C1269: a claim in flight is 409", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "in_flight" });
+    expect((await post()).status).toBe(409);
+  });
+
+  test("C1269: a provider outage is 503", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [expired] });
+    send.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect((await post()).status).toBe(503);
+  });
+
+  test("C1269: the one staff_expired message sent is 200 sent", async () => {
+    claim.mockResolvedValue({ ok: true, decision: "send", messages: [expired] });
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcome: "sent" });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+

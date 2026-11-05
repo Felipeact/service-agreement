@@ -1,0 +1,251 @@
+{
+  "name": "W3 agreement decided",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "74a1a574-7081-5670-8562-c4eb4d4acc9a",
+      "name": "When called by events",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "45eb611c-f3b7-5946-909d-b69b7704d374",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "b9ac37a2-7d00-5163-b0b2-434df9f3ff7d",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w3:' + $('When called by events').first().json.eventId, kind: 'staff_decision', eventId: $('When called by events').first().json.eventId, agreementId: $('When called by events').first().json.agreementId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "0683feaa-940b-506c-bc63-a51bf6c44000",
+      "name": "Decision body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "__SA_HMAC_SECRET__",
+        "encoding": "hex"
+      },
+      "id": "740d5c7c-0d0f-5e28-8342-6c1648dc4536",
+      "name": "Sign decision",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b2239c00-1225-50f8-ae2f-bd139b6fa8ac",
+      "name": "Notify decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "190b629b-4cc5-51fb-b009-ce8a54354ddc",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "eb4fb7c0-e4b0-5994-8670-2884b39561fb",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d2e93d50-edfc-5ae6-bb95-d7abc3d80965",
+      "name": "Retry decision?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "887d2ef9-d1a3-5407-9922-f0dfe3b8a380",
+      "name": "Wait 10 minutes (decision)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "f7781d16-dedc-5f69-a993-29dffb93da17"
+    }
+  ],
+  "connections": {
+    "When called by events": {
+      "main": [
+        [
+          {
+            "node": "Decision body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision body": {
+      "main": [
+        [
+          {
+            "node": "Sign decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign decision": {
+      "main": [
+        [
+          {
+            "node": "Notify decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify decision": {
+      "main": [
+        [
+          {
+            "node": "Retry decision?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry decision?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry decision?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (decision)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (decision)": {
+      "main": [
+        [
+          {
+            "node": "Decision body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

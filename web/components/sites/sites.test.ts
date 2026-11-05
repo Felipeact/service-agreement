@@ -1,0 +1,259 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, test } from "vitest";
+import type { AssetView, MemberRole, SiteView } from "@/application/ports";
+import { filterAssets, groupAssets } from "./assets";
+import { SiteRegisterView } from "./site-register-view";
+
+let counter = 0;
+const asset = (patch: Partial<AssetView> = {}): AssetView => ({
+  id: `a${++counter}`,
+  typeCode: "BOILER",
+  typeName: "Boiler",
+  unitNo: "B-1",
+  typeModel: "Condensing boiler, 1,000 MBH",
+  location: "Mechanical room P1",
+  source: "manual",
+  active: true,
+  replacedBy: null,
+  ...patch,
+});
+
+const site = (assets: AssetView[]): SiteView => ({
+  id: "s1",
+  name: "Harbourview Towers",
+  address: "2150 Harbour Lane, North Vancouver, BC",
+  customerId: "cust-1",
+  customerName: "Harbourview Towers Strata",
+  active: true,
+  customerActive: true,
+  siteContactId: "ct-1",
+  contactName: "Dana Whitfield",
+  assets,
+  liveAgreement: null,
+});
+
+const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
+const view = (assets: AssetView[], initialQuery?: string) => html(createElement(SiteRegisterView, { site: site(assets), initialQuery }));
+
+describe("SiteRegisterView", () => {
+  test("C135: header shows the title, address, customer link, contact and the asset badge", () => {
+    const out = view(Array.from({ length: 5 }, () => asset()));
+    expect(out).toContain("Harbourview Towers");
+    expect(out).toContain("2150 Harbour Lane, North Vancouver, BC");
+    expect(out).toMatch(/<a[^>]*href="\/customers\/cust-1"[^>]*>Harbourview Towers Strata</);
+    expect(out).toContain("Dana Whitfield");
+    expect(out).toContain(">5 assets<");
+    expect(view([asset()])).toContain(">1 asset<");
+  });
+
+  test("C136: the rendered view shows each group heading with its count", () => {
+    const out = view([asset(), asset(), asset({ typeCode: "RTU", typeName: "Rooftop unit" })]);
+    expect(out).toMatch(/BOILER - Boiler<span[^>]*>2</);
+    expect(out).toMatch(/RTU - Rooftop unit<span[^>]*>1</);
+    expect(out.indexOf("BOILER - Boiler")).toBeLessThan(out.indexOf("RTU - Rooftop unit"));
+  });
+
+  test("C138: a row shows unit, model, location and source; gaps are dashes", () => {
+    const out = view([asset()]);
+    for (const text of ["B-1", "Condensing boiler, 1,000 MBH", "Mechanical room P1", "Manual"]) expect(out).toContain(text);
+    expect(view([asset({ source: "import" })])).toContain("Imported");
+    expect(view([asset({ typeModel: null })])).toMatch(/<span[^>]*>-<\/span>/);
+  });
+
+  test("C140: a search with no match shows the message and Clear search", () => {
+    const out = view([asset()], "zzz");
+    expect(out).toContain('No equipment matches "zzz"');
+    expect(out).toMatch(/<button[^>]*>Clear search</);
+  });
+
+  test("C141: a site with no assets shows the empty panel", () => {
+    const out = view([]);
+    expect(out).toContain("No equipment recorded yet");
+    expect(out).toContain("Equipment appears here once it is added or imported.");
+  });
+});
+
+describe("groupAssets", () => {
+  test("C136: groups are ordered by type name and headed code - name with a count", () => {
+    const groups = groupAssets([
+      asset({ typeCode: "RTU", typeName: "Rooftop unit" }),
+      asset({ typeCode: "BOILER", typeName: "Boiler" }),
+      asset({ typeCode: "BOILER", typeName: "Boiler" }),
+      asset({ typeCode: "EXPANSION_TANK", typeName: "Expansion tank" }),
+    ]);
+    expect(groups.map((group) => [group.heading, group.count])).toEqual([
+      ["BOILER - Boiler", 2],
+      ["EXPANSION_TANK - Expansion tank", 1],
+      ["RTU - Rooftop unit", 1],
+    ]);
+  });
+
+  test("C137: rows order numerically by unit, and rows without a unit go last", () => {
+    const [group] = groupAssets([
+      asset({ unitNo: "B-10" }),
+      asset({ unitNo: null, id: "n1" }),
+      asset({ unitNo: "B-2" }),
+      asset({ unitNo: null, id: "n2" }),
+      asset({ unitNo: "B-1" }),
+    ]);
+    expect(group.rows.map((row) => row.unitNo)).toEqual(["B-1", "B-2", "B-10", null, null]);
+  });
+});
+
+describe("filterAssets", () => {
+  const boiler = asset({ unitNo: "B-2", typeModel: "Condensing boiler", location: "Mechanical room P1" });
+  const tank = asset({ typeCode: "EXPANSION_TANK", typeName: "Expansion tank", unitNo: "ET-1", typeModel: "Bladder", location: "Roof" });
+  const all = [boiler, tank];
+
+  test("C139: matches unit, model, location and type name, ignoring case", () => {
+    expect(filterAssets(all, "b-2")).toEqual([boiler]);
+    expect(filterAssets(all, "condensing")).toEqual([boiler]);
+    expect(filterAssets(all, "MECHANICAL room")).toEqual([boiler]);
+    expect(filterAssets(all, "expansion")).toEqual([tank]);
+    expect(filterAssets(all, "zzz")).toEqual([]);
+  });
+
+  test("C139: a group left with no rows disappears", () => {
+    expect(groupAssets(filterAssets(all, "roof")).map((group) => group.code)).toEqual(["EXPANSION_TANK"]);
+  });
+});
+
+const siteAs = (role: MemberRole, assets: AssetView[]) => html(createElement(SiteRegisterView, { site: site(assets), role }));
+
+describe("record write controls on the site register", () => {
+  test("C316: a writer sees Edit site", () => {
+    expect(siteAs("estimator", [])).toMatch(/<a[^>]*href="\/sites\/s1\/edit"[^>]*>Edit site<\/a>/);
+  });
+
+  test("C322: a writer sees Add asset in the header, and Edit on each asset row", () => {
+    const out = siteAs("estimator", [asset({ id: "a-1" }), asset({ id: "a-2" })]);
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/);
+    expect(out).toMatch(/<a[^>]*href="\/assets\/a-1\/edit"[^>]*>Edit<\/a>/);
+    expect(out).toMatch(/<a[^>]*href="\/assets\/a-2\/edit"[^>]*>Edit<\/a>/);
+  });
+
+  test("C322: an empty register offers Add asset too", () => {
+    const out = siteAs("estimator", []);
+    expect(out.match(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/g)).toHaveLength(2);
+    expect(out).toMatch(/No equipment recorded yet[\s\S]*<a[^>]*href="\/sites\/s1\/assets\/new"/);
+  });
+
+  test.each([
+    ["register with assets", [asset()]],
+    ["empty register", []],
+  ] as [string, AssetView[]][])("C329: a viewer's %s has no write controls", (_name, assets) => {
+    const out = siteAs("viewer", assets);
+    expect(out).not.toMatch(/href="[^"]*\/(new|edit)"/);
+    for (const text of ["New customer", "Add contact", "Add site", "Add asset", ">Edit<", "Edit site", "Delete"]) expect(out).not.toContain(text);
+  });
+
+  test("C348: a writer still sees every asset row", () => {
+    const out = siteAs("estimator", [asset({ unitNo: "B-7", typeModel: "Condensing boiler", location: "Roof" })]);
+    expect(out).toContain("B-7");
+    expect(out).toContain("Condensing boiler");
+    expect(out).toContain("Roof");
+    expect(out).toContain("Manual");
+  });
+});
+
+describe("import entry point on the site register", () => {
+  test("C401: a writer sees Import equipment list in the header", () => {
+    const header = siteAs("estimator", [asset()]).match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
+    expect(header).toMatch(/<a[^>]*href="\/sites\/s1\/import"[^>]*>Import equipment list<\/a>/);
+  });
+
+  test("C424: a viewer has no link to the import page", () => {
+    const out = siteAs("viewer", [asset()]);
+    expect(out).not.toContain('href="/sites/s1/import"');
+    expect(out).not.toContain("Import equipment list");
+  });
+
+  test("C444: a writer still sees every asset row and Add asset", () => {
+    const out = siteAs("estimator", [asset({ unitNo: "B-7", typeModel: "Condensing boiler", location: "Roof" })]);
+    for (const text of ["B-7", "Condensing boiler", "Roof", "Manual"]) expect(out, text).toContain(text);
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1\/assets\/new"[^>]*>Add asset<\/a>/);
+  });
+});
+
+describe("the site's agreement", () => {
+  const newAgreement = async () => ({ status: "idle" }) as const;
+  const render = (role: MemberRole, liveAgreement: SiteView["liveAgreement"]) =>
+    html(createElement(SiteRegisterView, { site: { ...site([]), liveAgreement }, role, newAgreement }));
+
+  test("C701: a writer sees a New agreement submit button while the site has no live agreement; a viewer does not", () => {
+    const writer = render("estimator", null);
+    expect(writer).toMatch(/<form[^>]*>\s*<button type="submit"[^>]*>New agreement<\/button>\s*<\/form>/);
+    const viewer = render("viewer", null);
+    expect(viewer).not.toContain("New agreement");
+  });
+
+  test.each<[SiteView["liveAgreement"] & object, string]>([
+    [{ id: "g1", number: "AG-1048", status: "draft" }, "AG-1048 · In progress"],
+    [{ id: "g1", number: "AG-1048", status: "sent" }, "AG-1048 · Sent to customer"],
+    [{ id: "g1", number: "AG-1048", status: "changes_requested" }, "AG-1048 · In progress"],
+  ])("C702: a live %o shows every member the link %j and no New agreement", (live, text) => {
+    for (const role of ["estimator", "viewer"] as const) {
+      const out = render(role, live);
+      expect(out, role).toMatch(new RegExp(`<a[^>]*href="/agreements/g1"[^>]*>${text}</a>`));
+      expect(out, role).not.toContain("New agreement");
+    }
+  });
+
+  test("C711: open_exists names the live agreement with a link to it", async () => {
+    const { NewAgreementPrompt } = await import("./new-agreement");
+    const out = html(createElement(NewAgreementPrompt, { state: { status: "open_exists", agreementId: "g9", number: "AG-1048" }, pending: false }));
+    expect(out).toContain("AG-1048 is already in progress for this site.");
+    expect(out).toMatch(/<a[^>]*href="\/agreements\/g9"/);
+  });
+});
+
+describe("inactive sites and removed assets", () => {
+  const assets = () => [
+    asset({ id: "r1", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-1", active: false, replacedBy: "RTU-2" }),
+    asset({ id: "r2", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-2" }),
+    asset({ id: "r3", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-3", active: false }),
+  ];
+  const render = (props: Partial<Parameters<typeof SiteRegisterView>[0]>, list = assets()) =>
+    html(createElement(SiteRegisterView, { site: site(list), ...props }));
+
+  test("C1302: removed assets are hidden by default; the toggle shows them and links back", () => {
+    const out = render({});
+    expect(out).toContain("RTU-2");
+    expect(out).not.toContain("RTU-1");
+    expect(out).not.toContain("RTU-3");
+    expect(out).toMatch(/<a[^>]*href="\/sites\/s1\?show=inactive"[^>]*>Show inactive<\/a>/);
+    const shown = render({ showInactive: true });
+    expect(shown).toMatch(/RTU-3[\s\S]*?>Removed</);
+    expect(shown).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Hide inactive<\/a>/);
+  });
+
+  test("C1279: a removed asset with a replacement says which unit replaced it", () => {
+    const shown = render({ showInactive: true });
+    expect(shown).toContain(">Removed · replaced by RTU-2<");
+    expect(shown).toContain(">Removed<");
+  });
+
+  test("C1303: a site whose assets are all removed says No active assets., with the toggle", () => {
+    const out = render({}, [asset({ unitNo: "B-9", active: false })]);
+    expect(out).toMatch(/No active assets\.[\s\S]*Show inactive/);
+  });
+
+  test("C1295: an inactive site shows the pill and offers no New agreement, Add asset or Import to a writer", () => {
+    const newAgreement = async () => ({ status: "idle" }) as const;
+    const out = html(createElement(SiteRegisterView, { site: { ...site(assets()), active: false }, role: "estimator", newAgreement }));
+    expect(out).toContain(">Inactive<");
+    for (const text of ["New agreement", "Add asset", "Import equipment list"]) expect(out, text).not.toContain(text);
+    expect(out).toContain("Edit site");
+  });
+});
+
+describe("site register approver", () => {
+  const withApprover = (approverName: string | null) =>
+    html(createElement(SiteRegisterView, { site: { ...site([asset()]), approverContactId: approverName ? "ct-2" : null, approverName } }));
+
+  test("C1456: the header shows Approver: <name>, or a dash when there is none", () => {
+    expect(withApprover("Avery Chen")).toContain("Approver: Avery Chen");
+    expect(withApprover(null)).toMatch(/Approver: (<span[^>]*>)?-/);
+  });
+});

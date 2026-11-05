@@ -1,0 +1,189 @@
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+type CookieToSet = { name: string; value: string; options: Record<string, unknown> };
+type CookieAdapter = { getAll(): unknown; setAll(cookies: CookieToSet[], headers: Record<string, string>): void };
+
+/** What the mocked client's getClaims does: optionally refresh cookies, then answer with or without claims. */
+let scenario: { claims: Record<string, unknown> | null; refresh?: CookieToSet[] };
+
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: (_url: string, _key: string, options: { cookies: CookieAdapter }) => ({
+    auth: {
+      getClaims: async () => {
+        if (scenario.refresh) options.cookies.setAll(scenario.refresh, { "Cache-Control": "private, no-store" });
+        return scenario.claims
+          ? { data: { claims: scenario.claims, header: {}, signature: new Uint8Array() }, error: null }
+          : { data: null, error: null };
+      },
+    },
+  }),
+}));
+
+const { updateSession } = await import("./session");
+
+const request = (path: string) => new NextRequest(new URL(path, "http://localhost:3000"));
+const locationPath = (response: Response) => new URL(response.headers.get("location") as string).pathname;
+
+beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("updateSession", () => {
+  test.each(["/pipeline", "/", "/customers/abc"])("C12: signed out, %s redirects to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+
+  test.each(["/login", "/auth/confirm"])("C12: signed out, %s passes through", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  test("C13: signed in, /login redirects to /pipeline", async () => {
+    scenario = { claims: { sub: "u1" } };
+    const response = await updateSession(request("/login"));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/pipeline");
+  });
+
+  test("C13: signed in, /pipeline passes through", async () => {
+    scenario = { claims: { sub: "u1" } };
+    const response = await updateSession(request("/pipeline"));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  const refreshed: CookieToSet = {
+    name: "sb-test-auth-token",
+    value: "refreshed",
+    options: { path: "/", maxAge: 3600, sameSite: "lax" },
+  };
+
+  test.each([
+    ["passes through", { sub: "u1" }],
+    ["redirects", null],
+  ])("C14: refreshed cookies reach the response when it %s", async (_label, claims) => {
+    scenario = { claims, refresh: [refreshed] };
+    const response = await updateSession(request("/pipeline"));
+
+    const cookie = response.cookies.get("sb-test-auth-token");
+    expect(cookie?.value).toBe("refreshed");
+    expect(cookie?.path).toBe("/");
+    expect(cookie?.maxAge).toBe(3600);
+    expect(cookie?.sameSite).toBe("lax");
+  });
+
+  test.each(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"])(
+    "C28: an unset %s is named in the error",
+    async (name) => {
+      scenario = { claims: null };
+      vi.stubEnv(name, "");
+      await expect(updateSession(request("/pipeline"))).rejects.toThrow(name);
+    },
+  );
+});
+
+describe("updateSession on the agreement PDF", () => {
+  test.each(["/agreements/00000000-0000-4000-8000-000000000001/pdf", "/agreements/00000000-0000-4000-8000-000000000001/pdf?version=2"])(
+    "C856: signed out, %s redirects to /login",
+    async (path) => {
+      scenario = { claims: null };
+      const response = await updateSession(request(path));
+
+      expect(response.status).toBe(307);
+      expect(locationPath(response)).toBe("/login");
+    },
+  );
+});
+
+describe("updateSession on the staff screens", () => {
+  test.each([
+    "/pipeline",
+    "/customers",
+    "/customers/00000000-0000-4000-8000-000000000001",
+    "/sites/00000000-0000-4000-8000-000000000002",
+    "/settings",
+  ])("C108: signed out, %s redirects to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+});
+
+describe("updateSession on the record forms", () => {
+  const id = "00000000-0000-4000-8000-000000000003";
+  test.each([
+    "/customers/new",
+    `/customers/${id}/edit`,
+    `/customers/${id}/contacts/new`,
+    `/contacts/${id}/edit`,
+    `/customers/${id}/sites/new`,
+    `/sites/${id}/edit`,
+    `/sites/${id}/assets/new`,
+    `/assets/${id}/edit`,
+  ])("C345: signed out, %s redirects to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+
+  test("C436: signed out, /sites/<uuid>/import redirects to /login", async () => {
+    scenario = { claims: null };
+    const response = await updateSession(request("/sites/33333333-3333-4333-8333-333333333333/import"));
+
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+});
+
+describe("updateSession on the customer review address", () => {
+  test.each(["/review/abc", "/review/abc/pdf"])("C944: signed out, %s passes through", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  test.each(["/review", "/reviews/abc", "/review-x/abc", "/agreements/00000000-0000-4000-8000-000000000001"])(
+    "C944: signed out, %s redirects to /login",
+    async (path) => {
+      scenario = { claims: null };
+      const response = await updateSession(request(path));
+
+      expect(response.status).toBe(307);
+      expect(locationPath(response)).toBe("/login");
+    },
+  );
+
+  test("C944: signed in, /review/abc is not redirected", async () => {
+    scenario = { claims: { sub: "u1" } };
+    const response = await updateSession(request("/review/abc"));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  test.each(["/login", "/auth/confirm"])("C944: %s stays public", async (path) => {
+    scenario = { claims: null };
+    expect((await updateSession(request(path))).headers.get("location")).toBeNull();
+  });
+});

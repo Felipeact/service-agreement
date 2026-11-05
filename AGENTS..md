@@ -45,3 +45,17 @@ ALWAYS finish every implementation that touches the web app (`web/`) by validati
 
 Everytime a roadmap item is completed mark it as done in the ROADMAP.md
 
+
+# Context (mandatory)
+
+`CONTEXT.md` is the shared knowledge base for agents. It explains what each domain concept is (service agreement, customer, site, asset, contract...) and what we built for it.
+
+1. Read `CONTEXT.md` before starting any task. Use it as the first source for domain terms and for what already exists, before searching the codebase or the internet.
+2. Every change to the app (feature, schema or migration, screen, n8n workflow, integration, domain rule) must update `CONTEXT.md` in the same change. Add or edit the concept's entry:
+   - **What it is**: the business meaning.
+   - **What we built**: files, tables, routes, workflows and decisions, with links to the files.
+3. If you had to search the internet to understand a domain concept, write the answer into `CONTEXT.md` so the next agent doesn't have to.
+4. Add a dated line to the "Build log" in `CONTEXT.md` for each completed change.
+5. A task is not done until `CONTEXT.md` reflects it, the same as the Playwright and ROADMAP rules.
+6. Keep entries short and factual. Link to files instead of copying code.
+
