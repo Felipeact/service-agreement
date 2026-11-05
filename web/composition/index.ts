@@ -21,7 +21,7 @@ import {
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
-import { reactPdfDocumentRenderer } from "@/infrastructure/documents";
+import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
 import { makePortalTokens } from "@/infrastructure/portal-tokens";
 import { resendEmailSender } from "@/infrastructure/email";
@@ -36,6 +36,7 @@ import {
   supabaseServiceLineStore,
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
+import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseTaskLibraryReader, supabaseTaskLibraryStore } from "@/infrastructure/supabase/task-library";
 import { supabaseInvitationAcceptor, supabaseInvitationLinkSender, supabaseMemberAdmin, supabaseMemberRoster } from "@/infrastructure/supabase/members";
@@ -187,6 +188,9 @@ export async function getContainer() {
     decidePortal: makeDecidePortal(portalReader, supabasePortalDecider(supabase), portalTokens),
     recordPortalView: makeRecordPortalView(supabasePortalViewRecorder(supabase), portalTokens),
     documentRenderer: reactPdfDocumentRenderer,
+    contractRenderer: reactPdfContractRenderer,
+    contractReader: supabaseContractReader(supabase),
+    contractStore: supabaseContractStore(supabase),
     clock: systemClock,
   };
 }

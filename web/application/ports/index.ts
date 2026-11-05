@@ -9,7 +9,7 @@ import type {
   ServiceLineValue,
   TimelineEntry,
 } from "@/domain/agreement";
-import type { ContractStatus } from "@/domain/contract";
+import type { ContractDocument, ContractParties, ContractStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
@@ -608,7 +608,20 @@ export type AgreementDetail = {
   /** The agreement this one renews, and the one that renews it (renewal door 1), or `null`. */
   renews: { id: string; number: string } | null;
   renewedBy: { id: string; number: string } | null;
+  /**
+   * The contract of the latest version, or `null` (contract-generation AC 9). Optional in the type so older fixtures
+   * compile; the reader always sets it.
+   */
+  contract?: ContractLink | null;
+  /**
+   * Who would sign if staff generated the contract now, only for an `accepted` agreement with no contract and a site
+   * with somebody who has an email; `null` otherwise (contract-generation AC 2, door 6).
+   */
+  signer?: { name: string; email: string } | null;
 };
+
+/** The contract of an agreement's version, as the agreement page links it. */
+export type ContractLink = { id: string; status: ContractStatus };
 
 export type LinkEmailView =
   | { status: "sent"; to: string; sentAt: Date }
@@ -663,6 +676,38 @@ export interface VersionNoteStore {
 /** Turns the content of one agreement into a PDF (agreement-pdf door 2). Rejects when it cannot render. */
 export interface DocumentRenderer {
   renderAgreement(document: AgreementDocument): Promise<Uint8Array>;
+}
+
+/** Turns one contract into a PDF. A port of its own: `DocumentRenderer`'s body is pinned (C874) and stays small (ISP). */
+export interface ContractRenderer {
+  renderContract(document: ContractDocument): Promise<Uint8Array>;
+}
+
+/** What the contract page and its PDF read about one contract (contract-generation S2). */
+export type ContractDetail = {
+  id: string;
+  status: ContractStatus;
+  agreementId: string;
+  versionNo: number;
+  number: string;
+  createdAt: Date;
+  /** `null` when the contract recorded no parties (stored `{}`). */
+  parties: ContractParties | null;
+};
+
+/** `null` for a malformed id, a missing row, or a row of another org. */
+export interface ContractReader {
+  get(id: string): Promise<ContractDetail | null>;
+}
+
+/** Why a contract was not generated: the five refusals of `create_contract`, then the usual write failures. */
+export type GenerateContractFailure = "not_accepted" | "auto_renewal" | "site_inactive" | "no_term_start" | "no_signer" | WriteFailure;
+
+export type GenerateContractResult = { ok: true; id: string } | { ok: false; code: GenerateContractFailure };
+
+/** Creates the contract of an accepted agreement and freezes its parties, in one call (`create_contract`, door 2). */
+export interface ContractStore {
+  create(agreementId: string): Promise<GenerateContractResult>;
 }
 
 /** Why a send or a new link wrote nothing. Anything else is unexpected and thrown by the adapter. */

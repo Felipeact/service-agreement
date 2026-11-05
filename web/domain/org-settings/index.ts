@@ -3,6 +3,23 @@ import { isTermStart } from "@/domain/agreement/term";
 /** Canadian province and territory codes; `org_settings.governing_province` stores one of these (door 4). */
 export const PROVINCES = ["AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"] as const;
 
+/** What the contract calls each province; a code outside the list is printed as stored. */
+export const PROVINCE_NAMES: Record<(typeof PROVINCES)[number], string> = {
+  AB: "Alberta",
+  BC: "British Columbia",
+  MB: "Manitoba",
+  NB: "New Brunswick",
+  NL: "Newfoundland and Labrador",
+  NS: "Nova Scotia",
+  NT: "the Northwest Territories",
+  NU: "Nunavut",
+  ON: "Ontario",
+  PE: "Prince Edward Island",
+  QC: "Quebec",
+  SK: "Saskatchewan",
+  YT: "Yukon",
+};
+
 /** The settings form as submitted: every field is the text the member typed. */
 export type OrgSettingsInput = {
   legalName: string;

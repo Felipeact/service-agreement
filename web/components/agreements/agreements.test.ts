@@ -3,10 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, AgreementServiceScope, MemberRole, ServiceLineView } from "@/application/ports";
 import type { AgreementStatus, EquipmentChoice } from "@/domain/agreement";
+import type { ContractStatus } from "@/domain/contract";
 import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./agreement-view";
 import { LineForm } from "./line-form";
 import { RemovePrompt } from "./line-row";
+import { GenerateContractControl, GenerateContractPrompt } from "./contract-controls";
+import { CONTRACT_MESSAGES } from "./contract-state";
 import { LinkPanel, ReissuePrompt, SendPrompt } from "./link-controls";
 import { RevisePrompt, WithdrawPrompt } from "./move-controls";
 import type { LineState, MoveState } from "./state";
@@ -604,5 +607,91 @@ describe("the activity timeline", () => {
     const html = view(agreement({ status: "withdrawn", detail: { timeline } }), "estimator");
     expect(text(section(html))).toContain("Withdrawn · site deactivated");
     for (const label of ["Add line", "Edit", "Remove", "Send to customer", "Save term"]) expect(has(html, label), label).toBe(false);
+  });
+});
+
+describe("the generate contract control", () => {
+  const SIGNER = { name: "Pat Lee", email: "pat@example.com" };
+  const TERM = { start: "2027-01-01", months: 12, end: "2027-12-31" };
+  const accepted = (detail: Partial<AgreementDetail> = {}) =>
+    agreement({ status: "accepted", lines: [{ ...LINES[0], annualCents: 180000 }], detail: { contract: null, signer: SIGNER, term: TERM, ...detail } });
+  const generateActions: AgreementActions = { ...actions, generate: async () => ({ status: "idle" }) };
+  const page = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions: generateActions }));
+
+  test.each<MemberRole>(["owner", "admin", "estimator"])("C1623: a %s sees Generate contract on an accepted agreement with no contract", (role) => {
+    expect(has(page(accepted(), role), "Generate contract")).toBe(true);
+  });
+
+  test("C1623: a viewer sees none", () => {
+    expect(has(page(accepted(), "viewer"), "Generate contract")).toBe(false);
+  });
+
+  test("C1623: an accepted agreement with a contract shows none", () => {
+    expect(has(page(accepted({ contract: { id: "con-1", status: "pending_signature" } })), "Generate contract")).toBe(false);
+  });
+
+  test.each<AgreementStatus>(["draft", "sent", "refused", "changes_requested", "expired", "withdrawn"])("C1623: a %s agreement shows none", (status) => {
+    expect(has(page(agreement({ status, detail: { contract: null, signer: SIGNER } })), "Generate contract")).toBe(false);
+  });
+
+  test.each<[ContractStatus, string]>([
+    ["pending_signature", "Pending signature"],
+    ["client_signed", "Client signed"],
+    ["completed", "Completed"],
+    ["declined", "Declined"],
+    ["voided", "Voided"],
+  ])("C1624: a contract that is %s reads %s, links to /contracts/con-1 and replaces the button, for every role", (status, label) => {
+    for (const role of ["owner", "admin", "estimator", "viewer"] as const) {
+      const html = page(accepted({ contract: { id: "con-1", status } }), role);
+      expect(text(html), role).toContain(`Contract: ${label}`);
+      expect(html, role).toMatch(/<a[^>]*href="\/contracts\/con-1"[^>]*>/);
+      expect(has(html, "Generate contract"), role).toBe(false);
+    }
+  });
+
+  const prompt = (over: Partial<Parameters<typeof GenerateContractPrompt>[0]> = {}) =>
+    renderToStaticMarkup(
+      createElement(GenerateContractPrompt, { signer: SIGNER, term: TERM, annualCents: 180000, confirming: false, pending: false, state: { status: "idle" }, ...over }),
+    );
+
+  test("C1625: not confirming, it renders one Generate contract button, no form and no submit button", () => {
+    const html = prompt();
+    expect(has(html, "Generate contract")).toBe(true);
+    expect(html.match(/<button/g)).toHaveLength(1);
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain('type="submit"');
+  });
+
+  test("C1625: confirming, it names the signer, the term and the total, with a submit button and Cancel", () => {
+    const html = prompt({ confirming: true });
+    const out = text(html);
+    expect(out).toContain("Pat Lee · pat@example.com");
+    expect(out).toContain("Jan 1, 2027 – Dec 31, 2027 · 12 months");
+    expect(out).toContain("Total per year $1,800.00");
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Generate contract<\/button>/);
+    expect(has(html, "Cancel")).toBe(true);
+  });
+
+  test("C1625: with no signer it says so in place of the signer", () => {
+    const out = text(prompt({ confirming: true, signer: null }));
+    expect(out).toContain("No signer with an email yet.");
+    expect(out).not.toContain("Pat Lee");
+  });
+
+  test("C1625: the stateful control renders the not-confirming markup first", () => {
+    const html = renderToStaticMarkup(createElement(GenerateContractControl, { signer: SIGNER, term: TERM, annualCents: 180000, action: async () => ({ status: "idle" as const }) }));
+    expect(has(html, "Generate contract")).toBe(true);
+    expect(html).not.toContain("<form");
+  });
+
+  test.each(["not_accepted", "auto_renewal", "site_inactive", "no_term_start", "no_signer"] as const)("C1626: %s renders its message in an alert, confirming or not", (status) => {
+    for (const confirming of [false, true]) {
+      const html = prompt({ confirming, state: { status } });
+      expect(html).toMatch(new RegExp(`<p[^>]*role="alert"[^>]*>${CONTRACT_MESSAGES[status].replace(/'/g, "&#x27;")}</p>`));
+    }
+  });
+
+  test("C1626: idle renders no alert", () => {
+    expect(prompt({ confirming: true })).not.toContain('role="alert"');
   });
 });

@@ -4,9 +4,11 @@ import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { labelFor, visitSchedule } from "@/domain/agreement";
+import { CONTRACT_STATUS_META } from "@/domain/contract";
 import { formatTermDate } from "@/domain/agreement/term";
 import { notEmailedWords } from "@/domain/notifications";
 import { formatCadExact } from "@/lib/money";
+import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
@@ -18,6 +20,7 @@ import { VersionCompare } from "./version-compare";
 import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "./visit-schedule";
+import type { GenerateContractState } from "./contract-state";
 import type { LineState, LinkState, MoveState, NoteState, TermState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
@@ -31,6 +34,8 @@ export type AgreementActions = {
   reissue: () => Promise<LinkState>;
   saveTerm: (formData: FormData) => Promise<TermState>;
   saveNote: (formData: FormData) => Promise<NoteState>;
+  /** Optional so a page without contracts (and older fixtures) still compiles; the agreement page always binds it. */
+  generate?: () => Promise<GenerateContractState>;
 };
 
 type AgreementViewProps = {
@@ -67,6 +72,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
   const canSend = writer !== undefined && agreement.editable;
   const canReissue = writer !== undefined && agreement.status === "sent" && shown.current;
   const firstViewed = agreement.portalLink?.firstViewedAt ?? null;
+  const canGenerate = writer?.generate !== undefined && agreement.status === "accepted" && !agreement.contract;
 
   return (
     <div className="flex flex-col gap-4">
@@ -119,7 +125,19 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         {agreement.status === "expired" && shown.current && agreement.validUntil && (
           <p className="text-[13px] text-ink-2">Expired · was valid until {formatTermDate(agreement.validUntil)}</p>
         )}
+        {agreement.contract && (
+          <p data-contract className="text-[13px] text-ink-2">
+            Contract: {CONTRACT_STATUS_META[agreement.contract.status].label} ·{" "}
+            <Link href={`/contracts/${agreement.contract.id}`} className={link}>
+              Open contract
+            </Link>
+          </p>
+        )}
       </div>
+
+      {canGenerate && writer.generate && (
+        <GenerateContractControl signer={agreement.signer ?? null} term={agreement.term} annualCents={shown.annualCents} action={writer.generate} />
+      )}
 
       {writer && (canSend || canReissue) && (
         <LinkControls number={agreement.number} canSend={canSend} canReissue={canReissue} send={writer.send} reissue={writer.reissue} />

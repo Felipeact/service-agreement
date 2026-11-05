@@ -31,3 +31,15 @@ export function applyContractCommand(
     event: { type: `contract.${transition.to}`, entityType: "contract", from: status, to: transition.to, data: {} },
   };
 }
+
+/** What staff read for each status, and whether it needs attention: the contract is still open, or it is over. */
+export const CONTRACT_STATUS_META: Record<ContractStatus, { label: string; tone: "attention" | "neutral" }> = {
+  pending_signature: { label: "Pending signature", tone: "attention" },
+  client_signed: { label: "Client signed", tone: "attention" },
+  completed: { label: "Completed", tone: "neutral" },
+  declined: { label: "Declined", tone: "neutral" },
+  voided: { label: "Voided", tone: "neutral" },
+};
+
+export * from "./parties";
+export * from "./document";

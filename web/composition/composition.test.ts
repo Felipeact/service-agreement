@@ -58,6 +58,21 @@ describe("composition root", () => {
     expect(container.clock.now()).toBeInstanceOf(Date);
   });
 
+  test("C1648: getContainer() exposes the contract reader, store and renderer, built from the member's client and the document adapter", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(typeof container.contractReader.get).toBe("function");
+    expect(typeof container.contractStore.create).toBe("function");
+    expect(typeof container.contractRenderer.renderContract).toBe("function");
+
+    const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
+    expect(source).toContain("contractReader: supabaseContractReader(supabase)");
+    expect(source).toContain("contractStore: supabaseContractStore(supabase)");
+    expect(source).toContain("contractRenderer: reactPdfContractRenderer");
+    expect(Object.keys(container).filter((key) => /^generateContract|^createContract/.test(key))).toEqual([]);
+  });
+
   test("C1517: the invitation sender gets its own client with no session and no refresh, and the cookie client is built apart", async () => {
     setEnv("https://example.supabase.co", "sb_publishable_test");
     const { createClient } = await import("@supabase/supabase-js");

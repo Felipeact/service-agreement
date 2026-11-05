@@ -77,6 +77,18 @@ describe("layer boundaries", () => {
     expect(document).not.toContain("ReactElement");
   });
 
+  test("C1647: ContractRenderer is a port of its own, DocumentRenderer keeps its pinned body, and the contract document imports no react", () => {
+    const ports = readFileSync(path.join(webRoot, "application", "ports", "index.ts"), "utf8");
+    const contract = ports.match(/export interface ContractRenderer \{([\s\S]*?)\r?\n\}/)?.[1] ?? "";
+    expect(contract).toContain("renderContract(document: ContractDocument): Promise<Uint8Array>;");
+    const agreement = ports.match(/export interface DocumentRenderer \{([\s\S]*?)\r?\n\}/)?.[1] ?? "";
+    expect(agreement).toContain("renderAgreement(document: AgreementDocument): Promise<Uint8Array>;");
+    expect(agreement).not.toContain("renderContract");
+    const document = readFileSync(path.join(webRoot, "domain", "contract", "document.ts"), "utf8");
+    expect(document).not.toMatch(/from "(react|@react-pdf)/);
+    expect(document).not.toContain("ReactElement");
+  });
+
   test.each(SDK_PLACES)("C539: %s importing @anthropic-ai/sdk is a lint error naming it", async (file) => {
     const messages = await restrictedImports(file, "@anthropic-ai/sdk");
     expect(messages).toHaveLength(1);

@@ -17,6 +17,7 @@ import {
   updateServiceLineAction,
   withdrawAgreementAction,
 } from "../../agreement-actions";
+import { generateContractAction } from "../../contract-actions";
 
 export const metadata: Metadata = { title: "Agreement" };
 
@@ -50,6 +51,7 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         reissue: reissueLinkAction.bind(null, agreementId),
         saveTerm: saveTermAction.bind(null, agreementId),
         saveNote: saveVersionNoteAction.bind(null, agreementId),
+        generate: generateContractAction.bind(null, agreementId),
       }
     : undefined;
 

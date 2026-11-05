@@ -62,7 +62,7 @@ type VersionRow = {
   valid_until: string | null;
   created_by: string | null;
   reason: string | null;
-  contracts: { status: string }[];
+  contracts: { id?: string; status: string }[];
 };
 
 type AgreementRow = {
@@ -322,12 +322,20 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
     };
   }
 
+  /** Who would sign, by the one rule the database keeps (`contract_signer`, door 6); `null` when nobody has an email. */
+  async function contractSigner(siteId: string): Promise<{ name: string; email: string } | null> {
+    const { data, error } = await client.rpc("contract_signer", { p_site_id: siteId });
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    const signer = data as { name?: unknown; email?: unknown } | null;
+    return signer && typeof signer.name === "string" && typeof signer.email === "string" ? { name: signer.name, email: signer.email } : null;
+  }
+
   return {
     async get(id, versionNo, compareNo) {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("agreements")
-        .select("id, org_id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, created_by, reason, contracts(status))")
+        .select("id, org_id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, created_by, reason, contracts(id, status))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -348,6 +356,9 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       const editable = status === "draft" && current;
       const { serviceScope, terms } = await recorded(row.sites.id, shownVersion?.id, editable);
       const links = await renewalLinks(row.id, row.renews_agreement_id ?? null);
+      const contract = latest?.contracts[0]?.id ? { id: latest.contracts[0].id, status: latest.contracts[0].status as ContractStatus } : null;
+      // Only a writer about to generate a contract needs the signer, and only for an accepted agreement that has none (door 6).
+      const signer = status === "accepted" && contract === null ? await contractSigner(row.sites.id) : null;
       return {
         id: row.id,
         number: row.number ?? "",
@@ -375,6 +386,8 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
         ...links,
+        contract,
+        signer,
       };
     },
   };

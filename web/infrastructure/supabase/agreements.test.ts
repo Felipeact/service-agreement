@@ -761,3 +761,45 @@ describe("agreement reader: the activity timeline", () => {
     await expect(supabaseAgreementReader(typed).get(AGR)).rejects.toThrow(/XX000/);
   });
 });
+
+describe("agreement reader: contract and signer", () => {
+  const withContracts = (status: string, contracts: { id: string; status: string }[]) =>
+    agreementRow([{ id: "v1", version_no: 1, contracts } as never], status);
+  const SIGNER = { name: "Pat Lee", email: "pat@example.com" };
+
+  test("C1622: the latest version's contract comes back as { id, status }, and none as null", async () => {
+    const withOne = stubClient({ agreements: ok(withContracts("accepted", [{ id: "con-1", status: "client_signed" }])), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(withOne.typed).get(AGR))?.contract).toEqual({ id: "con-1", status: "client_signed" });
+    const none = stubClient({ agreements: ok(withContracts("accepted", [])), service_lines: ok([]) });
+    expect((await supabaseAgreementReader(none.typed).get(AGR))?.contract).toBeNull();
+  });
+
+  test("C1622: contract_signer is read with the site id for an accepted agreement with no contract, and the signer comes back", async () => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts("accepted", [])), service_lines: ok([]) });
+    client.rpc.mockResolvedValue({ data: SIGNER, error: null });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(client.rpc).toHaveBeenCalledWith("contract_signer", { p_site_id: "s1" });
+    expect(detail?.signer).toEqual(SIGNER);
+  });
+
+  test("C1622: a null from contract_signer is signer: null", async () => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts("accepted", [])), service_lines: ok([]) });
+    client.rpc.mockResolvedValue({ data: null, error: null });
+    expect((await supabaseAgreementReader(typed).get(AGR))?.signer).toBeNull();
+  });
+
+  test.each(["draft", "sent", "refused", "changes_requested", "expired", "withdrawn"])("C1622: a %s agreement never asks for a signer", async (status) => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts(status, [])), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(client.rpc).not.toHaveBeenCalledWith("contract_signer", expect.anything());
+    expect(detail?.signer).toBeNull();
+  });
+
+  test("C1622: an accepted agreement that has a contract never asks for a signer", async () => {
+    const { client, typed } = stubClient({ agreements: ok(withContracts("accepted", [{ id: "con-1", status: "pending_signature" }])), service_lines: ok([]) });
+    const detail = await supabaseAgreementReader(typed).get(AGR);
+    expect(client.rpc).not.toHaveBeenCalledWith("contract_signer", expect.anything());
+    expect(detail?.signer).toBeNull();
+  });
+});

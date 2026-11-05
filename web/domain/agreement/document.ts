@@ -87,15 +87,10 @@ export function termsOf(settings: AgreementTerms, termMonths: number): Agreement
   return terms;
 }
 
-export function buildAgreementDocument(source: DocumentSource, settings: OrgSettingsValue): AgreementDocument {
+/** What the agreement and the contract print alike: the lines, the total, the schedule, the scope and the term. */
+export function documentBody(source: DocumentSource) {
   const scope = source.serviceScope;
   return {
-    tenant: { name: settings.legalName, address: settings.address, phone: settings.phone, accent: settings.accentColor ?? NEUTRAL_ACCENT },
-    number: source.number,
-    versionNo: source.shown.versionNo,
-    customerName: source.customer.name,
-    siteName: source.site.name,
-    mark: source.editable ? DRAFT_MARK : null,
     lines: source.shown.lines.map(({ description, visitsPerYear, costPerVisitCents, annualCents }) => ({
       description,
       visitsPerYear,
@@ -104,11 +99,23 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
     })),
     totalCents: source.shown.annualCents,
     schedule: visitSchedule(source.shown.lines, scope.source === "not_recorded" ? [] : scope.types),
-    scope: scope.source === "not_recorded" ? { kind: "not_recorded" } : { kind: "listed", recordedOn: scope.source === "frozen" ? scope.takenAt : null, types: scope.types },
+    scope: (scope.source === "not_recorded" ? { kind: "not_recorded" } : { kind: "listed", recordedOn: scope.source === "frozen" ? scope.takenAt : null, types: scope.types }) satisfies DocumentScope,
+    term: termLine(source.term, source.editable),
+  };
+}
+
+export function buildAgreementDocument(source: DocumentSource, settings: OrgSettingsValue): AgreementDocument {
+  return {
+    tenant: { name: settings.legalName, address: settings.address, phone: settings.phone, accent: settings.accentColor ?? NEUTRAL_ACCENT },
+    number: source.number,
+    versionNo: source.shown.versionNo,
+    customerName: source.customer.name,
+    siteName: source.site.name,
+    mark: source.editable ? DRAFT_MARK : null,
+    ...documentBody(source),
+    validity: source.validUntil ? `Valid until ${formatTermDate(source.validUntil)}` : null,
     // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
     // settings of today (customer-portal AC 32, 33).
-    term: termLine(source.term, source.editable),
-    validity: source.validUntil ? `Valid until ${formatTermDate(source.validUntil)}` : null,
     terms: source.editable ? termsOf(settings, source.term.months) : source.terms ? termsOf(source.terms, source.term.months) : [],
   };
 }
