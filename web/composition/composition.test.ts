@@ -71,6 +71,11 @@ describe("composition root", () => {
     expect(source).toContain("contractStore: supabaseContractStore(supabase)");
     expect(source).toContain("contractRenderer: reactPdfContractRenderer");
     expect(Object.keys(container).filter((key) => /^generateContract|^createContract/.test(key))).toEqual([]);
+
+    // The action that generates a contract reaches the container for the member and for the contract store only.
+    const action = readFileSync(path.join(__dirname, "..", "app", "(app)", "contract-actions.ts"), "utf8");
+    const reached = new Set([...action.matchAll(/container\.(\w+)/g)].map((match) => match[1]));
+    expect([...reached].sort()).toEqual(["contractStore", "currentMember"]);
   });
 
   test("C1517: the invitation sender gets its own client with no session and no refresh, and the cookie client is built apart", async () => {

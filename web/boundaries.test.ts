@@ -80,7 +80,8 @@ describe("layer boundaries", () => {
   test("C1647: ContractRenderer is a port of its own, DocumentRenderer keeps its pinned body, and the contract document imports no react", () => {
     const ports = readFileSync(path.join(webRoot, "application", "ports", "index.ts"), "utf8");
     const contract = ports.match(/export interface ContractRenderer \{([\s\S]*?)\r?\n\}/)?.[1] ?? "";
-    expect(contract).toContain("renderContract(document: ContractDocument): Promise<Uint8Array>;");
+    // Exactly one method: a second one on this port would be a different interface.
+    expect(contract.trim()).toBe("renderContract(document: ContractDocument): Promise<Uint8Array>;");
     const agreement = ports.match(/export interface DocumentRenderer \{([\s\S]*?)\r?\n\}/)?.[1] ?? "";
     expect(agreement).toContain("renderAgreement(document: AgreementDocument): Promise<Uint8Array>;");
     expect(agreement).not.toContain("renderContract");

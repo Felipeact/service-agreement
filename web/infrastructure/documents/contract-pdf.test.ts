@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { contractClauses, type ContractDocument } from "@/domain/contract";
 import type { AgreementTerms } from "@/domain/agreement";
 import { reactPdfContractRenderer } from "./index";
-import { pdfPages, winAnsi } from "./pdf-text.testing";
+import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
 
 const TERMS: AgreementTerms = {
   repairDiscountPct: 10,
@@ -92,6 +92,13 @@ describe("the contract PDF, rendered", () => {
     expect(inOrder(indexOfIn(first, "Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100", "Service Contract"))).toBe(true);
   });
 
+  test("C1641: the contractor's accent colour is the one drawn, and a different accent replaces it", async () => {
+    expect(pdfColours(await render()).has("#1f6f8b")).toBe(true);
+    const other = pdfColours(await render({ contractor: { ...base.contractor, accent: "#b45309" } }));
+    expect(other.has("#b45309")).toBe(true);
+    expect(other.has("#1f6f8b")).toBe(false);
+  });
+
   test("C1641: a contractor with no address or phone and a site with no address print no empty or null line", async () => {
     const [first] = await pages({ contractor: { ...base.contractor, address: null, phone: null }, site: { name: "Fernwood Dental, Main", address: null } });
     expect(first).not.toMatch(/null|undefined/);
@@ -126,14 +133,15 @@ describe("the contract PDF, rendered", () => {
     for (const expected of ["$450.00", "$1,800.00", "$945.00", "$1,890.00", "$3,690.00"]) expect(all, expected).toContain(expected);
   });
 
-  test("C1643: every clause is printed once", async () => {
-    const all = unwrapped(await pages());
+  test("C1643: every clause is printed once, in full", async () => {
+    // Whitespace is taken out of both sides: a wrapped line loses its trailing space in the PDF text.
+    const all = unwrapped(await pages()).replace(/\s+/g, "");
     for (const clause of contractClauses(TERMS, 12)) {
-      const squeezed = clause.replace(/\s+/g, " ");
-      expect(all.split(squeezed.slice(0, 40)).length - 1, squeezed).toBe(1);
+      const squeezed = clause.replace(/\s+/g, "");
+      expect(all.split(squeezed).length - 1, clause).toBe(1);
     }
-    expect(all).toContain("Repair work is discounted by 10%.");
-    expect(all).toContain("This contract is governed by the laws of British Columbia.");
+    expect(all).toContain("Repairworkisdiscountedby10%.");
+    expect(all).toContain("ThiscontractisgovernedbythelawsofBritishColumbia.");
   });
 
   test("C1643: a null payment, cancellation, governing province and renewal print none of those four clauses", async () => {

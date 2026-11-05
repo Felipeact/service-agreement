@@ -89,9 +89,9 @@ describe("the contract PDF route with the real renderer", () => {
     expect(body.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(body.toString("latin1").trimEnd().endsWith("%%EOF")).toBe(true);
 
-    const text = pdfPages(body).join("\n").replace(/-\n/g, "").replace(/\n/g, "");
-    expect(text).toContain("Service Contract");
-    expect(text).toContain("Pat Lee");
-    for (const clause of contractClauses(TERMS, 12)) expect(text, clause).toContain(clause.slice(0, 40));
+    const text = pdfPages(body).join("\n").replace(/-\n/g, "").replace(/\s+/g, "");
+    expect(text).toContain("ServiceContract");
+    expect(text).toContain("PatLee");
+    for (const clause of contractClauses(TERMS, 12)) expect(text, clause).toContain(clause.replace(/\s+/g, ""));
   });
 });

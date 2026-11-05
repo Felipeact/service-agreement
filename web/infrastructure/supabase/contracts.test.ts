@@ -19,7 +19,7 @@ describe("contract store", () => {
     expect(client.rpc).toHaveBeenCalledWith("create_contract", { p_agreement_id: AGR });
   });
 
-  test.each(["not_accepted", "auto_renewal", "site_inactive", "no_term_start", "no_signer"])("C1619: 55000 with the hint %s is %s", async (hint) => {
+  test.each(["not_accepted", "auto_renewal", "site_inactive", "no_term_start", "no_signer"])("C1619: 55000 with the hint %s comes back as that code", async (hint) => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue(fail("55000", hint));
     expect(await supabaseContractStore(typed).create(AGR)).toEqual({ ok: false, code: hint });

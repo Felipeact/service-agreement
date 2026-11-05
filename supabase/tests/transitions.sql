@@ -378,6 +378,9 @@ do $$
 declare a uuid; c uuid; before_outbox bigint; e record;
 begin
   a := tests.cg_accepted('cg5');
+  -- Two versions, so a payload that names the highest one cannot be a hard-coded 1.
+  insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start, term_months)
+  values (tests.id('cg5:v2'), tests.id('orgA'), a, 2, '2027-02-01', 12);
   before_outbox := (select count(*) from public.outbox where org_id = tests.id('orgA'));
   perform tests.act_as('uE');
   c := public.create_contract(a);
@@ -385,7 +388,7 @@ begin
   perform tests.ok('C1601 one event', (select count(*) from public.events where entity_id = c) = 1, 'not exactly one event');
   select * into e from public.events where entity_id = c;
   perform tests.ok('C1601 entity', e.entity_type = 'contract' and e.type = 'contract.pending_signature', 'wrong entity or type');
-  perform tests.ok('C1601 payload', e.payload = jsonb_build_object('from', null::text, 'to', 'pending_signature', 'versionNo', 1), 'wrong payload: ' || e.payload::text);
+  perform tests.ok('C1601 payload', e.payload = jsonb_build_object('from', null::text, 'to', 'pending_signature', 'versionNo', 2), 'wrong payload: ' || e.payload::text);
   perform tests.ok('C1601 actor', e.actor_id = tests.id('uE'), 'wrong actor');
   perform tests.ok('C1601 no outbox', (select count(*) from public.outbox where org_id = tests.id('orgA')) = before_outbox, 'an outbox row was written');
 end $$;
@@ -436,7 +439,8 @@ end $$;
 do $$
 declare def text;
 begin
-  def := pg_get_functiondef('public.create_contract(uuid)'::regprocedure);
+  -- Comments are taken out first, so a "for update" in a comment cannot stand in for the lock.
+  def := regexp_replace(pg_get_functiondef('public.create_contract(uuid)'::regprocedure), '--[^\n]*', '', 'g');
   perform tests.ok('C1604 lock order', position('for update' in def) > 0 and position('for update' in def) < position('from public.contracts' in def),
     'the agreement is not locked before the contract is read');
   perform tests.ok('C1604 unique', exists (
@@ -508,6 +512,7 @@ begin
   perform tests.act_as('uE');
   perform tests.expect_hint('C1608 none', format('select public.create_contract(%L)', a), '55000', 'no_term_start');
   reset role;
+  perform tests.ok('C1608 none wrote nothing', tests.cg_state() = before_state, 'a refusal wrote something');
 
   b := tests.cg_accepted('cg11b');
   insert into public.agreement_versions (id, org_id, agreement_id, version_no, term_start) values (tests.id('cg11b:v2'), tests.id('orgA'), b, 2, null);
