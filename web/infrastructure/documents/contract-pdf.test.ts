@@ -177,3 +177,46 @@ describe("the contract PDF, rendered", () => {
     expect(text(all)).not.toContain("DRAFT");
   });
 });
+
+describe("the DocuSeal tags in the signature blocks", () => {
+  const TAGS = [
+    "{{Sig;role=Customer;type=signature}}",
+    "{{Date;role=Customer;type=date}}",
+    "{{Sig;role=Contractor;type=signature}}",
+    "{{Date;role=Contractor;type=date}}",
+  ];
+  const compact = (all: string[]) => unwrapped(all).replace(/\s+/g, "");
+
+  test("C1713: the four tags appear once each, the Customer pair after the customer's heading and before the Contractor pair", async () => {
+    const all = await pages();
+    const flat = compact(all);
+    for (const tag of TAGS) {
+      expect(flat.split(tag).length - 1, tag).toBe(1);
+    }
+    const at = TAGS.map((tag) => flat.indexOf(tag));
+    const customerHeading = flat.indexOf("FortheCustomer:PatLee");
+    expect(customerHeading).toBeGreaterThan(-1);
+    expect(at[0]).toBeGreaterThan(customerHeading);
+    expect(at[1]).toBeGreaterThan(at[0]);
+    expect(at[2]).toBeGreaterThan(at[1]);
+    expect(at[3]).toBeGreaterThan(at[2]);
+    expect(flat.indexOf("ForKettleRidgeMechanicalLtd.")).toBeGreaterThan(at[1]);
+    expect(flat.indexOf("ForKettleRidgeMechanicalLtd.")).toBeLessThan(at[2]);
+  });
+
+  test("C1713: with no hyphen removed a tag still reads verbatim, because it fits its line and the word cut applies only where a word must wrap", async () => {
+    // A cut would insert a hyphen every 12 characters (`{{Sig;role=C-ustomer;...`); `unwrapped` hides that, so read the raw text.
+    const raw = text(await pages()).replace(/\s+/g, "");
+    for (const tag of TAGS) expect(raw, tag).toContain(tag);
+  });
+
+  test("C1714: with 40 clauses the last page holds both headings and all four tags", async () => {
+    const clauses = Array.from({ length: 40 }, (_, i) => `Clause ${i + 1}: Invoices are payable within 30 days of receipt by the customer.`);
+    const all = await pages({ clauses });
+    expect(all.length).toBeGreaterThan(1);
+    const last = compact([all[all.length - 1]]);
+    expect(last).toContain("FortheCustomer:PatLee");
+    expect(last).toContain("ForKettleRidgeMechanicalLtd.");
+    for (const tag of TAGS) expect(last, tag).toContain(tag);
+  });
+});

@@ -2,15 +2,32 @@ import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer"
 import type { ContractDocument } from "@/domain/contract";
 import { LetterHead, PageFooter, PriceSection, ScheduleSection, ScopeSections, styles } from "./pdf-sections";
 
+/**
+ * The DocuSeal text tags of one signer (signature-provider door 5). The provider finds each tag in the PDF, turns it into a
+ * field where the tag sits and removes the text (`remove_tags`). Drawn white on the signature and date lines, so a printed
+ * copy that never went through the provider shows blank lines to sign on.
+ */
+export const signerTags = (role: "Customer" | "Contractor") => ({
+  signature: `{{Sig;role=${role};type=signature}}`,
+  date: `{{Date;role=${role};type=date}}`,
+});
+
+const tagStyle = { position: "absolute", left: 4, bottom: 4, fontSize: 9, color: "#FFFFFF" } as const;
+
 /** One signer's block: who signs, then a line to sign on and a line for the date. Kept whole on one page. */
-function SignatureBlock({ heading }: { heading: string }) {
+function SignatureBlock({ heading, role }: { heading: string; role: "Customer" | "Contractor" }) {
   const line = { borderBottomWidth: 1, borderBottomColor: "#111827", height: 28, marginTop: 6 };
+  const tags = signerTags(role);
   return (
     <View wrap={false} style={{ marginTop: 18 }}>
       <Text style={{ fontFamily: "Helvetica-Bold" }}>{heading}</Text>
-      <View style={line} />
+      <View style={line}>
+        <Text style={tagStyle}>{tags.signature}</Text>
+      </View>
       <Text style={styles.muted}>Signature</Text>
-      <View style={{ ...line, height: 20 }} />
+      <View style={{ ...line, height: 20 }}>
+        <Text style={tagStyle}>{tags.date}</Text>
+      </View>
       <Text style={styles.muted}>Date</Text>
     </View>
   );
@@ -56,8 +73,8 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
 
         <View wrap={false} minPresenceAhead={160}>
           <Text style={[styles.h2, accent]}>Signatures</Text>
-          <SignatureBlock heading={signer ? `For the Customer: ${signer.name}` : "For the Customer"} />
-          <SignatureBlock heading={`For ${contractor.name}`} />
+          <SignatureBlock heading={signer ? `For the Customer: ${signer.name}` : "For the Customer"} role="Customer" />
+          <SignatureBlock heading={`For ${contractor.name}`} role="Contractor" />
         </View>
 
         <PageFooter number={document.number} />

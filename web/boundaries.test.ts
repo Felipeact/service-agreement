@@ -221,6 +221,24 @@ describe("layer boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("C1661: DOCUSEAL_API_KEY, DOCUSEAL_API_URL and SIGNING_LINK_KEY are read only under composition/, never as NEXT_PUBLIC_, and .env.example names them with no value", () => {
+    const names = ["DOCUSEAL_API_KEY", "DOCUSEAL_API_URL", "SIGNING_LINK_KEY"];
+    const files = sourceFiles(webRoot).filter((file) => !/\.test\.tsx?$/.test(file) && !file.endsWith(".testing.ts"));
+    const readers = (name: string) =>
+      files.filter((file) => new RegExp(String.raw`process\.env(\.${name}\b|\[["'${"`"}]${name}["'${"`"}]\])`).test(readFileSync(file, "utf8")));
+    for (const name of names) {
+      const found = readers(name).map((file) => path.relative(webRoot, file).split(path.sep).join("/"));
+      expect(found.length, name).toBeGreaterThan(0);
+      expect(found.filter((file) => !file.startsWith("composition/")), name).toEqual([]);
+    }
+    const exposed = files.filter((file) => /NEXT_PUBLIC_(DOCUSEAL_API_KEY|DOCUSEAL_API_URL|SIGNING_LINK_KEY)/.test(readFileSync(file, "utf8")));
+    expect(exposed).toEqual([]);
+
+    const example = readFileSync(path.join(webRoot, ".env.example"), "utf8");
+    for (const name of names) expect(example).toMatch(new RegExp(String.raw`^${name}=[ \t]*\r?$`, "m"));
+    expect(example).not.toMatch(/^NEXT_PUBLIC_(DOCUSEAL_API_KEY|DOCUSEAL_API_URL|SIGNING_LINK_KEY)/m);
+  });
+
   test("C1046: PORTAL_LINK_KEY, RESEND_API_KEY and EMAIL_FROM are read only under composition/, never as NEXT_PUBLIC_, and .env.example names them with no value", () => {
     const names = ["PORTAL_LINK_KEY", "RESEND_API_KEY", "EMAIL_FROM"];
     const files = sourceFiles(webRoot).filter((file) => !/\.test\.tsx?$/.test(file) && !file.endsWith(".testing.ts"));
