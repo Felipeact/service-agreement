@@ -411,10 +411,11 @@ Proof: `npx vitest run "app/sign/[token]/error.test.ts" "app/(app)/contracts/[co
 | roles on `begin_signature_request` (4) | owner C1663 · admin C1662 · estimator C1663 · viewer C1663 | - |
 | `signingState` combinations (9) | table-driven over all 9 C1697 | - |
 | refusal messages on the send prompt (3) | `rejected` C1694 · `unavailable` C1694 · `not_configured` C1694 | - |
-| contract page signing area states (5) | send button C1692 · open link C1695 · countersign embed C1709 · waiting C1710 · no request C1710 | - |
+| contract page signing area kinds (7) | send C1692 · sending C1724 · waiting C1710 · open link C1695 · countersign C1709 · no request C1710 · none C1710 | - |
 | roles by contract status for `contractor_signing_source` calls (20) | table-driven over all 20 (4 roles x 5 statuses) C1711 | - |
 | the ten `Landing` doors (10) | door 1 C1652 · door 2 C1673 · door 3 C1679 · door 4 C1717 · door 5 C1713 · door 6 C1716 · door 7 C1701 · door 8 C1670 · door 9 C1721 · door 10 C1704 | - |
 | `Relations` entities (3) | `contract_signature_requests` C1669 · `contract_signers` C1662 · `events` C1670 | - |
+| table-level format checks of the stored values (6) | role C1722 · token hash format C1722 · token hash case C1722 · submission id not blank C1722 · document hash format C1722 · sealed format C1722 | - |
 | `Relations` one-way constraints (7) | one live request per contract C1669 · one signer per role C1722 · customer token hash unique C1722 · a customer has a hash C1722 · only the customer has a link C1722 · an open request holds its submission C1722 · every reference composite on `(id, org_id)` C1721 | - |
 | refusal messages of the send (9) | `rejected` C1694 · `unavailable` C1694 · `not_configured` C1694 · `forbidden` C1724 · `not_found` C1724 · `not_pending` C1724 · `parties_missing` C1724 · `invalid_name` C1724 · `already_open` C1724 | - |
 | `complete_signature_request` hints (2) | `not_creating` C1723 · `22023` C1671 | - |
@@ -445,7 +446,7 @@ Evidence:
   analogue is `portal_decide`, proven at the boundary (`customer_portal.sql`) and in its adapter
 - `docuseal.ts`: maps six answer classes and a malformed body to three codes -> decides; closest analogue
   `infrastructure/email` (Resend), proven with a fake `fetch` over each status class
-- `signingState`: 8 combinations -> decides; closest analogue `portalState` in `domain/portal`, proven table-driven
+- `signingState`: 9 combinations -> decides; closest analogue `portalState` in `domain/portal`, proven table-driven
 - `signing-gate.ts`: 4 outcomes -> decides; closest analogue `portal-gate.ts`, proven in `portal-gate.test.ts`
 
 Cost: 31 proofs at their own layer across 10 files. Without these rows, 6 decision tables are proven only by a path that
@@ -531,3 +532,8 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - **Mutants re-run on the real tree and restored:** the form address, `parties_missing`, `SIGNING_LINK_KEY`, `DOCUSEAL_API_URL`: each fails its new proof.
 - **Not repeatable by a Verifier, left for the owner to accept as an author-side run (as for earlier features):** C1718 (the contractor's pair of fields and the downloaded document's text were not observed) and C1719 (a signed-out open and touch emulation were not part of the record). C1681 is the author's full `npm run test:db` (23 of 23); the Verifier's permission to run all 23 was denied.
 - **Owner's decision, 2026-11-06:** C1718 and C1719 are accepted as an author-side run, with these limits on the record: the contractor's pair of fields and the downloaded document's text were not observed (the contractor's fields only show to the contractor, once a contract is `client_signed`, which item 3 makes possible); the customer link was opened in the signed-in context, not a private window; touch was measured by size, not emulated. The countersign embed is proven with the fake provider and a seeded contract until item 3.
+
+### Round 2 verification and its fixes (2026-11-06)
+
+- **Verdict of round 2:** FAIL, 74 of 75 proven; both round 1 survivors were killed; two gaps found by reading: the hand-off from `SigningForm` to `SigningFormEmbed` (the branch that only runs after mount) was asserted by no test, and the table-level `role` and `token_hash` format checks were never reached because the functions in front of them refuse first.
+- **Fixed:** `components/signing/signing-form.test.ts` pins `useSyncExternalStore` to its client answer, so the mounted branch runs under `renderToStaticMarkup`: the form carries the given `src` and `email`, and `SigningForm` hands the same props on to `SigningFormEmbed` for two different addresses; a fixed foreign `src` there now fails two tests (checked on the real tree and restored). C1722 gained assertions written straight to the tables for `contract_signers_role_check`, `contract_signers_token_hash_check` (format and case), `contract_signature_requests_provider_submission_id_check`, `contract_signature_requests_document_sha256_check` and `contract_signers_embed_sealed_check`. The Coverage rows that still undercounted (`signingState` 9, signing-area kinds 7) were corrected and one row added for the six format checks.

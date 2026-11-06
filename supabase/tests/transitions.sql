@@ -1194,6 +1194,32 @@ begin
   reset role;
 end $$;
 
+-- C1722 (table level): the role and the token hash format are checked by the table too, not only by the functions in front of it,
+-- which refuse first. Written straight to the table as its owner, so no function stands between the statement and the constraint.
+do $$
+declare c uuid := tests.sg_contract('sg22c'); r uuid;
+begin
+  r := tests.sg_begin(c);
+  perform tests.sg_expect_constraint('C1722 role',
+    format('insert into public.contract_signers (request_id, org_id, role, name, email) values (%L, %L, ''witness'', ''x'', ''x@example.test'')', r, tests.id('orgA')),
+    '23514', 'contract_signers_role_check');
+  perform tests.sg_expect_constraint('C1722 token hash format',
+    format('update public.contract_signers set token_hash = ''not-a-hash'' where request_id = %L and role = ''customer''', r),
+    '23514', 'contract_signers_token_hash_check');
+  perform tests.sg_expect_constraint('C1722 token hash case',
+    format('update public.contract_signers set token_hash = %L where request_id = %L and role = ''customer''', upper(tests.sg_hash('x')), r),
+    '23514', 'contract_signers_token_hash_check');
+  perform tests.sg_expect_constraint('C1722 submission id not blank',
+    format('update public.contract_signature_requests set provider_submission_id = ''  '' where id = %L', r),
+    '23514', 'contract_signature_requests_provider_submission_id_check');
+  perform tests.sg_expect_constraint('C1722 document hash format',
+    format('update public.contract_signature_requests set document_sha256 = ''abc'' where id = %L', r),
+    '23514', 'contract_signature_requests_document_sha256_check');
+  perform tests.sg_expect_constraint('C1722 sealed format',
+    format('update public.contract_signers set embed_sealed = ''https://docuseal.com/s/plain'' where request_id = %L and role = ''customer''', r),
+    '23514', 'contract_signers_embed_sealed_check');
+end $$;
+
 reset role;
 rollback;
 select 'transitions: pass' as result;
