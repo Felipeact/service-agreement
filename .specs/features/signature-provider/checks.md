@@ -14,8 +14,8 @@ Plan: `.specs/features/signature-provider/plan.md`
   - Components are asserted with `renderToStaticMarkup`; the repo has no DOM test library, so a stateful control is
     proven by rendering the control itself in its initial state and its prompt in each state (L-014).
   - The DocuSeal adapter is tested with a fake `fetch` passed in; no test reaches the network.
-- **test:db** means `npm run test:db signing` in `web/` (AD-026), a new recipe `signing` (`fixture.sql` + `signing.sql`).
-  It runs against project `gnxebrtcpbujhvcamtoe`, rolled back, and passes only once the migration is applied there.
+- **test:db** means `npm run test:db transitions` in `web/` (AD-026): the assertions go into `transitions.sql`, beside
+  `create_contract`, because `runner.test.ts` pins 23 recipes and 25 files (C830, C1045). It runs against project `gnxebrtcpbujhvcamtoe`, rolled back, and passes only once the migration is applied there.
   Each assertion is labelled with its check id. Named hints use `tests.expect_hint` (L-025, L-030).
 - **mcp** means a Supabase MCP `get_advisors` or `execute_sql` call on that project; the result goes in the Handoff.
 - **live** means an author-side Playwright run in one signed-in context (playwright-single-context) at 375, 768 and
@@ -83,88 +83,88 @@ Proof: `npx vitest run boundaries.test.ts -t "C1661:"`
 `contract_signature_requests` row exists with `status = 'creating'`, `contract_id` the fixture and `org_id` org A, plus two
 `contract_signers`: `customer` with `name = 'Pat Lee'`, `email = 'pat@customer.ca'` and `token_hash = 'h1'`, and `contractor`
 with `name = 'Dana Admin'`, the email of uD in `auth.users` and `token_hash` null (AC 9, door 2)
-Proof: `npm run test:db signing` (assertions `C1662`)
+Proof: `npm run test:db transitions` (assertions `C1662`)
 
 **C1663** - `begin_signature_request` as uE and as uV raises `42501`; as uB, and for a random uuid, raises `P0002`; as uA
 (owner) it succeeds (AC 15, AC 7)
-Proof: `npm run test:db signing` (assertions `C1663`)
+Proof: `npm run test:db transitions` (assertions `C1663`)
 
 **C1664** - For a contract whose status is `client_signed`, `completed`, `declined` or `voided`, `begin_signature_request`
 raises `55000` with hint `not_pending` (AC 15)
-Proof: `npm run test:db signing` (assertions `C1664`)
+Proof: `npm run test:db transitions` (assertions `C1664`)
 
 **C1665** - For a contract whose `parties` is `{}`, `begin_signature_request` raises `55000` with hint `parties_missing`
 (AC 15)
-Proof: `npm run test:db signing` (assertions `C1665`)
+Proof: `npm run test:db transitions` (assertions `C1665`)
 
 **C1666** - A name that is empty, only spaces, or 121 characters raises `23514` with hint `invalid_name`; a 120-character
 name succeeds and is stored trimmed (AC 15, AC 8)
-Proof: `npm run test:db signing` (assertions `C1666`)
+Proof: `npm run test:db transitions` (assertions `C1666`)
 
 **C1667** - A second `begin_signature_request` for a contract with a `creating` request, and one for a contract with an
 `open` request, each raise `55000` with hint `already_open` and leave one row (AC 14)
-Proof: `npm run test:db signing` (assertions `C1667`)
+Proof: `npm run test:db transitions` (assertions `C1667`)
 
 **C1668** - After every refusal of C1663 to C1667, the counts of `contract_signature_requests`, `contract_signers` and
 `events` are unchanged (AC 15)
-Proof: `npm run test:db signing` (assertions `C1668`)
+Proof: `npm run test:db transitions` (assertions `C1668`)
 
 **C1669** - As the table owner, inserting a second `creating` or `open` request for a contract that already has one raises
 `23505` on `contract_signature_requests_one_live`, and inserting one when the only other request is `failed` or `voided`
 succeeds (AC 14, AC 12, door 2)
-Proof: `npm run test:db signing` (assertions `C1669`)
+Proof: `npm run test:db transitions` (assertions `C1669`)
 
 **C1670** - As uD, `complete_signature_request(<request fixture>, '13226499', <signers>, <sealed token>, <64 hex>)` sets the
 request to `open` with `provider_submission_id = '13226499'`, `provider = 'docuseal'` and the `document_sha256`; stores each
 signer's `provider_submitter_id` and `embed_sealed` and the customer's `link_sealed`; and writes exactly one `events` row
 `entity_type = 'contract'`, `type = 'contract.sent_for_signature'`, `payload = {"requestId": <id>, "provider": "docuseal", "versionNo": 1}`,
 `actor_id` uD, and no `outbox` row (AC 9, AC 10, doors 3 and 8)
-Proof: `npm run test:db signing` (assertions `C1670`)
+Proof: `npm run test:db transitions` (assertions `C1670`)
 
 **C1671** - `complete_signature_request` raises `55000` for a request that is `open` or `failed`, `22023` for a signers
 document with one signer, with three signers, with an unknown role, or with an `embed_sealed` that does not match
 `^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$`, `42501` as uE and uV, and `P0002` as uB; each leaves the request unchanged
 (AC 9, door 3)
-Proof: `npm run test:db signing` (assertions `C1671`)
+Proof: `npm run test:db transitions` (assertions `C1671`)
 
 **C1672** - `fail_signature_request` turns a `creating` request into `failed`, called again it changes nothing and raises
 nothing, called on an `open` request it leaves it `open`; it raises `42501` as uE and uV and `P0002` as uB; and a new
 `begin_signature_request` for the contract then succeeds (AC 12, AC 13)
-Proof: `npm run test:db signing` (assertions `C1672`)
+Proof: `npm run test:db transitions` (assertions `C1672`)
 
 **C1673** - As uD, `insert`, `update` and `delete` on `contract_signature_requests` and on `contract_signers` each raise
 `42501`; `select embed_sealed`, `select token_hash` and `select link_sealed` raise `42501`; `select id, status, name, email`
 returns the org's rows; as uB the same `select` returns 0 rows of org A (AC 16, door 2)
-Proof: `npm run test:db signing` (assertions `C1673`)
+Proof: `npm run test:db transitions` (assertions `C1673`)
 
 **C1674** - Called as `anon` with the hash `h1` of an `open` request on a `pending_signature` contract, `signature_view`
 returns an object whose `tenant.name` is the org's legal name, `agreement.number` is the agreement number, `signer.name` is
 `Pat Lee`, `contractStatus` is `pending_signature`, `requestStatus` is `open` and `embedSealed` is the customer's sealed
 value; for an unknown hash, for the contractor signer's (null) hash and for a hash whose request is `creating` it returns
 null (AC 18, AC 21, door 3)
-Proof: `npm run test:db signing` (assertions `C1674`)
+Proof: `npm run test:db transitions` (assertions `C1674`)
 
 **C1675** - `signature_view` returns `embedSealed` null and the real `requestStatus` and `contractStatus` when the request is
 `failed`, when it is `voided`, and when the contract is `client_signed`, `completed`, `declined` or `voided` (AC 19, AC 20)
-Proof: `npm run test:db signing` (assertions `C1675`)
+Proof: `npm run test:db transitions` (assertions `C1675`)
 
 **C1676** - `signature_view` changes nothing: the counts of `contract_signature_requests`, `contract_signers`, `events`
 and `outbox` are the same after 3 calls (AC 22)
-Proof: `npm run test:db signing` (assertions `C1676`)
+Proof: `npm run test:db transitions` (assertions `C1676`)
 
 **C1677** - `contractor_signing_source` as uD on a `client_signed` contract with an `open` request returns the contractor's
 `embed_sealed`; as uE and uV it raises `42501`; as uB `P0002`; on a `pending_signature` or `completed` contract
 `55000` with hint `not_client_signed`; on a `client_signed` contract with no request, and on the demo's `client_signed`
 contract AG-1031 after `seed.sql`, `55000` with hint `no_request` (AC 26, AC 28, AC 29)
-Proof: `npm run test:db signing` (assertions `C1677`)
+Proof: `npm run test:db transitions` (assertions `C1677`)
 
 **C1678** - `customer_signing_link` as uD and uA on a contract with an `open` request returns the customer's `link_sealed`;
 as uE and uV it raises `42501`; as uB `P0002`; with no `open` request `55000` with hint `no_request` (AC 11)
-Proof: `npm run test:db signing` (assertions `C1678`)
+Proof: `npm run test:db transitions` (assertions `C1678`)
 
 **C1679** - For each of the six functions, `has_function_privilege` is false for `public`, and true for `authenticated`; it is
 true for `anon` on `signature_view` only (AC 22, door 3)
-Proof: `npm run test:db signing` (assertions `C1679`)
+Proof: `npm run test:db transitions` (assertions `C1679`)
 
 **C1680** - `get_advisors` (security) lists the previous set plus exactly `anon_security_definer_function_executable` and
 `authenticated_security_definer_function_executable` for `public.signature_view`, and no lint for the other five
@@ -446,3 +446,15 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - Total ~104k, under the 150k budget -> one builder, no ask. Batches follow the slices: S1, S2, S3, S4 and S5, S6.
 - Mechanism: one builder (the orchestrator builds; a fresh Verifier is dispatched after the last commit)
 - Commits carry no attribution trailer, as `build.md` says.
+
+### Batch S1: C1652-C1660
+
+- **Boundary:** C1652-C1660 closed at `8d4ed02` (C1661 waits for S6, when `composition` reads the three names)
+- **Settled mid-build:** none
+- **Abandoned:** none
+
+### Batch S2: C1662-C1680
+
+- **Boundary:** C1662-C1680 closed in the commit after `8d4ed02`; migration `20261106154448_signature_provider` applied to `gnxebrtcpbujhvcamtoe` with the owner's go-ahead (2026-11-06)
+- **Settled mid-build:** the SQL proofs run as `npm run test:db transitions`, not a new `signing` recipe, because `runner.test.ts` pins 23 recipes and 25 files (C830, C1045); `rls_isolation.sql` C35 lists the public tables, so it now names the two new ones (23); `demo_seed.sql` carries the demo half of C1677 and clears the JWT claim after `act_as`, which the seed's frozen-line triggers need; plan door 9 (`contracts unique (id, org_id)`) and the new hints `parties_missing` for a signer-less `parties` and `not_creating` were added to the plan before the code. C1680 measured: `anon` lints 5 -> 6 (`signature_view`), `authenticated` 19 -> 25 (the six functions), nothing else changed
+- **Abandoned:** a `signing` recipe with its own file

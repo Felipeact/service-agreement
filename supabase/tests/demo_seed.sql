@@ -266,6 +266,20 @@ do $$ begin
            and c.parties -> 'site' ->> 'name' = st.name)), 'a demo contract has other parties than its site');
 end $$;
 
+-- C1677 (demo half): the demo's client_signed contract AG-1031 has no signature request, so the owner is told so. uA joins
+-- the demo org for this block only, and the membership is removed before the seed runs again.
+insert into public.memberships (org_id, user_id, role) values (tests.demo(), tests.id('uA'), 'owner');
+do $$
+begin
+  perform tests.ok('C1677 demo no requests', (select count(*) from public.contract_signature_requests where org_id = tests.demo()) = 0, 'the demo holds a signature request');
+  perform tests.act_as('uA');
+  perform tests.expect_hint('C1677 demo AG-1031', format('select public.contractor_signing_source(%L)', md5('demo:contract:7')::uuid), '55000', 'no_request');
+  reset role;
+  -- act_as set a user in the JWT claims; the seed's frozen-line triggers stand aside only when there is none (AD-054).
+  perform set_config('request.jwt.claims', '', true);
+end $$;
+delete from public.memberships where org_id = tests.demo() and user_id = tests.id('uA');
+
 -- C1617: one contract loses its parties and one holds a marker before the second run.
 update public.contracts set parties = '{}' where id = md5('demo:contract:7')::uuid;
 update public.contracts set parties = '{"schema": 1, "marker": true}' where id = md5('demo:contract:9')::uuid;

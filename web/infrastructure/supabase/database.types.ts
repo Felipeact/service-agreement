@@ -328,6 +328,108 @@ export type Database = {
           },
         ]
       }
+      contract_signature_requests: {
+        Row: {
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          document_sha256: string | null
+          id: string
+          org_id: string
+          provider: string
+          provider_submission_id: string | null
+          status: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          document_sha256?: string | null
+          id?: string
+          org_id: string
+          provider?: string
+          provider_submission_id?: string | null
+          status?: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_sha256?: string | null
+          id?: string
+          org_id?: string
+          provider?: string
+          provider_submission_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signature_requests_contract_id_org_id_fkey"
+            columns: ["contract_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "contract_signature_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_signers: {
+        Row: {
+          email: string
+          embed_sealed: string | null
+          link_sealed: string | null
+          name: string
+          org_id: string
+          provider_submitter_id: string | null
+          request_id: string
+          role: string
+          token_hash: string | null
+        }
+        Insert: {
+          email: string
+          embed_sealed?: string | null
+          link_sealed?: string | null
+          name: string
+          org_id: string
+          provider_submitter_id?: string | null
+          request_id: string
+          role: string
+          token_hash?: string | null
+        }
+        Update: {
+          email?: string
+          embed_sealed?: string | null
+          link_sealed?: string | null
+          name?: string
+          org_id?: string
+          provider_submitter_id?: string | null
+          request_id?: string
+          role?: string
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_signers_request_id_org_id_fkey"
+            columns: ["request_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "contract_signature_requests"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           agreement_version_id: string
@@ -1190,11 +1292,41 @@ export type Database = {
         }
         Returns: undefined
       }
+      begin_signature_request: {
+        Args: {
+          p_contract_id: string
+          p_contractor_name: string
+          p_customer_token_hash: string
+        }
+        Returns: string
+      }
       commit_import: { Args: { p_job_id: string }; Returns: number }
+      complete_signature_request: {
+        Args: {
+          p_customer_link_sealed: string
+          p_document_sha256: string
+          p_request_id: string
+          p_signers: Json
+          p_submission_id: string
+        }
+        Returns: undefined
+      }
       contract_signer: { Args: { p_site_id: string }; Returns: Json }
+      contractor_signing_source: {
+        Args: { p_contract_id: string }
+        Returns: string
+      }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
       create_contract: { Args: { p_agreement_id: string }; Returns: string }
       create_invitation: { Args: { p_email: string; p_role: string }; Returns: string }
+      customer_signing_link: {
+        Args: { p_contract_id: string }
+        Returns: string
+      }
+      fail_signature_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       list_invitations: {
         Args: never
         Returns: {
@@ -1326,6 +1458,7 @@ export type Database = {
         Args: { p_active: boolean; p_site_id: string }
         Returns: string[]
       }
+      signature_view: { Args: { p_token_hash: string }; Returns: Json }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
     }
     Enums: {
