@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AgreementDetail, ContractDetail } from "@/application/ports";
 import { LineRow } from "@/components/agreements/line-row";
+import { SigningArea, type SigningAreaProps } from "./signing-area";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -13,6 +14,8 @@ type ContractViewProps = {
   contract: ContractDetail;
   /** The agreement at the contract's own version: its lines, scope and frozen terms are the contract's. */
   agreement: AgreementDetail;
+  /** The signing section's inputs, read by the page for this member; absent where nothing about signing is shown. */
+  signing?: SigningAreaProps;
 };
 
 const link = "inline-flex min-h-11 items-center font-medium text-action lg:min-h-0";
@@ -28,7 +31,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** The contract page body: who it binds, the term, the accepted lines and total, the schedule and the terms. Read-only. */
-export function ContractView({ contract, agreement }: ContractViewProps) {
+export function ContractView({ contract, agreement, signing }: ContractViewProps) {
   const { parties } = contract;
   const { shown } = agreement;
   const meta = CONTRACT_STATUS_META[contract.status];
@@ -86,6 +89,8 @@ export function ContractView({ contract, agreement }: ContractViewProps) {
           <p className="text-[13px] text-ink-2">Parties not recorded for this contract.</p>
         )}
       </section>
+
+      {signing && <SigningArea {...signing} />}
 
       <section aria-label="Term" className="rounded-panel border border-hairline bg-surface px-4 py-3">
         <h2 className="mb-1 text-[13px] font-semibold">Term</h2>

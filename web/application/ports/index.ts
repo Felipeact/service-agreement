@@ -9,7 +9,7 @@ import type {
   ServiceLineValue,
   TimelineEntry,
 } from "@/domain/agreement";
-import type { ContractDocument, ContractParties, ContractStatus } from "@/domain/contract";
+import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
@@ -693,6 +693,11 @@ export type ContractDetail = {
   createdAt: Date;
   /** `null` when the contract recorded no parties (stored `{}`). */
   parties: ContractParties | null;
+  /**
+   * The newest signature request of the contract, or `null` when none was ever begun (signature-provider AC 7, AC 11).
+   * Optional in the type so older fixtures compile; the reader always sets it.
+   */
+  signing?: { requestId: string; status: SignatureRequestStatus } | null;
 };
 
 /** `null` for a malformed id, a missing row, or a row of another org. */
@@ -956,4 +961,59 @@ export interface InvitationLinkSender {
 /** Turns the signed-in user's live invitation into a membership; the number accepted, 0 when none (door 3). Never throws. */
 export interface InvitationAcceptor {
   acceptInvitations(): Promise<number>;
+}
+
+/** Why a send for signature, or one of its steps, wrote nothing. `unavailable` is anything unexpected, already logged. */
+export type BeginSignatureFailure = "forbidden" | "not_found" | "not_pending" | "parties_missing" | "invalid_name" | "already_open" | "unavailable";
+
+export type SignerEmbed = { role: SignerRole; submitterId: string; embedSealed: string };
+
+/** The three writers of a signature request, each one call to its function (signature-provider door 3). */
+export interface SignatureStore {
+  /** Claims the contract: a `creating` request with both signers. The customer's token hash is the only part of the link the database learns. */
+  begin(contractId: string, contractorName: string, customerTokenHash: string): Promise<{ ok: true; requestId: string } | { ok: false; code: BeginSignatureFailure }>;
+  /** Stores what the provider answered and opens the request. */
+  complete(
+    requestId: string,
+    submissionId: string,
+    signers: SignerEmbed[],
+    customerLinkSealed: string,
+    documentSha256: string,
+  ): Promise<{ ok: true } | { ok: false; code: "unavailable" }>;
+  /** Marks a request that never reached the provider `failed`. A repeat changes nothing. Never throws. */
+  fail(requestId: string): Promise<void>;
+}
+
+/** What `sendForSignature` answers: the customer's address, once, or why nothing was sent. */
+export type SendForSignatureResult = { ok: true; link: string } | { ok: false; code: BeginSignatureFailure | SignatureFailure };
+
+/** Why a signing secret was not returned. */
+export type SigningSecretFailure = "forbidden" | "not_found" | "not_client_signed" | "no_request" | "unavailable";
+
+export type SigningSecretResult = { ok: true; sealed: string } | { ok: false; code: SigningSecretFailure };
+
+/** The two sealed values staff read back: the customer's link and the contractor's embed (doors 3, 4). */
+export interface SigningSecrets {
+  customerLink(contractId: string): Promise<SigningSecretResult>;
+  contractorSource(contractId: string): Promise<SigningSecretResult>;
+}
+
+/** What `/sign/<token>` reads, as `public.signature_view` returns it. `embedSealed` is `null` unless the form may be shown. */
+export type SigningView = {
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null } | null;
+  agreementNumber: string;
+  signerName: string;
+  contractStatus: ContractStatus;
+  requestStatus: SignatureRequestStatus;
+  embedSealed: string | null;
+};
+
+/** `null` for an unknown hash. */
+export interface SigningReader {
+  view(tokenHash: string): Promise<SigningView | null>;
+}
+
+/** The contract as the renderer draws it, with the agreement number (signature-provider Flow hop 3). `null` when there is nothing to draw. */
+export interface ContractDocuments {
+  load(contractId: string, orgId: string): Promise<{ number: string; document: ContractDocument } | null>;
 }

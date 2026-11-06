@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
@@ -10,6 +9,7 @@ import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
 import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
+import { linkBase } from "./link-base";
 
 const FORBIDDEN = { status: "forbidden" } as const;
 const NOT_FOUND = { status: "not_found" } as const;
@@ -143,16 +143,6 @@ export async function withdrawAgreementAction(agreementId: string): Promise<Move
   if (!("ok" in moved)) return moved;
   revalidatePath(`/agreements/${agreementId}`);
   return { status: "withdrawn" };
-}
-
-/** `APP_BASE_URL` when set, otherwise the origin the request came in on (customer-portal assumption "Link address origin"). */
-async function linkBase(): Promise<string> {
-  const configured = process.env.APP_BASE_URL?.trim();
-  if (configured) return configured;
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
-  return `${protocol}://${host}`;
 }
 
 /** Runs a send or a re-link as a writer and turns the new secret into the full address, once. */
