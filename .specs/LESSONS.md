@@ -212,6 +212,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: C1647 web/boundaries.test.ts:83 (round 1) (lint-boundaries)
 - last seen: 2026-11-05T20:32:27Z
 
+### L-034 - A test that renders a client-only component to static markup sees only its server placeholder, so assert the props handed to it by walking the element tree, and pin the mounted branch with a mocked hook in its own test.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `web/ui` · harmful: 0
+- features: signature-provider
+- evidence: web/components/signing/signing-view.tsx:96 (web/ui)
+- last seen: 2026-11-06T18:47:34Z
+
+### L-035 - Every early-return branch of a use case needs its own asserted answer, because the happy-path tests never reach it and a changed code passes the whole suite.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `application` · harmful: 0
+- features: signature-provider
+- evidence: web/application/use-cases/signing.ts:46 (application)
+- last seen: 2026-11-06T18:47:35Z
+
+### L-036 - A table constraint that an RPC guard refuses first is never reached by RPC tests, so write the statement straight to the table as its owner and assert the constraint name.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `database` · harmful: 0
+- features: signature-provider
+- evidence: checks.md C1722, supabase/tests/transitions.sql (database)
+- last seen: 2026-11-06T18:47:35Z
+
+### L-037 - A proof line must name the file that holds the test; a -t filter that matches nothing exits 0 and reads as a green proof.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: signature-provider
+- evidence: checks.md C1701 (specs)
+- last seen: 2026-11-06T18:47:36Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

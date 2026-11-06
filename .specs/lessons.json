@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 34,
+  "next_id": 38,
   "lessons": [
     {
       "id": "L-001",
@@ -598,6 +598,78 @@
       ],
       "created": "2026-11-05T20:32:27Z",
       "last_seen": "2026-11-05T20:32:27Z"
+    },
+    {
+      "id": "L-034",
+      "key": "surviving_mutant::a test that renders a client only component to static markup sees only its server placeholder so assert the props handed to it by walking the element tree and pin the mounted branch with a mocked hook in its own test",
+      "text": "A test that renders a client-only component to static markup sees only its server placeholder, so assert the props handed to it by walking the element tree, and pin the mounted branch with a mocked hook in its own test.",
+      "signal": "surviving_mutant",
+      "scope": "web/ui",
+      "status": "candidate",
+      "features": [
+        "signature-provider"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/components/signing/signing-view.tsx:96 (web/ui)"
+      ],
+      "created": "2026-11-06T18:47:34Z",
+      "last_seen": "2026-11-06T18:47:34Z"
+    },
+    {
+      "id": "L-035",
+      "key": "surviving_mutant::every early return branch of a use case needs its own asserted answer because the happy path tests never reach it and a changed code passes the whole suite",
+      "text": "Every early-return branch of a use case needs its own asserted answer, because the happy-path tests never reach it and a changed code passes the whole suite.",
+      "signal": "surviving_mutant",
+      "scope": "application",
+      "status": "candidate",
+      "features": [
+        "signature-provider"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/application/use-cases/signing.ts:46 (application)"
+      ],
+      "created": "2026-11-06T18:47:35Z",
+      "last_seen": "2026-11-06T18:47:35Z"
+    },
+    {
+      "id": "L-036",
+      "key": "spec_precision_gap::a table constraint that an rpc guard refuses first is never reached by rpc tests so write the statement straight to the table as its owner and assert the constraint name",
+      "text": "A table constraint that an RPC guard refuses first is never reached by RPC tests, so write the statement straight to the table as its owner and assert the constraint name.",
+      "signal": "spec_precision_gap",
+      "scope": "database",
+      "status": "candidate",
+      "features": [
+        "signature-provider"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C1722, supabase/tests/transitions.sql (database)"
+      ],
+      "created": "2026-11-06T18:47:35Z",
+      "last_seen": "2026-11-06T18:47:35Z"
+    },
+    {
+      "id": "L-037",
+      "key": "spec_precision_gap::a proof line must name the file that holds the test a t filter that matches nothing exits 0 and reads as a green proof",
+      "text": "A proof line must name the file that holds the test; a -t filter that matches nothing exits 0 and reads as a green proof.",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "signature-provider"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C1701 (specs)"
+      ],
+      "created": "2026-11-06T18:47:36Z",
+      "last_seen": "2026-11-06T18:47:36Z"
     }
   ]
 }
