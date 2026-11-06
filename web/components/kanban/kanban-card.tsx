@@ -1,34 +1,62 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { Icon } from "@/components/ui/icons";
 import { StatusPill } from "@/components/ui/status-pill";
+import { followUpLabel, isClosedStage } from "@/domain/pipeline";
 import { formatCad } from "@/lib/money";
 import type { PipelineCard } from "@/application/ports";
-import { ageLabel } from "@/lib/age";
+import { ageLabel, ageShort } from "@/lib/age";
 
-export function KanbanCard({ card }: { card: PipelineCard }) {
+/**
+ * One agreement: its number and its age beside a clock, then the site, the customer, any pills that
+ * need the estimator (and a follow-up once the deal has sat past its stage's threshold), and the money with a chevron.
+ * A closed deal recedes: a medium-weight title and a grey amount.
+ */
+export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: number }) {
+  const closed = isClosedStage(card.stage);
+  const followUp = followUpLabel(card);
+  const stale = Boolean(followUp || card.attention);
+  // A site named after its customer ("Fernwood Dental" at "Fernwood Dental") needs saying once.
+  const showCustomer = card.customer.trim().toLowerCase() !== card.site.trim().toLowerCase();
   return (
     <Link
       href={`/agreements/${card.id}`}
       data-card
       data-amount-cents={card.annualCents ?? 0}
-      className="block rounded-control bg-surface px-3 py-2.5 text-ink shadow-card hover:ring-1 hover:ring-action"
+      style={{ "--i": index } as CSSProperties}
+      className="settle block rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
     >
-      <h3 className="text-[13.5px] leading-snug font-semibold">{card.site}</h3>
-      <p className="text-[12px] text-ink-2">{card.customer}</p>
-      <p className="mt-0.5 text-[12px] text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</p>
-      <p className="text-[12px] text-ink-2">{ageLabel(card.ageDays)}</p>
-      {(card.attention || card.isRenewal || card.status === "expired") && (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[12px] font-medium text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</span>
+        <span
+          title={ageLabel(card.ageDays)}
+          className={`inline-flex items-center gap-1 text-[12px] ${stale && !closed ? "font-semibold text-danger" : "text-ink-2"}`}
+        >
+          <Icon name="clock" className="size-3.5" />
+          {ageShort(card.ageDays)}
+        </span>
+      </div>
+      <h3 className={`mt-2.5 font-display text-[15px] leading-snug tracking-tight ${closed ? "font-medium" : "font-semibold"}`}>{card.site}</h3>
+      {showCustomer && <p className="text-[12px] text-ink-2">{card.customer}</p>}
+      {(card.attention || followUp || card.isRenewal || card.status === "expired") && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {card.isRenewal && <StatusPill tone="neutral" label="Renewal" />}
           {card.status === "expired" && <StatusPill tone="neutral" label="Expired" />}
           {card.attention && <StatusPill tone="attention" label={card.attention} />}
+          {followUp && <StatusPill tone="attention" label={followUp} />}
         </div>
       )}
-      {card.annualCents !== undefined && (
-        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-2 text-[12px] text-ink-2">
-          <span>{card.visitsPerYear} visits/yr</span>
-          <span className="ml-auto font-semibold text-ink">{formatCad(card.annualCents)}/yr</span>
-        </div>
-      )}
+      <div className="mt-3 flex items-end justify-between gap-2 border-t border-hairline pt-3">
+        {card.annualCents !== undefined ? (
+          <div className="flex flex-col">
+            <span className={`text-[15px] font-semibold ${closed ? "text-ink-2" : "text-ink"}`}>{formatCad(card.annualCents)}/yr</span>
+            <span className="text-[12px] text-ink-2">{card.visitsPerYear} visits/yr</span>
+          </div>
+        ) : (
+          <span className="text-[12px] text-ink-2">No service lines yet</span>
+        )}
+        <Icon name="chevron" className="size-4 text-ink-2" />
+      </div>
     </Link>
   );
 }

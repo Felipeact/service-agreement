@@ -488,7 +488,7 @@ export function supabaseSiteLister(client: Client): SiteLister {
     async listActive() {
       const { data, error } = await client
         .from("sites")
-        .select("id, name, deactivated_at, customers(name, deactivated_at), agreements(id, number, status)")
+        .select("id, name, deactivated_at, customers(id, name, deactivated_at), agreements(id, number, status)")
         .is("deactivated_at", null)
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
@@ -496,7 +496,7 @@ export function supabaseSiteLister(client: Client): SiteLister {
         id: string;
         name: string;
         deactivated_at: string | null;
-        customers: { name: string; deactivated_at: string | null };
+        customers: { id: string; name: string; deactivated_at: string | null };
         agreements: { id: string; number: string | null; status: string }[];
       };
       return (data as unknown as Row[])
@@ -506,6 +506,7 @@ export function supabaseSiteLister(client: Client): SiteLister {
           return {
             id: row.id,
             name: row.name,
+            customerId: row.customers.id,
             customer: row.customers.name,
             liveAgreement: live ? { id: live.id, number: live.number ?? "" } : null,
           };

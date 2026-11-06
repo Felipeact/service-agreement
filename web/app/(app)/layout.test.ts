@@ -9,7 +9,8 @@ const redirect = vi.fn((path: string) => {
   throw new Error(`NEXT_REDIRECT ${path}`);
 });
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut }) }));
+const pipelineBoard = vi.fn(async () => [] as unknown[]);
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut, pipelineBoard, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
 vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline" }));
 
 const { MemberGate } = await import("./member-gate");
@@ -46,6 +47,29 @@ describe("(app) layout", () => {
     expect(html).toContain("Kettle Ridge Mechanical Ltd.");
     expect(html).toContain("owner@example.com");
     expect(html).toContain("page body");
+  });
+
+  const owner: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Kettle Ridge Mechanical Ltd.", role: "owner" };
+
+  test("the top bar names today and the bell links to the follow-ups with their count", async () => {
+    currentMember.mockResolvedValue(owner);
+    pipelineBoard.mockResolvedValue([
+      { stage: "sent", ageDays: 12 }, // sat past the Sent limit
+      { stage: "in_progress", ageDays: 1, attention: "Changes requested" },
+      { stage: "sent", ageDays: 1 }, // fresh
+      { stage: "completed", ageDays: 90 }, // closed, never due
+    ]);
+    const html = await renderLayout();
+    expect(html).toContain("Wednesday, December 1");
+    expect(html).toMatch(/<a(?=[^>]*href="\/pipeline\?followups=1")(?=[^>]*aria-label="2 agreements need follow-up")[^>]*>/);
+  });
+
+  test("a board that cannot be read leaves the shell up with no count", async () => {
+    currentMember.mockResolvedValue(owner);
+    pipelineBoard.mockRejectedValue(new Error("down"));
+    const html = await renderLayout();
+    expect(html).toContain("page body");
+    expect(html).toContain("Follow-ups: none due");
   });
 
   test("C19: a user with no membership sees No workspace yet, a Sign out button and no navigation", async () => {

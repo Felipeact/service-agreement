@@ -28,20 +28,20 @@ describe("CustomersView", () => {
 
   test("C122: a row shows the site and asset counts", () => {
     const out = list([summary("1", "Alpha", { siteCount: 2, assetCount: 7 })]);
-    expect(out).toMatch(/Sites <\/span>2</);
-    expect(out).toMatch(/Assets <\/span>7</);
+    expect(out).toMatch(/Sites<\/span><span[^>]*>2</);
+    expect(out).toMatch(/Assets<\/span><span[^>]*>7</);
   });
 
-  test("C124: no contact shows a dash", () => {
-    expect(list([summary("1", "Alpha", { primaryContact: null })])).toMatch(/<span[^>]*>-<\/span>/);
+  test("C124: no contact says so", () => {
+    expect(list([summary("1", "Alpha", { primaryContact: null })])).toMatch(/<span[^>]*>No contact yet<\/span>/);
   });
 
   test.each([
     [12, "12 customers"],
     [1, "1 customer"],
-  ])("C125: %s customers badge reads %s", (count, label) => {
+  ])("C125: %s customers: the header standing line starts %s", (count, label) => {
     const customers = Array.from({ length: count }, (_, index) => summary(String(index), `Customer ${index}`));
-    expect(list(customers)).toContain(`>${label}<`);
+    expect(list(customers)).toContain(`>${label} · `);
   });
 
   test("C127: a search with no match shows the message and Clear search", () => {
@@ -163,9 +163,9 @@ const detailAs = (role: MemberRole, customer: CustomerDetail = populated) => htm
 
 describe("record write controls on the customer screens", () => {
   test("C301: a writer sees New customer in the header and in the empty state", () => {
-    expect(listAs("estimator", [summary("1", "Alpha")])).toMatch(/<a[^>]*href="\/customers\/new"[^>]*>New customer<\/a>/);
+    expect(listAs("estimator", [summary("1", "Alpha")])).toMatch(/<a[^>]*href="\/customers\/new"[^>]*>(?:<svg[\s\S]*?<\/svg>)?New customer<\/a>/);
     const empty = listAs("estimator", []);
-    expect(empty.match(/<a[^>]*href="\/customers\/new"[^>]*>New customer<\/a>/g)).toHaveLength(2);
+    expect(empty.match(/<a[^>]*href="\/customers\/new"[^>]*>(?:<svg[\s\S]*?<\/svg>)?New customer<\/a>/g)).toHaveLength(2);
     expect(empty).toMatch(/No customers yet[\s\S]*<a[^>]*href="\/customers\/new"/);
   });
 

@@ -13,7 +13,7 @@ const redirect = vi.fn((to: string) => {
 });
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
-vi.mock("next/navigation", () => ({ redirect, notFound: vi.fn(), usePathname: () => "/sites" }));
+vi.mock("next/navigation", () => ({ redirect, notFound: vi.fn(), usePathname: () => "/sites", useRouter: () => ({ push: vi.fn() }) }));
 
 const { SitesForRequest } = await import("./sites/page");
 

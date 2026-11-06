@@ -35,7 +35,7 @@ export function NoteSection({ note, action }: NoteSectionProps) {
             defaultValue={value}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "version-note-error" : undefined}
-            className={`w-full rounded-control border bg-surface px-3 py-2 text-[13px] text-ink ${error ? "border-danger" : "border-hairline"}`}
+            className={`w-full rounded-control border bg-surface px-3 py-2 text-[13px] text-ink ${error ? "border-danger" : "border-field"}`}
           />
           <p className="text-[12px] text-ink-2">Up to {MAX_NOTE_LENGTH} characters</p>
           {error && (

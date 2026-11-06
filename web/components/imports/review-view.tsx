@@ -25,6 +25,8 @@ type ReviewViewProps = {
   page?: string;
   /** The writer's actions; absent for a viewer, who sees the rows and flags only. */
   actions?: ReviewActions;
+  /** The agreement this list was sent for, when it came from the New agreement dialog (`?agreement=`): the page links back to it. */
+  agreementId?: string;
 };
 
 const CONFIDENCE = { low: "Low", medium: "Medium", high: "High" } as const;
@@ -58,8 +60,9 @@ function Cell({ label, children, className = "" }: { label: string; children: Re
   );
 }
 
-function hrefFor(jobId: string, show: "all" | "attention", page?: number) {
+function hrefFor(jobId: string, show: "all" | "attention", page?: number, agreementId?: string) {
   const params = new URLSearchParams();
+  if (agreementId) params.set("agreement", agreementId);
   if (show === "attention") params.set("show", "attention");
   if (page && page > 1) params.set("page", String(page));
   const query = params.toString();
@@ -67,7 +70,7 @@ function hrefFor(jobId: string, show: "all" | "attention", page?: number) {
 }
 
 /** The review grid of an extracted job, or the read-only record of a committed one. */
-export function ReviewView({ review, types, siteAssets, show, page, actions }: ReviewViewProps) {
+export function ReviewView({ review, types, siteAssets, show, page, actions, agreementId }: ReviewViewProps) {
   const { job, rows } = review;
   const open = job.status === "extracted";
   const writer = open ? actions : undefined;
@@ -93,6 +96,19 @@ export function ReviewView({ review, types, siteAssets, show, page, actions }: R
         <PageHeader title={job.originalName} badge={<StatusPill tone="neutral" label={open ? "Extracted" : "Added to site"} />} />
         <p className="text-[13px] text-ink-2">{job.siteName}</p>
       </div>
+
+      {agreementId && (
+        <section aria-label="Your agreement" className="flex flex-col gap-2 rounded-panel bg-action-tint px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] text-ink">
+            {job.committed
+              ? "The equipment is on the site. Your agreement is ready to build."
+              : `This list is for the agreement you just started. Check the rows, add them to ${job.siteName}, then continue.`}
+          </p>
+          <Link href={`/agreements/${agreementId}`} className="inline-flex min-h-11 shrink-0 items-center font-semibold text-action lg:min-h-0">
+            {job.committed ? "Continue to the agreement" : "Skip to the agreement"}
+          </Link>
+        </section>
+      )}
 
       {job.committed && (
         <section className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface px-4 py-3">
@@ -125,10 +141,10 @@ export function ReviewView({ review, types, siteAssets, show, page, actions }: R
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[13px] text-ink">{`${plural(rows.length, "row")} · ${included.length.toLocaleString("en-CA")} included · ${attention.length.toLocaleString("en-CA")} need attention`}</p>
               <nav aria-label="Filter rows" className="flex gap-4">
-                <Link href={hrefFor(job.id, "all")} aria-current={show === "all" ? "page" : undefined} className={filter(show === "all")}>
+                <Link href={hrefFor(job.id, "all", undefined, agreementId)} aria-current={show === "all" ? "page" : undefined} className={filter(show === "all")}>
                   All rows
                 </Link>
-                <Link href={hrefFor(job.id, "attention")} aria-current={show === "attention" ? "page" : undefined} className={filter(show === "attention")}>
+                <Link href={hrefFor(job.id, "attention", undefined, agreementId)} aria-current={show === "attention" ? "page" : undefined} className={filter(show === "attention")}>
                   Needs attention
                 </Link>
               </nav>
@@ -184,13 +200,13 @@ export function ReviewView({ review, types, siteAssets, show, page, actions }: R
             {pager.pages > 1 && (
               <nav aria-label="Pages" className="flex flex-wrap items-center gap-4 text-[13px]">
                 {pager.page > 1 && (
-                  <Link href={hrefFor(job.id, show, pager.page - 1)} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
+                  <Link href={hrefFor(job.id, show, pager.page - 1, agreementId)} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
                     Previous
                   </Link>
                 )}
                 <span className="text-ink-2">{`Rows ${pager.from}-${pager.to} of ${shown.length.toLocaleString("en-CA")}`}</span>
                 {pager.page < pager.pages && (
-                  <Link href={hrefFor(job.id, show, pager.page + 1)} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
+                  <Link href={hrefFor(job.id, show, pager.page + 1, agreementId)} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
                     Next
                   </Link>
                 )}

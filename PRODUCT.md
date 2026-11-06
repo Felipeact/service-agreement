@@ -50,7 +50,7 @@ The user confirmed three reasons, all of equal weight:
 ## Brand Commitments
 
 - Customer-facing output carries the tenant's brand, never a hard-coded one.
-- **Visual stance (chosen 2026-10-16):** the user deliberately chose the familiar category standard over distinctive directions. The quality bar is Linear, Stripe Dashboard, Attio/HubSpot CRM and Jobber/Housecall Pro. See `DESIGN.md`.
+- **Visual stance (chosen 2026-10-16, warmed 2026-11-06):** the user deliberately chose the familiar category standard over distinctive directions. The quality bar is Linear, Stripe Dashboard, Attio/HubSpot CRM and Jobber/Housecall Pro. On 2026-11-06 the user said it felt "too dry" and chose to warm it up on a pilot (shell, Pipeline, sign-in) rather than replace it: same structure and density, with a navy shell, a display face, stage-tinted wells, layered depth and authored drawings in quiet moments. The rollout to the other staff screens and to the customer-facing surfaces (portal, signing page, PDFs, emails, where the tenant's brand leads) is agreed but not yet done. See `DESIGN.md`.
 
 ## Evidence on Hand
 

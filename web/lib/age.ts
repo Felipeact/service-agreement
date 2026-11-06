@@ -3,3 +3,8 @@ export function ageLabel(days: number): string {
   if (days === 0) return "Updated today";
   return `Updated ${days} ${days === 1 ? "day" : "days"} ago`;
 }
+
+/** The compact age a card shows beside its clock: "today", "1d", "9d". */
+export function ageShort(days: number): string {
+  return days === 0 ? "today" : `${days}d`;
+}

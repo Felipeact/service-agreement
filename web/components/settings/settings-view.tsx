@@ -25,8 +25,8 @@ function SettingsForm({ settings, role, action }: SettingsViewProps & { settings
 /** The Settings page body. */
 export function SettingsView(props: SettingsViewProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="Settings" />
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
       {props.settings ? (
         <SettingsForm {...props} settings={props.settings} />
       ) : (

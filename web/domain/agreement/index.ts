@@ -249,3 +249,4 @@ export * from "./version-diff";
 export * from "./version-note";
 export * from "./timeline";
 export * from "./list-filter";
+export * from "./new-agreement";

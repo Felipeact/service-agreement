@@ -83,7 +83,7 @@ describe("PipelineView", () => {
   test("C1359: for a writer New agreement is a link to /agreements/new, on the board and on the empty board", () => {
     for (const cards of [[], [card()]]) {
       const html = renderToStaticMarkup(createElement(PipelineView, { cards, canCreate: true }));
-      expect(html).toMatch(/<a\b[^>]*href="\/agreements\/new"[^>]*>New agreement</);
+      expect(html).toMatch(/<a\b[^>]*href="\/agreements\/new"[^>]*>(?:<svg[\s\S]*?<\/svg>)?New agreement</);
       expect(html).not.toMatch(/<[^>]*\sdisabled(?:=|\s|>)[^>]*>New agreement</);
     }
   });
@@ -100,13 +100,13 @@ describe("PipelineView", () => {
     expect(cards.map((tag) => /\bhref="([^"]*)"/.exec(tag)?.[1])).toEqual(["/agreements/a1", "/agreements/a2", "/agreements/a3"]);
   });
 
-  test("C1054: the card heading is the site, with the customer on the next line before number and version", () => {
+  test("C1054: the card opens with its number and age, then the site as its heading with the customer on the next line", () => {
     const html = render([card({ site: "Harbourview Tower A", customer: "Harbourview Towers Strata", number: "AG-1048", versionNo: 3 })]);
     const heading = /<h3\b[^>]*>([^<]*)<\/h3>/.exec(html);
     expect(heading?.[1]).toBe("Harbourview Tower A");
+    expect(html.indexOf("AG-1048 · v3")).toBeLessThan(heading?.index ?? 0);
     const afterHeading = html.slice((heading?.index ?? 0) + (heading?.[0].length ?? 0));
     expect(afterHeading).toMatch(/^<[^>]+>Harbourview Towers Strata</);
-    expect(afterHeading.indexOf("Harbourview Towers Strata")).toBeLessThan(afterHeading.indexOf("AG-1048 · v3"));
   });
 
   test("C1055: a long site name is never truncated", () => {
@@ -118,54 +118,6 @@ describe("PipelineView", () => {
     expect(heading?.[2]).toBe(site);
     const classes = /class="([^"]*)"/.exec(heading?.[1] ?? "")?.[1].split(/\s+/) ?? [];
     expect(classes.filter((name) => /^(truncate|line-clamp-.*|whitespace-nowrap|overflow-hidden)$/.test(name))).toEqual([]);
-  });
-
-  const searchBoard = () => [
-    card({ id: "a", site: "Harbourview Tower A", customer: "Harbourview Towers Strata" }),
-    card({ id: "b", site: "Fernwood Clinic", customer: "Fernwood Dental" }),
-    card({ id: "c", site: "Main office", customer: "Kestrel Logistics" }),
-  ];
-  const shownIds = (html: string) => [...html.matchAll(/<a\b[^>]*\bhref="\/agreements\/([^"]*)"/g)].map((m) => m[1]);
-  const renderQuery = (cards: PipelineCard[], initialQuery: string) =>
-    renderToStaticMarkup(createElement(PipelineView, { cards, initialQuery })).replace(/&#x27;/g, "'");
-
-  test.each([
-    ["  CLINIC ", ["b"]],
-    ["kestrel", ["c"]],
-    ["harbourview", ["a"]],
-  ])("C1056: the query %j matches site or customer and shows %j", (query, ids) => {
-    expect(shownIds(renderQuery(searchBoard(), query))).toEqual(ids);
-  });
-
-  test("C1057: a query matching no site or customer shows the no-match state and no card", () => {
-    const html = renderQuery(searchBoard(), "zzz");
-    expect(html).toContain("No agreements match &quot;zzz&quot;");
-    expect(html).toMatch(/<button[^>]*>Clear search</);
-    expect(shownIds(html)).toEqual([]);
-  });
-
-  test("C1058: under a query each column header counts and totals only its matching cards", () => {
-    const html = renderQuery(
-      [
-        card({ id: "a", site: "Fernwood Clinic", customer: "Fernwood Dental", annualCents: 400000 }),
-        card({ id: "b", site: "Main office", customer: "Kestrel Logistics", annualCents: 1000000 }),
-        card({ id: "c", stage: "sent", site: "Fernwood Annex", customer: "Fernwood Dental", annualCents: 250000 }),
-      ],
-      "fernwood",
-    );
-    const inProgress = column(html, "in_progress");
-    expect(inProgress).toMatch(/data-column-count[^>]*>1</);
-    expect(inProgress).toMatch(/data-column-total[^>]*>\$4,000\/yr</);
-    const sent = column(html, "sent");
-    expect(sent).toMatch(/data-column-count[^>]*>1</);
-    expect(sent).toMatch(/data-column-total[^>]*>\$2,500\/yr</);
-  });
-
-  test("C1059: the search input invites sites or customers and keeps its label", () => {
-    const html = render([card()]);
-    expect(html).toMatch(/<input[^>]*placeholder="Search sites or customers…"/);
-    expect(html).toContain("Search agreements");
-    expect(html).not.toContain("Search customers…");
   });
 
   test("C119: there is no Sample data badge and no sample data module", () => {
@@ -182,6 +134,151 @@ describe("PipelineView", () => {
     const needle = ["sample", "pipeline"].join("-");
     const importers = walk(webRoot).filter((file) => readFileSync(file, "utf8").includes(`lib/${needle}`));
     expect(importers).toEqual([]);
+  });
+});
+
+describe("PipelineView: follow-up", () => {
+  const shownIds = (html: string) => [...html.matchAll(/<a\b[^>]*\bhref="\/agreements\/([^"]*)"/g)].map((m) => m[1]);
+  const stuck = () => [
+    card({ id: "fresh", stage: "sent", status: "sent", ageDays: 2 }),
+    card({ id: "stale", stage: "sent", status: "sent", ageDays: 9 }),
+    card({ id: "oldest", stage: "sent", status: "sent", ageDays: 30 }),
+    card({ id: "done", stage: "completed", status: "accepted", ageDays: 90, annualCents: 1880000, visitsPerYear: 4 }),
+  ];
+
+  test("a card that has sat too long says what to chase, and a fresh one says nothing", () => {
+    const html = render(stuck());
+    expect(html).toMatch(/data-tone="attention"[^>]*>No reply in 9 days</);
+    expect(html).toMatch(/data-tone="attention"[^>]*>No reply in 30 days</);
+    expect(html).not.toContain("No reply in 2 days");
+  });
+
+  test("a closed card never asks for a follow-up, however old", () => {
+    expect(column(render(stuck()), "completed")).not.toContain('data-tone="attention"');
+  });
+
+  test("an open column lists the longest-waiting deal first", () => {
+    const sent = column(render(stuck()), "sent");
+    expect(shownIds(sent)).toEqual(["oldest", "stale", "fresh"]);
+  });
+
+  test("a column header counts how many cards need a follow-up", () => {
+    expect(column(render(stuck()), "sent")).toMatch(/data-column-follow-up[^>]*>.*2 to follow up</);
+    expect(column(render(stuck()), "in_progress")).not.toContain("data-column-follow-up");
+  });
+
+  test("the Follow-ups due card counts the cards that qualify, starts off, and is the board's filter", () => {
+    const html = render(stuck());
+    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*data-summary="follow-ups"|<button[^>]*data-summary="follow-ups"[^>]*aria-pressed="false"/);
+    expect(html).toMatch(/Follow-ups due[\s\S]*?<span[^>]*text-\[32px\][^>]*>2</);
+  });
+
+  test("the first card is the open money, the second the cards waiting on the customer", () => {
+    const html = render([...stuck(), card({ id: "draft", annualCents: 500000, visitsPerYear: 4 })]);
+    expect(html).toMatch(/Open pipeline[\s\S]*?\$5,000/);
+    expect(html).toMatch(/Waiting on customer[\s\S]*?text-\[32px\][^>]*>3</);
+    expect(html).toContain("4 agreements in motion");
+  });
+
+  test("the page title is the greeting it is given", () => {
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()], title: "Good morning, Jamie" }))).toMatch(/<h1[^>]*>Good morning, Jamie</);
+  });
+
+  test("Expiring soon is a sixth column after Refused, with its own cards and a link to the full list", () => {
+    const row = { id: "x1", number: "AG-1004", site: "Harbourview Towers", customer: "Harbourview Strata", termEnd: "2027-12-31", noticeDate: "2027-12-15", annualCents: 119999, renewal: null, openAgreement: null };
+    const html = renderToStaticMarkup(createElement(PipelineView, { cards: [card()], expiring: [row], today: "2027-12-01" }));
+    const order = [...html.matchAll(/data-column="([a-z_]+)"/g)].map((m) => m[1]);
+    expect(order).toEqual(["in_progress", "sent", "accepted", "completed", "refused", "expiring"]);
+    const expiring = column(html, "expiring");
+    expect(expiring).toContain("Harbourview Towers");
+    expect(expiring).toContain("$1,199.99/yr");
+    expect(expiring).toContain("30d");
+    expect(expiring).toMatch(/<a[^>]*href="\/pipeline\?view=expiring"[^>]*>Expiring soon<\/a>/);
+  });
+
+  test("with nothing ending the Expiring soon column says so", () => {
+    expect(column(render([card()]), "expiring")).toContain("Nothing ends in the next 90 days");
+  });
+
+  const importJob = (patch: Record<string, unknown> = {}) =>
+    ({
+      id: "j1",
+      siteId: "s1",
+      originalName: "Juniper HVAC list.csv",
+      sizeBytes: 2048,
+      status: "extracted",
+      createdAt: new Date("2026-11-05T00:00:00Z"),
+      uploadedBy: "a@x.test",
+      outcome: { status: "parsed", tables: 1, rows: 31 },
+      extraction: { status: "extracted", rows: 31, unmatched: 4, cursor: 1, total: 1 },
+      committed: null,
+      site: { id: "s1", name: "Juniper Medical Pavilion" },
+      customer: { id: "c1", name: "Juniper Health" },
+      ...patch,
+    }) as never;
+
+  test("Recent equipment imports names the newest lists with how much was recognized, and links to all of them", () => {
+    const html = renderToStaticMarkup(createElement(PipelineView, { cards: [card()], imports: [importJob(), importJob({ id: "j2", originalName: "Riverside.xlsx", status: "uploaded", extraction: undefined })] }));
+    expect(html).toContain("Recent equipment imports");
+    expect(html).toContain("Messy files, structured into priceable assets.");
+    expect(html).toContain("Juniper HVAC list.csv");
+    expect(html).toContain("Juniper Medical Pavilion · Juniper Health");
+    expect(html).toContain("27 of 31 rows recognized");
+    expect(html).toMatch(/<a[^>]*href="\/imports"[^>]*>View all<\/a>/);
+    // a reviewable list links to its rows, any other to the site's import page
+    expect(html).toMatch(/<a[^>]*href="\/imports\/j1"/);
+    expect(html).toMatch(/<a[^>]*href="\/sites\/s1\/import"/);
+  });
+
+  test("only the three newest imports are named, and with none the panel is left out", () => {
+    const many = ["a", "b", "c", "d", "e"].map((id) => importJob({ id }));
+    expect((renderToStaticMarkup(createElement(PipelineView, { cards: [card()], imports: many })).match(/data-import=/g) ?? []).length).toBe(3);
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()] }))).not.toContain("Recent equipment imports");
+  });
+
+  test("opened from the bell the board starts on the agreements that need follow-up", () => {
+    const html = renderToStaticMarkup(createElement(PipelineView, { cards: [card({ id: "late", stage: "sent", status: "sent", ageDays: 20 }), card({ id: "fresh", stage: "sent", status: "sent", ageDays: 1 })], initialFollowUpOnly: true }));
+    expect(html).toContain("/agreements/late");
+    expect(html).not.toContain("/agreements/fresh");
+    expect(html).toMatch(/aria-pressed="true"[^>]*data-summary="follow-ups"|data-summary="follow-ups"[^>]*aria-pressed="true"/);
+  });
+
+  test("there is no search on the board: the sidebar's is the app's one", () => {
+    expect(render([card()])).not.toContain("type=\"search\"");
+  });
+
+  test("with no agreements there are no summary cards", () => {
+    expect(render([])).not.toContain("Follow-ups due");
+  });
+
+  test("a closed column's total says what the money was", () => {
+    const html = render([
+      ...stuck(),
+      card({ id: "no", stage: "refused", status: "refused", annualCents: 3148000, visitsPerYear: 4 }),
+    ]);
+    expect(column(html, "completed")).toMatch(/data-column-total[^>]*>\$18,800\/yr<\/span><span[^>]*>signed</);
+    expect(column(html, "refused")).toMatch(/data-column-total[^>]*>\$31,480\/yr<\/span><span[^>]*>not won</);
+    expect(column(html, "sent")).not.toContain("not won");
+  });
+
+  test("an empty column says what it would hold", () => {
+    const html = render(stuck());
+    expect(column(html, "accepted")).toContain("Nothing is waiting on a signature");
+    expect(column(html, "in_progress")).toContain("No drafts in progress");
+  });
+});
+
+describe("KanbanCard: lines that earn their place", () => {
+  const html = (patch: Partial<PipelineCard>) => renderToStaticMarkup(createElement(KanbanCard, { card: card(patch) }));
+
+  test("a site named after its customer shows the name once", () => {
+    const out = html({ site: "Fernwood Dental", customer: "fernwood dental" });
+    expect(out.match(/Fernwood Dental/gi)).toHaveLength(1);
+  });
+
+  test("a card with no service lines says so instead of showing no money", () => {
+    expect(html({})).toContain("No service lines yet");
+    expect(html({ annualCents: 100000, visitsPerYear: 4 })).not.toContain("No service lines yet");
   });
 });
 

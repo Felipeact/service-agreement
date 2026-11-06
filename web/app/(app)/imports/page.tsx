@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ImportHistoryView } from "@/components/imports/import-history";
+import { canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
 import { parseImportFilter } from "@/domain/imports";
+import { ImportBannerLauncher } from "../new-agreement-launcher";
 
 export const metadata: Metadata = { title: "Imports" };
 
@@ -15,7 +17,14 @@ export async function ImportsForRequest({ params }: { params: Params }) {
   if (member.status !== "member") redirect("/login");
   const filter = parseImportFilter(params);
   const [rows, sites] = await Promise.all([listImportHistory(filter), listSites({ showInactive: true })]);
-  return <ImportHistoryView rows={rows} sites={sites.map((site) => ({ id: site.id, name: site.name, customer: site.customer }))} filter={filter} />;
+  return (
+    <ImportHistoryView
+      rows={rows}
+      sites={sites.map((site) => ({ id: site.id, name: site.name, customer: site.customer }))}
+      filter={filter}
+      banner={canWriteRecords(member.role) ? <ImportBannerLauncher /> : undefined}
+    />
+  );
 }
 
 export default async function ImportsPage({ searchParams }: PageProps<"/imports">) {

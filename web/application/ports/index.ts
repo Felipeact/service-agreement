@@ -123,6 +123,7 @@ export interface AgreementLister {
 export type SiteOption = {
   id: string;
   name: string;
+  customerId: string;
   customer: string;
   liveAgreement: { id: string; number: string } | null;
 };

@@ -645,7 +645,7 @@ describe("site lister (agreements-page)", () => {
       id,
       name: `Site ${id}`,
       deactivated_at,
-      customers: { name: `Customer ${id}`, deactivated_at: null },
+      customers: { id: `cust-${id}`, name: `Customer ${id}`, deactivated_at: null },
       agreements,
     });
     const { typed, calls } = stubClient({
@@ -664,6 +664,7 @@ describe("site lister (agreements-page)", () => {
     expect(options.find((o) => o.id === "busy")).toEqual({
       id: "busy",
       name: "Site busy",
+      customerId: "cust-busy",
       customer: "Customer busy",
       liveAgreement: { id: "x1", number: "AG-1001" },
     });

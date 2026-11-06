@@ -83,7 +83,7 @@ export function DecisionPanel({ mode, reason, state, pending = false, tenantName
             onChange={(event) => onReason?.(event.target.value)}
             aria-invalid={reasonError ? true : undefined}
             aria-describedby={reasonError ? "reason-error" : "reason-count"}
-            className={`w-full rounded-control border bg-surface px-3 py-2 text-base text-ink sm:text-[13px] ${reasonError ? "border-danger" : "border-hairline"}`}
+            className={`w-full rounded-control border bg-surface px-3 py-2 text-base text-ink sm:text-[13px] ${reasonError ? "border-danger" : "border-field"}`}
           />
           <p id="reason-count" className={`text-[12px] ${typed > MAX_REASON ? "font-medium text-danger" : "text-ink-2"}`}>
             {`${typed} of ${MAX_REASON} characters`}

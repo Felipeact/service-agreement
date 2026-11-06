@@ -3,12 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { ImportPageView } from "@/components/imports/import-page-view";
 import { canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
+import { isUuid } from "@/domain/imports";
 import { confirmImportAction, discardImportAction, extractImportAction, readImportAction, startImportAction } from "../../../import-actions";
 
 export const metadata: Metadata = { title: "Import equipment list" };
 
-export default async function ImportPage({ params }: PageProps<"/sites/[siteId]/import">) {
+export default async function ImportPage({ params, searchParams }: PageProps<"/sites/[siteId]/import">) {
   const { siteId } = await params;
+  const { agreement } = await searchParams;
   const { currentMember, siteRegister, listImportJobs } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
@@ -25,5 +27,6 @@ export default async function ImportPage({ params }: PageProps<"/sites/[siteId]/
       }
     : undefined;
 
-  return <ImportPageView site={{ id: site.id, name: site.name }} jobs={jobs} actions={actions} />;
+  const agreementId = typeof agreement === "string" && isUuid(agreement) ? agreement : undefined;
+  return <ImportPageView site={{ id: site.id, name: site.name }} jobs={jobs} actions={actions} agreementId={agreementId} />;
 }
