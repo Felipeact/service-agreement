@@ -1117,6 +1117,83 @@ begin
   end loop;
 end $$;
 
+-- Round 2 of the verification (signature-provider checks C1721-C1723): the constraints the plan's Relations and door 9 name.
+-- Runs p_sql as the table owner and requires it to fail with p_state on the constraint named p_constraint.
+create function tests.sg_expect_constraint(p_label text, p_sql text, p_state text, p_constraint text) returns void
+language plpgsql as $$
+declare v_constraint text;
+begin
+  begin
+    execute p_sql;
+  exception when others then
+    get stacked diagnostics v_constraint = constraint_name;
+    if sqlstate = p_state and v_constraint is not distinct from p_constraint then
+      return;
+    end if;
+    raise exception '%: expected % on %, got % on % (%)', p_label, p_state, p_constraint, sqlstate, v_constraint, sqlerrm;
+  end;
+  raise exception '%: expected % on %, statement succeeded', p_label, p_state, p_constraint;
+end $$;
+
+-- C1721: contracts carries unique (id, org_id), and a request cannot name a contract of another org, nor a signer a request of another org.
+do $$
+declare c uuid := tests.sg_contract('sg21'); x uuid := tests.sg_contract('sg21x'); r uuid; k text := 'contracts_id_org_id_key';
+begin
+  r := tests.sg_begin(c);
+  perform tests.ok('C1721 key', exists (select 1 from pg_constraint where conname = k and contype = 'u' and conrelid = 'public.contracts'::regclass),
+    'contracts has no unique (id, org_id)');
+  perform tests.ok('C1721 key columns', (select array_agg(a.attname::text order by a.attname) from pg_constraint x
+      join pg_attribute a on a.attrelid = x.conrelid and a.attnum = any (x.conkey) where x.conname = k) = array['id', 'org_id'], 'wrong key columns');
+  perform tests.sg_expect_constraint('C1721 request across orgs',
+    format('insert into public.contract_signature_requests (org_id, contract_id) values (%L, %L)', tests.id('orgB'), x),
+    '23503', 'contract_signature_requests_contract_id_org_id_fkey');
+  perform tests.sg_expect_constraint('C1721 signer across orgs',
+    format('update public.contract_signers set org_id = %L where request_id = %L and role = ''contractor''', tests.id('orgB'), r),
+    '23503', 'contract_signers_request_id_org_id_fkey');
+end $$;
+
+-- C1722: one signer per role per request, a customer token hash is unique, a customer has a hash, only the customer has a link, and an open request holds its submission.
+do $$
+declare c uuid := tests.sg_contract('sg22a'); d uuid := tests.sg_contract('sg22b'); r uuid; q uuid;
+begin
+  r := tests.sg_begin(c);
+  q := tests.sg_begin(d);
+  perform tests.sg_expect_constraint('C1722 one signer per role',
+    format('insert into public.contract_signers (request_id, org_id, role, name, email, token_hash) values (%L, %L, ''customer'', ''x'', ''x@example.test'', %L)', r, tests.id('orgA'), tests.sg_hash('another')),
+    '23505', 'contract_signers_pkey');
+  perform tests.sg_expect_constraint('C1722 token hash unique',
+    format('update public.contract_signers set token_hash = %L where request_id = %L and role = ''customer''', tests.sg_hash(c::text), q),
+    '23505', 'contract_signers_token_hash_key');
+  perform tests.sg_expect_constraint('C1722 customer has a hash',
+    format('update public.contract_signers set token_hash = null where request_id = %L and role = ''customer''', r),
+    '23514', 'contract_signers_customer_has_link');
+  perform tests.sg_expect_constraint('C1722 contractor has no hash',
+    format('update public.contract_signers set token_hash = %L where request_id = %L and role = ''contractor''', tests.sg_hash('x'), r),
+    '23514', 'contract_signers_customer_has_link');
+  perform tests.sg_expect_constraint('C1722 only the customer has a link',
+    format('update public.contract_signers set link_sealed = %L where request_id = %L and role = ''contractor''', tests.sg_sealed('l'), r),
+    '23514', 'contract_signers_link_is_customers');
+  perform tests.sg_expect_constraint('C1722 open holds its submission',
+    format('update public.contract_signature_requests set status = ''open'' where id = %L', r),
+    '23514', 'contract_signature_requests_open_has_document');
+  perform tests.sg_expect_constraint('C1722 unknown status',
+    format('update public.contract_signature_requests set status = ''signed'' where id = %L', r),
+    '23514', 'contract_signature_requests_status_check');
+end $$;
+
+-- C1723: completing a request that is not being made is refused with the hint not_creating.
+do $$
+declare o uuid; f uuid;
+begin
+  o := tests.sg_open(tests.sg_contract('sg23o'));
+  f := tests.sg_begin(tests.sg_contract('sg23f'));
+  update public.contract_signature_requests set status = 'failed' where id = f;
+  perform tests.act_as('uD');
+  perform tests.expect_hint('C1723 open', format('select public.complete_signature_request(%L, ''1'', %L::jsonb, %L, %L)', o, tests.sg_signers()::text, tests.sg_sealed('l'), repeat('a', 64)), '55000', 'not_creating');
+  perform tests.expect_hint('C1723 failed', format('select public.complete_signature_request(%L, ''1'', %L::jsonb, %L, %L)', f, tests.sg_signers()::text, tests.sg_sealed('l'), repeat('a', 64)), '55000', 'not_creating');
+  reset role;
+end $$;
+
 reset role;
 rollback;
 select 'transitions: pass' as result;

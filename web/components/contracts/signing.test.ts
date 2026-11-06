@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { ContractStatus, SignatureRequestStatus } from "@/domain/contract";
 import { SendForSignaturePrompt, SigningArea, signingAreaKind, type SigningAreaProps } from "./signing-area";
-import { SIGNING_MESSAGES, type SendSignatureState } from "./signing-state";
+import { SIGNING_MESSAGES, signingMessageFor, type SendSignatureState } from "./signing-state";
 
 // The embedded form is the signing form component, which only mounts in the browser; here it is a marker that carries its props.
 vi.mock("@/components/signing/signing-form", () => ({
@@ -155,5 +155,47 @@ describe("the countersignature", () => {
     expect(signingAreaKind({ contractStatus: "client_signed", request: request("open"), role: "owner" })).toBe("countersign");
     expect(signingAreaKind({ contractStatus: "client_signed", request: request("open"), role: "viewer" })).toBe("none");
     expect(signingAreaKind({ contractStatus: "declined", request: null, role: "owner" })).toBe("none");
+  });
+});
+
+describe("every message the send can show", () => {
+  const TEXTS = {
+    rejected: "DocuSeal rejected the document.",
+    unavailable: "DocuSeal could not be reached. Try again.",
+    not_configured: "E-signature is not set up for this workspace.",
+    forbidden: "Only an owner or an admin can send a contract for signature.",
+    not_found: "This contract no longer exists.",
+    not_pending: "This contract is no longer waiting for signatures.",
+    parties_missing: "This contract has no recorded signer, so it cannot be sent.",
+    invalid_name: "Enter your name, up to 120 characters.",
+    already_open: "This contract was already sent for signature.",
+  } as const;
+
+  test("C1724: each of the nine refusals has exactly its text, and nothing else has one", () => {
+    expect(SIGNING_MESSAGES).toEqual(TEXTS);
+    expect(Object.keys(SIGNING_MESSAGES)).toHaveLength(9);
+    expect(signingMessageFor("idle")).toBeNull();
+    expect(signingMessageFor("sent")).toBeNull();
+  });
+
+  test.each(Object.entries(TEXTS))("C1724: the prompt shows %s as %j in one alert", (status, text) => {
+    const markup = renderToStaticMarkup(
+      createElement(SendForSignaturePrompt, { customer: CUSTOMER, memberEmail: "dana@example.com", confirming: true, pending: false, state: { status } as SendSignatureState }),
+    );
+    expect(markup).toContain(text);
+    expect(markup.match(/role="alert"/g)).toHaveLength(1);
+  });
+
+  test("C1724: while a request is being made the owner reads that the contract is being sent, with no button", () => {
+    const markup = html({ request: request("creating") });
+    expect(markup).toContain("This contract is being sent for signature.");
+    expect(markup).not.toContain("Send for signature");
+    expect(html({ role: "viewer", request: request("creating") })).toBe("");
+  });
+
+  test("C1724: a countersign form that could not be opened says so and offers a reload", () => {
+    const markup = html({ contractStatus: "client_signed", request: request("open"), contractorSrc: null });
+    expect(markup).toContain("The countersignature form could not be opened. Reload the page to try again.");
+    expect(markup).not.toContain("data-docuseal-form");
   });
 });

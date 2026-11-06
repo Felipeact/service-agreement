@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/signature-provider/plan.md`
 
-69 checks in 6 slices · 8 one-way doors · 2 open, 0 block (1 blocks go-live)
+75 checks in 6 slices · 10 one-way doors · 2 open, 0 block (1 blocks go-live)
 
 ## How proofs run
 
@@ -267,7 +267,7 @@ Proof: `npx vitest run infrastructure/supabase/session.test.ts -t "C1700:"`
 
 **C1701** - `proxy` runs the signing gate before the session refresh, and `next.config.ts` sets
 `Cache-Control: private, no-store`, `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex` for `/sign/:path*` (AC 24, door 7)
-Proof: `npx vitest run next.config.test.ts -t "C1701:"` and `npx vitest run proxy.test.ts -t "C1701:"`
+Proof: `npx vitest run next.config.test.ts -t "C1701:"` and `npx vitest run proxy.signing.test.ts -t "C1701:"`
 
 **C1702** - The `signature_view` adapter returns the typed view for an object, `null` for null, and `null` for an object
 missing `embedSealed`, `contractStatus` or `requestStatus` (AC 18, AC 21)
@@ -277,7 +277,7 @@ Proof: `npx vitest run infrastructure/supabase/signing.test.ts -t "C1702:"`
 `{state: "open", embedSrc, ...}`; it calls no other port and returns `{state: "unavailable"}` when unsealing throws (AC 18, AC 23)
 Proof: `npx vitest run application/use-cases/signing.test.ts -t "C1703:"`
 
-**C1704** - In the `open` state the page shows the tenant's name, the accent colour on its button text via `contrastText`,
+**C1704** - In the `open` state the page shows the tenant's name, the accent colour on its accent rule (the page has no button),
 `Contract AG-1052`, the signer's name `Pat Lee`, and a `DocusealForm` whose `src` is the unsealed `embed_src` and which has
 an `onComplete` handler; it shows no `Send` or `Accept` control (AC 18)
 Proof: `npx vitest run components/signing/signing.test.ts -t "C1704:"`
@@ -357,6 +357,42 @@ Proof: `live` Playwright run, result in the Handoff
 (AC 1, Impact)
 Proof: `npm test`
 
+### Added after verification round 1 (additive; each closes a gap the Verifier recorded) · 7 files · ~12k
+
+**C1721** - `contracts` carries `contracts_id_org_id_key unique (id, org_id)` on exactly those two columns; inserting a request
+for a contract of org A with `org_id` of org B fails with `23503` on `contract_signature_requests_contract_id_org_id_fkey`, and
+moving a signer to org B fails with `23503` on `contract_signers_request_id_org_id_fkey` (door 9, Relations)
+Proof: `npm run test:db transitions` (assertions `C1721`)
+
+**C1722** - A second signer of the same role in a request fails with `23505` on `contract_signers_pkey`; a second request's
+customer taking an existing token hash fails with `23505` on `contract_signers_token_hash_key`; a customer with no token hash
+and a contractor with one fail with `23514` on `contract_signers_customer_has_link`; a contractor with a sealed link fails with
+`23514` on `contract_signers_link_is_customers`; a request set `open` with no submission fails with `23514` on
+`contract_signature_requests_open_has_document`; and a status outside the four fails with `23514` on `contract_signature_requests_status_check` (Relations, door 2)
+Proof: `npm run test:db transitions` (assertions `C1722`)
+
+**C1723** - `complete_signature_request` on a request that is `open` and on one that is `failed` raises `55000` with the hint
+`not_creating` (Surface)
+Proof: `npm run test:db transitions` (assertions `C1723`)
+
+**C1724** - `SIGNING_MESSAGES` holds exactly nine texts and the prompt shows each in one alert: `forbidden` `Only an owner or an
+admin can send a contract for signature.`, `not_found` `This contract no longer exists.`, `not_pending` `This contract is no
+longer waiting for signatures.`, `parties_missing` `This contract has no recorded signer, so it cannot be sent.`, `invalid_name`
+`Enter your name, up to 120 characters.`, `already_open` `This contract was already sent for signature.`, plus the three of
+C1694; a `creating` request shows `This contract is being sent for signature.` to an owner and nothing to a viewer (AC 12)
+Proof: `npx vitest run components/contracts/signing.test.ts -t "C1724:"`
+
+**C1725** - The document loader reads the contract, then the agreement at the contract's own version, then the org's settings,
+and builds the document from them with the tenant's accent; a missing contract, no parties, no agreement each give `null`, and no
+settings row is thrown; the send answers `not_found` for no document and `parties_missing` for a document with no customer
+signer, begins nothing, renders nothing and asks the provider nothing (AC 9, AC 15)
+Proof: `npx vitest run application/use-cases/signing-documents.test.ts -t "C1725:"`
+
+**C1726** - A refused or failed `customer_signing_link` or `contractor_signing_source` read leaves the link and the form out
+and the contract page still renders; the `/sign` error boundary shows one alert, `Something went wrong. Try again, or contact the
+company that sent this link.`, a retry that calls `reset` once, and names no tenant, contract or product (AC 18, Observable)
+Proof: `npx vitest run "app/sign/[token]/error.test.ts" "app/(app)/contracts/[contractId]/page.test.ts" -t "C1726:"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -367,18 +403,24 @@ Proof: `npm test`
 | `signature_view` outcomes (3) | object C1674 · null for an unknown hash, the contractor hash and a `creating` request C1674 · embed withheld in a closed state C1675 | - |
 | `contractor_signing_source` outcomes (5) | success C1677 · `42501` C1677 · `P0002` C1677 · `not_client_signed` C1677 · `no_request` C1677 | - |
 | `customer_signing_link` outcomes (4) | success C1678 · `42501` C1678 · `P0002` C1678 · `no_request` C1678 | - |
-| `GET /sign/[token]` statuses (5) | `200` open C1704 · `200` signed C1705 · `200` closed C1705 · `404` malformed C1698 · `404` unknown C1698 | - |
+| `GET /sign/[token]` outcomes (7) | `200` open C1704 · `200` signed C1705 · `200` closed C1705 · `200` unavailable C1705 · `404` malformed C1698 · `404` unknown C1698 · no redirect to `/login` C1700 | - |
 | DocuSeal `POST /submissions/pdf` outcomes (6) | `2xx` C1653 · `4xx` C1654 · `429` C1655 · `5xx` C1655 · network error C1655 · timeout C1655 | - |
 | DocuSeal `DELETE /submissions/{id}` outcomes (4) | `200` C1658 · `404` C1658 · `5xx` C1658 · network error C1658 | - |
 | contract statuses that block `begin_signature_request` (4) | `client_signed` C1664 · `completed` C1664 · `declined` C1664 · `voided` C1664 | - |
 | request statuses (4) | `creating` C1662 · `open` C1670 · `failed` C1672 · `voided` C1675 | - |
 | roles on `begin_signature_request` (4) | owner C1663 · admin C1662 · estimator C1663 · viewer C1663 | - |
-| `signingState` combinations (8) | table-driven over all 8 C1697 | - |
+| `signingState` combinations (9) | table-driven over all 9 C1697 | - |
 | refusal messages on the send prompt (3) | `rejected` C1694 · `unavailable` C1694 · `not_configured` C1694 | - |
 | contract page signing area states (5) | send button C1692 · open link C1695 · countersign embed C1709 · waiting C1710 · no request C1710 | - |
 | roles by contract status for `contractor_signing_source` calls (20) | table-driven over all 20 (4 roles x 5 statuses) C1711 | - |
-| the eight `Landing` doors (8) | door 1 C1652 · door 2 C1673 · door 3 C1679 · door 4 C1717 · door 5 C1713 · door 6 C1716 · door 7 C1701 · door 8 C1670 | - |
+| the ten `Landing` doors (10) | door 1 C1652 · door 2 C1673 · door 3 C1679 · door 4 C1717 · door 5 C1713 · door 6 C1716 · door 7 C1701 · door 8 C1670 · door 9 C1721 · door 10 C1704 | - |
 | `Relations` entities (3) | `contract_signature_requests` C1669 · `contract_signers` C1662 · `events` C1670 | - |
+| `Relations` one-way constraints (7) | one live request per contract C1669 · one signer per role C1722 · customer token hash unique C1722 · a customer has a hash C1722 · only the customer has a link C1722 · an open request holds its submission C1722 · every reference composite on `(id, org_id)` C1721 | - |
+| refusal messages of the send (9) | `rejected` C1694 · `unavailable` C1694 · `not_configured` C1694 · `forbidden` C1724 · `not_found` C1724 · `not_pending` C1724 · `parties_missing` C1724 · `invalid_name` C1724 · `already_open` C1724 | - |
+| `complete_signature_request` hints (2) | `not_creating` C1723 · `22023` C1671 | - |
+| use-case branches before the request is begun (3) | no document `not_found` C1725 · no signer `parties_missing` C1725 · sealing throws C1688 | - |
+| inputs of the document loader (5) | no contract C1725 · no parties C1725 · no agreement C1725 · no settings row C1725 · success C1725 | - |
+| failed secret reads on the contract page (2) | `customerLink` C1726 · `contractorSource` C1726 | - |
 | the three signing headers (3) | `Cache-Control` C1701 · `Referrer-Policy` C1701 · `X-Robots-Tag` C1701 | - |
 | startup config, environment names (3) | `DOCUSEAL_API_KEY` C1717 · `DOCUSEAL_API_URL` C1717 · `SIGNING_LINK_KEY` C1717 | - |
 | startup config, places that wire the signing container (1) | `getContainer` C1717 | - |
@@ -480,3 +522,11 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - **Found live, fixed:** on a reload the form did not render: `Uncaught NotSupportedError: Failed to execute 'attachShadow'` from `cdn.docuseal.com/js/form.js`. Cause: the server-rendered custom element is moved by React's streaming reveal and connects twice. Fix: `SigningForm` creates `DocusealForm` only after mount (AD-146). After the fix four reloads in a row rendered the form with no page error.
 - **Cleanup:** the submission archived (`DELETE`, `archived_at` set) and the request, signers, two events and the contract deleted by SQL; counts back to 3 contracts, 0 requests, 0 signers, 22 events, 16 outbox rows.
 - **C1681:** `npm run test:db` 23 recipes, 23 passed. **C1720:** `npm test` 155 files and 3,083 tests passed, `tsc --noEmit` and `eslint .` clean, after the live fix.
+
+### Round 1 verification and its fixes (2026-11-06)
+
+- **Verdict of round 1:** FAIL, 62 of 69 checks proven; two surviving mutants (the address handed to the form; the missing-signer answer), two Test policy rows unmet, C1717 asserted only the wiring's source text, and coverage members with no proof.
+- **Amendments to approved text, for the owner to see:** the claim of C1704 named an accent on a button's text via `contrastText`, but the page has no button, so it now says the accent rule; the Proof line of C1701 named `proxy.test.ts`, which holds no `C1701` test and so skipped everything and exited 0, so it now names `proxy.signing.test.ts` (where the proof has been since the build); Coverage rows that undercounted their sets now count them (doors 10, `signingState` 9, `/sign` outcomes 7). No assertion was weakened or removed.
+- **Added:** C1721 to C1726 (six checks), the missing proofs: door 9 and the Relations constraints, the `not_creating` hint, every message text, the use-case branches and the document loader, the container-level C1717 answers (`composition/signing-wiring.test.ts`, real wiring with only the database adapters and the layout engine replaced), the page's failed secret reads and the `/sign` error boundary. C1704 gained the assertion that the unsealed address is the form's `src`.
+- **Mutants re-run on the real tree and restored:** the form address, `parties_missing`, `SIGNING_LINK_KEY`, `DOCUSEAL_API_URL`: each fails its new proof.
+- **Not repeatable by a Verifier, left for the owner to accept as an author-side run (as for earlier features):** C1718 (the contractor's pair of fields and the downloaded document's text were not observed) and C1719 (a signed-out open and touch emulation were not part of the record). C1681 is the author's full `npm run test:db` (23 of 23); the Verifier's permission to run all 23 was denied.

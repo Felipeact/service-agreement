@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { createElement, type ReactElement } from "react";
+import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ViewSigningResult } from "@/application/use-cases";
@@ -111,5 +111,34 @@ describe("completing the form", () => {
       expect(source, name).not.toMatch(/from "@\/app\/|from "(\.\.\/)+app\/|\/actions"/);
       expect(source, name).not.toContain('"use server"');
     }
+  });
+});
+
+/** Every element of the given type in a React tree, found by walking props.children and calling function components once. */
+function elementsOf(node: ReactNode, type: unknown): ReactElement<{ src?: string }>[] {
+  if (Array.isArray(node)) return node.flatMap((child) => elementsOf(child, type));
+  if (!isValidElement(node)) return [];
+  const element = node as ReactElement<{ children?: ReactNode; src?: string }>;
+  const own = element.type === type ? [element as ReactElement<{ src?: string }>] : [];
+  const children = elementsOf(element.props.children, type);
+  if (typeof element.type === "function" && element.type !== type) {
+    return [...own, ...children, ...elementsOf((element.type as (props: unknown) => ReactNode)(element.props), type)];
+  }
+  return [...own, ...children];
+}
+
+describe("the address that reaches the form", () => {
+  test("C1704: in the open state the unsealed embed address is the form's src, and in the other states no form is created", () => {
+    const open = elementsOf(SigningView({ result: shown() }), SigningForm);
+    expect(open).toHaveLength(1);
+    expect(open[0].props.src).toBe(EMBED);
+    expect(elementsOf(SigningView({ result: shown({ embedSrc: "https://docuseal.com/s/other" }) }), SigningForm)[0].props.src).toBe("https://docuseal.com/s/other");
+    for (const result of [shown({ state: "signed", embedSrc: null }), shown({ state: "closed", embedSrc: null }), { state: "unavailable" } as const]) {
+      expect(elementsOf(SigningView({ result }), SigningForm)).toHaveLength(0);
+    }
+  });
+
+  test("C1704: an open state with no address creates no form rather than one with an empty src", () => {
+    expect(elementsOf(SigningView({ result: shown({ embedSrc: null }) }), SigningForm)).toHaveLength(0);
   });
 });

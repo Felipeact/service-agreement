@@ -154,9 +154,9 @@
 
 ## Handoff
 
-**Feature**: signature-provider (ROADMAP Phase 4 item 2) - built, Verifier pending. Profile standard, one builder; plan `.specs/features/signature-provider/plan.md`, 69 checks
+**Feature**: signature-provider (ROADMAP Phase 4 item 2) - built; Verifier round 1 FAIL (62 of 69, two surviving mutants), fixed, 75 checks, round 2 pending. Profile standard, one builder; plan `.specs/features/signature-provider/plan.md`
 **Where**: on `development`, feature base `7269d60`; plan and checks `7dbfb4f`, provider `8d4ed02`, database `bb4ee2d`, send `385c755`, customer page `a3dde87`, live fix and docs after it
-**Proofs**: `npm test` 155 files, `tsc` and `eslint` clean, `npm run test:db` 23 recipes pass, advisors measured (C1680). Live run 2026-11-06 on the demo with the owner's DocuSeal sandbox key: contract generated for AG-1035, sent, the `/sign` page rendered DocuSeal's form with the customer's signature and date fields on the real contract at 1440, 768 and 375 px, then the demo rows were deleted and the submission archived (3 contracts, 0 requests, 22 events, 16 outbox rows again)
+**Proofs**: `npm test` 158 files and 3,115 tests, `tsc` and `eslint` clean, `npm run test:db` 23 recipes pass, advisors measured (C1680). Live run 2026-11-06 on the demo with the owner's DocuSeal sandbox key: contract generated for AG-1035, sent, the `/sign` page rendered DocuSeal's form with the customer's signature and date fields on the real contract at 1440, 768 and 375 px, then the demo rows were deleted and the submission archived (3 contracts, 0 requests, 22 events, 16 outbox rows again)
 **Known, not a check**: the contractor's pair of fields and the countersign embed were not seen live (nothing sets `client_signed` until item 3); touch was measured by size, not emulated; the two-session race behind AC 14 is proven structurally (unique index and the lock order); `next build` was not run, to leave the running dev server alone. Open for go-live: counsel has not read the generated clauses or the e-signature flow
 **Branch**: development; nothing pushed
 **Local servers**: the dev server on port 3000 was already running and was used as found (it picked up `.env.local`)

@@ -140,3 +140,23 @@ describe("the signing secrets on the contract page", () => {
     }
   });
 });
+
+describe("a secret that cannot be read", () => {
+  test("C1726: a refused or failed customer-link read leaves the link out and the page renders", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const code of ["forbidden", "not_found", "no_request", "unavailable"]) {
+      customerLink.mockResolvedValue({ ok: false, code });
+      const signing = await render({ signing: { requestId: "r1", status: "open" } }, "owner");
+      expect(signing.customerLinkUrl, code).toBeNull();
+      expect(signing.request).toEqual({ requestId: "r1", status: "open" });
+    }
+  });
+
+  test("C1726: a refused or failed contractor-source read leaves the form out and the page renders", async () => {
+    for (const code of ["forbidden", "not_client_signed", "no_request", "unavailable"]) {
+      contractorSource.mockResolvedValue({ ok: false, code });
+      const signing = await render({ status: "client_signed", signing: { requestId: "r1", status: "open" } }, "owner");
+      expect(signing.contractorSrc, code).toBeNull();
+    }
+  });
+});
