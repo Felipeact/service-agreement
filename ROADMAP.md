@@ -163,7 +163,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 
 ### Phase 4: Contract & e-signature
 - [x] Contract generated from the accepted agreement version
-- [ ] `SignatureProvider` with a DocuSeal adapter and embedded signing
+- [x] `SignatureProvider` with a DocuSeal adapter and embedded signing. Staff send a pending contract for signature; the customer signs on a tenant-branded `/sign/<token>` page; the owner or admin countersigns inside the contract page. The status still moves only with item 3's webhook. Live run 2026-11-06 on the demo (sandbox key); countersigning is proven with the fake provider until item 3
 - [ ] Verified DocuSeal webhook, storage of the signed PDF and audit log
 - [ ] n8n W2 and W4
 

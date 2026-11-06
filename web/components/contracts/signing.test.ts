@@ -5,10 +5,9 @@ import type { ContractStatus, SignatureRequestStatus } from "@/domain/contract";
 import { SendForSignaturePrompt, SigningArea, signingAreaKind, type SigningAreaProps } from "./signing-area";
 import { SIGNING_MESSAGES, type SendSignatureState } from "./signing-state";
 
-// The embedded form is DocuSeal's; here it is a marker that carries the props the component passes.
-vi.mock("@docuseal/react", () => ({
-  DocusealForm: (props: { src: string; onComplete?: () => void }) =>
-    createElement("div", { "data-docuseal-form": props.src, "data-on-complete": String(typeof props.onComplete === "function") }),
+// The embedded form is the signing form component, which only mounts in the browser; here it is a marker that carries its props.
+vi.mock("@/components/signing/signing-form", () => ({
+  SigningForm: (props: { src: string; email?: string }) => createElement("div", { "data-docuseal-form": props.src, "data-email": props.email ?? "" }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -126,7 +125,7 @@ describe("the countersignature", () => {
   test.each(["owner", "admin"] as const)("C1709: a %s gets the contractor's form with the unsealed address once the customer has signed", (role) => {
     const markup = html({ role, contractStatus: "client_signed", request: request("open"), contractorSrc: EMBED });
     expect(markup).toContain(`data-docuseal-form="${EMBED}"`);
-    expect(markup).toContain('data-on-complete="true"');
+    expect(markup).toContain('data-email="dana@example.com"');
   });
 
   test("C1710: a pending contract with an open request says it waits for the customer and shows no contractor form", () => {

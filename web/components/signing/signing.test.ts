@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ViewSigningResult } from "@/application/use-cases";
 import { CLOSED_MESSAGE, SIGNED_MESSAGE, SigningView, UNAVAILABLE_MESSAGE } from "./signing-view";
-import { SigningForm } from "./signing-form";
+import { SigningForm, SigningFormEmbed } from "./signing-form";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -42,8 +42,9 @@ describe("the signing page", () => {
     expect(markup).toMatch(/data-accent-rule[^>]*background-color:\s*#1f6f8b/i);
     expect(markup).toContain("Contract AG-1052");
     expect(markup).toContain("Signer: Pat Lee");
-    expect(markup).toContain(`data-docuseal-form="${EMBED}"`);
-    expect(markup).toContain('data-on-complete="true"');
+    // The form is created in the browser only (see "the embedded form"): the server HTML holds its box, not its element.
+    expect(markup).toContain("Loading the signing form");
+    expect(markup).toContain("aria-busy");
   });
 
   test("C1704: it offers no Send, Accept or Refuse control and names no product", () => {
@@ -79,9 +80,23 @@ describe("the signing page", () => {
   });
 });
 
+describe("the embedded form", () => {
+  test("C1704: the server HTML holds no DocuSeal element, only a placeholder, so the provider's element connects once, in the browser", () => {
+    const markup = renderToStaticMarkup(createElement(SigningForm, { src: EMBED }));
+    expect(markup).not.toContain("data-docuseal-form");
+    expect(markup).toContain("Loading the signing form");
+  });
+
+  test("C1704: once mounted the form is DocuSeal's, with the address it was given and a completion handler", () => {
+    const element = SigningFormEmbed({ src: EMBED }) as ReactElement<{ onComplete: unknown; src: string }>;
+    expect(element.props.src).toBe(EMBED);
+    expect(typeof element.props.onComplete).toBe("function");
+  });
+});
+
 describe("completing the form", () => {
   test("C1706: the completion handler refreshes the route once and nothing else", () => {
-    const element = SigningForm({ src: EMBED }) as ReactElement<{ onComplete: () => unknown; src: string }>;
+    const element = SigningFormEmbed({ src: EMBED }) as ReactElement<{ onComplete: () => unknown; src: string }>;
     expect(element.props.src).toBe(EMBED);
     expect(refresh).not.toHaveBeenCalled();
     expect(element.props.onComplete()).toBeUndefined();
