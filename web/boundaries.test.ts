@@ -90,6 +90,25 @@ describe("layer boundaries", () => {
     expect(document).not.toContain("ReactElement");
   });
 
+  test.each(["application/x.ts", "components/x.tsx", "app/x.tsx", "domain/x.ts", "lib/x.ts", "infrastructure/supabase/x.ts", "infrastructure/documents/x.ts"])(
+    "C1660: %s importing the DocuSeal adapter is a lint error naming it",
+    async (file) => {
+      const messages = await restrictedImports(file, "@/infrastructure/docuseal");
+      expect(messages).toHaveLength(1);
+      expect(messages[0].message.length).toBeGreaterThan(0);
+    },
+  );
+
+  test("C1660: composition and infrastructure/docuseal may import the DocuSeal adapter, and no source file outside them does", async () => {
+    expect(await restrictedImports("composition/x.ts", "@/infrastructure/docuseal")).toHaveLength(0);
+    expect(await restrictedImports("infrastructure/docuseal/x.ts", "@/infrastructure/docuseal")).toHaveLength(0);
+    const files = sourceFiles(webRoot).filter((file) => !/\.test\.tsx?$/.test(file));
+    const importers = files
+      .filter((file) => /from "@\/infrastructure\/docuseal/.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(webRoot, file).split(path.sep).join("/"));
+    expect(importers.filter((file) => !file.startsWith("composition/") && !file.startsWith("infrastructure/docuseal/"))).toEqual([]);
+  });
+
   test.each(SDK_PLACES)("C539: %s importing @anthropic-ai/sdk is a lint error naming it", async (file) => {
     const messages = await restrictedImports(file, "@anthropic-ai/sdk");
     expect(messages).toHaveLength(1);

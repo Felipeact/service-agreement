@@ -20,6 +20,12 @@ const PDF_LIBRARY = {
   message: "Render PDFs only in infrastructure/documents, behind the DocumentRenderer port.",
 };
 
+// The DocuSeal adapter is reached through the SignatureProvider port, from the composition root only (signature-provider door 1).
+const DOCUSEAL_ADAPTER = {
+  group: ["@/infrastructure/docuseal", "@/infrastructure/docuseal/*"],
+  message: "Reach DocuSeal only through the SignatureProvider port; the composition root wires the adapter.",
+};
+
 const ADAPTER_PATTERNS = [
   {
     group: [
@@ -49,6 +55,7 @@ const eslintConfig = defineConfig([
               group: ["@/lib", "@/lib/*", "@/components", "@/components/*", "@/app", "@/app/*"],
               message: "The domain layer must not import UI or app code.",
             },
+            DOCUSEAL_ADAPTER,
             PARSER_LIBRARIES,
             CLAUDE_SDK,
             PDF_LIBRARY,
@@ -87,20 +94,24 @@ const eslintConfig = defineConfig([
   // Adapters implement ports; they never reach UI or the composition root. Only the parser adapter parses files.
   {
     files: ["infrastructure/**/*.ts"],
-    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**", "infrastructure/documents/**"],
+    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**", "infrastructure/documents/**", "infrastructure/docuseal/**"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, PARSER_LIBRARIES, CLAUDE_SDK, PDF_LIBRARY] }] },
+  },
+  {
+    files: ["infrastructure/docuseal/**/*.ts"],
     rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/import-parsers/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, CLAUDE_SDK, PDF_LIBRARY] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, CLAUDE_SDK, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/claude/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, PDF_LIBRARY] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, PARSER_LIBRARIES, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/documents/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, PARSER_LIBRARIES, CLAUDE_SDK] }] },
   },
   // UI reaches adapters only through @/composition, which is server-only.
   {

@@ -880,6 +880,34 @@ export interface EmailSender {
   send(message: EmailMessage): Promise<EmailSendResult>;
 }
 
+/** Who signs a contract: the customer first, then the contractor (signature-provider door 1). */
+export type SignerRole = "customer" | "contractor";
+
+export type SignatureSigner = { role: SignerRole; name: string; email: string };
+
+export type SignatureRequestInput = {
+  contractId: string;
+  /** The agreement number, which names the document `<number>-contract.pdf`. */
+  number: string;
+  pdf: Uint8Array;
+  /** Customer first, then contractor. */
+  signers: [SignatureSigner, SignatureSigner];
+};
+
+/** `rejected`: the provider will not take this document. `unavailable`: worth another try. `not_configured`: no key or URL. */
+export type SignatureFailure = "rejected" | "unavailable" | "not_configured";
+
+export type SignatureRequestResult =
+  | { ok: true; submissionId: string; signers: { role: SignerRole; submitterId: string; embedSrc: string }[] }
+  | { ok: false; code: SignatureFailure };
+
+/** Gets a document signed by two parties, in order, with an embeddable signing link for each (signature-provider door 1). */
+export interface SignatureProvider {
+  createRequest(input: SignatureRequestInput): Promise<SignatureRequestResult>;
+  /** Archives a request at the provider. Never throws. */
+  void(submissionId: string): Promise<{ ok: true } | { ok: false; code: SignatureFailure }>;
+}
+
 export interface TaskLibraryReader {
   /** The org's equipment types by name, each with its default visit months and its tasks in position order, at most 500 (task-library-page door 1). */
   list(): Promise<LibraryType[]>;
