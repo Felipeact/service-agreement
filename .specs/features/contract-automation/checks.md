@@ -225,3 +225,9 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - **Found by the parser, not by a test:** an unparenthesised `CASE` inside an `IF` condition in `automation_request` ended the condition at the first inner `THEN`; wrapped in parentheses before the commit.
 - **Abandoned:** one workflow with a Switch for all three events (door 5's rejected alternative stands); a Storage link for the signed copy (door 4).
 
+
+### Measured after the migration was applied (2026-11-08)
+
+- **C1782-C1815 (SQL):** `npm run test:db outbox_dispatch` passes against `gnxebrtcpbujhvcamtoe` (author run, then Verifier round 2).
+- **C1818:** `get_advisors` (security) lists 7 `anon` and 26 `authenticated` `SECURITY DEFINER` findings, the baseline plus item 3's `signature_webhook`, and nothing for `private.make_contract` or `private.create_contract_for_system` (private schema, `execute` revoked). The result's `observed_at` is 2026-11-07T18:45Z, so it may be cached from before the migration; the two new functions would not appear either way, because the linter reads the exposed schema only.
+- **Verifier round 2:** 37 of 39 proven, 0 failed, no surviving mutant; C1819 (live run) open. Weak spots it listed and I left: C1792 does not assert tenant or site name; C1810 and C1811 check "nothing written" narrowly; C1812's anon half also gives 42501 without schema USAGE; C1794 counts skipped rows with a running total.
