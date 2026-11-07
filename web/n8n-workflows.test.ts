@@ -5,7 +5,7 @@ import { describe, expect, test } from "vitest";
 
 /** The n8n exports of outbox-dispatch door 8, read as data. */
 const DIR = path.join(__dirname, "..", "automation", "n8n");
-const FILES = ["events.json", "W1-agreement-sent.json", "W3-agreement-decided.json", "W5-stale-daily.json", "W7-renewal-daily.json", "W8-expiry-daily.json"];
+const FILES = ["events.json", "W1-agreement-sent.json", "W3-agreement-decided.json", "W5-stale-daily.json", "W7-renewal-daily.json", "W8-expiry-daily.json", "W2a-contract-ready.json", "W2b-signing-link.json", "W4-contract-signed.json"];
 
 type N8nNode = { name: string; type: string; parameters: Record<string, unknown>; credentials?: Record<string, unknown>; onError?: string };
 type Link = { node: string; type: string; index: number };
@@ -136,7 +136,7 @@ describe("the n8n workflow exports", () => {
     expect(hex).toBe("8cb2c3355fca388e9ac2caec004f4d5d7045d74937ab5faad61dc11682247a9f");
   });
 
-  test("C1033: the folder holds exactly the four exports, each valid JSON with nodes and connections", () => {
+  test("C1033: the folder holds exactly the listed exports, each valid JSON with nodes and connections", () => {
     expect(readdirSync(DIR).sort()).toEqual([...FILES].sort());
     for (const file of FILES) {
       const wf = load(file);
@@ -209,7 +209,7 @@ describe("the n8n workflow exports", () => {
     expect(wf.settings.timezone).toBe("America/Vancouver");
   });
 
-  test("C1034: the events webhook answers on receipt and routes exactly three types; the fallback starts no workflow", () => {
+  test("C1034: the events webhook answers on receipt and routes exactly the six listed types; the fallback starts no workflow", () => {
     const wf = load("events.json");
     const webhook = wf.nodes.find((node) => node.type === "n8n-nodes-base.webhook") as N8nNode;
     expect(webhook.parameters.responseMode).toBe("onReceived");
@@ -222,7 +222,7 @@ describe("the n8n workflow exports", () => {
       expect(rule.conditions.conditions[0].leftValue).toBe("={{ $json.type }}");
       return rule.conditions.conditions[0].rightValue;
     });
-    expect(routed).toEqual(["agreement.sent", "agreement.refused", "agreement.changes_requested"]);
+    expect(routed).toEqual(["agreement.sent", "agreement.refused", "agreement.changes_requested", "agreement.accepted", "contract.sent_for_signature", "contract.completed"]);
 
     const target = (output: number) => {
       const nodes = nextOf(wf, router.name, output);
@@ -233,10 +233,13 @@ describe("the n8n workflow exports", () => {
     expect(target(0)).toMatch(/^W1 /);
     expect(target(1)).toMatch(/^W3 /);
     expect(target(2)).toMatch(/^W3 /);
+    expect(target(3)).toMatch(/^W2a /);
+    expect(target(4)).toMatch(/^W2b /);
+    expect(target(5)).toMatch(/^W4 /);
 
     expect((router.parameters.options as { fallbackOutput: string }).fallbackOutput).toBe("extra");
-    expect(wf.connections[router.name].main).toHaveLength(4);
-    expect(reachable(wf, router.name, 3).some((node) => node.type === "n8n-nodes-base.executeWorkflow")).toBe(false);
+    expect(wf.connections[router.name].main).toHaveLength(7);
+    expect(reachable(wf, router.name, 6).some((node) => node.type === "n8n-nodes-base.executeWorkflow")).toBe(false);
   });
 
   test("C1035: no export contains $env, every notify URL starts with __SA_APP_BASE_URL__, every signer uses __SA_HMAC_SECRET__", () => {
@@ -252,7 +255,7 @@ describe("the n8n workflow exports", () => {
         expect(signer.parameters.secret, `${file} ${signer.name}`).toBe("__SA_HMAC_SECRET__");
       }
     }
-    expect(notifyCount).toBe(7);
+    expect(notifyCount).toBe(10);
   });
 
   test("C1035: the signature is checked before routing, over <X-SA-Timestamp>.<raw body> with __SA_HMAC_SECRET__, with the 300 s window", () => {
@@ -299,6 +302,9 @@ describe("the n8n workflow exports", () => {
     ["W5-stale-daily.json", 0, "W5", theEnd],
     ["W7-renewal-daily.json", 0, "W7", theEnd],
     ["W8-expiry-daily.json", 0, "W8", theEnd],
+    ["W2a-contract-ready.json", 0, "W2a", theEnd],
+    ["W2b-signing-link.json", 0, "W2b", theEnd],
+    ["W4-contract-signed.json", 0, "W4", theEnd],
   ] as const;
 
   describe.each(CALLS)("C1052: notify call %s #%i (%s)", (file, index, _label, nextStep) => {
@@ -448,9 +454,45 @@ describe("W8, the expiry export (proposal-expiry door 8)", () => {
     expect(raw("W8-expiry-daily.json")).not.toMatch(/"credentials"/);
   });
 
-  test("C1260: the folder holds six exports and seven notify calls", () => {
-    expect(FILES).toHaveLength(6);
-    expect(FILES.reduce((count, file) => count + notifyNodes(load(file)).length, 0)).toBe(7);
+  test("C1260: the folder holds nine exports and ten notify calls", () => {
+    expect(FILES).toHaveLength(9);
+    expect(FILES.reduce((count, file) => count + notifyNodes(load(file)).length, 0)).toBe(10);
+  });
+});
+
+describe("W2a, W2b and W4, the contract exports (contract-automation door 5)", () => {
+  const router = () => load("events.json").nodes.find((node) => node.type === "n8n-nodes-base.switch") as N8nNode;
+  const routeOf = (type: string) => {
+    const wf = load("events.json");
+    const rules = (router().parameters.rules as { values: { conditions: { conditions: { rightValue: string }[] } }[] }).values;
+    const output = rules.findIndex((rule) => rule.conditions.conditions[0].rightValue === type);
+    const target = nextOf(wf, router().name, output)[0];
+    return (target.parameters.workflowId as { cachedResultName: string }).cachedResultName;
+  };
+
+  test.each([
+    ["C1781", "W2a-contract-ready.json", "contract_ready", /idempotencyKey: 'w2:' \+ [^,]*eventId \+ ':ready'/, "agreementId", "agreement.accepted", /^W2a /],
+    ["C1791", "W2b-signing-link.json", "customer_signing_link", /idempotencyKey: 'w2:' \+ [^,]*eventId \+ ':link'/, "contractId", "contract.sent_for_signature", /^W2b /],
+    ["C1800", "W4-contract-signed.json", "contract_signed_copy", /idempotencyKey: 'w4:' \+ [^,]*eventId \+ ':copy'/, "contractId", "contract.completed", /^W4 /],
+  ] as const)("%s: %s is Set, Crypto HMAC and one signed notify call of kind %s with its key, id and executionId, and events.json routes %s to it", (_id, file, kind, key, idField, type, name) => {
+    const wf = load(file);
+    const [call] = notifyNodes(wf);
+    expect(notifyNodes(wf)).toHaveLength(1);
+    const { body, signer } = bodyOf(wf, call);
+    expect(body).toContain(`kind: '${kind}'`);
+    expect(body).toMatch(key);
+    expect(body).toContain(`${idField}: $('When called by events').first().json.${idField}`);
+    expect(body).toContain("executionId: $execution.id");
+    expect(signer.parameters).toMatchObject({ action: "hmac", type: "SHA256", secret: "__SA_HMAC_SECRET__", value: "={{ $json.timestamp }}.{{ $json.body }}" });
+    expect(String(call.parameters.url)).toBe("__SA_APP_BASE_URL__/api/automation/notify");
+    expect(raw(file)).not.toContain("$env");
+    expect(routeOf(type)).toMatch(name);
+  });
+
+  test("C1791: the events Set node hands the entity id on as contractId as well as agreementId", () => {
+    const event = load("events.json").nodes.find((node) => node.name === "Event") as N8nNode;
+    const assignments = (event.parameters.assignments as { assignments: { name: string; value: string }[] }).assignments;
+    expect(assignments.find((a) => a.name === "contractId")?.value).toContain(".entityId");
   });
 });
 

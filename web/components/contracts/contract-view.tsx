@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { termsOf, termSummary, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
+import { formatDay, notEmailedWords } from "@/domain/notifications";
 import { formatCadExact } from "@/lib/money";
 
 type ContractViewProps = {
@@ -91,6 +92,13 @@ export function ContractView({ contract, agreement, signing }: ContractViewProps
       </section>
 
       {signing && <SigningArea {...signing} />}
+      {contract.signingLinkEmail && contract.signingLinkEmail.status !== "pending" && (
+        <p data-signing-link-email className="text-[13px] text-ink-2">
+          {contract.signingLinkEmail.status === "sent"
+            ? `Signing link emailed to ${contract.signingLinkEmail.to} on ${formatDay(contract.signingLinkEmail.sentAt)}`
+            : `The signing link email did not go out: ${notEmailedWords(contract.signingLinkEmail.reason)}`}
+        </p>
+      )}
 
       <section aria-label="Term" className="rounded-panel border border-hairline bg-surface px-4 py-3">
         <h2 className="mb-1 text-[13px] font-semibold">Term</h2>

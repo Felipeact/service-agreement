@@ -250,6 +250,7 @@ export async function getAutomationContainer(requestOrigin: string) {
       resendEmailSender({ apiKey, from }),
       makePortalTokens(process.env.PORTAL_LINK_KEY),
       process.env.APP_BASE_URL || requestOrigin,
+      makePortalTokens(process.env.SIGNING_LINK_KEY),
     ),
   };
 }

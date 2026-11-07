@@ -1,0 +1,251 @@
+{
+  "name": "W2a contract ready",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "19202011-65cf-5fd7-832f-3e8e5d25f0a5",
+      "name": "When called by events",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4047b207-be60-5fd5-a49f-3aa79ac541c6",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "625d0729-ca95-53b3-94a2-954acaac6174",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w2:' + $('When called by events').first().json.eventId + ':ready', kind: 'contract_ready', eventId: $('When called by events').first().json.eventId, agreementId: $('When called by events').first().json.agreementId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "0bd882aa-5538-5eae-9556-072ce1836136",
+      "name": "Contract ready body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "__SA_HMAC_SECRET__",
+        "encoding": "hex"
+      },
+      "id": "5b95cac8-b7ff-5d7a-9ea8-174cb33d6441",
+      "name": "Sign contract ready",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "4f240411-4d66-5a51-9dcf-67b783f3f643",
+      "name": "Notify contract ready",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "16424427-5620-56a3-a975-e77778a8db98",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3285253c-7739-503a-adcc-9a74f7e1e8e5",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "de68a724-d3a9-51cf-a38d-1a672421995f",
+      "name": "Retry contract ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "7539f7bd-03b4-58d5-8ac2-d29c37754853",
+      "name": "Wait 10 minutes (contract ready)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "f7781d16-dedc-5f69-a993-29dffb93da17"
+    }
+  ],
+  "connections": {
+    "When called by events": {
+      "main": [
+        [
+          {
+            "node": "Contract ready body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contract ready body": {
+      "main": [
+        [
+          {
+            "node": "Sign contract ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign contract ready": {
+      "main": [
+        [
+          {
+            "node": "Notify contract ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify contract ready": {
+      "main": [
+        [
+          {
+            "node": "Retry contract ready?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry contract ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry contract ready?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (contract ready)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (contract ready)": {
+      "main": [
+        [
+          {
+            "node": "Contract ready body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseContractParties, SIGNATURE_REQUEST_STATUSES, SIGNED_DOCUMENT_KINDS, type ContractStatus, type SignatureRequestStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
-import type { ContractReader, ContractStore, GenerateContractFailure, SignedCopyView } from "@/application/ports";
+import { isNotEmailedReason } from "@/domain/notifications";
+import type { ContractReader, ContractStore, GenerateContractFailure, LinkEmailView, SignedCopyView } from "@/application/ports";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -76,6 +77,32 @@ function signedCopy(rows: RequestRow[]): SignedCopyView | null {
 }
 
 export function supabaseContractReader(client: Client): ContractReader {
+  /** The `customer_signing_link` notification of the contract's latest send; `null` when it was never sent (contract-automation AC 13). */
+  async function signingLinkEmail(contractId: string): Promise<LinkEmailView | null> {
+    const { data: event, error } = await client
+      .from("events")
+      .select("id")
+      .eq("entity_type", "contract")
+      .eq("entity_id", contractId)
+      .eq("type", "contract.sent_for_signature")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    if (!event) return null;
+    const { data: row, error: rowError } = await client
+      .from("notifications")
+      .select("status, skip_reason, recipients, sent_at")
+      .eq("event_id", event.id)
+      .eq("kind", "customer_signing_link")
+      .maybeSingle();
+    if (rowError) throw new Error(`Supabase error ${rowError.code}: ${rowError.message}`);
+    if (row?.status === "sent" && row.sent_at) return { status: "sent", to: row.recipients[0] ?? "", sentAt: new Date(row.sent_at) };
+    if (row?.status === "failed") return { status: "not_sent", reason: "failed" };
+    if (row?.status === "skipped" && row.skip_reason && isNotEmailedReason(row.skip_reason)) return { status: "not_sent", reason: row.skip_reason };
+    return { status: "pending" };
+  }
+
   return {
     async get(id) {
       if (!isUuid(id)) return null;
@@ -97,6 +124,7 @@ export function supabaseContractReader(client: Client): ContractReader {
         parties: parseContractParties(row.parties),
         signing: row.contract_signature_requests ? newestRequest(row.contract_signature_requests) : undefined,
         signed: row.contract_signature_requests ? signedCopy(row.contract_signature_requests) : undefined,
+        signingLinkEmail: row.contract_signature_requests ? await signingLinkEmail(row.id) : undefined,
       };
     },
   };

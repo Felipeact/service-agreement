@@ -124,6 +124,12 @@
               "name": "orgId",
               "value": "={{ JSON.parse($('Raw body').item.json.rawBody).orgId }}",
               "type": "string"
+            },
+            {
+              "id": "33761be0-6a67-5994-a4ff-d98649680c68",
+              "name": "contractId",
+              "value": "={{ JSON.parse($('Raw body').item.json.rawBody).entityId }}",
+              "type": "string"
             }
           ]
         },
@@ -214,6 +220,78 @@
               },
               "renameOutput": true,
               "outputKey": "W3"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d3061500-1361-5622-94b0-0fde49e8a7a3",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "agreement.accepted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "W2a"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "30f55cb5-c5b3-5024-8c6d-9e4e2bc398f9",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "contract.sent_for_signature",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "W2b"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b0e7b022-87d4-57d3-8165-614ebca84f75",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "contract.completed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "W4"
             }
           ]
         },
@@ -283,7 +361,7 @@
       "typeVersion": 1,
       "position": [
         1320,
-        300
+        600
       ]
     },
     {
@@ -295,6 +373,72 @@
       "position": [
         880,
         200
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "W2a contract ready"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "421c7831-59b8-55d6-a414-b9fa2be87ef6",
+      "name": "Run W2a",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "W2b signing link"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "5a8e14ec-31fd-5ded-8593-c868c47bc277",
+      "name": "Run W2b",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "W4 contract signed"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "a0bc2510-20f2-57e6-954a-d90d738ca699",
+      "name": "Run W4",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        400
       ]
     }
   ],
@@ -380,6 +524,27 @@
         [
           {
             "node": "Run W3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run W2a",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run W2b",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run W4",
             "type": "main",
             "index": 0
           }

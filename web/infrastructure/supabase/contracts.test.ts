@@ -212,3 +212,35 @@ describe("contract reader: the signed copy", () => {
     expect((await supabaseContractReader(typed).get(CON))?.signed).toBeUndefined();
   });
 });
+
+describe("contract reader, the signing-link email (contract-automation AC 13)", () => {
+  const withRequests = row({ contract_signature_requests: [{ id: "req-1", status: "open", created_at: "2026-11-06T10:00:00Z" }] });
+  const read = async (notification: unknown, event: unknown = { id: "ev-1" }) => {
+    const { typed, calls } = stubClient({
+      contracts: { data: withRequests, error: null },
+      events: { data: event, error: null },
+      notifications: { data: notification, error: null },
+    });
+    return { view: await supabaseContractReader(typed).get(CON), calls };
+  };
+
+  test("C1796: a sent notification is sent with the address and time, read for the latest contract.sent_for_signature event", async () => {
+    const { view, calls } = await read({ status: "sent", skip_reason: null, recipients: ["pat@customer.ca"], sent_at: "2026-11-08T18:00:00Z" });
+    expect(view?.signingLinkEmail).toEqual({ status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-11-08T18:00:00Z") });
+    expect(calls).toContainEqual({ table: "events", method: "eq", args: ["type", "contract.sent_for_signature"] });
+    expect(calls).toContainEqual({ table: "notifications", method: "eq", args: ["kind", "customer_signing_link"] });
+  });
+
+  test.each([
+    ["failed", { status: "failed", skip_reason: null, recipients: [], sent_at: null }, { status: "not_sent", reason: "failed" }],
+    ["skipped not_signable", { status: "skipped", skip_reason: "not_signable", recipients: [], sent_at: null }, { status: "not_sent", reason: "not_signable" }],
+    ["claimed", { status: "claimed", skip_reason: null, recipients: [], sent_at: null }, { status: "pending" }],
+    ["no row yet", null, { status: "pending" }],
+  ])("C1796: %s is read as %j", async (_label, notification, expected) => {
+    expect((await read(notification)).view?.signingLinkEmail).toEqual(expected);
+  });
+
+  test("C1796: a contract never sent for signature has null", async () => {
+    expect((await read(null, null)).view?.signingLinkEmail).toBeNull();
+  });
+});
