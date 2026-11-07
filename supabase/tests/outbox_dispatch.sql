@@ -1369,5 +1369,417 @@ begin
     'the renewal without an address was not skipped: ' || coalesce(skipped.status, 'no row'));
 end $$;
 
+-- contract-automation (.specs/features/contract-automation/checks.md): C1782-C1784, C1786, C1787, C1790, C1792, C1794,
+-- C1798, C1801, C1803, C1804, C1806, C1810-C1815. Needs migration 20261108100000_contract_automation applied.
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+create function tests.ca_sealed(p_body text) returns text
+language sql immutable as $$ select 'v1.AAAAAAAAAAAAAAAA.' || p_body $$;
+
+-- An accepted org A agreement <name> whose site contact is pat@customer.ca, with p_start as its term start, and its
+-- agreement.accepted event <name>:<tag>.
+create function tests.ca_agreement(p_name text, p_start date default '2027-01-01') returns uuid
+language sql as $$ select tests.rn_agreement(p_name, 'A', p_start) $$;
+
+create function tests.ca_accepted(p_name text, p_tag text default 'acc') returns uuid
+language plpgsql as $$
+begin
+  insert into public.events (id, org_id, entity_type, entity_id, type, payload)
+  values (tests.id(p_name || ':' || p_tag), tests.id('orgA'), 'agreement', tests.id(p_name), 'agreement.accepted', '{"from": "sent", "to": "accepted"}');
+  return tests.id(p_name || ':' || p_tag);
+end $$;
+
+create function tests.ca_w2a(p_name text, p_event uuid) returns jsonb
+language sql as $$
+  select jsonb_build_object('kind', 'contract_ready', 'idempotencyKey', 'w2:' || p_event || ':ready', 'eventId', p_event,
+                            'agreementId', tests.id(p_name), 'executionId', 'exec-w2a')
+$$;
+
+create function tests.ca_w2b(p_contract uuid, p_event uuid) returns jsonb
+language sql as $$
+  select jsonb_build_object('kind', 'customer_signing_link', 'idempotencyKey', 'w2:' || p_event || ':link', 'eventId', p_event,
+                            'contractId', p_contract, 'executionId', 'exec-w2b')
+$$;
+
+create function tests.ca_w4(p_contract uuid, p_event uuid) returns jsonb
+language sql as $$
+  select jsonb_build_object('kind', 'contract_signed_copy', 'idempotencyKey', 'w4:' || p_event || ':copy', 'eventId', p_event,
+                            'contractId', p_contract, 'executionId', 'exec-w4')
+$$;
+
+-- The contract fixture: an accepted agreement <name> made into a contract by uE, then an open request begun and completed
+-- by uD (customer Pat <name> pat@customer.ca, contractor uD).
+create function tests.ca_contract(p_name text) returns uuid
+language plpgsql as $$
+declare
+  a uuid := tests.rn_agreement(p_name, 'A', '2027-01-01');
+  c uuid;
+  r uuid;
+begin
+  perform tests.act_as('uE');
+  c := public.create_contract(a);
+  reset role;
+  perform tests.act_as('uD');
+  r := public.begin_signature_request(c, 'Dana Admin', encode(sha256(convert_to(p_name, 'UTF8')), 'hex'));
+  perform public.complete_signature_request(r, '9' || md5(p_name), jsonb_build_array(
+    jsonb_build_object('role', 'customer', 'submitterId', '101', 'embedSealed', tests.ca_sealed('cust' || p_name)),
+    jsonb_build_object('role', 'contractor', 'submitterId', '102', 'embedSealed', tests.ca_sealed('con' || p_name))),
+    tests.ca_sealed('link' || p_name), repeat('a', 64));
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+  return c;
+end $$;
+
+create function tests.ca_request(p_contract uuid) returns uuid
+language sql as $$ select id from public.contract_signature_requests where contract_id = p_contract order by created_at desc limit 1 $$;
+
+create function tests.ca_event(p_contract uuid, p_type text) returns uuid
+language sql as $$
+  select id from public.events where entity_type = 'contract' and entity_id = p_contract and type = p_type order by created_at desc, id limit 1
+$$;
+
+-- Both parties signed: the contract and request completed, two stored files, and a contract.completed event.
+create function tests.ca_completed(p_contract uuid, p_documents integer default 2) returns uuid
+language plpgsql as $$
+declare r uuid := tests.ca_request(p_contract);
+begin
+  update public.contract_signature_requests set status = 'completed', completed_at = now() where id = r;
+  update public.contracts set status = 'completed' where id = p_contract;
+  insert into public.contract_signed_documents (request_id, org_id, kind, content, size_bytes, sha256)
+  select r, tests.id('orgA'), k, convert_to('%PDF-1.7 ' || k || ' ' || p_contract, 'UTF8'),
+         octet_length(convert_to('%PDF-1.7 ' || k || ' ' || p_contract, 'UTF8')),
+         encode(sha256(convert_to('%PDF-1.7 ' || k || ' ' || p_contract, 'UTF8')), 'hex')
+  from unnest(case when p_documents = 2 then array['signed', 'audit_log'] else array['signed'] end) k;
+  insert into public.events (org_id, entity_type, entity_id, type, payload)
+  values (tests.id('orgA'), 'contract', p_contract, 'contract.completed', '{"from": "client_signed", "to": "completed"}');
+  return tests.ca_event(p_contract, 'contract.completed');
+end $$;
+
+create function tests.ca_notifications(p_event uuid) returns bigint
+language sql as $$ select count(*) from public.notifications where event_id = p_event $$;
+
+create function tests.ca_signed_state(p_sql text, p_ts text, p_sig text) returns text
+language sql as $$ select tests.od_state(tests.od_claim_sql(p_sql, p_ts, p_sig)) $$;
+
+grant execute on all functions in schema tests to anon, authenticated;
+
+select tests.od_secret('automation_hmac_secret', 'test-secret');
+
+-- C1782: a signed contract_ready claim makes one contract by the system and tells the managers.
+do $$
+declare ev uuid; r jsonb; m jsonb; c public.contracts; e public.events;
+begin
+  perform tests.ca_agreement('ca82');
+  ev := tests.ca_accepted('ca82');
+  r := tests.od_claim(tests.ca_w2a('ca82', ev));
+  m := tests.od_msg(r);
+  select * into c from public.contracts where agreement_version_id = tests.id('ca82:v1');
+  select * into e from public.events where entity_type = 'contract' and entity_id = c.id and type = 'contract.pending_signature';
+  perform tests.ok('C1782 one contract', c.id is not null and (select count(*) from public.contracts where agreement_version_id = tests.id('ca82:v1')) = 1,
+    'contracts for the version: ' || (select count(*) from public.contracts where agreement_version_id = tests.id('ca82:v1')));
+  perform tests.ok('C1782 event', e.actor_id is null and e.payload ->> 'via' = 'w2' and e.payload ->> 'to' = 'pending_signature'
+    and e.payload ->> 'versionNo' = '1', 'event ' || coalesce(e::text, 'none'));
+  perform tests.ok('C1782 message', r ->> 'decision' = 'send' and m ->> 'kind' = 'staff_contract_ready'
+    and m -> 'contract' ->> 'id' = c.id::text and m -> 'refusal' = 'null'::jsonb
+    and array(select jsonb_array_elements_text(m -> 'to') order by 1) = (select array_agg(email::text order by email) from auth.users where id in (tests.id('uA'), tests.id('uD'))),
+    'message ' || coalesce(m::text, 'none'));
+end $$;
+
+-- C1783: a second acceptance event for an agreement that already has its contract creates nothing and names the same id.
+do $$
+declare ev uuid; r jsonb; c uuid;
+begin
+  select id into c from public.contracts where agreement_version_id = tests.id('ca82:v1');
+  ev := tests.ca_accepted('ca82', 'acc2');
+  r := tests.od_claim(tests.ca_w2a('ca82', ev));
+  perform tests.ok('C1783', r ->> 'decision' = 'send' and tests.od_msg(r) -> 'contract' ->> 'id' = c::text
+    and (select count(*) from public.contracts where agreement_version_id = tests.id('ca82:v1')) = 1
+    and (select count(*) from public.events where entity_type = 'contract' and entity_id = c and type = 'contract.pending_signature') = 1,
+    'second claim ' || r::text);
+end $$;
+
+-- C1784: each refusal of the rules is a message with the hint and makes no contract.
+create function tests.ca_refusal(p_hint text) returns jsonb
+language plpgsql as $$
+declare n text := 'ca84' || p_hint; ev uuid;
+begin
+  perform tests.rn_agreement(n, 'A', case when p_hint = 'no_term_start' then null else '2027-01-01'::date end);
+  if p_hint = 'not_accepted' then update public.agreements set status = 'withdrawn' where id = tests.id(n);
+  elsif p_hint = 'auto_renewal' then
+    insert into public.events (org_id, entity_type, entity_id, type, payload)
+    values (tests.id('orgA'), 'agreement', tests.id(n), 'agreement.renewed', '{}');
+  elsif p_hint = 'site_inactive' then
+    update public.sites set deactivated_at = now(), deactivated_by = tests.id('uA') where id = tests.id(n || ':site');
+  elsif p_hint = 'no_signer' then
+    update public.sites set site_contact_id = null where id = tests.id(n || ':site');
+  end if;
+  ev := tests.ca_accepted(n);
+  return tests.od_claim(tests.ca_w2a(n, ev));
+end $$;
+grant execute on function tests.ca_refusal(text) to anon, authenticated;
+do $$
+declare h text; r jsonb; m jsonb;
+begin
+  foreach h in array array['not_accepted', 'auto_renewal', 'site_inactive', 'no_term_start', 'no_signer'] loop
+    r := tests.ca_refusal(h);
+    m := tests.od_msg(r);
+    perform tests.ok('C1784 ' || h, r ->> 'decision' = 'send' and m ->> 'kind' = 'staff_contract_ready' and m -> 'contract' = 'null'::jsonb
+      and m ->> 'refusal' = h and not exists (select 1 from public.contracts where agreement_version_id = tests.id('ca84' || h || ':v1')),
+      h || ' gave ' || coalesce(r::text, 'none'));
+  end loop;
+end $$;
+
+-- C1787: a delivery that was sent answers duplicate, with one contract, one event and one notification.
+do $$
+declare ev uuid; r jsonb; m jsonb; c uuid;
+begin
+  perform tests.ca_agreement('ca87');
+  ev := tests.ca_accepted('ca87');
+  r := tests.od_claim(tests.ca_w2a('ca87', ev));
+  m := tests.od_msg(r);
+  perform tests.od_complete(tests.ca_w2a('ca87', ev), jsonb_build_array(jsonb_build_object('id', m ->> 'notificationId', 'outcome', 'sent', 'providerMessageId', 're_1')));
+  r := tests.od_claim(tests.ca_w2a('ca87', ev));
+  select id into c from public.contracts where agreement_version_id = tests.id('ca87:v1');
+  perform tests.ok('C1787', r ->> 'decision' = 'duplicate' and c is not null
+    and (select count(*) from public.contracts where agreement_version_id = tests.id('ca87:v1')) = 1
+    and (select count(*) from public.events where entity_id = c and type = 'contract.pending_signature') = 1
+    and tests.ca_notifications(ev) = 1, 'second delivery ' || r::text);
+end $$;
+
+-- C1790: completing a signature request writes one contract.sent_for_signature event and one pending outbox row for it.
+do $$
+declare c uuid; ev uuid;
+begin
+  perform tests.od_quiet();
+  c := tests.ca_contract('ca90');
+  ev := tests.ca_event(c, 'contract.sent_for_signature');
+  perform tests.ok('C1790', (select count(*) from public.events where entity_id = c and type = 'contract.sent_for_signature') = 1
+    and (select count(*) from public.outbox where event_id = ev and status = 'pending') = 1
+    and (select count(*) from public.outbox where event_id = ev) = 1, 'event ' || coalesce(ev::text, 'none'));
+end $$;
+
+-- C1792: the claim for an open request on a pending_signature contract carries the customer signer and the sealed link.
+do $$
+declare c uuid; ev uuid; r jsonb; m jsonb;
+begin
+  c := tests.ca_contract('ca92');
+  ev := tests.ca_event(c, 'contract.sent_for_signature');
+  r := tests.od_claim(tests.ca_w2b(c, ev));
+  m := tests.od_msg(r);
+  perform tests.ok('C1792', r ->> 'decision' = 'send' and m ->> 'kind' = 'customer_signing_link' and m -> 'to' = '["pat@customer.ca"]'
+    and m ->> 'linkSealed' = tests.ca_sealed('linkca92') and m -> 'contract' ->> 'id' = c::text
+    and m -> 'agreement' ->> 'number' = 'AG-ca92' and m ->> 'signerName' is not null, 'message ' || r::text);
+end $$;
+
+-- C1794: nine situations in which the link must not be sent.
+create function tests.ca_not_signable(p_case text) returns jsonb
+language plpgsql as $$
+declare c uuid := tests.ca_contract('ca94' || p_case); r uuid := tests.ca_request(c);
+begin
+  if p_case in ('creating', 'failed', 'voided', 'declined') then
+    update public.contract_signature_requests set status = p_case where id = r;
+  elsif p_case = 'req_completed' then
+    update public.contract_signature_requests set status = 'completed', completed_at = now() where id = r;
+  else
+    update public.contracts set status = substr(p_case, 5) where id = c;
+  end if;
+  return tests.od_claim(tests.ca_w2b(c, tests.ca_event(c, 'contract.sent_for_signature')));
+end $$;
+grant execute on function tests.ca_not_signable(text) to anon, authenticated;
+do $$
+declare k text; r jsonb; i int := 0;
+begin
+  foreach k in array array['creating', 'failed', 'voided', 'declined', 'req_completed', 'con_client_signed', 'con_completed', 'con_declined', 'con_voided'] loop
+    i := i + 1;
+    r := tests.ca_not_signable(k);
+    perform tests.ok('C1794 ' || k, r ->> 'decision' = 'skip' and r ->> 'reason' = 'not_signable'
+      and (select count(*) from public.notifications n where n.kind = 'customer_signing_link' and n.status = 'skipped'
+           and n.skip_reason = 'not_signable') = i,
+      k || ' gave ' || r::text);
+  end loop;
+end $$;
+
+-- C1798: a link that was sent answers duplicate, with one notification.
+do $$
+declare c uuid; ev uuid; r jsonb; m jsonb;
+begin
+  c := tests.ca_contract('ca98');
+  ev := tests.ca_event(c, 'contract.sent_for_signature');
+  r := tests.od_claim(tests.ca_w2b(c, ev));
+  m := tests.od_msg(r);
+  perform tests.od_complete(tests.ca_w2b(c, ev), jsonb_build_array(jsonb_build_object('id', m ->> 'notificationId', 'outcome', 'sent', 'providerMessageId', 're_2')));
+  r := tests.od_claim(tests.ca_w2b(c, ev));
+  perform tests.ok('C1798', r ->> 'decision' = 'duplicate' and tests.ca_notifications(ev) = 1, 'second delivery ' || r::text);
+end $$;
+
+-- C1801, C1814: both parties get the signed files, the managers a note without them; the staff note is completed under the copy's key.
+do $$
+declare c uuid; ev uuid; r jsonb; m jsonb; n int := 0; body jsonb; results jsonb := '[]';
+begin
+  c := tests.ca_contract('ca01');
+  ev := tests.ca_completed(c);
+  body := tests.ca_w4(c, ev);
+  r := tests.od_claim(body);
+  perform tests.ok('C1801 count', r ->> 'decision' = 'send' and jsonb_array_length(r -> 'messages') = 3, 'messages ' || r::text);
+  for m in select value from jsonb_array_elements(r -> 'messages') loop
+    if m ->> 'kind' = 'contract_signed_copy' then
+      n := n + 1;
+      perform tests.ok('C1801 party ' || (m ->> 'role'), jsonb_array_length(m -> 'documents') = 2
+        and m ->> 'idempotencyKey' = 'w4:' || ev || ':copy:' || (m ->> 'role')
+        and not exists (
+          select 1 from jsonb_array_elements(m -> 'documents') d
+          where not exists (select 1 from public.contract_signed_documents s
+                            where s.request_id = tests.ca_request(c) and s.kind = d ->> 'kind' and s.sha256 = d ->> 'sha256'
+                              and decode(d ->> 'contentBase64', 'base64') = s.content and (d ->> 'contentBase64') !~ E'\\n')),
+        'documents differ from the stored ones: ' || m::text);
+    else
+      perform tests.ok('C1801 staff', m ->> 'kind' = 'staff_contract_signed' and not (m ? 'documents') and m -> 'contract' ->> 'id' = c::text
+        and m ->> 'idempotencyKey' = 'w4:' || ev || ':staff', 'staff ' || m::text);
+    end if;
+  end loop;
+  perform tests.ok('C1801 two parties', n = 2, 'party messages: ' || n);
+  -- C1814: results for the staff note (key w4:<e>:staff) are accepted under the request key w4:<e>:copy.
+  for m in select value from jsonb_array_elements(r -> 'messages') loop
+    results := results || jsonb_build_object('id', m ->> 'notificationId', 'outcome', 'sent', 'providerMessageId', 're_' || (m ->> 'kind'));
+  end loop;
+  perform tests.ok('C1814 other event refused',
+    tests.od_state(format('select tests.od_complete(%L::jsonb, %L::jsonb)', body::text,
+      jsonb_build_array(jsonb_build_object('id', (select id from public.notifications where kind = 'staff_contract_ready' limit 1), 'outcome', 'sent', 'providerMessageId', 're_x'))::text)) = 'P0002',
+    'a result naming another event notification was not refused');
+  perform tests.od_complete(body, results);
+  perform tests.ok('C1814 accepted', (select count(*) from public.notifications where event_id = ev and status = 'sent') = 2,
+    'sent notifications: ' || (select count(*) from public.notifications where event_id = ev and status = 'sent'));
+  -- C1806: a repeat after both were sent is a duplicate and writes no new row.
+  r := tests.od_claim(body);
+  perform tests.ok('C1806', r ->> 'decision' = 'duplicate' and tests.ca_notifications(ev) = 2, 'repeat ' || r::text);
+end $$;
+
+-- C1803: not completed, and one document only.
+do $$
+declare c uuid; ev uuid; r jsonb;
+begin
+  c := tests.ca_contract('ca03a');
+  insert into public.events (org_id, entity_type, entity_id, type, payload)
+  values (tests.id('orgA'), 'contract', c, 'contract.completed', '{}');
+  ev := tests.ca_event(c, 'contract.completed');
+  r := tests.od_claim(tests.ca_w4(c, ev));
+  perform tests.ok('C1803 not_completed', r ->> 'decision' = 'skip' and r ->> 'reason' = 'not_completed', 'gave ' || r::text);
+
+  c := tests.ca_contract('ca03b');
+  ev := tests.ca_completed(c, 1);
+  r := tests.od_claim(tests.ca_w4(c, ev));
+  perform tests.ok('C1803 no_documents', r ->> 'decision' = 'skip' and r ->> 'reason' = 'no_documents', 'gave ' || r::text);
+end $$;
+
+-- C1804: one address on both sides is one party email, in either case.
+do $$
+declare c uuid; ev uuid; r jsonb;
+begin
+  c := tests.ca_contract('ca04');
+  ev := tests.ca_completed(c);
+  update public.contract_signers set email = 'PAT@customer.ca' where request_id = tests.ca_request(c) and role = 'contractor';
+  r := tests.od_claim(tests.ca_w4(c, ev));
+  perform tests.ok('C1804', jsonb_array_length(r -> 'messages') = 2
+    and (select count(*) from jsonb_array_elements(r -> 'messages') m where m ->> 'kind' = 'contract_signed_copy') = 1, 'messages ' || r::text);
+end $$;
+
+-- C1810: a bad signature or a stale timestamp raises 42501 and writes nothing, for each of the three kinds.
+do $$
+declare
+  c uuid := tests.ca_contract('ca10');
+  ev uuid := tests.ca_completed(c);
+  ea uuid;
+  b text; k text; before_contracts bigint; before_notifications bigint;
+begin
+  perform tests.ca_agreement('ca10a');
+  ea := tests.ca_accepted('ca10a');
+  select count(*) into before_contracts from public.contracts;
+  select count(*) into before_notifications from public.notifications;
+  foreach b in array array[tests.ca_w2a('ca10a', ea)::text, tests.ca_w2b(c, tests.ca_event(c, 'contract.sent_for_signature'))::text, tests.ca_w4(c, ev)::text] loop
+    k := (b::jsonb) ->> 'kind';
+    perform tests.ok('C1810 wrong ' || k, tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts(), 'wrong-secret'))) = '42501', 'wrong signature was not 42501');
+    perform tests.ok('C1810 stale ' || k, tests.od_state(tests.od_claim_sql(b, tests.od_ts(-301), tests.od_sig(b, tests.od_ts(-301)))) = '42501', 'stale timestamp was not 42501');
+  end loop;
+  perform tests.ok('C1810 nothing written', (select count(*) from public.contracts) = before_contracts
+    and (select count(*) from public.notifications) = before_notifications, 'a refused call wrote');
+end $$;
+
+-- C1811: P0002 for an event that does not exist, another agreement's, one of the wrong type and another contract's.
+do $$
+declare
+  ca uuid := tests.ca_contract('ca11a'); cb uuid := tests.ca_contract('ca11b');
+  ea uuid; eb uuid := tests.ca_completed(cb);
+  bodies jsonb[];
+  b jsonb;
+begin
+  perform tests.ca_agreement('ca11x'); perform tests.ca_agreement('ca11y');
+  ea := tests.ca_accepted('ca11x');
+  bodies := array[
+    tests.ca_w2a('ca11x', gen_random_uuid()),
+    tests.ca_w2a('ca11y', ea),
+    tests.ca_w2b(ca, tests.ca_event(ca, 'contract.pending_signature')),
+    tests.ca_w4(ca, eb)];
+  foreach b in array bodies loop
+    perform tests.ok('C1811 ' || (b ->> 'idempotencyKey'), tests.od_state(tests.od_claim_sql(b::text, tests.od_ts(), tests.od_sig(b::text, tests.od_ts()))) = 'P0002',
+      'not P0002 for ' || b::text);
+  end loop;
+  perform tests.ok('C1811 nothing claimed', not exists (select 1 from public.notifications where idempotency_key like '%' || ea || '%'), 'a refused call claimed a key');
+end $$;
+
+-- C1812: nobody but the database calls the creators.
+do $$
+declare s text;
+begin
+  perform tests.act_as_anon();
+  perform tests.ok('C1812 anon system', tests.od_state(format('select private.create_contract_for_system(%L)', tests.id('ca82'))) = '42501', 'anon');
+  perform tests.ok('C1812 anon make', tests.od_state(format('select private.make_contract(%L, null, null)', tests.id('ca82'))) = '42501', 'anon');
+  reset role;
+  perform tests.act_as('uA');
+  perform tests.ok('C1812 member system', tests.od_state(format('select private.create_contract_for_system(%L)', tests.id('ca82'))) = '42501', 'owner');
+  perform tests.ok('C1812 member make', tests.od_state(format('select private.make_contract(%L, null, null)', tests.id('ca82'))) = '42501', 'owner');
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+end $$;
+
+-- C1813: a key that does not fit its kind and event, and a missing contractId, are 22023.
+do $$
+declare
+  c uuid := tests.ca_contract('ca13'); ev uuid := tests.ca_event(c, 'contract.sent_for_signature');
+  b text;
+begin
+  foreach b in array array[
+    (tests.ca_w2b(c, ev) || jsonb_build_object('idempotencyKey', 'w2:' || ev || ':ready'))::text,
+    (tests.ca_w2b(c, ev) || jsonb_build_object('idempotencyKey', 'w2:' || gen_random_uuid() || ':link'))::text,
+    (tests.ca_w2b(c, ev) - 'contractId')::text] loop
+    perform tests.ok('C1813 ' || left(b, 60), tests.od_state(tests.od_claim_sql(b, tests.od_ts(), tests.od_sig(b, tests.od_ts()))) = '22023', 'not 22023 for ' || b);
+  end loop;
+end $$;
+
+-- C1815: the four new kinds are stored, an unknown one is 23514.
+do $$
+declare k text;
+begin
+  foreach k in array array['staff_contract_ready', 'customer_signing_link', 'contract_signed_copy', 'staff_contract_signed'] loop
+    perform tests.ok('C1815 ' || k, tests.od_state(format('insert into public.notifications (org_id, idempotency_key, kind) values (%L, %L, %L)', tests.id('orgA'), 'k15:' || k, k)) = 'ok', k || ' refused');
+  end loop;
+  perform tests.ok('C1815 unknown', tests.od_state(format('insert into public.notifications (org_id, idempotency_key, kind) values (%L, %L, %L)', tests.id('orgA'), 'k15:x', 'staff_made_up')) = '23514', 'unknown kind was not 23514');
+end $$;
+
+-- C1786: an org with no owner or admin gets no email, after the contract is made.
+update public.memberships set role = 'viewer' where org_id = tests.id('orgB');
+do $$
+declare ev uuid; r jsonb; n text := 'ca86';
+begin
+  perform tests.rn_agreement(n, 'B', '2027-01-01');
+  insert into public.events (id, org_id, entity_type, entity_id, type, payload)
+  values (tests.id(n || ':acc'), tests.id('orgB'), 'agreement', tests.id(n), 'agreement.accepted', '{}');
+  ev := tests.id(n || ':acc');
+  r := tests.od_claim(tests.ca_w2a(n, ev));
+  perform tests.ok('C1786', r ->> 'decision' = 'skip' and r ->> 'reason' = 'no_recipient'
+    and exists (select 1 from public.contracts where agreement_version_id = tests.id(n || ':v1'))
+    and (select skip_reason from public.notifications where event_id = ev) = 'no_recipient', 'gave ' || r::text);
+end $$;
+
 rollback;
 select 'outbox_dispatch: pass' as result;
