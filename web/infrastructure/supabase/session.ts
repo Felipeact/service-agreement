@@ -7,9 +7,10 @@ const PUBLIC_PATHS = ["/login", "/auth/confirm"];
 /**
  * Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`,
  * the customer signs at `/sign/<token>` (signature-provider door 7), and n8n's signed callbacks post to
- * `/api/automation/notify` (outbox-dispatch door 6).
+ * `/api/automation/notify` (outbox-dispatch door 6), and DocuSeal's signed webhook posts to `/api/webhooks/docuseal`
+ * (signature-webhook door 4).
  */
-const PUBLIC_PREFIXES = ["/review/", "/sign/", "/api/automation/"];
+const PUBLIC_PREFIXES = ["/review/", "/sign/", "/api/automation/", "/api/webhooks/"];
 const SIGN_IN_PATH = "/login";
 const HOME_PATH = "/pipeline";
 

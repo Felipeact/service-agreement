@@ -154,7 +154,8 @@ describe("the countersignature", () => {
   test("C1710: the section's kind is decided from the status, the request and the role alone", () => {
     expect(signingAreaKind({ contractStatus: "client_signed", request: request("open"), role: "owner" })).toBe("countersign");
     expect(signingAreaKind({ contractStatus: "client_signed", request: request("open"), role: "viewer" })).toBe("none");
-    expect(signingAreaKind({ contractStatus: "declined", request: null, role: "owner" })).toBe("none");
+    // signature-webhook AC 28: a declined contract now says so (it was "none" before the webhook could decline one).
+    expect(signingAreaKind({ contractStatus: "declined", request: null, role: "owner" })).toBe("declined");
   });
 });
 

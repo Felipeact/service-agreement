@@ -77,3 +77,28 @@ describe("contract state machine", () => {
     expect(result.event.to).toBe(to);
   });
 });
+
+describe("signature-webhook door 3", () => {
+  // The moves signature_webhook makes in SQL (C1766): who may go where. The same set the pure machine allows.
+  const WEBHOOK_MOVES: Array<[ContractStatus, ContractStatus]> = [
+    ["pending_signature", "client_signed"],
+    ["client_signed", "completed"],
+    ["pending_signature", "declined"],
+    ["client_signed", "declined"],
+  ];
+
+  test("C1767: client_sign is allowed only from pending_signature, countersign only from client_signed, decline from those two", () => {
+    const reached: Array<[ContractStatus, ContractStatus]> = [];
+    for (const from of CONTRACT_STATUSES) {
+      for (const type of ["client_sign", "countersign", "decline"] as const) {
+        const result = applyContractCommand(from, { type });
+        if (result.ok) reached.push([from, result.status]);
+      }
+    }
+    const key = (pairs: Array<[ContractStatus, ContractStatus]>) => pairs.map(([from, to]) => `${from}>${to}`).sort();
+    expect(key(reached)).toEqual(key(WEBHOOK_MOVES));
+    expect(applyContractCommand("completed", { type: "client_sign" }).ok).toBe(false);
+    expect(applyContractCommand("declined", { type: "decline" }).ok).toBe(false);
+    expect(applyContractCommand("voided", { type: "countersign" }).ok).toBe(false);
+  });
+});

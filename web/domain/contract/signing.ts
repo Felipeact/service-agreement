@@ -1,7 +1,7 @@
 import type { ContractStatus } from "./index";
 
-/** Same values as the `contract_signature_requests.status` check (signature-provider door 2). */
-export const SIGNATURE_REQUEST_STATUSES = ["creating", "open", "failed", "voided"] as const;
+/** Same values as the `contract_signature_requests.status` check (signature-provider door 2, signature-webhook door 2). */
+export const SIGNATURE_REQUEST_STATUSES = ["creating", "open", "failed", "voided", "completed", "declined"] as const;
 
 export type SignatureRequestStatus = (typeof SIGNATURE_REQUEST_STATUSES)[number];
 

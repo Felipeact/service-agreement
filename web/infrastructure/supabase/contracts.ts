@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseContractParties, SIGNATURE_REQUEST_STATUSES, type ContractStatus, type SignatureRequestStatus } from "@/domain/contract";
+import { parseContractParties, SIGNATURE_REQUEST_STATUSES, SIGNED_DOCUMENT_KINDS, type ContractStatus, type SignatureRequestStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
-import type { ContractReader, ContractStore, GenerateContractFailure } from "@/application/ports";
+import type { ContractReader, ContractStore, GenerateContractFailure, SignedCopyView } from "@/application/ports";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -38,14 +38,41 @@ type ContractRow = {
   parties: unknown;
   agreement_versions: { version_no: number; agreement_id: string; agreements: { number: string | null } };
   /** Embedded when the reader selects it; absent in a row that did not ask. */
-  contract_signature_requests?: { id: string; status: string; created_at: string }[];
+  contract_signature_requests?: RequestRow[];
 };
 
+type RequestRow = {
+  id: string;
+  status: string;
+  created_at: string;
+  contract_signers?: { role: string; name: string; signed_at: string | null; signed_ip: string | null }[];
+  contract_signed_documents?: { kind: string; size_bytes: number; sha256: string }[];
+};
+
+function newestOf(rows: RequestRow[]): RequestRow | undefined {
+  return [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+}
+
 /** The newest request, or `null` when there is none. */
-function newestRequest(rows: NonNullable<ContractRow["contract_signature_requests"]>): { requestId: string; status: SignatureRequestStatus } | null {
-  const newest = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+function newestRequest(rows: RequestRow[]): { requestId: string; status: SignatureRequestStatus } | null {
+  const newest = newestOf(rows);
   const status = SIGNATURE_REQUEST_STATUSES.find((candidate) => candidate === newest?.status);
   return newest && status ? { requestId: newest.id, status } : null;
+}
+
+/** What the webhook stored, once the newest request is `completed` with both files; `null` before that (signature-webhook S5). */
+function signedCopy(rows: RequestRow[]): SignedCopyView | null {
+  const newest = newestOf(rows);
+  const documents = (newest?.contract_signed_documents ?? []).flatMap((document) => {
+    const kind = SIGNED_DOCUMENT_KINDS.find((candidate) => candidate === document.kind);
+    return kind ? [{ kind, sizeBytes: document.size_bytes, sha256: document.sha256 }] : [];
+  });
+  if (newest?.status !== "completed" || documents.length === 0) return null;
+  const signers: SignedCopyView["signers"] = (newest.contract_signers ?? []).flatMap((signer) => {
+    const role = signer.role === "customer" || signer.role === "contractor" ? signer.role : null;
+    return role ? [{ role, name: signer.name, signedAt: signer.signed_at ? new Date(signer.signed_at) : null, ip: signer.signed_ip }] : [];
+  });
+  return { documents, signers: signers.sort((a, b) => (a.role === b.role ? 0 : a.role === "customer" ? -1 : 1)) };
 }
 
 export function supabaseContractReader(client: Client): ContractReader {
@@ -54,7 +81,7 @@ export function supabaseContractReader(client: Client): ContractReader {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("contracts")
-        .select("id, status, created_at, parties, agreement_versions(version_no, agreement_id, agreements(number)), contract_signature_requests(id, status, created_at)")
+        .select("id, status, created_at, parties, agreement_versions(version_no, agreement_id, agreements(number)), contract_signature_requests(id, status, created_at, contract_signers(role, name, signed_at, signed_ip), contract_signed_documents(kind, size_bytes, sha256))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -69,6 +96,7 @@ export function supabaseContractReader(client: Client): ContractReader {
         createdAt: new Date(row.created_at),
         parties: parseContractParties(row.parties),
         signing: row.contract_signature_requests ? newestRequest(row.contract_signature_requests) : undefined,
+        signed: row.contract_signature_requests ? signedCopy(row.contract_signature_requests) : undefined,
       };
     },
   };

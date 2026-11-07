@@ -181,8 +181,9 @@ Proof: `npm run test:db transitions` (assertions `C1754`)
 and content not beginning `%PDF-` each raise `22023` and write nothing; content of exactly 10 485 760 bytes beginning `%PDF-` is stored (AC 21)
 Proof: `npm run test:db transitions` (assertions `C1755`)
 
-**C1756** - For a request `creating`, `failed`, `voided` or `declined`, each of the events returns `{"outcome":"ignored","reason":"request_closed"}`; for an `open` request whose
-contract is `declined` or `voided`, each of the events returns the same; nothing is written in any of the 18 cases (4 request statuses and 2 contract statuses, 3 events each) (AC 23)
+**C1756** - For a request `failed`, `voided` or `declined` (a `creating` request has no submission id, so no delivery can name it), each of the events returns `{"outcome":"ignored","reason":"request_closed"}`, except that a `declined` request answers
+`form.declined` with `{"outcome":"duplicate"}` (it is that event again); for an `open` request whose contract is `declined` or
+`voided`, each of the events returns `ignored` / `request_closed`; nothing is written in any of the 15 cases (3 request statuses and 2 contract statuses, 3 events each) (AC 23)
 Proof: `npm run test:db transitions` (assertions `C1756`)
 
 ### S4 - the customer declines inside the form · 1 file · 4 KB · ~1k
@@ -204,7 +205,7 @@ contract's id and the kind (AC 26, 27)
 Proof: `npx vitest run infrastructure/supabase/signed-copy.test.ts -t "C1759:"`
 
 **C1760** - For a `completed` contract with a completed request and a stored copy, the signing section renders for each of the roles owner, admin, estimator and viewer a link `Signed contract` to
-`/contracts/<id>/signed-pdf`, a link `Audit log` to `/contracts/<id>/audit-log-pdf`, and for the customer signer `Pat Lee · Nov 7, 2026, 2:14 PM · 203.0.113.9` (22:14 UTC shown in America/Vancouver) (AC 25)
+`/contracts/<id>/signed-pdf`, a link `Audit log` to `/contracts/<id>/audit-log-pdf`, and for the customer signer `Pat Lee · Jan 15, 2026, 2:14 PM · 203.0.113.9` (22:14 UTC shown in America/Vancouver, in winter; a July instant shows 3:14 PM) (AC 25)
 Proof: `npx vitest run components/contracts/signed-copy.test.ts -t "C1760:"`
 
 **C1761** - For a `declined` contract the signing section renders `This contract was declined.` and no signing form and no `Send for signature` button for each of the four roles, and `signingAreaKind` returns
@@ -295,8 +296,8 @@ Proof: `npm run test:db transitions` (assertions `C1780`)
 | bodies refused with `22023` (6) | `[]` C1732 · `"x"` C1732 · `7` C1732 · `{}` C1732 · `{"event_type": 5}` C1732 · `not json` C1732 | - |
 | `ignored` reasons (4) | `event_not_handled` C1738 · `unknown_submission` C1739 · `signer_mismatch` C1743 · `request_closed` C1756 | - |
 | signer mismatch inputs (6) | unknown submitter C1743 · other role's `external_id` C1743 · other contract's `external_id` C1743 · matching `external_id` applied C1743 · null `external_id` applied C1743 · absent `external_id` applied C1743 | - |
-| request statuses (6) | `creating` C1756 · `open` C1740 · `failed` C1756 · `voided` C1756 · `completed` C1753 · `declined` C1757 | - |
-| closed situations (6) | request `creating` C1756 · request `failed` C1756 · request `voided` C1756 · request `declined` C1756 · contract `declined` C1756 · contract `voided` C1756 | - |
+| request statuses (6) | `creating` C1769 · `open` C1740 · `failed` C1756 · `voided` C1756 · `completed` C1753 · `declined` C1757 | - |
+| closed situations (5) | request `failed` C1756 · request `voided` C1756 · request `declined` C1756 · contract `declined` C1756 · contract `voided` C1756 | - |
 | contract status x event moves (20) | table-driven over all 20 C1766 · parity with `applyContractCommand` C1767 | - |
 | document validation refusals (8) | one entry C1755 · three entries C1755 · two `signed` C1755 · kind `other` C1755 · bad base64 C1755 · empty C1755 · 10 485 761 bytes C1755 · no `%PDF-` C1755 | - |
 | document size bounds (4 edges) | 0 C1769 · 1 C1769 · 10 485 760 C1769 · 10 485 761 C1769 | - |
@@ -345,3 +346,14 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - Total ~89k, under the 150k budget -> one builder, no ask.
 - Mechanism: one builder (the orchestrator builds; a fresh Verifier is dispatched after the last commit)
 - Applying the migration to `gnxebrtcpbujhvcamtoe` is a production schema change: it needs the owner's go-ahead, which the SQL proofs (C1729 to C1757, C1765 to C1770, C1774, C1780) and C1773 wait for.
+
+### Build: C1727-C1772, C1774-C1775, C1780
+
+- **Boundary:** database half closed in `fa7cd43` (migration `20261107175044_signature_webhook`, applied to `gnxebrtcpbujhvcamtoe` with the owner's go-ahead on 2026-11-07; SQL proofs C1729-C1770 and C1780 pass with `npm run test:db transitions`); TypeScript half closed in the commit after it. C1773 measured with `get_advisors` (security): `anon_security_definer_function_executable` 6 -> 7 and `authenticated_security_definer_function_executable` 25 -> 26, the new finding being `signature_webhook` in both and nothing else. C1774: `npm run test:db`, 23 recipes. C1775: `npm test` 170 files and 3,267 tests, `tsc --noEmit` and `eslint .` clean. Still open: C1776-C1779, the live checks, which wait for the owner's DocuSeal webhook and Vault secret (open question 2).
+- **Settled mid-build, amendments to approved text (no assertion weakened or removed):**
+  - C1756: a `creating` request has no submission id, so no delivery can name it; the claim lists `failed`, `voided` and `declined` requests (15 cases, not 18), and a `declined` request answers `form.declined` with `duplicate` because that is the same event again (AC 14). The Coverage rows follow.
+  - C1760: the claim's instant moved from `2026-11-07T22:14:00Z` (`Nov 7, 2026, 2:14 PM`) to `2026-01-15T22:14:00Z` (`Jan 15, 2026, 2:14 PM`), with a July instant at 3:14 PM. The Node on this machine reports PDT for America/Vancouver on 2026-11-07 and through 2027 (checked: it finds no DST end after 2025, while 2024 and 2025 are right), so a November 2026 instant would assert the runtime's tz data and not the code.
+  - Existing assertions that pinned what door 3 and the new states change, edited and listed: `transitions.sql` C13 (`authenticated` no longer executes `apply_contract_transition`), C14 and C15 (the calls are refused `42501`; C14 sets the status as the owner so the rows after it keep their state), C1612 `status` (now `42501`), `rls_isolation.sql` C35 (24 public tables); `components/contracts/signing.test.ts` C1710 (a declined contract's kind is `declined`, was `none`); `infrastructure/supabase/contracts.test.ts` C1690 (the select string now continues after `created_at`).
+  - Built beyond the text of the plan, additive: the migration also revokes nothing else; the `signature_webhook` function drops the SQL comments from its body when applied through `apply_migration` (the file keeps them); `form.completed` with no parseable `completed_at` raises `22023` (AC 11 reads the value from there).
+- **Abandoned:** a Storage bucket for the files (door 2's rejected alternative stands); logging the database's message on an unexpected error (it can quote the delivery, so the adapter throws the code only).
+- **Local environment:** `@docuseal/react` was listed in `package.json` but missing from `node_modules`, and Next's generated route types were stale; `npm install` and `next typegen` fixed both, so `tsc` was clean before and after the feature's own changes.
