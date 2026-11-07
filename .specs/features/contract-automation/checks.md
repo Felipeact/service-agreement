@@ -213,3 +213,15 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - Total ~95k, under the 150k budget -> one builder, no ask.
 - Mechanism: one builder (the orchestrator builds; a fresh Verifier is dispatched after the last commit)
 - Applying the migration to `gnxebrtcpbujhvcamtoe` is a production schema change: it needs the owner's go-ahead, which the SQL proofs (C1782 to C1815) and C1818 wait for.
+
+### Build: C1781-C1817 (C1782-C1815 SQL halves written, not run; C1818, C1819 open)
+
+- **Boundary:** TypeScript, n8n exports and migration closed locally; proofs: `npx vitest run` 174 files and 3,363 tests, `tsc --noEmit` and `eslint .` clean. The SQL proofs are written in `supabase/tests/outbox_dispatch.sql` and parse (pglast), but have **not run**: they need migration `20261108100000_contract_automation` applied to `gnxebrtcpbujhvcamtoe`, which needs the owner's go-ahead (blast radius). C1818 (advisors) and C1819 (live run) wait on the same go-ahead and on the owner's n8n import.
+- **Settled mid-build, amendments to approved text (no assertion weakened or removed):**
+  - Existing pins that counted the n8n exports changed because the exports changed: `web/n8n-workflows.test.ts` C1033 (the folder holds the listed exports, nine now), C1034 (routes six types, seven router outputs, the fallback is output 6), C1035 (ten notify calls) and C1260 (nine exports, ten calls); the C1052 table gained W2a, W2b and W4.
+  - `notify` takes the signing tokens as an optional fifth argument that defaults to the portal tokens, so every old call site is unchanged; C1817 proves the container passes the right ones.
+  - C1801 and C1814 are proven in one block of `outbox_dispatch.sql` (the staff note is completed under the copy's key in the same test); C1806 follows in that block.
+  - The party message has its own provider key `w4:<eventId>:copy:<role>` (AD-150), so Resend dedupes each email separately.
+- **Found by the parser, not by a test:** an unparenthesised `CASE` inside an `IF` condition in `automation_request` ended the condition at the first inner `THEN`; wrapped in parentheses before the commit.
+- **Abandoned:** one workflow with a Switch for all three events (door 5's rejected alternative stands); a Storage link for the signed copy (door 4).
+
