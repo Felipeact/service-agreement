@@ -229,6 +229,9 @@ describe("contract reader, the signing-link email (contract-automation AC 13)", 
     expect(view?.signingLinkEmail).toEqual({ status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-11-08T18:00:00Z") });
     expect(calls).toContainEqual({ table: "events", method: "eq", args: ["type", "contract.sent_for_signature"] });
     expect(calls).toContainEqual({ table: "notifications", method: "eq", args: ["kind", "customer_signing_link"] });
+    // The latest send: newest first, one row.
+    expect(calls).toContainEqual({ table: "events", method: "order", args: ["created_at", { ascending: false }] });
+    expect(calls).toContainEqual({ table: "events", method: "limit", args: [1] });
   });
 
   test.each([

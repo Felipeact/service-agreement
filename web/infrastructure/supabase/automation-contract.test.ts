@@ -85,5 +85,6 @@ describe("the automation callbacks adapter, contract messages", () => {
     const staff = { notificationId: "n4", kind: "staff_contract_signed", idempotencyKey: "w4:e:staff", to: ["o@n.ca"], tenant, agreement: { id: "a1", number: "AG-1052" }, contract: { id: "con-1" }, site: { name: "S" }, customer: { name: "Fernwood" } };
     expect(await claimOf(staff)).toMatchObject({ ok: true, messages: [{ kind: "staff_contract_signed", contract: { id: "con-1" }, customer: { name: "Fernwood" } }] });
     await expect(claimOf({ ...staff, contract: undefined })).rejects.toThrow("malformed staff_contract_signed message");
+    await expect(claimOf({ ...staff, idempotencyKey: undefined })).rejects.toThrow("malformed staff_contract_signed message");
   });
 });

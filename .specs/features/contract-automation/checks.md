@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/contract-automation/plan.md`
 
-35 checks in 4 slices · 5 one-way doors · 3 open, 0 block, 2 block go-live
+39 checks in 4 slices · 5 one-way doors · 3 open, 0 block, 2 block go-live
 
 ## How proofs run
 
@@ -78,7 +78,7 @@ Proof: `npx vitest run application/use-cases/notify-contract.test.ts -t "C1795:"
 Proof: `npx vitest run infrastructure/supabase/contracts.test.ts -t "C1796:"`
 
 **C1797** - The contract page shows `Signing link emailed to <address>`, `The signing link email did not go out: <reason>` or nothing, in the section beside the signing state (AC 13)
-Proof: `npx vitest run components/contracts/contract-view.test.tsx -t "C1797:"`
+Proof: `npx vitest run components/contracts/contract-view.test.ts -t "C1797:"`
 
 **C1798** - A second delivery of the same `customer_signing_link` answers `duplicate` with one notification row (AC 14)
 Proof: `npm run test:db outbox_dispatch` (assertion `C1798`)
