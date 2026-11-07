@@ -9,11 +9,12 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { LinkButton } from "@/components/ui/link-button";
+import { Spot } from "@/components/ui/illustrations";
+import { Icon } from "@/components/ui/icons";
+import { Initials } from "@/components/ui/list-panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { filterCustomers } from "./filter";
-
-const COLUMNS = "md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_5rem_5rem]";
 
 type CustomersViewProps = {
   customers: CustomerSummary[];
@@ -30,10 +31,17 @@ export function CustomersView({ customers, initialQuery = "", role, showInactive
   const searchRef = useRef<HTMLInputElement>(null);
   const listed = showInactive ? customers : customers.filter((customer) => customer.active);
   const shown = filterCustomers(listed, query);
-  const count = `${listed.length} ${listed.length === 1 ? "customer" : "customers"}`;
+  const sites = listed.reduce((sum, customer) => sum + customer.siteCount, 0);
+  const assets = listed.reduce((sum, customer) => sum + customer.assetCount, 0);
+  const standing = [
+    `${listed.length} ${listed.length === 1 ? "customer" : "customers"}`,
+    `${sites} ${sites === 1 ? "site" : "sites"}`,
+    `${assets} ${assets === 1 ? "asset" : "assets"}`,
+  ].join(" · ");
   const toggle = <ShowInactiveToggle href="/customers" showing={showInactive} />;
   const newCustomer = role && canWriteRecords(role) && (
     <LinkButton href="/customers/new" variant="primary">
+      <Icon name="plus" className="size-4" />
       New customer
     </LinkButton>
   );
@@ -47,7 +55,7 @@ export function CustomersView({ customers, initialQuery = "", role, showInactive
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Customers"
-        badge={listed.length > 0 ? <StatusPill tone="neutral" label={count} /> : undefined}
+        subtitle={listed.length > 0 ? standing : undefined}
         controls={
           <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
             <SearchInput
@@ -65,7 +73,7 @@ export function CustomersView({ customers, initialQuery = "", role, showInactive
       />
 
       {customers.length === 0 ? (
-        <EmptyPanel title="No customers yet" text="Customers appear here once they are added or imported.">
+        <EmptyPanel title="No customers yet" text="Customers appear here once they are added or imported." art={<Spot kind="people" />}>
           {newCustomer}
         </EmptyPanel>
       ) : listed.length === 0 ? (
@@ -75,43 +83,39 @@ export function CustomersView({ customers, initialQuery = "", role, showInactive
           <Button onClick={clearSearch}>Clear search</Button>
         </EmptyPanel>
       ) : (
-        <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
-          <div
-            aria-hidden="true"
-            className={`hidden border-b border-hairline bg-ground px-4 py-2 text-[11px] font-semibold text-ink-2 md:grid md:gap-x-3 ${COLUMNS}`}
-          >
-            <span>Customer</span>
-            <span>Primary contact</span>
-            <span>Sites</span>
-            <span>Assets</span>
-          </div>
-          <ul className="divide-y divide-hairline">
-            {shown.map((customer) => (
-              <li key={customer.id} className={`grid grid-cols-2 gap-x-3 gap-y-1 px-4 py-3 md:items-center ${COLUMNS}`}>
-                <Link
-                  href={`/customers/${customer.id}`}
-                  className="col-span-2 inline-flex min-h-11 items-center text-[13.5px] font-semibold text-ink hover:text-action md:col-span-1 lg:min-h-0"
-                >
-                  {customer.name}
-                  {!customer.active && (
-                    <span className="ml-2">
-                      <StatusPill tone="neutral" label="Inactive" />
-                    </span>
-                  )}
-                </Link>
-                <span className="col-span-2 text-ink-2 md:col-span-1">{customer.primaryContact ?? "-"}</span>
-                <span className="text-ink-2">
-                  <span className="md:hidden">Sites </span>
-                  {customer.siteCount}
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:gap-4">
+          {shown.map((customer) => (
+            <li key={customer.id}>
+              <Link
+                href={`/customers/${customer.id}`}
+                className="flex h-full flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
+              >
+                <Initials name={customer.name} large />
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-display text-[18px] leading-snug font-semibold tracking-tight text-ink">{customer.name}</span>
+                  {!customer.active && <StatusPill tone="neutral" label="Inactive" />}
                 </span>
-                <span className="text-ink-2">
-                  <span className="md:hidden">Assets </span>
-                  {customer.assetCount}
+                <span className="grid grid-cols-2 gap-4 border-t border-hairline pt-4">
+                  <span className="flex flex-col">
+                    <span className="text-[12px] text-ink-2">Sites</span>
+                    <span className="font-display text-[22px] leading-tight font-medium tracking-tight">{customer.siteCount}</span>
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="text-[12px] text-ink-2">Assets</span>
+                    <span className="font-display text-[22px] leading-tight font-medium tracking-tight">{customer.assetCount}</span>
+                  </span>
                 </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+                <span className="flex items-center justify-between gap-2 border-t border-hairline pt-3">
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[12px] text-ink-2">Primary contact</span>
+                    <span className="truncate text-[13px] font-semibold text-ink">{customer.primaryContact ?? "No contact yet"}</span>
+                  </span>
+                  <Icon name="chevron" className="size-4 text-ink-2" />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

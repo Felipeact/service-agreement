@@ -8,7 +8,7 @@ web
 
 ## Users
 
-**Primary: the office estimator.** An estimator or office manager at an HVAC or mechanical contractor, working at a desk on a desktop screen. They take a customer's equipment list, build a preventive-maintenance (PM) service agreement, send it for review, follow it up, and turn the accepted ones into signed contracts. They work through many agreements at once, so they need to see which ones are stuck and which need a reply.
+**Primary: the office estimator.** An estimator or office manager at a trade contractor that maintains equipment on a recurring schedule, working at a desk on a desktop screen. HVAC and mechanical contractors are the first trade and the only one built so far; plumbing, electrical and other trades are planned (see Direction below). They take a customer's equipment list, build a preventive-maintenance (PM) service agreement, send it for review, follow it up, and turn the accepted ones into signed contracts. They work through many agreements at once, so they need to see which ones are stuck and which need a reply.
 
 **Secondary: the owner.** Checks the pipeline (what's out, what's accepted, what's signed, what's aging) and countersigns contracts. Roles in the app: owner, admin, estimator, viewer.
 
@@ -28,10 +28,12 @@ The user confirmed three reasons, all of equal weight:
 2. **Tracked to signature.** One status for each deal (In progress → Sent to customer → Accepted (awaiting signature) → Completed, with Refused as the exit), plus automatic reminders and an audit trail.
 3. **Focused and affordable.** It does this one job well for small and mid-sized shops that don't want a full field-service suite such as ServiceTitan, or a pile of Word templates and spreadsheets.
 
+**Direction (planned 2026-11-06, not built; the user delegated the open questions to Claude and accepted its recommendations on 2026-11-06, see `ROADMAP.md` Decisions):** extend the same job to other trades. The shape is a serviced item, a checklist for it and a cadence, so "equipment" becomes a per-org label ("Equipment", "Areas", "Stations"). Each tenant picks their trade when they sign up, and the workspace is set up for it: catalog, checklists, visit months, and starter agreement and contract wording that the tenant can edit. Project work such as construction and one-off contracts is a non-goal. See `ROADMAP.md` (Trades and packs, Onboarding, Document templates, Reporting, Open decisions).
+
 ## Operating Context
 
-- **Market:** contractors across Canada from launch. Money is in CAD. Tenants set a governing province and a tax note (for example GST/PST/HST) in their default terms. E-signature has to be valid under provincial electronic transactions law. All site content is in English.
-- **Inputs:** customers' equipment lists in xlsx, csv, docx or pdf, often messy tables. Each asset has a type, unit #, type/model and location/access. There are about 40 equipment types (RTU, MUA, and so on), each with a maintenance checklist.
+- **Market:** contractors across Canada outside Quebec from launch (recommended 2026-11-06 because Quebec's e-signature framework and language rules differ; to confirm with counsel). Money is in CAD. Tenants set a governing province and a tax note (for example GST/PST/HST) in their default terms. E-signature has to be valid under provincial electronic transactions law. All site content is in English.
+- **Inputs:** customers' equipment lists in xlsx, csv, docx or pdf, often messy tables. Each asset has a type, unit #, type/model and location/access. The HVAC starter catalog has about 40 equipment types (RTU, MUA, and so on), each with a maintenance checklist; other trades will get their own catalogs.
 - **Agreement anatomy:** visit frequency, service price lines (visits per year × cost per visit), "Service included" built from the asset types on site, an equipment list grouped by type, and versions. The default terms are repair discount %, CPI cap %, cancellation notice days, payment days, governing province and tax note.
 - **Documents:** tenant-branded agreement and contract PDFs. The client signs first, then the tenant countersigns. The signed PDF and its audit log are stored.
 - **Statuses:** agreement states are `draft` (shown as "In progress"), `sent`, `accepted`, `refused`, `changes_requested`, `expired` and `withdrawn`. Contract states are `pending_signature`, `client_signed`, `completed`, `declined` and `voided`.
@@ -43,12 +45,12 @@ The user confirmed three reasons, all of equal weight:
 - **Seed and demo data** use a fictitious company.
 - **Customers never see or build workflows.** The app owns all status; n8n only automates.
 - **Engineering:** SOLID, ports and adapters, money in integer cents. Every change to the web app must pass Playwright validation at 375, 768 and 1440 px wide, with touch targets of at least 44 px (see `AGENTS..md`).
-- **Undecided:** the product name and brand (the working name is "Service Agreement"), and plans and pricing (Phase 5). Transactional email runs on Resend (outbox-dispatch, 2026-10-29).
+- **Undecided:** the product name and brand (the working name is "Service Agreement"), plans and pricing (Phase 5), and, for the multi-trade scope, the things only the user can supply: a pilot contractor, a practitioner to review packs, a lawyer for the starter contract wording, and plan price points (see `ROADMAP.md` Decisions). Transactional email runs on Resend (outbox-dispatch, 2026-10-29).
 
 ## Brand Commitments
 
 - Customer-facing output carries the tenant's brand, never a hard-coded one.
-- **Visual stance (chosen 2026-10-16):** the user deliberately chose the familiar category standard over distinctive directions. The quality bar is Linear, Stripe Dashboard, Attio/HubSpot CRM and Jobber/Housecall Pro. See `DESIGN.md`.
+- **Visual stance (chosen 2026-10-16, warmed 2026-11-06):** the user deliberately chose the familiar category standard over distinctive directions. The quality bar is Linear, Stripe Dashboard, Attio/HubSpot CRM and Jobber/Housecall Pro. On 2026-11-06 the user said it felt "too dry" and chose to warm it up on a pilot (shell, Pipeline, sign-in) rather than replace it: same structure and density, with a navy shell, a display face, stage-tinted wells, layered depth and authored drawings in quiet moments. The rollout to the other staff screens and to the customer-facing surfaces (portal, signing page, PDFs, emails, where the tenant's brand leads) is agreed but not yet done. See `DESIGN.md`.
 
 ## Evidence on Hand
 
@@ -61,7 +63,7 @@ The user confirmed three reasons, all of equal weight:
 1. **Status is never in doubt.** Every agreement and contract has one clear current state, how long it has been there, and what happens next.
 2. **The messy input is our problem.** Accept equipment lists as customers actually send them. Flag uncertainty for review, never hide it, and never make the estimator retype.
 3. **The tenant's brand faces the customer.** Anything the customer sees must look like it came from the contractor.
-4. **Built for one job, done thoroughly.** Prefer depth in the list → agreement → signature path over breadth. Leave field-service-suite features out until Phase 6 earns them.
+4. **Built for one job, done thoroughly.** Prefer depth in the list → agreement → signature path over breadth. Leave field-service-suite features out until Phase 6 earns them. Breadth means more trades on this same job, not more kinds of job: project contracts are out.
 5. **Audit-ready by default.** Approvals, signatures and automated actions leave verifiable evidence.
 
 ## Accessibility & Inclusion

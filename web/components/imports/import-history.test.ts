@@ -46,7 +46,7 @@ describe("ImportHistoryView", () => {
     ["j-parsed", "15 rows in 2 tables"],
     ["j-unreadable", "No table with column headings was found."],
     ["j-extracting", "2 of 3"],
-    ["j-extracted", "40 rows, 3 need an equipment type"],
+    ["j-extracted", "37 recognized · 3 flagged"],
     ["j-committed", "Added to site: 336 assets, 2 skipped"],
   ])("C1389: the outcome line of %s is %j", (id, line) => {
     const html = item(render(SEVEN), id);
@@ -108,17 +108,17 @@ describe("ImportHistoryView", () => {
     expect(render([row("j-1", "uploaded")])).not.toContain("Clear filters");
   });
 
-  test("C1404: the form is a GET to /imports with the status and site selects following the filter", () => {
+  test("C1404: the status filter is a row of links that keep the site, and the form keeps the status and offers the sites", () => {
     const html = render([row("j-1", "uploaded")], { status: "unreadable", siteId: SITE });
     expect(html).toMatch(/<form[^>]*method="get"/i);
     expect(html).toMatch(/<form[^>]*action="\/imports"/i);
-    const values = (select: string) => [...select.matchAll(/<option[^>]*value="([^"]*)"/g)].map((m) => m[1]);
-    const status = html.match(/<select[^>]*name="status"[\s\S]*?<\/select>/)?.[0] ?? "";
-    expect(values(status)).toEqual(["", "attention", "uploaded", "parsed", "unreadable", "extracting", "extracted", "committed"]);
-    expect(status).toMatch(/<option[^>]*selected=""[^>]*value="unreadable"|<option[^>]*value="unreadable"[^>]*selected=""/);
+    const chips = [...html.matchAll(/<a[^>]*href="(\/imports[^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[2], m[1]]);
+    expect(chips.map(([label]) => label)).toEqual(["All", "Needs attention", "Uploaded", "Read", "Can't read", "Extracting", "Extracted", "Added to site", "Clear filters"].map((label) => label.replace("'", "&#x27;")));
+    expect(chips.find(([label]) => label === "Extracted")?.[1]).toBe(`/imports?status=extracted&amp;site=${SITE}`);
+    expect(html).toMatch(/<a(?=[^>]*aria-current="true")[^>]*>Can&#x27;t read</);
+    expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="status"[^>]*value="unreadable"/);
     const site = html.match(/<select[^>]*name="site"[\s\S]*?<\/select>/)?.[0] ?? "";
-    expect(values(site)).toEqual(["", SITE]);
+    expect([...site.matchAll(/<option[^>]*value="([^"]*)"/g)].map((m) => m[1])).toEqual(["", SITE]);
     expect(site).toContain("Harbourview Strata");
-    expect(site).toMatch(new RegExp(`<option[^>]*selected=""[^>]*value="${SITE}"|<option[^>]*value="${SITE}"[^>]*selected=""`));
   });
 });

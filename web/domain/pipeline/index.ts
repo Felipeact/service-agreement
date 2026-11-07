@@ -40,3 +40,4 @@ export function pipelineStage(agreement: AgreementStatus, contract?: ContractSta
 }
 
 export { addDays, EXPIRING_WINDOW_DAYS, expiringLabel, type ExpiringAgreement } from "./expiring";
+export { FOLLOW_UP_AFTER_DAYS, followUpLabel, isClosedStage, needsFollowUp, sortForColumn } from "./follow-up";

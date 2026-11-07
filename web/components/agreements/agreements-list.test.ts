@@ -23,13 +23,13 @@ const row = (patch: Partial<AgreementListRow> = {}): AgreementListRow => ({
   ...patch,
 });
 const sites: SiteOption[] = [
-  { id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null },
-  { id: "s2", name: "Tower B", customer: "Harbourview", liveAgreement: { id: "ag-9", number: "AG-1009" } },
-  { id: "s3", name: "Plant 1", customer: "Northside", liveAgreement: null },
+  { id: SITE, name: "Tower A", customerId: "c1", customer: "Harbourview", liveAgreement: null },
+  { id: "s2", name: "Tower B", customerId: "c1", customer: "Harbourview", liveAgreement: { id: "ag-9", number: "AG-1009" } },
+  { id: "s3", name: "Plant 1", customerId: "c2", customer: "Northside", liveAgreement: null },
 ];
 
 const list = (rows: AgreementListRow[], filter: AgreementFilter = {}, role: MemberRole = "estimator") =>
-  renderToStaticMarkup(createElement(AgreementsListView, { rows, sites, filter, role })).replace(/&#x27;/g, "'");
+  renderToStaticMarkup(createElement(AgreementsListView, { rows, filter, role })).replace(/&#x27;/g, "'");
 
 describe("agreements list", () => {
   test("C1353: a row links to its agreement and shows number, site, customer, status, version and total", () => {
@@ -66,26 +66,55 @@ describe("agreements list", () => {
     expect(html).not.toContain("No agreements yet");
   });
 
-  test("C1355: the filters are labelled and show the current values", () => {
+  test("C1355: the status is a row of links, the current one marked, and the site and expiring filters keep their place", () => {
     const html = list([row()], { status: "sent", siteId: SITE, expiring: true });
-    expect(html).toMatch(/<label[^>]*for="status"[^>]*>Status</);
-    expect(html).toMatch(/<label[^>]*for="site"[^>]*>Site</);
-    expect(html).toMatch(/<option value="sent" selected/);
-    expect(html).toMatch(new RegExp(`<option value="${SITE}" selected`));
-    expect(html).toMatch(/<input(?=[^>]*name="expiring")(?=[^>]*value="1")(?=[^>]*checked)[^>]*>/);
-    expect(html).toContain("Expiring soon");
+    const links = [...html.matchAll(/<a[^>]*href="(\/agreements[^"]*)"[^>]*>([^<]*(?:<svg[\s\S]*?<\/svg>)?[^<]*)<\/a>/g)];
+    const current = links.filter((m) => /aria-current="true"/.test(m[0])).map((m) => m[2].replace(/<svg[\s\S]*?<\/svg>/, ""));
+    expect(current.sort()).toEqual(["Expiring soon", "Sent"]);
+    // choosing another status keeps the site and the expiring filter
+    expect(html).toContain(`href="/agreements?status=accepted&amp;site=${SITE}&amp;expiring=1"`);
+    // the filter that is on can be switched off
+    expect(html).toContain(`href="/agreements?status=sent&amp;site=${SITE}"`);
+    expect(html).toContain("Show every site");
   });
 
-  test("C1355: with no filter nothing is selected or checked", () => {
+  test("C1355: with no filter only All is current and no site notice shows", () => {
     const html = list([row()]);
-    expect([...html.matchAll(/<option value="([^"]*)" selected/g)].map((m) => m[1])).toEqual(["", ""]);
-    expect(html).not.toMatch(/<input(?=[^>]*name="expiring")(?=[^>]*checked)[^>]*>/);
+    const current = [...html.matchAll(/<a[^>]*aria-current="true"[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
+    expect(current).toEqual(["All"]);
+    expect(html).not.toContain("Show every site");
+  });
+
+  test("the four cards count the rows: all, with the customer, needing follow-up and the open value", () => {
+    const now = new Date("2026-10-31T00:00:00Z");
+    const rows = [
+      row({ id: "a", status: "sent", annualCents: 100000, updatedAt: "2026-10-01T00:00:00Z" }),
+      row({ id: "b", status: "sent", annualCents: 200000, updatedAt: "2026-10-30T00:00:00Z" }),
+      row({ id: "c", status: "changes_requested", annualCents: 50000, updatedAt: "2026-10-30T00:00:00Z" }),
+      row({ id: "d", status: "accepted", annualCents: 400000, updatedAt: "2026-10-30T00:00:00Z" }),
+    ];
+    const html = renderToStaticMarkup(createElement(AgreementsListView, { rows, filter: {}, role: "estimator", now }));
+    const card = (label: string) => new RegExp(`${label}</span>[\\s\\S]*?text-\\[30px\\][^>]*>([^<]*)<`).exec(html)?.[1];
+    expect(card("Agreements")).toBe("4");
+    expect(card("With customer")).toBe("2");
+    expect(card("Need follow-up")).toBe("2"); // the sent one that sat 30 days, and the changes request
+    expect(card("Open value")).toBe("$7,500"); // every open stage: 1,000 + 2,000 + 500 + 4,000
+    expect(html).toContain("$4,000/yr accepted");
+  });
+
+  test("a row's age turns red once the agreement has sat past its stage's limit", () => {
+    const now = new Date("2026-10-31T00:00:00Z");
+    const stale = renderToStaticMarkup(createElement(AgreementsListView, { rows: [row({ status: "sent", updatedAt: "2026-10-01T00:00:00Z" })], filter: {}, role: "estimator", now }));
+    const fresh = renderToStaticMarkup(createElement(AgreementsListView, { rows: [row({ status: "sent", updatedAt: "2026-10-30T00:00:00Z" })], filter: {}, role: "estimator", now }));
+    expect(stale).toMatch(/font-semibold text-danger[^>]*>(?:<svg[\s\S]*?<\/svg>)30 days</);
+    expect(fresh).not.toMatch(/text-danger/);
+    expect(fresh).toContain("1 day<");
   });
 
   test("C1360: a viewer sees no New agreement, a writer does", () => {
     expect(list([row()], {}, "viewer")).not.toContain("New agreement");
     for (const role of ["owner", "admin", "estimator"] as const) {
-      expect(list([row()], {}, role)).toMatch(/<a[^>]*href="\/agreements\/new"[^>]*>New agreement</);
+      expect(list([row()], {}, role)).toMatch(/<a[^>]*href="\/agreements\/new"[^>]*>(?:<svg[\s\S]*?<\/svg>)?New agreement</);
     }
   });
 });

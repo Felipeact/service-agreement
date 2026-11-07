@@ -47,6 +47,7 @@ export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
       show={first(params.show) === "attention" ? "attention" : "all"}
       page={first(params.page)}
       actions={actions}
+      agreementId={isUuid(first(params.agreement) ?? "") ? first(params.agreement) : undefined}
     />
   );
 }

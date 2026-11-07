@@ -140,7 +140,7 @@ describe("confirm and discard", () => {
 });
 
 describe("the import page", () => {
-  const render = async (siteId: string) => renderToStaticMarkup((await ImportPage({ params: Promise.resolve({ siteId }) } as never)) as ReactElement);
+  const render = async (siteId: string) => renderToStaticMarkup((await ImportPage({ params: Promise.resolve({ siteId }), searchParams: Promise.resolve({}) } as never)) as ReactElement);
 
   test.each([
     ["a non-uuid id", "not-a-uuid"],

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { IMPORT_ACCEPT, IMPORT_MESSAGES, validateImportFile } from "@/domain/imports";
 import { Button } from "@/components/ui/button";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 import { uploadFile, uploadMessage, type ConfirmState, type ReadState, type StartState, type UploadState } from "./state";
 
 type FieldsProps = {
@@ -22,25 +23,15 @@ export function ImportUploadFields({ state, fileName, onChoose, onSubmit, formRe
   const message = uploadMessage(state);
   return (
     <form ref={formRef} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="importFile" className="text-[13px] font-medium text-ink">
-          Equipment list
-        </label>
-        <input
-          id="importFile"
-          name="file"
-          type="file"
-          accept={IMPORT_ACCEPT}
-          aria-describedby="importFileHint"
-          disabled={uploading}
-          onChange={(event) => onChoose?.(event.target.files?.[0] ?? null)}
-          className="min-h-11 w-full text-[13px] text-ink-2 file:mr-3 file:h-11 file:cursor-pointer file:rounded-control file:border file:border-hairline file:bg-surface file:px-3.5 file:text-[13px] file:font-semibold file:text-ink lg:min-h-0 lg:file:h-[34px]"
-        />
-        <p id="importFileHint" className="text-[12px] text-ink-2">
-          Excel, CSV, Word or PDF, up to 20 MB
-        </p>
-      </div>
-      {fileName && <p className="text-[13px] break-all text-ink">{fileName}</p>}
+      <FileDropzone
+        id="importFile"
+        label="Equipment list"
+        accept={IMPORT_ACCEPT}
+        hint="Excel, CSV, Word or PDF, up to 20 MB"
+        file={fileName ? { name: fileName } : null}
+        disabled={uploading}
+        onFile={(file) => onChoose?.(file)}
+      />
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {message}

@@ -6,9 +6,10 @@ import type { Database } from "./database.types";
 const PUBLIC_PATHS = ["/login", "/auth/confirm"];
 /**
  * Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`,
- * and n8n's signed callbacks post to `/api/automation/notify` (outbox-dispatch door 6).
+ * the customer signs at `/sign/<token>` (signature-provider door 7), and n8n's signed callbacks post to
+ * `/api/automation/notify` (outbox-dispatch door 6).
  */
-const PUBLIC_PREFIXES = ["/review/", "/api/automation/"];
+const PUBLIC_PREFIXES = ["/review/", "/sign/", "/api/automation/"];
 const SIGN_IN_PATH = "/login";
 const HOME_PATH = "/pipeline";
 

@@ -20,6 +20,18 @@ const PDF_LIBRARY = {
   message: "Render PDFs only in infrastructure/documents, behind the DocumentRenderer port.",
 };
 
+// The DocuSeal adapter is reached through the SignatureProvider port, from the composition root only (signature-provider door 1).
+const DOCUSEAL_ADAPTER = {
+  group: ["@/infrastructure/docuseal", "@/infrastructure/docuseal/*"],
+  message: "Reach DocuSeal only through the SignatureProvider port; the composition root wires the adapter.",
+};
+
+// The signing form component is embedded only under components/signing (signature-provider door 6).
+const DOCUSEAL_REACT = {
+  group: ["@docuseal/react", "@docuseal/react/*"],
+  message: "Embed the signing form only in components/signing.",
+};
+
 const ADAPTER_PATTERNS = [
   {
     group: [
@@ -49,6 +61,8 @@ const eslintConfig = defineConfig([
               group: ["@/lib", "@/lib/*", "@/components", "@/components/*", "@/app", "@/app/*"],
               message: "The domain layer must not import UI or app code.",
             },
+            DOCUSEAL_ADAPTER,
+            DOCUSEAL_REACT,
             PARSER_LIBRARIES,
             CLAUDE_SDK,
             PDF_LIBRARY,
@@ -87,24 +101,49 @@ const eslintConfig = defineConfig([
   // Adapters implement ports; they never reach UI or the composition root. Only the parser adapter parses files.
   {
     files: ["infrastructure/**/*.ts"],
-    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**", "infrastructure/documents/**"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK, PDF_LIBRARY] }] },
+    ignores: ["infrastructure/import-parsers/**", "infrastructure/claude/**", "infrastructure/documents/**", "infrastructure/docuseal/**"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, DOCUSEAL_REACT, PARSER_LIBRARIES, CLAUDE_SDK, PDF_LIBRARY] }] },
+  },
+  {
+    files: ["infrastructure/docuseal/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_REACT, PARSER_LIBRARIES, CLAUDE_SDK, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/import-parsers/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, CLAUDE_SDK, PDF_LIBRARY] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, DOCUSEAL_REACT, CLAUDE_SDK, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/claude/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, PDF_LIBRARY] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, DOCUSEAL_REACT, PARSER_LIBRARIES, PDF_LIBRARY] }] },
   },
   {
     files: ["infrastructure/documents/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, PARSER_LIBRARIES, CLAUDE_SDK] }] },
+    rules: { "no-restricted-imports": ["error", { patterns: [...ADAPTER_PATTERNS, DOCUSEAL_ADAPTER, DOCUSEAL_REACT, PARSER_LIBRARIES, CLAUDE_SDK] }] },
   },
   // UI reaches adapters only through @/composition, which is server-only.
   {
     files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/infrastructure", "@/infrastructure/*", "@supabase/*"],
+              message: "UI code must not use adapters or the database client directly; use @/composition.",
+            },
+            DOCUSEAL_REACT,
+            PARSER_LIBRARIES,
+            CLAUDE_SDK,
+            PDF_LIBRARY,
+          ],
+        },
+      ],
+    },
+  },
+  // ...except the signing form, which is the one place that embeds it.
+  {
+    files: ["components/signing/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",

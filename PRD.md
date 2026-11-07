@@ -107,7 +107,7 @@ Next.js 16 (App Router), React 19, Tailwind 4 in `web/`; Supabase (Postgres with
 | 2 | Asset import | Done |
 | 3 | Agreement builder, PDF, customer portal, outbox, n8n W1/W3/W5, email | Done; live on Railway since 2026-10-30 |
 | 3.5 | Cadence, terms, renewals, deactivation, versioning, list pages, task library, contact roles | Done except: agreement activity timeline, members page, global search |
-| 4 | Contract and e-signature (DocuSeal), W2, W4 | Not started |
+| 4 | Contract and e-signature (DocuSeal), W2, W4 | In progress: contract generation and sending for signature built; webhook, signed PDF, W2 and W4 remain |
 | 5 | Stripe billing, onboarding, plan limits | Not started |
 | 6 | Post-contract operations | Not started |
 

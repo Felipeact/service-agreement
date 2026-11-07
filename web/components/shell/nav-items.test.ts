@@ -24,8 +24,8 @@ describe("navigation", () => {
     expect(hrefOf("Imports")).toBe("/imports");
   });
 
-  test("C1415: Task library links to /task-library", () => {
-    expect(hrefOf("Task library")).toBe("/task-library");
+  test("the Task library is gone from the navigation", () => {
+    expect([...MAIN_NAV, ...FOOTER_NAV].map((item) => item.label)).not.toContain("Task library");
   });
 
   test.each([
@@ -35,7 +35,7 @@ describe("navigation", () => {
   ])("C1358: on %s the Agreements item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/agreements"[^>]*>Agreements<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/agreements"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Agreements<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -48,7 +48,7 @@ describe("navigation", () => {
   ])("C1376: on %s the Sites & equipment item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/sites"[^>]*>Sites &amp; equipment<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/sites"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Sites &amp; equipment<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -61,21 +61,7 @@ describe("navigation", () => {
   ])("C1394: on %s the Imports item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/imports"[^>]*>Imports<\/a>/.exec(html)?.[0] ?? "";
-    expect(link).not.toBe("");
-    expect(link.includes('aria-current="page"')).toBe(current);
-  });
-
-  test.each([
-    ["/task-library", true],
-    ["/task-library?type=RTU", true],
-    ["/pipeline", false],
-    ["/sites", false],
-    ["/imports", false],
-  ])("C1416: on %s the Task library item is current: %s", (path, current) => {
-    pathname = path;
-    const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/task-library"[^>]*>Task library<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/imports"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Imports<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -89,11 +75,10 @@ describe("navigation", () => {
     ["/members", true],
     ["/settings", false],
     ["/pipeline", false],
-    ["/task-library", false],
   ])("C1504: on %s the Members item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/members"[^>]*>Members<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/members"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Members<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });

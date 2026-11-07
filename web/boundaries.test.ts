@@ -90,6 +90,54 @@ describe("layer boundaries", () => {
     expect(document).not.toContain("ReactElement");
   });
 
+  test.each(["application/x.ts", "components/x.tsx", "app/x.tsx", "domain/x.ts", "lib/x.ts", "infrastructure/supabase/x.ts", "infrastructure/documents/x.ts"])(
+    "C1660: %s importing the DocuSeal adapter is a lint error naming it",
+    async (file) => {
+      const messages = await restrictedImports(file, "@/infrastructure/docuseal");
+      expect(messages).toHaveLength(1);
+      expect(messages[0].message.length).toBeGreaterThan(0);
+    },
+  );
+
+  test("C1660: composition and infrastructure/docuseal may import the DocuSeal adapter, and no source file outside them does", async () => {
+    expect(await restrictedImports("composition/x.ts", "@/infrastructure/docuseal")).toHaveLength(0);
+    expect(await restrictedImports("infrastructure/docuseal/x.ts", "@/infrastructure/docuseal")).toHaveLength(0);
+    const files = sourceFiles(webRoot).filter((file) => !/\.test\.tsx?$/.test(file));
+    const importers = files
+      .filter((file) => /from "@\/infrastructure\/docuseal/.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(webRoot, file).split(path.sep).join("/"));
+    expect(importers.filter((file) => !file.startsWith("composition/") && !file.startsWith("infrastructure/docuseal/"))).toEqual([]);
+  });
+
+  // Layers that already forbid `react` catch `@docuseal/react` through the same pattern; the UI places get the rule that names components/signing.
+  test.each(["application/x.ts", "domain/x.ts", "infrastructure/supabase/x.ts", "infrastructure/docuseal/x.ts", "infrastructure/documents/x.ts"])(
+    "C1716: %s importing @docuseal/react is a lint error",
+    async (file) => {
+      expect((await restrictedImports(file, "@docuseal/react")).length).toBeGreaterThan(0);
+    },
+  );
+
+  test.each(["lib/x.ts", "app/x.tsx", "components/contracts/x.tsx", "components/x.tsx"])(
+    "C1716: %s importing @docuseal/react is a lint error naming components/signing",
+    async (file) => {
+      const messages = await restrictedImports(file, "@docuseal/react");
+      expect(messages).toHaveLength(1);
+      expect(messages[0].message).toContain("components/signing");
+    },
+  );
+
+  test("C1716: components/signing may import @docuseal/react, no other file does, and the dependency is pinned exact", async () => {
+    expect(await restrictedImports("components/signing/x.tsx", "@docuseal/react")).toHaveLength(0);
+    const files = sourceFiles(webRoot).filter((file) => !/\.test\.tsx?$/.test(file));
+    const importers = files
+      .filter((file) => /from "@docuseal\/react/.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(webRoot, file).split(path.sep).join("/"));
+    expect(importers.length).toBeGreaterThan(0);
+    expect(importers.filter((file) => !file.startsWith("components/signing/"))).toEqual([]);
+    const pkg = JSON.parse(readFileSync(path.join(webRoot, "package.json"), "utf8"));
+    expect(pkg.dependencies["@docuseal/react"]).toBe("1.0.76");
+  });
+
   test.each(SDK_PLACES)("C539: %s importing @anthropic-ai/sdk is a lint error naming it", async (file) => {
     const messages = await restrictedImports(file, "@anthropic-ai/sdk");
     expect(messages).toHaveLength(1);
@@ -171,6 +219,24 @@ describe("layer boundaries", () => {
     expect(files.length).toBeGreaterThan(10);
     const offenders = files.filter((file) => /from "(@supabase\/|@\/infrastructure)/.test(readFileSync(file, "utf8")));
     expect(offenders).toEqual([]);
+  });
+
+  test("C1661: DOCUSEAL_API_KEY, DOCUSEAL_API_URL and SIGNING_LINK_KEY are read only under composition/, never as NEXT_PUBLIC_, and .env.example names them with no value", () => {
+    const names = ["DOCUSEAL_API_KEY", "DOCUSEAL_API_URL", "SIGNING_LINK_KEY"];
+    const files = sourceFiles(webRoot).filter((file) => !/\.test\.tsx?$/.test(file) && !file.endsWith(".testing.ts"));
+    const readers = (name: string) =>
+      files.filter((file) => new RegExp(String.raw`process\.env(\.${name}\b|\[["'${"`"}]${name}["'${"`"}]\])`).test(readFileSync(file, "utf8")));
+    for (const name of names) {
+      const found = readers(name).map((file) => path.relative(webRoot, file).split(path.sep).join("/"));
+      expect(found.length, name).toBeGreaterThan(0);
+      expect(found.filter((file) => !file.startsWith("composition/")), name).toEqual([]);
+    }
+    const exposed = files.filter((file) => /NEXT_PUBLIC_(DOCUSEAL_API_KEY|DOCUSEAL_API_URL|SIGNING_LINK_KEY)/.test(readFileSync(file, "utf8")));
+    expect(exposed).toEqual([]);
+
+    const example = readFileSync(path.join(webRoot, ".env.example"), "utf8");
+    for (const name of names) expect(example).toMatch(new RegExp(String.raw`^${name}=[ \t]*\r?$`, "m"));
+    expect(example).not.toMatch(/^NEXT_PUBLIC_(DOCUSEAL_API_KEY|DOCUSEAL_API_URL|SIGNING_LINK_KEY)/m);
   });
 
   test("C1046: PORTAL_LINK_KEY, RESEND_API_KEY and EMAIL_FROM are read only under composition/, never as NEXT_PUBLIC_, and .env.example names them with no value", () => {

@@ -31,7 +31,7 @@ export function LoginFields({ state, pending, linkInvalid, action }: LoginFields
   if (state.status === "sent") {
     return (
       <div className="flex flex-col gap-3">
-        <h1 className="text-[22px] leading-tight font-bold">Check your email</h1>
+        <h1 className="font-display text-[26px] leading-tight font-semibold tracking-tight">Check your email</h1>
         <p className="text-ink-2">
           We sent a sign-in link to <span className="font-semibold text-ink">{state.email}</span>.
         </p>
@@ -52,7 +52,7 @@ export function LoginFields({ state, pending, linkInvalid, action }: LoginFields
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-[22px] leading-tight font-bold">Sign in</h1>
+        <h1 className="font-display text-[26px] leading-tight font-semibold tracking-tight">Sign in</h1>
         <p className="text-ink-2">We&apos;ll email you a link to sign in. No password needed.</p>
       </div>
       {notice && <Notice>{notice}</Notice>}

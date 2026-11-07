@@ -7,12 +7,16 @@ const REVIEW_PAGE = /^\/review\/([^/]+)$/;
 
 const NOT_WORKING_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Agreement</title></head><body style="margin:0;font-family:system-ui,sans-serif;color:#111827;background:#f6f7f9"><main style="max-width:480px;margin:0 auto;padding:40px 16px"><h1 style="font-size:18px">${LINK_NOT_WORKING.replace("'", "&#39;")}</h1></main></body></html>`;
 
-async function linkExists(token: string): Promise<boolean> {
+/**
+ * Whether `<fn>(sha256(token))` answers something. Shared with the signing gate: both pages are a secret address whose
+ * token is the only credential, and both fail open, so a failed check never turns a good link away.
+ */
+export async function linkExists(fn: "portal_view" | "signature_view", token: string): Promise<boolean> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return true;
   try {
-    const response = await fetch(`${url}/rest/v1/rpc/portal_view`, {
+    const response = await fetch(`${url}/rest/v1/rpc/${fn}`, {
       method: "POST",
       headers: { apikey: key, "Content-Type": "application/json" },
       body: JSON.stringify({ p_token_hash: createHash("sha256").update(token, "utf8").digest("hex") }),
@@ -35,7 +39,12 @@ export async function portalGate(request: NextRequest): Promise<NextResponse | n
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const token = REVIEW_PAGE.exec(request.nextUrl.pathname)?.[1];
   if (token === undefined) return null;
-  if (isPortalToken(token) && (await linkExists(token))) return null;
+  if (isPortalToken(token) && (await linkExists("portal_view", token))) return null;
+  return linkNotWorkingResponse();
+}
+
+/** The real `404` an address that is malformed or has no link gets, in full: it names no tenant and no document. */
+export function linkNotWorkingResponse(): NextResponse {
   return new NextResponse(NOT_WORKING_PAGE, {
     status: 404,
     headers: {

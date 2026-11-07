@@ -88,7 +88,7 @@ export function LinkPanel({ url, copied = false, onCopy }: LinkPanelProps) {
           readOnly
           value={url}
           aria-label="Customer link address"
-          className="min-h-11 min-w-0 flex-1 rounded-control border border-hairline bg-ground px-3 text-[13px] lg:min-h-[34px]"
+          className="min-h-11 min-w-0 flex-1 rounded-control border border-field bg-ground px-3 text-[13px] lg:min-h-[34px]"
         />
         <Button variant="primary" onClick={onCopy}>
           {copied ? "Copied" : "Copy link"}

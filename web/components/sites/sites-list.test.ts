@@ -1,9 +1,11 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 import type { CustomerSummary, SiteListRow } from "@/application/ports";
 import type { SiteFilter } from "@/domain/records";
-import { SitesListView } from "./sites-list";
+const { SitesListView } = await import("./sites-list");
 
 const CUSTOMER = "00000000-0000-4000-8000-0000000000c1";
 
@@ -56,12 +58,17 @@ describe("sites list view", () => {
     const out = html([row({ liveAgreement: { id: "ag1", number: "AG-1001", status: "sent" } })]);
     expect(out).toMatch(/<a[^>]*href="\/agreements\/ag1"[^>]*>AG-1001<\/a>/);
     expect(out).toContain("Sent to customer");
-    expect(out).not.toContain("No live agreement");
+    // the segmented control also names "No live agreement", so look at the rows only
+    expect(out.slice(out.indexOf('<ul class="divide-y'))).not.toContain("No live agreement");
   });
 
-  test("C1372: the header badge counts the sites", () => {
-    expect(html([row()])).toContain("1 site<");
-    expect(html([row(), row({ id: "s2" })])).toContain("2 sites<");
+  test("C1372: the summary cards count the sites, their assets, the live agreements and the sites ready to quote", () => {
+    const card = (out: string, label: string) => new RegExp(`${label}</span>[\\s\\S]*?text-\\[30px\\][^>]*>([^<]*)<`).exec(out)?.[1];
+    const out = html([row(), row({ id: "s2", assetCount: 5, liveAgreement: { id: "ag1", number: "AG-1", status: "sent" } }), row({ id: "s3", assetCount: 0 })]);
+    expect(card(out, "Sites")).toBe("3");
+    expect(card(out, "Assets")).toBe("8");
+    expect(card(out, "Live agreements")).toBe("1");
+    expect(card(out, "Ready to quote")).toBe("1");
   });
 
   const types = (n: number) => Array.from({ length: n }, (_, i) => ({ code: `T${i + 1}`, count: n - i }));
@@ -82,18 +89,16 @@ describe("sites list view", () => {
     expect(html([row({ assetCount: 0, equipment: [] })])).toContain("No equipment");
   });
 
-  test("C1382: the filter bar is a labelled GET form to /sites", () => {
+  test("C1382: the filter bar is a segmented control, a labelled customer picker following the filter, and a search that starts from q", () => {
     const out = html([row()], { q: "tower", customerId: CUSTOMER });
-    const form = /<form\b[^>]*>/.exec(out)?.[0] ?? "";
-    expect(form).toContain('method="get"');
-    expect(form).toContain('action="/sites"');
-    expect(out).toMatch(/<label[^>]*for="q"[^>]*>[^<]*Search/);
-    expect(out).toMatch(/<input[^>]*name="q"[^>]*value="tower"/);
+    const segments = [...out.matchAll(/<button[^>]*aria-pressed="(true|false)"[^>]*>([^<]*)<\/button>/g)].map((m) => [m[2], m[1]]);
+    expect(segments).toEqual([["All", "true"], ["With a live agreement", "false"], ["No live agreement", "false"]]);
     expect(out).toMatch(/<label[^>]*for="customer"[^>]*>Customer<\/label>/);
     expect(out).toContain("All customers");
     expect(out).toMatch(new RegExp(`<option value="${CUSTOMER}" selected="">Harbourview Strata</option>`));
     expect(out).toContain("Bayside Bakery");
-    expect(out).toMatch(/<button[^>]*type="submit"[^>]*>Apply filters<\/button>/);
+    expect(out).toMatch(/<input[^>]*type="search"[^>]*value="tower"/);
+    expect(out).not.toContain("Apply filters");
   });
 
   test("C1383: the default link shows inactive and keeps q and customer", () => {
@@ -103,9 +108,10 @@ describe("sites list view", () => {
   });
 
   test("C1383: while showing inactive the link hides it, keeps q and customer, and an inactive row has the pill", () => {
-    const filter: SiteFilter = { q: "tower", customerId: CUSTOMER, showInactive: true };
+    // the search starts from q and narrows the rows on the page, so it must match both rows to keep the inactive one in view
+    const filter: SiteFilter = { q: "harbour", customerId: CUSTOMER, showInactive: true };
     const out = html([row(), row({ id: "s2", name: "Old Annex", active: false })], filter);
-    expect(out).toMatch(new RegExp(`<a[^>]*href="/sites\\?q=tower&amp;customer=${CUSTOMER}"[^>]*>Hide inactive<\\/a>`));
+    expect(out).toMatch(new RegExp(`<a[^>]*href="/sites\\?q=harbour&amp;customer=${CUSTOMER}"[^>]*>Hide inactive<\\/a>`));
     expect(out.match(/>Inactive</g)?.length).toBe(1);
     expect(out).toMatch(/Old Annex[\s\S]*>Inactive</);
     expect(html([row()])).not.toContain(">Inactive<");
@@ -132,8 +138,9 @@ describe("sites list view", () => {
 
   test("C1372: a null address leaves out the address line, so only the asset count is secondary text", () => {
     const secondary = (out: string) => out.match(/text-\[12px\] text-ink-2/g)?.length ?? 0;
-    expect(secondary(html([row()]))).toBe(2);
-    expect(secondary(html([row({ address: null })]))).toBe(1);
+    const rowOnly = (out: string) => out.slice(out.indexOf('<ul class="divide-y'));
+    expect(secondary(rowOnly(html([row()])))).toBe(2);
+    expect(secondary(rowOnly(html([row({ address: null })])))).toBe(1);
   });
 
   test("C1372: the status label is the text of its own pill", () => {

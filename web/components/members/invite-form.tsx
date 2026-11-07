@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { DEFAULT_INVITE_ROLE, ROLES, ROLE_LABELS } from "@/domain/members";
@@ -13,8 +14,16 @@ type Props = { action: (state: InviteFormState, formData: FormData) => Promise<I
 export function InviteFields({ state, pending, formAction }: { state: InviteFormState; pending?: boolean; formAction?: (formData: FormData) => void }) {
   const failed = state.status !== "idle" && state.status !== "sent";
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-      <h2 className="text-[13px] font-semibold">Invite someone</h2>
+    <form action={formAction} className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-control bg-action-tint text-action">
+          <Icon name="plus" />
+        </span>
+        <div className="flex flex-col">
+          <h2 className="font-display text-[18px] leading-tight font-semibold tracking-tight">Invite someone</h2>
+          <p className="text-[13px] text-ink-2">They get an email with a link to join. No password needed.</p>
+        </div>
+      </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <TextInput id="invite-email" name="email" type="email" label="Email" autoComplete="off" required className="sm:flex-1" />
         <Select id="invite-role" name="role" label="Role" defaultValue={DEFAULT_INVITE_ROLE} className="sm:w-44">

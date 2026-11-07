@@ -59,3 +59,8 @@ Everytime a roadmap item is completed mark it as done in the ROADMAP.md
 5. A task is not done until `CONTEXT.md` reflects it, the same as the Playwright and ROADMAP rules.
 6. Keep entries short and factual. Link to files instead of copying code.
 
+
+
+## tlc-spec-lean
+
+profile: standard

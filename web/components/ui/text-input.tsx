@@ -20,7 +20,7 @@ export function TextInput({ id, label, error, className = "", ...props }: TextIn
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={`h-11 w-full rounded-control border bg-surface px-3 text-[13px] text-ink placeholder:text-ink-2 lg:h-[34px] ${error ? "border-danger" : "border-hairline"}`}
+        className={`h-11 w-full rounded-control border bg-surface px-3 text-[13px] text-ink placeholder:text-ink-2 lg:h-[34px] ${error ? "border-danger" : "border-field"}`}
         {...props}
       />
       {error && (

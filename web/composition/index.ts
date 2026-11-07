@@ -7,6 +7,7 @@ import type { OrgSettingsValue } from "@/domain/org-settings";
 import {
   makeDecidePortal,
   makeInviteMember,
+  makeContractDocuments,
   makeExtractImport,
   makeNotify,
   makeReadImport,
@@ -14,13 +15,16 @@ import {
   makeReissueLink,
   makeRequestSignInLink,
   makeSendAgreement,
+  makeSendForSignature,
   makeTransitionAgreement,
   makeTransitionContract,
   makeViewPortal,
+  makeViewSigning,
   type NotifyResult,
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
+import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
 import { makePortalTokens } from "@/infrastructure/portal-tokens";
@@ -59,6 +63,7 @@ import {
   supabaseSiteRegister,
 } from "@/infrastructure/supabase/readers";
 import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supabaseSiteStore } from "@/infrastructure/supabase/records";
+import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
 
 function required(name: string, value: string | undefined): string {
@@ -117,6 +122,9 @@ export async function getContainer() {
   const portalReader = supabasePortalReader(supabase);
   // Sealing needs PORTAL_LINK_KEY: without it a send or a new link throws and answers unavailable (outbox-dispatch door 5).
   const portalTokens = makePortalTokens(process.env.PORTAL_LINK_KEY);
+  // The signing links and the provider's embed links are sealed with their own key, so a leak of one key opens one family
+  // of links (signature-provider door 4). Without it a send answers unavailable before anything is begun.
+  const signingTokens = makePortalTokens(process.env.SIGNING_LINK_KEY);
 
   return {
     requestSignInLink: makeRequestSignInLink(auth),
@@ -191,6 +199,18 @@ export async function getContainer() {
     contractRenderer: reactPdfContractRenderer,
     contractReader: supabaseContractReader(supabase),
     contractStore: supabaseContractStore(supabase),
+    // Sending a contract for signature (signature-provider): the member's client claims and stores, the provider gets the PDF.
+    sendForSignature: makeSendForSignature({
+      // The same stateless readers, built over the same member client.
+      documents: makeContractDocuments(supabaseContractReader(supabase), supabaseAgreementReader(supabase), settings.get),
+      store: supabaseSignatureStore(supabase),
+      renderer: reactPdfContractRenderer,
+      provider: docusealSignatureProvider({ apiKey: process.env.DOCUSEAL_API_KEY, apiUrl: process.env.DOCUSEAL_API_URL }),
+      tokens: signingTokens,
+    }),
+    signingSecrets: supabaseSigningSecrets(supabase),
+    signingTokens,
+    viewSigning: makeViewSigning(supabaseSigningReader(supabase), signingTokens),
     clock: systemClock,
   };
 }

@@ -117,3 +117,34 @@ describe("contract reader", () => {
     await expect(supabaseContractReader(typed).get(CON)).rejects.toThrow("XX000");
   });
 });
+
+describe("contract reader: signature requests", () => {
+  const request = (id: string, status: string, createdAt: string) => ({ id, status, created_at: createdAt });
+
+  test("C1690: a contract with no request has signing null", async () => {
+    const { typed } = stubClient({ contracts: { data: row({ contract_signature_requests: [] }), error: null } });
+    expect((await supabaseContractReader(typed).get(CON))?.signing).toBeNull();
+  });
+
+  test("C1690: the newest request is the one the view carries, whatever order the rows come in", async () => {
+    const rows = [request("old", "failed", "2026-11-05T10:00:00Z"), request("new", "open", "2026-11-06T10:00:00Z"), request("mid", "voided", "2026-11-05T20:00:00Z")];
+    const { typed } = stubClient({ contracts: { data: row({ contract_signature_requests: rows }), error: null } });
+    expect((await supabaseContractReader(typed).get(CON))?.signing).toEqual({ requestId: "new", status: "open" });
+  });
+
+  test("C1690: the read asks for the requests of the contract", async () => {
+    const { typed, calls } = stubClient({ contracts: { data: row({ contract_signature_requests: [] }), error: null } });
+    await supabaseContractReader(typed).get(CON);
+    expect(String(calls.find((call) => call.method === "select")?.args[0])).toContain("contract_signature_requests(id, status, created_at)");
+  });
+
+  test.each([
+    ["creating", true],
+    ["open", true],
+    ["failed", false],
+    ["voided", false],
+  ])("C1690: a %s request is live: %s", async (status, live) => {
+    const { isLiveRequest } = await import("@/domain/contract");
+    expect(isLiveRequest(status as "creating" | "open" | "failed" | "voided")).toBe(live);
+  });
+});

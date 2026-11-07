@@ -187,3 +187,18 @@ describe("updateSession on the customer review address", () => {
     expect((await updateSession(request(path))).headers.get("location")).toBeNull();
   });
 });
+
+describe("the customer's signing address", () => {
+  test.each(["/sign/U-FVzrQONnE0OeSkuG3mDhLni8aAqblTz4-KLseYCj4", "/sign/anything"])("C1700: signed out, GET %s is not redirected to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  test.each(["/sign", "/signx", "/signing/abc"])("C1700: signed out, %s is not public and redirects to /login", async (path) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+    expect(response.status).toBe(307);
+    expect(locationPath(response)).toBe("/login");
+  });
+});
