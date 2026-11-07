@@ -207,40 +207,35 @@ begin
     perform tests.ok('C13 search_path ' || f,
       (select proconfig from pg_proc where oid = f::regprocedure) @> array['search_path=""'], 'search_path not empty');
     perform tests.ok('C13 anon ' || f, not has_function_privilege('anon', f, 'execute'), 'anon may execute');
-    perform tests.ok('C13 authenticated ' || f, has_function_privilege('authenticated', f, 'execute'),
-      'authenticated may not execute');
+    -- signature-webhook door 3: members no longer call apply_contract_transition; signature_webhook is the contract's writer.
+    perform tests.ok('C13 authenticated ' || f, has_function_privilege('authenticated', f, 'execute') = (f not like '%apply_contract_transition%'),
+      'wrong execute privilege for authenticated');
   end loop;
 end $$;
 
--- C14 (conA is pending_signature)
+-- C14 (conA is pending_signature). signature-webhook door 3: a member can no longer move a contract through
+-- apply_contract_transition (the verified webhook is the writer), so the call is refused and the owner moves the status
+-- directly, to leave conA client_signed for the rows below.
 do $$
-declare e uuid;
 begin
   perform tests.act_as('uE');
-  e := public.apply_contract_transition(tests.id('conA'), 'pending_signature', 'client_signed',
-    'contract.client_signed', '{"from":"pending_signature","to":"client_signed"}');
+  perform tests.expect_error('C14 refused', tests.sign_sql(tests.id('conA'), 'pending_signature'), '42501');
   reset role;
-  perform tests.ok('C14 status', (select status from public.contracts where id = tests.id('conA')) = 'client_signed',
-    'status is not client_signed');
-  perform tests.ok('C14 event', (select count(*) from public.events where id = e) = 1 and exists (
-    select 1 from public.events
-    where id = e and type = 'contract.client_signed' and entity_type = 'contract' and entity_id = tests.id('conA')
-      and actor_id = tests.id('uE') and payload = '{"from":"pending_signature","to":"client_signed"}'::jsonb),
-    'event row differs');
-  perform tests.ok('C14 outbox', (select count(*) from public.outbox where event_id = e and status = 'pending') = 1,
-    'not exactly one pending outbox row');
+  perform tests.ok('C14 status', (select status from public.contracts where id = tests.id('conA')) = 'pending_signature',
+    'status moved');
+  update public.contracts set status = 'client_signed' where id = tests.id('conA');
 end $$;
 
--- C15 (conA is client_signed)
+-- C15 (conA is client_signed). Every call is refused at the privilege, whoever calls and whatever it names.
 do $$
 declare sa text; sb text;
 begin
   sa := tests.con_state(tests.id('conA'));
   sb := tests.con_state(tests.id('conB'));
   perform tests.act_as('uE');
-  perform tests.expect_error('C15 stale', tests.sign_sql(tests.id('conA'), 'pending_signature'), '40001');
-  perform tests.expect_error('C15 other org', tests.sign_sql(tests.id('conB'), 'pending_signature'), 'P0002');
-  perform tests.expect_error('C15 unknown', tests.sign_sql(tests.id('no-such-contract'), 'pending_signature'), 'P0002');
+  perform tests.expect_error('C15 stale', tests.sign_sql(tests.id('conA'), 'pending_signature'), '42501');
+  perform tests.expect_error('C15 other org', tests.sign_sql(tests.id('conB'), 'pending_signature'), '42501');
+  perform tests.expect_error('C15 unknown', tests.sign_sql(tests.id('no-such-contract'), 'pending_signature'), '42501');
   perform tests.act_as('uV');
   perform tests.expect_error('C15 viewer',
     format('select public.apply_contract_transition(%L, ''client_signed'', ''completed'', ''contract.completed'', ''{"from":"client_signed","to":"completed"}'')',
@@ -604,7 +599,8 @@ begin
   perform tests.expect_error('C1612 parties', format('update public.contracts set parties = ''{}'' where id = %L', c), '42501');
   perform tests.expect_error('C1612 org_id', format('update public.contracts set org_id = org_id where id = %L', c), '42501');
   perform tests.expect_error('C1612 agreement_version_id', format('update public.contracts set agreement_version_id = agreement_version_id where id = %L', c), '42501');
-  perform tests.expect_rows('C1612 status', format('update public.contracts set status = ''client_signed'' where id = %L and status = ''pending_signature''', c), 1);
+  -- signature-webhook door 3 (C1765): the status was the one column members could update; the verified webhook is its only writer now.
+  perform tests.expect_error('C1612 status', format('update public.contracts set status = ''client_signed'' where id = %L and status = ''pending_signature''', c), '42501');
   reset role;
   perform tests.act_as('uE');
   perform tests.expect_error('C1612 estimator insert', format('insert into public.contracts (org_id, agreement_version_id) values (%L, %L)', tests.id('orgA'), tests.id('cg1:v1')), '42501');
@@ -1218,6 +1214,567 @@ begin
   perform tests.sg_expect_constraint('C1722 sealed format',
     format('update public.contract_signers set embed_sealed = ''https://docuseal.com/s/plain'' where request_id = %L and role = ''customer''', r),
     '23514', 'contract_signers_embed_sealed_check');
+end $$;
+
+
+-- Signature webhook (.specs/features/signature-webhook/checks.md): C1729-C1770 and C1780. C1773 is a get_advisors call, C1774 the full run.
+
+-- The HMAC secret DocuSeal's webhook is signed with, created inside this rolled-back transaction (null deletes it).
+create function tests.sw_secret(p_value text) returns void
+language plpgsql as $$
+declare v uuid;
+begin
+  select id into v from vault.secrets where name = 'docuseal_webhook_secret';
+  if p_value is null then
+    delete from vault.secrets where id = v;
+  elsif v is null then
+    perform vault.create_secret(p_value, 'docuseal_webhook_secret');
+  else
+    perform vault.update_secret(v, p_value);
+  end if;
+end $$;
+
+-- `<seconds>.<hex>` for p_body, with the seconds p_offset away from the database clock and p_secret as the key.
+create function tests.sw_sig(p_body text, p_offset integer default 0, p_secret text default 'whsec_test') returns text
+language sql stable as $$
+  select s || '.' || encode(extensions.hmac(s || '.' || p_body, p_secret, 'sha256'), 'hex')
+  from (select (floor(extract(epoch from now()))::bigint + p_offset)::text as s) t
+$$;
+
+-- A signed delivery of p_body, and the same as SQL text for tests.expect_error.
+create function tests.sw_post(p_body jsonb, p_documents jsonb default null) returns jsonb
+language sql as $$ select public.signature_webhook(p_body::text, tests.sw_sig(p_body::text), p_documents) $$;
+
+create function tests.sw_post_sql(p_body jsonb, p_documents jsonb default null, p_offset integer default 0) returns text
+language sql stable as $$
+  select format('select public.signature_webhook(%L, %L, %L::jsonb)', p_body::text, tests.sw_sig(p_body::text, p_offset), p_documents::text)
+$$;
+
+-- form.completed / form.declined for submission p_submission and submitter p_submitter, with p_extra merged into `data`.
+create function tests.sw_form(p_event text, p_submission text, p_submitter text, p_extra jsonb default '{}') returns jsonb
+language sql immutable as $$
+  select jsonb_build_object('event_type', p_event, 'timestamp', '2026-11-07T22:14:00Z', 'data',
+    jsonb_build_object('id', p_submitter::bigint, 'role', 'Customer', 'completed_at', '2026-11-07T22:14:00.000Z', 'ip', '203.0.113.9',
+      'ua', 'UA/1', 'submission', jsonb_build_object('id', p_submission::bigint)) || p_extra)
+$$;
+
+create function tests.sw_done(p_submission text, p_extra jsonb default '{}') returns jsonb
+language sql immutable as $$
+  select jsonb_build_object('event_type', 'submission.completed', 'timestamp', '2026-11-07T22:20:00Z', 'data',
+    jsonb_build_object('id', p_submission::bigint, 'status', 'completed',
+      'combined_document_url', 'https://docuseal.com/file/a/document.pdf', 'audit_log_url', 'https://docuseal.com/file/a/audit-log.pdf') || p_extra)
+$$;
+
+-- The two documents of a second call; the text is the PDF, its base64 the content.
+create function tests.sw_docs(p_signed text default '%PDF-1.4 signed', p_audit text default '%PDF-1.4 audit') returns jsonb
+language sql immutable as $$
+  select jsonb_build_array(
+    jsonb_build_object('kind', 'signed', 'content', encode(convert_to(p_signed, 'UTF8'), 'base64')),
+    jsonb_build_object('kind', 'audit_log', 'content', encode(convert_to(p_audit, 'UTF8'), 'base64')))
+$$;
+
+-- A begun and completed request on p_contract with the provider's submission id p_submission (submitters 101 and 102).
+create function tests.sw_open(p_contract uuid, p_submission text) returns uuid
+language plpgsql as $$
+declare r uuid := tests.sg_begin(p_contract);
+begin
+  perform tests.act_as('uD');
+  perform public.complete_signature_request(r, p_submission, tests.sg_signers(), tests.sg_sealed('lw'), repeat('a', 64));
+  reset role;
+  return r;
+end $$;
+
+-- requests | signers | signed signers | documents | events | outbox of org A, and every contract and request status, read past RLS.
+create function tests.sw_state() returns text
+language sql security definer as $$
+  select concat_ws('|',
+    (select count(*) from public.contract_signature_requests),
+    (select count(*) from public.contract_signers),
+    (select count(*) from public.contract_signers where signed_at is not null),
+    (select count(*) from public.contract_signed_documents),
+    (select count(*) from public.events where org_id = tests.id('orgA')),
+    (select count(*) from public.outbox where org_id = tests.id('orgA')),
+    (select string_agg(status, ',' order by id) from public.contracts),
+    (select string_agg(status, ',' order by id) from public.contract_signature_requests))
+$$;
+
+-- The events of type p_type about p_contract.
+create function tests.sw_events(p_contract uuid, p_type text) returns bigint
+language sql security definer as $$ select count(*) from public.events where entity_id = p_contract and type = p_type $$;
+
+grant execute on all functions in schema tests to anon, authenticated;
+
+select tests.sw_secret('whsec_test');
+
+-- C1729: a hex that differs in its last character, and a signature over a changed body, raise 42501 and write nothing.
+do $$
+declare
+  c uuid := tests.sg_contract('sw29'); r uuid := tests.sw_open(c, '2901');
+  body text := tests.sw_form('form.completed', '2901', '101')::text;
+  good text := tests.sw_sig(body);
+  bad text := left(good, length(good) - 1) || case when right(good, 1) = 'a' then 'b' else 'a' end;
+  before_state text := tests.sw_state();
+begin
+  perform tests.expect_error('C1729 last character', format('select public.signature_webhook(%L, %L)', body, bad), '42501');
+  perform tests.expect_error('C1729 changed body', format('select public.signature_webhook(%L, %L)', body, tests.sw_sig(body || ' ')), '42501');
+  perform tests.expect_error('C1729 other secret', format('select public.signature_webhook(%L, %L)', body, tests.sw_sig(body, 0, 'whsec_other')), '42501');
+  perform tests.ok('C1729 unchanged', tests.sw_state() = before_state, 'a refused delivery wrote something');
+end $$;
+
+-- C1730: 300 s either side of the database clock is accepted; 301 s either side is refused.
+do $$
+declare body text := '{"event_type":"x.unknown"}';
+begin
+  perform tests.ok('C1730 300 old', public.signature_webhook(body, tests.sw_sig(body, -300)) ->> 'outcome' = 'ignored', 'a 300 s old delivery was refused');
+  perform tests.ok('C1730 300 ahead', public.signature_webhook(body, tests.sw_sig(body, 300)) ->> 'outcome' = 'ignored', 'a delivery 300 s ahead was refused');
+  perform tests.expect_error('C1730 301 old', format('select public.signature_webhook(%L, %L)', body, tests.sw_sig(body, -301)), '42501');
+  perform tests.expect_error('C1730 301 ahead', format('select public.signature_webhook(%L, %L)', body, tests.sw_sig(body, 301)), '42501');
+end $$;
+
+-- C1731: with no Vault secret every delivery is refused, even one signed with the empty string.
+do $$
+declare body text := '{"event_type":"x.unknown"}';
+begin
+  perform tests.sw_secret(null);
+  perform tests.expect_error('C1731 whsec_test', format('select public.signature_webhook(%L, %L)', body, tests.sw_sig(body)), '42501');
+  perform tests.expect_error('C1731 empty key', format('select public.signature_webhook(%L, %L)', body, tests.sw_sig(body, 0, '')), '42501');
+  perform tests.sw_secret('whsec_test');
+  perform tests.ok('C1731 restored', public.signature_webhook(body, tests.sw_sig(body)) ->> 'outcome' = 'ignored', 'the secret did not come back');
+end $$;
+
+-- C1732: a valid signature over a body that is not an object with a string event_type raises 22023.
+do $$
+declare b text; before_state text := tests.sw_state();
+begin
+  foreach b in array array['[]', '"x"', '7', '{}', '{"event_type": 5}', 'not json'] loop
+    perform tests.expect_error('C1732 ' || b, format('select public.signature_webhook(%L, %L)', b, tests.sw_sig(b)), '22023');
+  end loop;
+  perform tests.ok('C1732 unchanged', tests.sw_state() = before_state, 'a refused delivery wrote something');
+end $$;
+
+-- C1738: the ignored events answer ignored / event_not_handled and write nothing.
+do $$
+declare
+  c uuid := tests.sg_contract('sw38'); r uuid := tests.sw_open(c, '3801');
+  e text; before_state text := tests.sw_state();
+begin
+  foreach e in array array['form.viewed', 'form.started', 'submission.created', 'submission.expired', 'submission.archived', 'template.created', 'x.unknown'] loop
+    perform tests.ok('C1738 ' || e,
+      tests.sw_post(tests.sw_form(e, '3801', '101')) = jsonb_build_object('outcome', 'ignored', 'reason', 'event_not_handled'), 'wrong answer for ' || e);
+  end loop;
+  perform tests.ok('C1738 unchanged', tests.sw_state() = before_state, 'an ignored event wrote something');
+end $$;
+
+-- C1739: a submission no request has, and an event with no submission id, answer ignored / unknown_submission.
+do $$
+declare before_state text := tests.sw_state(); unknown jsonb := jsonb_build_object('outcome', 'ignored', 'reason', 'unknown_submission');
+begin
+  perform tests.ok('C1739 form.completed', tests.sw_post(tests.sw_form('form.completed', '999', '101')) = unknown, 'wrong answer');
+  perform tests.ok('C1739 form.declined', tests.sw_post(tests.sw_form('form.declined', '999', '101')) = unknown, 'wrong answer');
+  perform tests.ok('C1739 submission.completed', tests.sw_post(tests.sw_done('999')) = unknown, 'wrong answer');
+  perform tests.ok('C1739 no submission id',
+    tests.sw_post('{"event_type":"form.completed","data":{"id":101,"completed_at":"2026-11-07T22:14:00Z"}}'::jsonb) = unknown, 'wrong answer');
+  perform tests.ok('C1739 unchanged', tests.sw_state() = before_state, 'an unknown submission wrote something');
+end $$;
+
+-- C1740: the customer's form.completed moves a pending_signature contract to client_signed with one event and one outbox row.
+do $$
+declare
+  c uuid := tests.sg_contract('sw40'); r uuid := tests.sw_open(c, '4001');
+  answer jsonb; e public.events;
+begin
+  answer := tests.sw_post(tests.sw_form('form.completed', '4001', '101'));
+  perform tests.ok('C1740 answer', answer = jsonb_build_object('outcome', 'applied'), 'wrong answer ' || answer::text);
+  perform tests.ok('C1740 status', (select status from public.contracts where id = c) = 'client_signed', 'contract is not client_signed');
+  perform tests.ok('C1740 one event', tests.sw_events(c, 'contract.client_signed') = 1, 'not exactly one event');
+  select * into e from public.events where entity_id = c and type = 'contract.client_signed';
+  perform tests.ok('C1740 payload', e.payload = jsonb_build_object('from', 'pending_signature', 'to', 'client_signed', 'versionNo', 1, 'via', 'docuseal', 'requestId', r),
+    'wrong payload ' || e.payload::text);
+  perform tests.ok('C1740 entity', e.entity_type = 'contract' and e.actor_id is null and e.org_id = tests.id('orgA'), 'wrong entity, actor or org');
+  perform tests.ok('C1740 outbox', (select count(*) from public.outbox where event_id = e.id and status = 'pending') = 1, 'not exactly one pending outbox row');
+  perform tests.ok('C1740 request open', (select status from public.contract_signature_requests where id = r) = 'open', 'the request left open');
+end $$;
+
+-- C1741: signer facts for both roles; a later delivery does not replace them.
+do $$
+declare c uuid := tests.sg_contract('sw41'); r uuid := tests.sw_open(c, '4101'); s public.contract_signers;
+begin
+  perform tests.sw_post(tests.sw_form('form.completed', '4101', '101', '{"completed_at":"2026-11-07T22:14:00Z","ip":"203.0.113.9","ua":"UA/1"}'));
+  perform tests.sw_post(tests.sw_form('form.completed', '4101', '102', '{"completed_at":"2026-11-07T22:30:00Z","ip":"198.51.100.7","ua":"UA/2"}'));
+  select * into s from public.contract_signers where request_id = r and role = 'customer';
+  perform tests.ok('C1741 customer', s.signed_at = '2026-11-07T22:14:00Z'::timestamptz and s.signed_ip = '203.0.113.9' and s.signed_ua = 'UA/1', 'wrong customer facts');
+  select * into s from public.contract_signers where request_id = r and role = 'contractor';
+  perform tests.ok('C1741 contractor', s.signed_at = '2026-11-07T22:30:00Z'::timestamptz and s.signed_ip = '198.51.100.7' and s.signed_ua = 'UA/2', 'wrong contractor facts');
+  perform tests.sw_post(tests.sw_form('form.completed', '4101', '101', '{"completed_at":"2026-11-08T00:00:00Z","ip":"198.51.100.1","ua":"UA/9"}'));
+  select * into s from public.contract_signers where request_id = r and role = 'customer';
+  perform tests.ok('C1741 first write wins', s.signed_at = '2026-11-07T22:14:00Z'::timestamptz and s.signed_ip = '203.0.113.9' and s.signed_ua = 'UA/1', 'facts were replaced');
+end $$;
+
+-- C1742: the contractor's form.completed leaves a client_signed contract alone and writes no event or outbox row.
+do $$
+declare c uuid := tests.sg_contract('sw42'); r uuid := tests.sw_open(c, '4201'); events_before bigint; outbox_before bigint;
+begin
+  update public.contracts set status = 'client_signed' where id = c;
+  events_before := (select count(*) from public.events where org_id = tests.id('orgA'));
+  outbox_before := (select count(*) from public.outbox where org_id = tests.id('orgA'));
+  perform tests.sw_post(tests.sw_form('form.completed', '4201', '102'));
+  perform tests.ok('C1742 status', (select status from public.contracts where id = c) = 'client_signed', 'the status moved');
+  perform tests.ok('C1742 events', (select count(*) from public.events where org_id = tests.id('orgA')) = events_before, 'an event was written');
+  perform tests.ok('C1742 outbox', (select count(*) from public.outbox where org_id = tests.id('orgA')) = outbox_before, 'an outbox row was written');
+  perform tests.ok('C1742 facts', (select signed_at from public.contract_signers where request_id = r and role = 'contractor') is not null, 'the contractor facts were not stored');
+end $$;
+
+-- C1743: a submitter or external_id that does not name that request's signer is ignored; the right shapes apply.
+do $$
+declare
+  c uuid := tests.sg_contract('sw43'); r uuid := tests.sw_open(c, '4301'); other uuid := tests.sg_contract('sw43b');
+  before_state text; mismatch jsonb := jsonb_build_object('outcome', 'ignored', 'reason', 'signer_mismatch');
+  k text; fixture uuid;
+begin
+  before_state := tests.sw_state();
+  perform tests.ok('C1743 unknown submitter', tests.sw_post(tests.sw_form('form.completed', '4301', '555')) = mismatch, 'wrong answer');
+  perform tests.ok('C1743 other role', tests.sw_post(tests.sw_form('form.completed', '4301', '101', jsonb_build_object('external_id', c::text || ':contractor'))) = mismatch, 'wrong answer');
+  perform tests.ok('C1743 other contract', tests.sw_post(tests.sw_form('form.completed', '4301', '101', jsonb_build_object('external_id', other::text || ':customer'))) = mismatch, 'wrong answer');
+  perform tests.ok('C1743 unchanged', tests.sw_state() = before_state, 'a mismatch wrote something');
+  foreach k in array array['matching', 'null', 'absent'] loop
+    fixture := tests.sg_contract('sw43' || k);
+    perform tests.sw_open(fixture, '43' || length(k) || '02');
+    perform tests.ok('C1743 ' || k,
+      tests.sw_post(tests.sw_form('form.completed', '43' || length(k) || '02', '101',
+        case k when 'matching' then jsonb_build_object('external_id', fixture::text || ':customer') when 'null' then '{"external_id":null}'::jsonb else '{}'::jsonb end))
+        = jsonb_build_object('outcome', 'applied'), 'the ' || k || ' shape was not applied');
+  end loop;
+end $$;
+
+-- C1744: every handled event, delivered again, answers duplicate and writes nothing more.
+do $$
+declare
+  a uuid := tests.sg_contract('sw44a'); b uuid := tests.sg_contract('sw44b'); c uuid := tests.sg_contract('sw44c'); d uuid := tests.sg_contract('sw44d');
+  after_first text; dup jsonb := jsonb_build_object('outcome', 'duplicate');
+begin
+  perform tests.sw_open(a, '4401'); perform tests.sw_open(b, '4402'); perform tests.sw_open(c, '4403'); perform tests.sw_open(d, '4404');
+  update public.contracts set status = 'client_signed' where id = b;
+
+  perform tests.sw_post(tests.sw_form('form.completed', '4401', '101'));
+  after_first := tests.sw_state();
+  perform tests.ok('C1744 customer form.completed', tests.sw_post(tests.sw_form('form.completed', '4401', '101')) = dup, 'not a duplicate');
+  perform tests.ok('C1744 customer unchanged', tests.sw_state() = after_first, 'a repeat wrote something');
+
+  perform tests.sw_post(tests.sw_form('form.completed', '4402', '102'));
+  after_first := tests.sw_state();
+  perform tests.ok('C1744 contractor form.completed', tests.sw_post(tests.sw_form('form.completed', '4402', '102')) = dup, 'not a duplicate');
+  perform tests.ok('C1744 contractor unchanged', tests.sw_state() = after_first, 'a repeat wrote something');
+
+  perform tests.sw_post(tests.sw_done('4403'), tests.sw_docs());
+  after_first := tests.sw_state();
+  perform tests.ok('C1744 submission.completed', tests.sw_post(tests.sw_done('4403'), tests.sw_docs()) = dup, 'not a duplicate');
+  perform tests.ok('C1744 submission.completed without documents', tests.sw_post(tests.sw_done('4403')) = dup, 'not a duplicate');
+  perform tests.ok('C1744 completed unchanged', tests.sw_state() = after_first, 'a repeat wrote something');
+
+  perform tests.sw_post(tests.sw_form('form.declined', '4404', '101'));
+  after_first := tests.sw_state();
+  perform tests.ok('C1744 form.declined', tests.sw_post(tests.sw_form('form.declined', '4404', '101')) = dup, 'not a duplicate');
+  perform tests.ok('C1744 declined unchanged', tests.sw_state() = after_first, 'a repeat wrote something');
+end $$;
+
+-- C1745: the lock order that makes two concurrent deliveries take turns: the request, then the contract, both for update,
+-- before any write. (Structural: the two-session race itself is not run.)
+do $$
+declare
+  def text := pg_get_functiondef('public.signature_webhook(text, text, jsonb)'::regprocedure);
+  p1 int := strpos(def, 'for update');
+  p2 int;
+  first_write int;
+begin
+  perform tests.ok('C1745 first lock', p1 > 0, 'no for update');
+  p2 := p1 + 9 + strpos(substr(def, p1 + 10), 'for update');
+  perform tests.ok('C1745 second lock', p2 > p1 + 9, 'only one for update');
+  perform tests.ok('C1745 request first', strpos(substr(def, greatest(p1 - 220, 1), 220), 'contract_signature_requests') > 0, 'the first lock is not on the request');
+  perform tests.ok('C1745 contract second', strpos(substr(def, greatest(p2 - 160, 1), 160), 'public.contracts') > 0, 'the second lock is not on the contract');
+  first_write := least(
+    coalesce(nullif(strpos(def, 'update public.contract_signers'), 0), 2147483647),
+    coalesce(nullif(strpos(def, 'insert into public.contract_signed_documents'), 0), 2147483647),
+    coalesce(nullif(strpos(def, 'perform private.docuseal_move_contract'), 0), 2147483647),
+    coalesce(nullif(strpos(def, 'update public.contract_signature_requests'), 0), 2147483647));
+  perform tests.ok('C1745 locks before writes', p2 < first_write, 'a write comes before the second lock');
+end $$;
+
+-- C1746: submission.completed on an open request with no documents asks for the two files and writes nothing.
+do $$
+declare c uuid := tests.sg_contract('sw46'); r uuid := tests.sw_open(c, '4601'); before_state text := tests.sw_state();
+begin
+  perform tests.ok('C1746 answer', tests.sw_post(tests.sw_done('4601')) = jsonb_build_object('outcome', 'documents_needed', 'documents', jsonb_build_array(
+      jsonb_build_object('kind', 'signed', 'url', 'https://docuseal.com/file/a/document.pdf'),
+      jsonb_build_object('kind', 'audit_log', 'url', 'https://docuseal.com/file/a/audit-log.pdf'))), 'wrong answer');
+  perform tests.ok('C1746 unchanged', tests.sw_state() = before_state, 'the first call wrote something');
+end $$;
+
+-- C1747: missing, null and non-string file urls raise 22023.
+do $$
+declare c uuid := tests.sg_contract('sw47'); r uuid := tests.sw_open(c, '4701'); before_state text := tests.sw_state();
+begin
+  perform tests.expect_error('C1747 missing combined', tests.sw_post_sql(tests.sw_done('4701') #- '{data,combined_document_url}'), '22023');
+  perform tests.expect_error('C1747 null audit', tests.sw_post_sql(tests.sw_done('4701', '{"audit_log_url":null}')), '22023');
+  perform tests.expect_error('C1747 number audit', tests.sw_post_sql(tests.sw_done('4701', '{"audit_log_url":7}')), '22023');
+  perform tests.ok('C1747 unchanged', tests.sw_state() = before_state, 'a refused delivery wrote something');
+end $$;
+
+-- C1753: from client_signed, both documents stored and the contract completed with one event and one outbox row.
+do $$
+declare
+  c uuid := tests.sg_contract('sw53'); r uuid := tests.sw_open(c, '5301'); e public.events; d public.contract_signed_documents;
+begin
+  update public.contracts set status = 'client_signed' where id = c;
+  perform tests.ok('C1753 answer', tests.sw_post(tests.sw_done('5301'), tests.sw_docs()) = jsonb_build_object('outcome', 'applied'), 'wrong answer');
+  select * into d from public.contract_signed_documents where request_id = r and kind = 'signed';
+  perform tests.ok('C1753 signed', convert_from(d.content, 'UTF8') = '%PDF-1.4 signed' and d.size_bytes = 15
+    and d.sha256 = encode(sha256(convert_to('%PDF-1.4 signed', 'UTF8')), 'hex') and d.org_id = tests.id('orgA'), 'wrong signed document');
+  select * into d from public.contract_signed_documents where request_id = r and kind = 'audit_log';
+  perform tests.ok('C1753 audit log', convert_from(d.content, 'UTF8') = '%PDF-1.4 audit' and d.size_bytes = 14
+    and d.sha256 = encode(sha256(convert_to('%PDF-1.4 audit', 'UTF8')), 'hex'), 'wrong audit log');
+  perform tests.ok('C1753 two documents', (select count(*) from public.contract_signed_documents where request_id = r) = 2, 'not exactly two documents');
+  perform tests.ok('C1753 request', (select status from public.contract_signature_requests where id = r) = 'completed'
+    and (select completed_at from public.contract_signature_requests where id = r) between now() - interval '5 seconds' and now() + interval '5 seconds', 'the request is not completed');
+  perform tests.ok('C1753 contract', (select status from public.contracts where id = c) = 'completed', 'the contract is not completed');
+  perform tests.ok('C1753 one event', tests.sw_events(c, 'contract.completed') = 1 and tests.sw_events(c, 'contract.client_signed') = 0, 'wrong events');
+  select * into e from public.events where entity_id = c and type = 'contract.completed';
+  perform tests.ok('C1753 payload', e.payload = jsonb_build_object('from', 'client_signed', 'to', 'completed', 'versionNo', 1, 'via', 'docuseal', 'requestId', r)
+    and e.actor_id is null, 'wrong payload ' || e.payload::text);
+  perform tests.ok('C1753 outbox', (select count(*) from public.outbox where event_id = e.id and status = 'pending') = 1, 'not exactly one pending outbox row');
+  perform set_config('tests.sw_request', r::text, true);
+end $$;
+
+-- C1754: from pending_signature the same call writes client_signed and then completed.
+do $$
+declare c uuid := tests.sg_contract('sw54'); r uuid := tests.sw_open(c, '5401'); first_event public.events; second_event public.events;
+begin
+  perform tests.sw_post(tests.sw_done('5401'), tests.sw_docs());
+  perform tests.ok('C1754 contract', (select status from public.contracts where id = c) = 'completed', 'the contract is not completed');
+  select * into first_event from public.events where entity_id = c and type = 'contract.client_signed';
+  select * into second_event from public.events where entity_id = c and type = 'contract.completed';
+  perform tests.ok('C1754 both events', first_event.id is not null and second_event.id is not null, 'an event is missing');
+  perform tests.ok('C1754 order', first_event.created_at <= second_event.created_at and first_event.payload ->> 'from' = 'pending_signature'
+    and second_event.payload ->> 'from' = 'client_signed', 'wrong order or payloads');
+  perform tests.ok('C1754 outbox', (select count(*) from public.outbox where event_id in (first_event.id, second_event.id) and status = 'pending') = 2, 'not two pending outbox rows');
+  perform tests.ok('C1754 documents', (select count(*) from public.contract_signed_documents where request_id = r) = 2, 'not two documents');
+end $$;
+
+-- C1755: documents that are not one signed and one audit_log PDF of 1 to 10 485 760 bytes raise 22023; the limit itself is stored.
+do $$
+declare
+  c uuid := tests.sg_contract('sw55'); r uuid := tests.sw_open(c, '5501'); before_state text := tests.sw_state();
+  ok_doc jsonb := tests.sw_docs() -> 0; big text := '%PDF-' || repeat('a', 10485756);
+  n int := 0; bad jsonb;
+begin
+  foreach bad in array array[
+    jsonb_build_array(ok_doc),
+    jsonb_build_array(ok_doc, tests.sw_docs() -> 1, ok_doc),
+    jsonb_build_array(ok_doc, ok_doc),
+    jsonb_build_array(ok_doc, jsonb_build_object('kind', 'other', 'content', ok_doc ->> 'content')),
+    jsonb_build_array(ok_doc, jsonb_build_object('kind', 'audit_log', 'content', '!!not base64!!')),
+    jsonb_build_array(ok_doc, jsonb_build_object('kind', 'audit_log', 'content', '')),
+    tests.sw_docs('%PDF-1.4 signed', big),
+    tests.sw_docs('not a pdf', '%PDF-1.4 audit')] loop
+    n := n + 1;
+    perform tests.expect_error('C1755 refusal ' || n, tests.sw_post_sql(tests.sw_done('5501'), bad), '22023');
+  end loop;
+  perform tests.ok('C1755 eight refusals', n = 8, 'not eight cases');
+  perform tests.ok('C1755 unchanged', tests.sw_state() = before_state, 'a refused delivery wrote something');
+  perform tests.ok('C1755 limit', tests.sw_post(tests.sw_done('5501'), tests.sw_docs('%PDF-' || repeat('a', 10485755), '%PDF-1.4 audit')) = jsonb_build_object('outcome', 'applied'), 'the limit was refused');
+  perform tests.ok('C1755 limit size', (select size_bytes from public.contract_signed_documents where request_id = r and kind = 'signed') = 10485760, 'wrong stored size');
+end $$;
+
+-- C1756: closed requests and closed contracts answer ignored / request_closed, writing nothing; a declined request answers form.declined with duplicate.
+do $$
+declare
+  c uuid; r uuid; st text; ev text; n int := 0; i int := 0; before_state text; answer jsonb; sub text;
+  closed jsonb := jsonb_build_object('outcome', 'ignored', 'reason', 'request_closed');
+begin
+  foreach st in array array['failed', 'voided', 'declined'] loop
+    foreach ev in array array['form.completed', 'form.declined', 'submission.completed'] loop
+      i := i + 1; sub := '56' || lpad(i::text, 2, '0');
+      c := tests.sg_contract('sw56r' || i); r := tests.sw_open(c, sub);
+      update public.contract_signature_requests set status = st where id = r;
+      before_state := tests.sw_state();
+      answer := tests.sw_post(case ev when 'submission.completed' then tests.sw_done(sub) else tests.sw_form(ev, sub, '101') end,
+        case ev when 'submission.completed' then tests.sw_docs() end);
+      perform tests.ok('C1756 request ' || st || ' ' || ev, answer = case when st = 'declined' and ev = 'form.declined' then jsonb_build_object('outcome', 'duplicate') else closed end,
+        'wrong answer ' || answer::text);
+      perform tests.ok('C1756 unchanged ' || st || ' ' || ev, tests.sw_state() = before_state, 'a closed request wrote something');
+      n := n + 1;
+    end loop;
+  end loop;
+  foreach st in array array['declined', 'voided'] loop
+    foreach ev in array array['form.completed', 'form.declined', 'submission.completed'] loop
+      i := i + 1; sub := '56' || lpad(i::text, 2, '0');
+      c := tests.sg_contract('sw56c' || i); r := tests.sw_open(c, sub);
+      update public.contracts set status = st where id = c;
+      before_state := tests.sw_state();
+      answer := tests.sw_post(case ev when 'submission.completed' then tests.sw_done(sub) else tests.sw_form(ev, sub, '101') end,
+        case ev when 'submission.completed' then tests.sw_docs() end);
+      perform tests.ok('C1756 contract ' || st || ' ' || ev, answer = closed, 'wrong answer ' || answer::text);
+      perform tests.ok('C1756 unchanged contract ' || st || ' ' || ev, tests.sw_state() = before_state, 'a closed contract was written');
+      n := n + 1;
+    end loop;
+  end loop;
+  perform tests.ok('C1756 fifteen cases', n = 15, 'not fifteen cases');
+end $$;
+
+-- C1757: form.declined declines the request and the contract with the reason, from both open statuses.
+do $$
+declare
+  c uuid; r uuid; e public.events; s text; i int := 0; reason text;
+begin
+  foreach s in array array['pending_signature', 'client_signed'] loop
+    i := i + 1;
+    c := tests.sg_contract('sw57' || i); r := tests.sw_open(c, '570' || i);
+    update public.contracts set status = s where id = c;
+    perform tests.ok('C1757 answer ' || s, tests.sw_post(tests.sw_form('form.declined', '570' || i, '101', '{"decline_reason":"  Wrong price  "}')) = jsonb_build_object('outcome', 'applied'), 'wrong answer');
+    perform tests.ok('C1757 request ' || s, (select status from public.contract_signature_requests where id = r) = 'declined', 'the request is not declined');
+    perform tests.ok('C1757 contract ' || s, (select status from public.contracts where id = c) = 'declined', 'the contract is not declined');
+    select * into e from public.events where entity_id = c and type = 'contract.declined';
+    perform tests.ok('C1757 payload ' || s, e.payload = jsonb_build_object('from', s, 'to', 'declined', 'versionNo', 1, 'via', 'docuseal', 'requestId', r, 'reason', 'Wrong price') and e.actor_id is null,
+      'wrong payload ' || e.payload::text);
+    perform tests.ok('C1757 outbox ' || s, (select count(*) from public.outbox where event_id = e.id and status = 'pending') = 1, 'not exactly one pending outbox row');
+  end loop;
+  c := tests.sg_contract('sw57long'); r := tests.sw_open(c, '5703');
+  perform tests.sw_post(tests.sw_form('form.declined', '5703', '101', jsonb_build_object('decline_reason', repeat('x', 501))));
+  reason := (select payload ->> 'reason' from public.events where entity_id = c and type = 'contract.declined');
+  perform tests.ok('C1757 cut at 500', length(reason) = 500, 'the reason was not cut to 500');
+  c := tests.sg_contract('sw57none'); r := tests.sw_open(c, '5704');
+  perform tests.sw_post(tests.sw_form('form.declined', '5704', '101'));
+  perform tests.ok('C1757 no reason', (select payload -> 'reason' from public.events where entity_id = c and type = 'contract.declined') = 'null'::jsonb, 'an absent reason is not JSON null');
+end $$;
+
+-- C1765: no member sets a contract status, and apply_contract_transition is not theirs to call.
+do $$
+declare u text; c uuid := tests.sg_contract('sw65');
+begin
+  perform tests.ok('C1765 privilege', not has_function_privilege('authenticated', 'public.apply_contract_transition(uuid, text, text, text, jsonb)', 'execute'), 'authenticated may execute');
+  foreach u in array array['uA', 'uD', 'uE', 'uV'] loop
+    perform tests.act_as(u);
+    perform tests.expect_error('C1765 update ' || u, format('update public.contracts set status = ''completed'' where id = %L', c), '42501');
+    reset role;
+  end loop;
+  perform tests.act_as('uE');
+  perform tests.expect_error('C1765 call', tests.sign_sql(c, 'pending_signature'), '42501');
+  reset role;
+  perform tests.ok('C1765 unchanged', (select status from public.contracts where id = c) = 'pending_signature', 'the status moved');
+end $$;
+
+-- C1766: the 20 pairs of contract status and event, and where each ends.
+do $$
+declare
+  st text; i int := 0; ev text; c uuid; sub text; expected text; got text;
+  statuses text[] := array['pending_signature', 'client_signed', 'completed', 'declined', 'voided'];
+  kinds text[] := array['customer', 'contractor', 'done', 'declined'];
+  -- rows: the status before; columns: where it ends after the customer's form.completed, the contractor's, submission.completed, form.declined
+  ends text[][] := array[
+    ['client_signed', 'pending_signature', 'completed', 'declined'],
+    ['client_signed', 'client_signed', 'completed', 'declined'],
+    ['completed', 'completed', 'completed', 'completed'],
+    ['declined', 'declined', 'declined', 'declined'],
+    ['voided', 'voided', 'voided', 'voided']];
+  s int; k int;
+begin
+  for s in 1..5 loop
+    for k in 1..4 loop
+      i := i + 1;
+      st := statuses[s]; ev := kinds[k]; sub := '66' || lpad(i::text, 2, '0');
+      c := tests.sg_contract('sw66' || i);
+      perform tests.sw_open(c, sub);
+      update public.contracts set status = st where id = c;
+      perform tests.sw_post(case ev
+        when 'customer' then tests.sw_form('form.completed', sub, '101')
+        when 'contractor' then tests.sw_form('form.completed', sub, '102')
+        when 'done' then tests.sw_done(sub)
+        else tests.sw_form('form.declined', sub, '101') end,
+        case ev when 'done' then tests.sw_docs() end);
+      expected := ends[s][k];
+      got := (select status from public.contracts where id = c);
+      perform tests.ok('C1766 ' || st || ' + ' || ev, got = expected, 'expected ' || expected || ', got ' || got);
+    end loop;
+  end loop;
+  perform tests.ok('C1766 twenty pairs', i = 20, 'not twenty pairs');
+end $$;
+
+-- C1768: the function's one signature, its security mode and who may run it.
+do $$
+declare f regprocedure := 'public.signature_webhook(text, text, jsonb)'::regprocedure;
+begin
+  perform tests.ok('C1768 one function', (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname = 'signature_webhook') = 1, 'overloaded');
+  perform tests.ok('C1768 definer', (select prosecdef from pg_proc where oid = f), 'not security definer');
+  perform tests.ok('C1768 search_path', (select proconfig from pg_proc where oid = f) @> array['search_path=""'], 'search_path not empty');
+  perform tests.ok('C1768 anon', has_function_privilege('anon', f, 'execute'), 'anon may not execute');
+  perform tests.ok('C1768 authenticated', has_function_privilege('authenticated', f, 'execute'), 'authenticated may not execute');
+  perform tests.ok('C1768 public', not exists (select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a where p.oid = f and a.grantee = 0 and a.privilege_type = 'EXECUTE'), 'public may execute');
+  perform tests.act_as_anon();
+  perform tests.ok('C1768 as anon', public.signature_webhook('{"event_type":"x.unknown"}', tests.sw_sig('{"event_type":"x.unknown"}')) ->> 'outcome' = 'ignored', 'anon could not call it');
+  reset role;
+end $$;
+
+-- C1769: the stored shape: statuses, completed_at, kinds, sizes, hash format, one per kind, composite references.
+do $$
+declare
+  c uuid := tests.sg_contract('sw69'); r uuid := tests.sw_open(c, '6901'); o uuid := tests.sw_open(tests.sg_contract('sw69o'), '6902'); s text;
+  ins text := 'insert into public.contract_signed_documents (request_id, org_id, kind, content, size_bytes, sha256) values (%L, %L, %L, ''\x25504446''::bytea, %s, %L)';
+  h text := repeat('b', 64);
+begin
+  foreach s in array array['creating', 'open', 'failed', 'voided'] loop
+    perform tests.expect_rows('C1769 status ' || s, format('update public.contract_signature_requests set status = %L where id = %L', s, r), 1);
+  end loop;
+  update public.contract_signature_requests set status = 'open' where id = r;
+  perform tests.expect_rows('C1769 declined', format('update public.contract_signature_requests set status = ''declined'' where id = %L', r), 1);
+  perform tests.expect_rows('C1769 completed', format('update public.contract_signature_requests set status = ''completed'', completed_at = now() where id = %L', r), 1);
+  perform tests.sg_expect_constraint('C1769 unknown status', format('update public.contract_signature_requests set status = ''signed'' where id = %L', o), '23514', 'contract_signature_requests_status_check');
+  perform tests.sg_expect_constraint('C1769 completed_at on open', format('update public.contract_signature_requests set completed_at = now() where id = %L', o), '23514', 'contract_signature_requests_completed_at_iff_completed');
+  perform tests.sg_expect_constraint('C1769 completed without completed_at', format('update public.contract_signature_requests set completed_at = null where id = %L', r), '23514', 'contract_signature_requests_completed_at_iff_completed');
+  perform tests.sg_expect_constraint('C1769 kind', format(ins, o, tests.id('orgA'), 'other', 4, h), '23514', 'contract_signed_documents_kind_check');
+  perform tests.sg_expect_constraint('C1769 size 0', format(ins, o, tests.id('orgA'), 'signed', 0, h), '23514', 'contract_signed_documents_size_bytes_check');
+  perform tests.sg_expect_constraint('C1769 size over', format(ins, o, tests.id('orgA'), 'signed', 10485761, h), '23514', 'contract_signed_documents_size_bytes_check');
+  perform tests.sg_expect_constraint('C1769 hash', format(ins, o, tests.id('orgA'), 'signed', 4, 'abc'), '23514', 'contract_signed_documents_sha256_check');
+  perform tests.expect_rows('C1769 size 1', format(ins, o, tests.id('orgA'), 'signed', 1, h), 1);
+  perform tests.sg_expect_constraint('C1769 one per kind', format(ins, o, tests.id('orgA'), 'signed', 4, h), '23505', 'contract_signed_documents_pkey');
+  perform tests.sg_expect_constraint('C1769 across orgs', format(ins, o, tests.id('orgB'), 'audit_log', 4, h), '23503', 'contract_signed_documents_request_id_org_id_fkey');
+  perform tests.expect_rows('C1769 size 10485760', format(ins, o, tests.id('orgA'), 'audit_log', 10485760, h), 1);
+  perform tests.ok('C1769 signer facts', (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'contract_signers'
+    and column_name in ('signed_at', 'signed_ip', 'signed_ua')) = 3, 'a signer fact column is missing');
+end $$;
+
+-- C1770: a stored document is never changed (a cascade is let through); members read it and write nothing.
+do $$
+declare
+  r uuid := current_setting('tests.sw_request')::uuid; u text; n bigint;
+begin
+  perform tests.expect_error('C1770 owner update', format('update public.contract_signed_documents set size_bytes = size_bytes where request_id = %L', r), '55000');
+  perform tests.expect_error('C1770 owner delete', format('delete from public.contract_signed_documents where request_id = %L', r), '55000');
+  foreach u in array array['uA', 'uD', 'uE', 'uV'] loop
+    perform tests.act_as(u);
+    perform tests.expect_error('C1770 insert ' || u, format('insert into public.contract_signed_documents (request_id, org_id, kind, content, size_bytes, sha256) values (%L, %L, ''signed'', ''\x25''::bytea, 1, %L)', r, tests.id('orgA'), repeat('c', 64)), '42501');
+    perform tests.expect_error('C1770 update ' || u, format('update public.contract_signed_documents set size_bytes = 1 where request_id = %L', r), '42501');
+    perform tests.expect_error('C1770 delete ' || u, format('delete from public.contract_signed_documents where request_id = %L', r), '42501');
+    n := tests.count(format('select count(*) from public.contract_signed_documents where request_id = %L', r));
+    perform tests.ok('C1770 read ' || u, n = 2, 'a member of org A sees ' || n || ' documents');
+    n := tests.count(format('select count(*) from public.contract_signers where request_id = %L and signed_ip is null', r));
+    perform tests.ok('C1770 facts ' || u, n = 2, 'a member could not read the signer facts');
+    perform tests.expect_error('C1770 sealed ' || u, format('select embed_sealed from public.contract_signers where request_id = %L', r), '42501');
+    reset role;
+  end loop;
+  perform tests.act_as('uB');
+  perform tests.ok('C1770 other org', tests.count(format('select count(*) from public.contract_signed_documents where request_id = %L', r)) = 0, 'org B sees org A documents');
+  reset role;
+  delete from public.contract_signature_requests where id = r;
+  perform tests.ok('C1770 cascade', (select count(*) from public.contract_signed_documents where request_id = r) = 0, 'the cascade did not remove the documents');
+end $$;
+
+-- C1780: completing a request keeps the hash of the PDF that was sent and sets completed_at exactly when completed.
+do $$
+declare c uuid := tests.sg_contract('sw80'); r uuid := tests.sw_open(c, '8001'); o uuid := tests.sw_open(tests.sg_contract('sw80o'), '8002');
+begin
+  perform tests.sw_post(tests.sw_done('8001'), tests.sw_docs());
+  perform tests.ok('C1780 hash kept', (select document_sha256 from public.contract_signature_requests where id = r) = repeat('a', 64), 'document_sha256 changed');
+  perform tests.ok('C1780 completed', (select completed_at is not null from public.contract_signature_requests where id = r and status = 'completed'), 'a completed request has no completed_at');
+  perform tests.ok('C1780 open', (select completed_at is null from public.contract_signature_requests where id = o and status = 'open'), 'an open request has completed_at');
 end $$;
 
 reset role;
