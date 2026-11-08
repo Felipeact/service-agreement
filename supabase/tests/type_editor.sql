@@ -387,6 +387,44 @@ do $$ begin
   perform tests.expect_error('C1934 org', format('update public.asset_types set org_id = %L where id = %L', tests.id('orgB'), tests.id('typeA')), '23514');
 end $$;
 
+-- C1942 (door 7): a signed-in caller who cannot write the target org is answered by the row policy; one who can is refused by the trigger.
+insert into public.memberships (org_id, user_id, role) values (tests.id('orgB'), tests.id('uA'), 'owner');
+select tests.act_as('uA');
+do $$ begin
+  perform tests.expect_error('C1942 owner of both orgs',
+    format('update public.asset_types set org_id = %L where id = %L', tests.id('orgB'), tests.id('typeA')), '23514');
+end $$;
+reset role;
+delete from public.memberships where org_id = tests.id('orgB') and user_id = tests.id('uA');
+select tests.act_as('uA');
+do $$ begin
+  perform tests.expect_error('C1942 owner of one org',
+    format('update public.asset_types set org_id = %L where id = %L', tests.id('orgB'), tests.id('typeA')), '42501');
+end $$;
+reset role;
+
+-- C1943 (door 6): only reset is a definer function, and none of the four is open to anon.
+do $$
+declare f text;
+begin
+  perform tests.ok('C1943 reset definer',
+    (select p.prosecdef and p.proconfig @> array['search_path=""'] from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'reset_task_library_type'), 'reset is not a definer function with an empty search_path');
+  foreach f in array array['create_task_library_type', 'rename_task_library_type', 'remove_task_library_type'] loop
+    perform tests.ok('C1943 ' || f || ' invoker',
+      (select not p.prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = f),
+      f || ' is a definer function');
+  end loop;
+  perform tests.ok('C1943 anon', not exists (
+      select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname like '%task_library_type' and p.proname <> 'save_task_library_type'
+        and has_function_privilege('anon', p.oid, 'execute')), 'anon can execute a type function');
+  perform tests.ok('C1943 authenticated', (
+      select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname in ('create_task_library_type', 'rename_task_library_type', 'remove_task_library_type', 'reset_task_library_type')
+        and has_function_privilege('authenticated', p.oid, 'execute')) = 4, 'authenticated cannot execute all four');
+end $$;
+
 -- C1908: the name index holds below the functions.
 do $$ begin
   perform tests.expect_error('C1908 duplicate name',

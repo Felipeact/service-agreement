@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/type-editor/plan.md`
 
-40 checks in 6 slices · 5 one-way doors · 0 open, 0 block
+42 checks in 6 slices · 7 one-way doors · 0 open, 0 block
 
 ## How proofs run
 
@@ -154,6 +154,12 @@ Proof: `npx vitest run "app/(app)/task-library-types.test.ts" -t "C1937:"` in `w
 **C1938** - The Supabase store maps SQLSTATE `42501` to `forbidden`, `P0002` to `not_found`, `23505` to `conflict`, `23514` to `invalid`, `23503` to `in_use`, `55000` to `no_pack` and anything else to `unavailable`, for each of create, rename, remove and reset (Surface statuses)
 Proof: `npx vitest run infrastructure/supabase/task-library.test.ts -t "C1938:"` in `web/`
 
+**C1942** - Door 7: a signed-in owner of org A alone moving a type to org B is refused with `42501` by the row policy, and a signed-in owner of both orgs is refused with `23514` by the trigger; C1934 covers the same move with no signed-in user (AC 30, door 7)
+Proof: `npm run test:db type_editor` in `web/` (assertions `C1942 ...`)
+
+**C1943** - Door 6: `reset_task_library_type` is `security definer` with an empty `search_path`, `create`, `rename` and `remove` are `security invoker`, `anon` can execute none of the four and `authenticated` all four (door 6, Surface)
+Proof: `npm run test:db type_editor` in `web/` (assertions `C1943 ...`)
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -170,7 +176,7 @@ Proof: `npx vitest run infrastructure/supabase/task-library.test.ts -t "C1938:"`
 | `seed_org_catalog` outcomes (4) | named pack C1920 · default `hvac` C1921 · unknown pack C1922 · rerun C1923 | - |
 | `pack` format check (5) | `Hvac` C1935 · `1abc` C1935 · `a-b` C1935 · `hvac` C1935 · `a_1` C1935 | - |
 | reset refusals (3) | no pack C1927 · template row missing C1927 · name taken C1928 | - |
-| doors (5) | 1 C1936 · 2 C1935, C1926 · 3 C1921, C1922, C1925 · 4 C1908 · 5 C1902, C1934 | - |
+| doors (7) | 1 C1936 · 2 C1935, C1926 · 3 C1921, C1922, C1925 · 4 C1908 · 5 C1902, C1934 · 6 C1943 · 7 C1942 | - |
 | relations entities (5) | catalog pack C1936 · catalog type C1936 · catalog task C1936 · org type C1901 · org task C1915 | - |
 | acceptance criteria (30) | 1 C1901 · 2 C1902 · 3 C1903 · 4 C1905, C1906, C1937 · 5 C1907, C1937 · 6 C1909 · 7 C1910 · 8 C1911 · 9 C1912 · 10 C1913 · 11 C1914 · 12 C1915 · 13 C1916, C1919 · 14 C1917 · 15 C1918 · 16 C1920 · 17 C1921 · 18 C1922 · 19 C1923 · 20 C1924 · 21 C1925 · 22 C1926 · 23 C1927 · 24 C1928 · 25 C1929 · 26 C1930, C1941 · 27 C1931 · 28 C1932 · 29 C1933 · 30 C1934 | - |
 
@@ -201,4 +207,5 @@ Proof: `npx vitest run infrastructure/supabase/task-library.test.ts -t "C1938:"`
 - Mechanism: one builder
 
 - **Settled mid-build:** (1) C1924's proof could not read the demo org, because `fixture.sql` deletes it, so the claim now says the backfill statement is run over fixture rows and the live demo org is read once after the migration is applied. (2) C1926 said 6 RTU tasks; the template has 10, 2 of them seasonal, so the claim was corrected. (3) Door 6 was added to the plan before the code: reset is `security definer` because `authenticated` cannot read the private template. (4) C1407 and the `test:db` runner counts (23 to 24 recipes, 25 to 26 files) changed because `pack` joined `LibraryType` and one recipe was added; no assertion was loosened.
+- **Verifier round 1 (FAIL, one gap):** C1934's `org_id` half was proven only with no signed-in user and doors 6 and 7 had no check. C1942 and C1943 were added; C1934 itself is unchanged and its `org_id` half is now bound by C1942 for signed-in callers.
 - **Abandoned:** nothing.
