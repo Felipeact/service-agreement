@@ -249,3 +249,16 @@ Proof: `npm run test:db transitions` (assertion `C1821`, 3 cases)
 
 - **Applied and measured (2026-11-08, with the owner's go-ahead):** `20261108210000_signature_webhook_documents_fallback` and `20261108220000_create_contract_lock_order`. `npm run test:db`: all 23 recipes pass (C1604 green again, C1820 and C1821 green).
 - **Amendment to an existing assertion, listed:** `transitions.sql` C1670 `no outbox` ("an outbox row was written" must not happen) pinned what door 3 / AD-152 deliberately reverses; it is now `one outbox row`: exactly one more row than before and exactly one `pending` row for the send event. Stricter, not weaker.
+
+### Live run C1819 (2026-11-08, Playwright browser + the owner's own inbox)
+
+Passed end to end on production (project `gnxebrtcpbujhvcamtoe`, Railway `web`, n8n, DocuSeal cloud) with a test agreement `AG-LIVE1` whose signer and the owner were the same address (so also the same-address case, C1804):
+
+1. `agreement.accepted` -> W2a -> contract made by the system (event `via: "w2"`), "contract is ready" email sent (n8n execution 23).
+2. The owner pressed Send -> `contract.sent_for_signature` -> W2b -> signing-link email sent.
+3. Customer and contractor signed in DocuSeal; `form.completed` applied (`client_signed`).
+4. `submission.completed` was refused three times with `400 malformed`: this account sends `combined_document_url: null` (found here). After migration `20261108210000` the owner's Playwright session pressed Resend in the DocuSeal console: contract `completed`, `signed` (97,544 bytes) and `audit_log` (129,963 bytes) stored, W4 notifications `contract_signed_copy` and `staff_contract_signed` both `sent`.
+5. The test rows were deleted afterwards (no `AG-LIVE1`, no `LIVE TEST` customer left).
+
+**C1822** - The contract page passes the contract's `signed` copy (or `null`) and its id to the signing section (signature-webhook Verifier gap M28, M29)
+Proof: `npx vitest run "app/(app)/contracts/[contractId]/page.test.ts" -t "C1822:"`
