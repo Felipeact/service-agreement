@@ -10,7 +10,8 @@ const redirect = vi.fn((path: string) => {
 });
 
 const pipelineBoard = vi.fn(async () => [] as unknown[]);
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut, pipelineBoard, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }), clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
+const getItemWords = vi.fn(async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut, pipelineBoard, getItemWords, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
 vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline" }));
 
 const { MemberGate } = await import("./member-gate");
@@ -23,6 +24,7 @@ async function renderLayout() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getItemWords.mockResolvedValue({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
 });
 
 describe("(app) layout", () => {
@@ -90,5 +92,16 @@ describe("sign out", () => {
     expect(signOut).toHaveBeenCalledTimes(1);
     expect(redirect).toHaveBeenCalledWith("/login");
     expect(signOut.mock.invocationCallOrder[0]).toBeLessThan(redirect.mock.invocationCallOrder[0]);
+  });
+});
+
+describe("(app) layout, item words", () => {
+  test("C2011: the shell gets the member's org words from the container: the Sites link and a client screen under it say them", async () => {
+    const { itemWords } = await import("@/domain/org-settings");
+    getItemWords.mockResolvedValue(itemWords("station", "stations"));
+    currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "owner@example.com", orgId: "org-9", orgName: "Kettle", role: "owner" });
+    const out = await renderLayout();
+    expect(out).toContain("Sites &amp; stations");
+    expect(getItemWords).toHaveBeenCalledWith("org-9");
   });
 });

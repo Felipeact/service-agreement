@@ -24,6 +24,7 @@ const { ImportPageView } = await import("./imports/import-page-view");
 const { ReviewView } = await import("./imports/review-view");
 const { NewAgreementDialog } = await import("./agreements/new-agreement-dialog");
 const { SitesLoading, ImportLoading } = await import("./sites/loading-titles");
+const { phaseLine, listNotice } = await import("./agreements/new-agreement-state");
 
 const stations = itemWords("station", "stations");
 /** The output with the words set to station/stations, as a member of an org that chose them would get it. */
@@ -64,6 +65,7 @@ describe("staff screens, item words", () => {
     noEquipment(empty);
     const full = view([asset()]);
     expect(full).toContain("Search stations");
+    expect(full).toContain('placeholder="Search stations…"');
     noEquipment(full);
     const none = view([asset()], "zzz");
     expect(none).toContain('No stations match "zzz"');
@@ -118,6 +120,8 @@ describe("staff screens, item words", () => {
     });
     expect(hit).toContain(">Stations<");
     for (const out of [prompt, miss, hit]) noEquipment(out);
+    const typed = render("equipment", { customers: none, sites: none, equipment: none });
+    expect(typed).toContain("match “equipment”.");
   });
 
   test("C2018: the task library names the item in its empty state, nav label and new-type field", () => {
@@ -146,5 +150,28 @@ describe("staff screens, item words", () => {
     expect(asStations(createElement(ImportLoading))).toContain("Import station list");
     expect(renderToStaticMarkup(createElement(SitesLoading))).toContain("Sites &amp; equipment");
     expect(renderToStaticMarkup(createElement(ImportLoading))).toContain("Import equipment list");
+  });
+});
+
+describe("staff screens, item words, the parts the first pass left unrendered", () => {
+  test("C2014: the review grid draws its column heading and type label with the org's words once there are rows", () => {
+    const row = { id: "r1", position: 1, assetTypeRaw: "Pumper", assetTypeId: null, unitNo: "P-1", typeModel: null, location: null, confidence: "low" as const, sourceRef: "s!2", skipped: false, assetId: null };
+    const review = { job: { id: "j1", siteId: "s1", siteName: "Harbourview Towers", originalName: "Units.xlsx", status: "extracted", committed: null }, rows: [row] } as unknown as ImportReview;
+    const out = asStations(createElement(ReviewView, { review, types: [], siteAssets: [], show: "all", words: stations }));
+    expect(out).toContain("<span>Station type</span>");
+    expect(out).toContain("Station type");
+    noEquipment(out);
+  });
+
+  test("C2014: the progress words say the org's item while the list is sent and the items found", () => {
+    expect(phaseLine("uploading", null, stations)).toBe("Sending the station list…");
+    expect(phaseLine("extracting", { done: 2, total: 5 }, stations)).toBe("Finding the stations… 2 of 5");
+    expect(phaseLine("idle", null, stations)).toBe("");
+    expect(phaseLine("uploading", null, itemWords("equipment", "equipment"))).toBe("Sending the equipment list…");
+  });
+
+  test("C2015: the list-failed message names the item, and an upload's own message is kept", () => {
+    expect(listNotice(null, stations)).toBe("The agreement was created, but we couldn't read the station list. You can add it from the agreement's site.");
+    expect(listNotice("The upload didn't finish. Try again.", stations)).toBe("The upload didn't finish. Try again.");
   });
 });

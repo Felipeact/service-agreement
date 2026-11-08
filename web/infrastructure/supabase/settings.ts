@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrgSettingsStore } from "@/application/ports";
+import { DEFAULT_ITEM_WORD } from "@/domain/org-settings";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -27,8 +28,8 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
         renewalCpiPct: data.renewal_cpi_pct === null ? null : Number(data.renewal_cpi_pct),
         renewalCpiAsOf: data.renewal_cpi_as_of,
         proposalValidityDays: data.proposal_validity_days,
-        itemSingular: data.item_singular,
-        itemPlural: data.item_plural,
+        itemSingular: data.item_singular ?? DEFAULT_ITEM_WORD,
+        itemPlural: data.item_plural ?? DEFAULT_ITEM_WORD,
       };
     },
 

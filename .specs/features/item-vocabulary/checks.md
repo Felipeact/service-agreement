@@ -103,8 +103,8 @@ Proof: `npx vitest run infrastructure/documents -t "C2023:"`
 **C2024** - With the words set, the "not recorded" sentence reads "The stations covered by this version were not recorded", and with the default words it reads today's sentence "The equipment covered by this version was not recorded" (AC 9, AC 8)
 Proof: `npx vitest run infrastructure/documents -t "C2024:"`
 
-**C2025** - With the words set, the visit schedule's item column is headed "Stations" (AC 9)
-Proof: `npx vitest run infrastructure/documents -t "C2025:"`
+**C2025** - Withdrawn by the owner on 2026-11-09 ("go with recommendations"): the PDF visit schedule has no item column or heading, so the claim cannot be met without changing the default output. AC 9's schedule clause is dropped with it. Replaced by the contract PDF claim in C2023's second test: the contract's covered-items section is headed with the org's plural (AC 9 as amended)
+Proof: `npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C2023:"`
 
 **C2026** - With the default words the PDF prints today's section heading, sentence and column, so the existing PDF suites pass unedited (AC 8)
 Proof: `npx vitest run infrastructure/documents composition/pdf-route.test.ts app/(app)/agreements/[agreementId]/pdf/route.test.ts`
@@ -136,7 +136,7 @@ Proof: `npx vitest run components/review app/review -t "C2032:"`
 | AC 6 places (9) | sidebar C2011 · Sites page C2012 · site register C2013 · import flow C2014 · agreement builder C2015 · agreement view C2016 · search C2017 · task library C2018 · pipeline C2019 | - |
 | page titles (4) | Sites metadata C2020 · import metadata C2020 · Sites loading C2020 · import loading C2020 | - |
 | places AC 6 leaves out (3) | extraction prompt C2022 · login page C2022 · root layout C2022 | - |
-| PDF places (3) | section heading C2023 · "not recorded" sentence C2024 · schedule column C2025 | - |
+| PDF places (3) | section heading C2023 · "not recorded" sentence C2024 · contract PDF section C2023 (replaces the schedule column, C2025 withdrawn) | - |
 | rejected word shapes (7) | empty C2003 · spaces only C2003 · 31 letters C2003 · `Station1` C2003 · `-station` C2003 · `Sta<b>` C2003 · `Étage` C2003 | - |
 | accepted word shapes (4) | `a` C2003 · thirty letters C2003 · `walk-in` C2003 · `O'Brien area` C2003 | - |
 | fields carrying the rule (2) | `item_singular` C2003 C2004 · `item_plural` C2003 C2004 | - |
@@ -194,5 +194,5 @@ Cost: 4 decision proofs at their own layer (C2001, C2003, C2004, C2010), 1 sourc
 - Mechanism: one builder (fits)
 
 - **Boundary:** C2001-C2024, C2026-C2032 closed at the feature's last commit; the database recipe was run with the migration inside its rolled-back transaction (`item_vocabulary: pass`), the migration is not applied to the project
-- **Settled mid-build:** none yet; C2025 is renegotiation (see Abandoned)
+- **Settled mid-build:** 2026-11-09, owner: "go with recommendations": drop the schedule-column clause of AC 9 and C2025; localise the contract PDF, the asset form, the add-asset page and the Settings link (the C2021 allowlist keeps only the login copy and the settings help text). Verifier round 1 survivors closed with C2009 (item-words reader), C2011 (shell wiring), C2013 (placeholder), C2014 (progress words, review grid), C2015 (list-failed), C2022 (wording) and a search-query-verbatim assertion
 - **Abandoned:** C2025 ("the visit schedule's item column is headed Stations"): the PDF visit schedule has no item column or heading, so the check cannot be met without a new heading that would change the default output. Not built, not edited; a stop-and-ask. Also found: the contract PDF prints the covered-items section through the same `ScopeSections` component and still says Equipment for a station org, and the asset form, the add-asset page and the Settings link to the task library are outside the plan's AC 6 list and stay in the C2021 allowlist

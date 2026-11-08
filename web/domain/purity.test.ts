@@ -53,11 +53,8 @@ const ITEM_COPY_ALLOWED = [
   "components/imports/state.ts",
   "components/task-library/state.ts",
   "components/agreements/new-agreement-state.ts",
-  // outside AC 6: the product's own pages and the asset form / catalog page the plan does not list
+  // outside the feature: the product's own login copy (roadmap Phase 4.5 item 6) and the settings help that names the example word
   "app/login/page.tsx",
-  "app/(app)/sites/[siteId]/assets/new/page.tsx",
-  "components/records/asset-form.tsx",
-  "components/settings/settings-view.tsx",
   "components/settings/settings-fields.tsx",
   "components/ui/illustrations.tsx",
 ];

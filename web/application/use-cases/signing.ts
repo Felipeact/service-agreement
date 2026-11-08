@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { buildContractDocument, signingLinkUrl, signingState, type SigningState } from "@/domain/contract";
+import { itemWords } from "@/domain/org-settings";
 import type {
   AgreementReader,
   ContractDocuments,
@@ -112,7 +113,7 @@ export function makeSendForSignature({ documents, store, renderer, provider, tok
 export function makeContractDocuments(
   contracts: ContractReader,
   agreements: AgreementReader,
-  getSettings: (orgId: string) => Promise<{ accentColor: string | null } | null>,
+  getSettings: (orgId: string) => Promise<{ accentColor: string | null; itemSingular?: string; itemPlural?: string } | null>,
 ): ContractDocuments {
   return {
     async load(contractId, orgId) {
@@ -122,7 +123,10 @@ export function makeContractDocuments(
       if (!agreement) return null;
       const settings = await getSettings(orgId);
       if (!settings) throw new Error(`org ${orgId} has no settings row`);
-      return { number: contract.number, document: buildContractDocument(agreement, contract.parties, settings.accentColor) };
+      return { number: contract.number, document: settings.itemSingular && settings.itemPlural
+          ? buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural))
+          : buildContractDocument(agreement, contract.parties, settings.accentColor),
+      };
     },
   };
 }

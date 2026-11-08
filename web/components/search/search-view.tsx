@@ -47,7 +47,7 @@ export function SearchView({ query, results, words = DEFAULT_ITEM_WORDS }: { que
       {results === null ? (
         <EmptyPanel title={itemText("Search customers, sites and equipment by name, address or unit number.", words)} />
       ) : empty ? (
-        <EmptyPanel title={itemText(`No customers, sites or equipment match “${query}”.`, words)} text="Deactivated records are not searched." />
+        <EmptyPanel title={`${itemText("No customers, sites or equipment match “", words)}${query}”.`} text="Deactivated records are not searched." />
       ) : (
         <div className="flex flex-col gap-5">
           <Group

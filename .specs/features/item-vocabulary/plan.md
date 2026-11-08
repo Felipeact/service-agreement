@@ -90,7 +90,7 @@ Company settings holds the singular and plural of the serviced item, and a value
 
 **Acceptance Criteria**
 
-9. WHEN an agreement PDF is rendered THEN the system SHALL print the org's plural as the heading of the covered-items section, the org's plural in the "not recorded" sentence, and the org's plural in the schedule column, in place of "Equipment"
+9. WHEN an agreement PDF is rendered THEN the system SHALL print the org's plural as the heading of the covered-items section, and the org's plural in the "not recorded" sentence, in place of "Equipment"; the contract PDF, which draws the same section, SHALL do the same (amended 2026-11-09: the visit schedule has no item column, so that clause is dropped)
 10. The system SHALL read the words from `org_settings` at render time, so re-rendering a version sent earlier shows the current words
 
 **Independent test:** download the PDF of a sent version before and after changing the words.
@@ -123,7 +123,7 @@ Company settings holds the singular and plural of the serviced item, and a value
 | Two words (singular, plural) rather than one | two, as door 1 says | roadmap says "one label"; one noun cannot produce "Station type" next to "Stations" and the HVAC default is a mass noun | n |
 | Stored lowercase and shown capitalised by the helper | lowercase, helper capitalises | an item word is a common noun; proper-noun words are not the use case | n |
 | A re-rendered older PDF shows the current words (criterion 10) | live, not frozen | a changed noun is wording, and freezing it needs a template version that does not exist until Phase 5.5 | n |
-| The contract PDF and signing page carry no item word | none to change | `contract-pdf.tsx` and `contract/document.ts` have no "equipment" string; checks confirm it by search | n |
+| The contract PDF carries the section | it does, through the shared `ScopeSections`, so it takes the words too (amended 2026-11-09, owner: go with the recommendation); the signing page has no item word | the Verifier found the contract PDF printing "Equipment" for a station org | y |
 | The words are allowed to be any letters, including "Equipment" in another language | letters, space, hyphen, apostrophe, ASCII only | the shape check is a floor against markup and punctuation, not a vocabulary | n |
 
 **Open questions:** none - all resolved or logged above.

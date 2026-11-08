@@ -11,6 +11,7 @@ const container = {
   contactForEdit: vi.fn(),
   assetForEdit: vi.fn(),
   listAssetTypes: vi.fn(),
+  getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }),
   createCustomer: vi.fn(),
   updateCustomer: vi.fn(),
   createContact: vi.fn(),
