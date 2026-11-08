@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ImportJobStatus, ImportJobView } from "@/application/ports";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { committedSummary, extractionSummary, formatFileSize, READ_ERROR_MESSAGES, readSummary } from "@/domain/imports";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DiscardControl } from "./discard-control";
@@ -42,17 +43,19 @@ type ImportJobListProps = {
   read?: (jobId: string) => () => Promise<ReadState>;
   /** The extract action; absent for members who may not write, so no "Extract equipment" shows. */
   extract?: (jobId: string) => Promise<ExtractState>;
+  words?: ItemWords;
 };
 
 /** A site's import jobs, in the order given (newest first). */
-export function ImportJobList({ jobs, discard, read, extract }: ImportJobListProps) {
+export function ImportJobList({ jobs, discard, read, extract, words = DEFAULT_ITEM_WORDS }: ImportJobListProps) {
   if (jobs.length === 0) {
-    return <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">No equipment lists imported yet</p>;
+    return <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">{itemText("No equipment lists imported yet", words)}</p>;
   }
   return (
     <ul className="flex flex-col divide-y divide-hairline rounded-panel border border-hairline bg-surface">
       {jobs.map((job) => {
-        const line = outcomeLine(job);
+        const found = outcomeLine(job);
+        const line = found && itemText(found, words);
         return (
           <li key={job.id} className="flex flex-col gap-2 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

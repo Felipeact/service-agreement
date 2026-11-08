@@ -9,6 +9,7 @@ const container = {
   listAssetTypes: vi.fn(),
   siteRegister: vi.fn(),
   reviewImport: vi.fn(),
+  getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }),
   updateImportRow: vi.fn(),
   skipImportRow: vi.fn(),
   mapImportType: vi.fn(),

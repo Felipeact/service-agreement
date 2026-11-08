@@ -3,6 +3,7 @@ import type { AssetTypeOption, ImportReview, ImportRowView } from "@/application
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, unmatchedSpellings, type ReviewFlag } from "@/domain/imports";
+import { DEFAULT_ITEM_WORDS, itemText, itemVerb, type ItemWords } from "@/domain/org-settings";
 import { CommitControl, MappingSection, RowControls } from "./review-controls";
 import type { CommitState, MapState, RowState } from "./state";
 
@@ -27,6 +28,7 @@ type ReviewViewProps = {
   actions?: ReviewActions;
   /** The agreement this list was sent for, when it came from the New agreement dialog (`?agreement=`): the page links back to it. */
   agreementId?: string;
+  words?: ItemWords;
 };
 
 const CONFIDENCE = { low: "Low", medium: "Medium", high: "High" } as const;
@@ -70,7 +72,7 @@ function hrefFor(jobId: string, show: "all" | "attention", page?: number, agreem
 }
 
 /** The review grid of an extracted job, or the read-only record of a committed one. */
-export function ReviewView({ review, types, siteAssets, show, page, actions, agreementId }: ReviewViewProps) {
+export function ReviewView({ review, types, siteAssets, show, page, actions, agreementId, words = DEFAULT_ITEM_WORDS }: ReviewViewProps) {
   const { job, rows } = review;
   const open = job.status === "extracted";
   const writer = open ? actions : undefined;
@@ -101,7 +103,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
         <section aria-label="Your agreement" className="flex flex-col gap-2 rounded-panel bg-action-tint px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[13px] text-ink">
             {job.committed
-              ? "The equipment is on the site. Your agreement is ready to build."
+              ? `The ${words.plural} ${itemVerb(words, "is", "are")} on the site. Your agreement is ready to build.`
               : `This list is for the agreement you just started. Check the rows, add them to ${job.siteName}, then continue.`}
           </p>
           <Link href={`/agreements/${agreementId}`} className="inline-flex min-h-11 shrink-0 items-center font-semibold text-action lg:min-h-0">
@@ -120,7 +122,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
       )}
 
       {rows.length === 0 ? (
-        <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">No equipment was found in this file.</p>
+        <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">{`No ${words.plural} ${itemVerb(words, "was", "were")} found in this file.`}</p>
       ) : (
         <>
           {writer && (
@@ -158,7 +160,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
                 <div className="md:min-w-[960px]">
                   <div aria-hidden="true" className="hidden grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] gap-3 border-b border-hairline px-4 py-2 text-[11px] font-semibold text-ink-2 md:grid">
                     {COLUMNS.map((column) => (
-                      <span key={column}>{column}</span>
+                      <span key={column}>{itemText(column, words)}</span>
                     ))}
                   </div>
                   <ul className="flex flex-col divide-y divide-hairline">
@@ -169,7 +171,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
                         <li key={row.id} data-row={row.position} className="flex flex-col gap-2 px-4 py-3">
                           <div className={`grid grid-cols-2 gap-x-3 gap-y-2 text-[13px] md:grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] ${ink}`}>
                             <Cell label="#">{row.position}</Cell>
-                            <Cell label="Equipment type" className="font-medium">
+                            <Cell label={itemText("Equipment type", words)} className="font-medium">
                               {row.assetTypeId ? (typeLabel.get(row.assetTypeId) ?? "Unknown type") : "Needs a type"}
                             </Cell>
                             <Cell label="In file">{row.assetTypeRaw ?? "-"}</Cell>

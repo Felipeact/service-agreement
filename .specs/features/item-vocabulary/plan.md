@@ -15,7 +15,7 @@ Reuses `org_settings` and its form (`OrgSettingsStore`, `validateOrgSettings`, t
 1. Company settings form -> `validateOrgSettings` (exists) - checks the two words, hands the value to the store
 2. `OrgSettingsStore` (exists) -> `org_settings` (exists) - persists `item_singular` and `item_plural` (door 1)
 3. `single module - vocabulary` words helper (new, door 3) - turns the two stored words into the four forms copy needs (singular, plural, each lower and capitalised), the only place that changes case
-4. out, staff: screens that name the item read the org's settings (exists, as for the accent colour) and call the helper
+4. out, staff: `getItemWords(orgId)` on the container (exists, new member) reads the settings; server screens take the words as a prop from their page, client screens read them from `ItemWordsProvider` that `AppShell` (exists) mounts, and copy written for the default word goes through `itemText` in the helper (the same single place that changes case)
 5. out, PDF: `AgreementDocument.words` (exists, a new top-level field; the existing tests assert `tenant` exactly) carries the words, and `pdf-sections.tsx` (exists) prints them
 6. out, customer: `public.portal_view` (exists) returns `tenant.itemSingular` and `tenant.itemPlural` (door 2), and the portal page (exists) calls the helper
 

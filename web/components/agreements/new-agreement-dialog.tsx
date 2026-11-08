@@ -9,7 +9,9 @@ import { Icon } from "@/components/ui/icons";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
+import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
+import { itemText } from "@/domain/org-settings";
 import { runExtraction, uploadFile, uploadMessage, type ConfirmState, type ExtractState, type ReadState, type StartState } from "@/components/imports/state";
 import { FILE_HINT, firstCustomerChoice, LIST_FAILED, NEW_CHOICE, START_MESSAGES, type StartAgreementState } from "./new-agreement-state";
 
@@ -52,6 +54,7 @@ const PHASE_TEXT: Record<Exclude<Phase, "idle">, string> = {
  * leaves the flow to add a customer or a site first.
  */
 export function NewAgreementDialog({ customers, sites, actions, open: controlledOpen, onClose, initialFile }: Props) {
+  const words = useItemWords();
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [customer, setCustomer] = useState(firstCustomerChoice(customers));
@@ -194,7 +197,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
     });
   }
 
-  const progressText = phase === "extracting" && progress ? `${PHASE_TEXT.extracting} ${progress.done} of ${progress.total}` : phase !== "idle" ? PHASE_TEXT[phase] : "";
+  const progressText = itemText(phase === "extracting" && progress ? `${PHASE_TEXT.extracting} ${progress.done} of ${progress.total}` : phase !== "idle" ? PHASE_TEXT[phase] : "", words);
   const submitLabel = busy ? "Working…" : file ? "Create agreement and read the list" : "Create agreement";
 
   return (
@@ -219,7 +222,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
               <h2 id="new-agreement-title" className="font-display text-[22px] leading-tight font-semibold tracking-tight">
                 New agreement
               </h2>
-              <p className="text-[13px] text-ink-2">Start with the customer&apos;s equipment list and the service scope is built from what is on site.</p>
+              <p className="text-[13px] text-ink-2">{itemText("Start with the customer's equipment list and the service scope is built from what is on site.", words)}</p>
             </div>
             <button
               type="button"
@@ -234,7 +237,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
 
           <FileDropzone
             id="newAgreementFile"
-            label="Equipment list (optional)"
+            label={itemText("Equipment list (optional)", words)}
             accept={IMPORT_ACCEPT}
             hint={FILE_HINT}
             file={file}
@@ -322,7 +325,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
           </div>
           {notice && (
             <p role="alert" className="rounded-control bg-attention-bg px-3 py-2.5 text-[13px] text-attention-fg">
-              {notice.text}{" "}
+              {itemText(notice.text, words)}{" "}
               {notice.href && (
                 <Link href={notice.href} className="inline-flex min-h-11 items-center font-semibold underline lg:min-h-0">
                   {notice.linkText}

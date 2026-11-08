@@ -10,7 +10,7 @@ const TODAY = new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long",
 
 /** Checks the session again behind the proxy, which a matcher change could bypass. Render it inside Suspense (door 6). */
 export async function MemberGate({ children }: { children: ReactNode }) {
-  const { currentMember, pipelineBoard, clock } = await getContainer();
+  const { currentMember, pipelineBoard, clock, getItemWords } = await getContainer();
   const member = await currentMember();
 
   if (member.status === "signed_out") redirect("/login");
@@ -21,9 +21,10 @@ export async function MemberGate({ children }: { children: ReactNode }) {
     (cards) => cards.filter(needsFollowUp).length,
     () => 0,
   );
+  const words = await getItemWords(member.orgId);
 
   return (
-    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} todayLabel={TODAY.format(clock.now())}>
+    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} todayLabel={TODAY.format(clock.now())} words={words}>
       {children}
     </AppShell>
   );

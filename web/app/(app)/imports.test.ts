@@ -8,6 +8,7 @@ const container = {
   currentMember,
   siteRegister: vi.fn(),
   listImportJobs: vi.fn(),
+  getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }),
   startImport: vi.fn(),
   confirmImportUpload: vi.fn(),
   discardImport: vi.fn(),

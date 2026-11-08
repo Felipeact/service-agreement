@@ -2,9 +2,11 @@
 
 import { useState, type ComponentProps, type DragEvent } from "react";
 import { NewAgreementDialog } from "@/components/agreements/new-agreement-dialog";
+import { useItemWords } from "@/components/shell/item-words";
 import { Spot } from "@/components/ui/illustrations";
 import { FILE_HINT } from "@/components/agreements/new-agreement-state";
 import { IMPORT_ACCEPT } from "@/domain/imports";
+import { itemText } from "@/domain/org-settings";
 
 /**
  * The call to action at the top of the Imports page: drop a customer's equipment list here, or choose a file. Either
@@ -12,6 +14,7 @@ import { IMPORT_ACCEPT } from "@/domain/imports";
  * to put it on.
  */
 export function ImportBanner(props: Omit<ComponentProps<typeof NewAgreementDialog>, "open" | "onClose" | "initialFile">) {
+  const words = useItemWords();
   const [file, setFile] = useState<File | null>(null);
   const [open, setOpen] = useState(false);
   const [over, setOver] = useState(false);
@@ -45,7 +48,7 @@ export function ImportBanner(props: Omit<ComponentProps<typeof NewAgreementDialo
       >
         <Spot kind="sheet" className="size-14 text-ink-2" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <p className="font-display text-[17px] font-semibold tracking-tight">Drop a customer equipment list here</p>
+          <p className="font-display text-[17px] font-semibold tracking-tight">{itemText("Drop a customer equipment list here", words)}</p>
           <p className="text-[13px] text-ink-2">{FILE_HINT}. We keep every row and flag what we are unsure of for review.</p>
         </div>
         <span className="inline-flex h-11 shrink-0 items-center justify-center rounded-control border border-hairline bg-surface px-4 text-[13px] font-semibold text-ink shadow-card lg:h-[34px]">
@@ -53,7 +56,7 @@ export function ImportBanner(props: Omit<ComponentProps<typeof NewAgreementDialo
         </span>
         <input
           type="file"
-          aria-label="Choose an equipment list"
+          aria-label={itemText("Choose an equipment list", words)}
           accept={IMPORT_ACCEPT}
           onChange={(event) => {
             take(event.target.files?.[0]);

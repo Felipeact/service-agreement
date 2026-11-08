@@ -12,16 +12,17 @@ type Params = Parameters<typeof parseImportFilter>[0];
 
 /** `?status=` and `?site=` narrow the list; anything not valid is ignored (imports-page Surface). */
 export async function ImportsForRequest({ params }: { params: Params }) {
-  const { currentMember, listImportHistory, listSites } = await getContainer();
+  const { currentMember, listImportHistory, listSites, getItemWords } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const filter = parseImportFilter(params);
-  const [rows, sites] = await Promise.all([listImportHistory(filter), listSites({ showInactive: true })]);
+  const [rows, sites, words] = await Promise.all([listImportHistory(filter), listSites({ showInactive: true }), getItemWords(member.orgId)]);
   return (
     <ImportHistoryView
       rows={rows}
       sites={sites.map((site) => ({ id: site.id, name: site.name, customer: site.customer }))}
       filter={filter}
+      words={words}
       banner={canWriteRecords(member.role) ? <ImportBannerLauncher /> : undefined}
     />
   );

@@ -11,6 +11,8 @@ import { RooftopScene, Spot } from "@/components/ui/illustrations";
 import { LinkButton } from "@/components/ui/link-button";
 import { isClosedStage, needsFollowUp, sortForColumn, type ExpiringAgreement } from "@/domain/pipeline";
 import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
+import { useItemWords } from "@/components/shell/item-words";
+import { itemText } from "@/domain/org-settings";
 import { ExpiringColumn } from "./expiring-column";
 import { KanbanColumn } from "./kanban-column";
 import { PipelineSummary } from "./pipeline-summary";
@@ -45,6 +47,7 @@ type PipelineViewProps = {
  * one search is the sidebar's, so the board has none of its own.
  */
 export function PipelineView({ cards, title = "Pipeline", canCreate = false, newAgreement, expiring = [], today = "", imports = [], initialFollowUpOnly = false }: PipelineViewProps) {
+  const words = useItemWords();
   const [selected, setSelected] = useState<View>("in_progress");
   const [followUpOnly, setFollowUpOnly] = useState(initialFollowUpOnly);
   const tabRefs = useRef<Partial<Record<View, HTMLButtonElement | null>>>({});
@@ -75,7 +78,7 @@ export function PipelineView({ cards, title = "Pipeline", canCreate = false, new
       <PageHeader
         large
         title={title}
-        subtitle="Keep every PM agreement moving from equipment list to signature."
+        subtitle={itemText("Keep every PM agreement moving from equipment list to signature.", words)}
         action={
           newAgreement ??
           (canCreate ? (

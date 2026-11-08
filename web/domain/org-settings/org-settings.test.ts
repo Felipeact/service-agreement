@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { PROVINCES, countItems, formatSettingNumber, itemWords, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
+import { DEFAULT_ITEM_WORDS, PROVINCES, countItems, formatSettingNumber, itemText, itemWords, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
 
 const valid: OrgSettingsInput = {
   legalName: "Kettle Ridge Mechanical Ltd.",
@@ -213,5 +213,29 @@ describe("item words", () => {
     expect([mass.Singular, mass.Plural]).toEqual(["Equipment", "Equipment"]);
     const words = itemWords("station", "stations");
     expect([countItems(1, words), countItems(0, words), countItems(2, words)]).toEqual(["1 station", "0 stations", "2 stations"]);
+  });
+});
+
+describe("item text", () => {
+  const stations = itemWords("station", "stations");
+  test("C2010: copy written for equipment is spoken in the org's words, and the default changes nothing", () => {
+    expect(itemText("Import equipment list", stations)).toBe("Import station list");
+    expect(itemText("Equipment type", stations)).toBe("Station type");
+    expect(itemText("Equipment types not recognised", stations)).toBe("Station types not recognised");
+    expect(itemText("This document lists more equipment than can be read at once.", stations)).toBe("This document lists more stations than can be read at once.");
+    expect(itemText("Equipment, no agreement yet", stations)).toBe("Stations, no agreement yet");
+    for (const text of ["Import equipment list", "Equipment types not recognised", "No equipment on this site yet.", "Equipment"]) {
+      expect(itemText(text, DEFAULT_ITEM_WORDS)).toBe(text);
+    }
+  });
+});
+
+describe("item text, articles", () => {
+  test("C2010: an before the word follows the word it now precedes, and the default keeps an", () => {
+    const stations = itemWords("station", "stations");
+    expect(itemText("Choose an equipment list", stations)).toBe("Choose a station list");
+    expect(itemText("Drag an equipment list here", stations)).toBe("Drag a station list here");
+    expect(itemText("Choose an equipment type", itemWords("area", "areas"))).toBe("Choose an area type");
+    expect(itemText("Choose an equipment type", DEFAULT_ITEM_WORDS)).toBe("Choose an equipment type");
   });
 });

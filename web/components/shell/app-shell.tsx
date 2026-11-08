@@ -7,6 +7,8 @@ import { ProductMark } from "@/components/ui/product-mark";
 import { SearchInput } from "@/components/ui/search-input";
 import { SEARCH_MAX } from "@/domain/records";
 import { SidebarAccount } from "./sidebar-account";
+import type { ItemWords } from "@/domain/org-settings";
+import { ItemWordsProvider } from "./item-words";
 import { SidebarNav } from "./sidebar-nav";
 
 const PRODUCT_NAME = "Service Agreement";
@@ -22,6 +24,8 @@ type AppShellProps = {
   followUps?: number;
   /** Today's date as the business reads it ("Friday, November 6"), formatted on the server so the page and the browser agree. */
   todayLabel?: string;
+  /** The org's item words, for the Sites link; the default when absent. */
+  words?: ItemWords;
 };
 
 /** The bell: a link to the Pipeline filtered to the agreements that need follow-up, with their count when there are any. */
@@ -59,7 +63,7 @@ function Brand({ orgName, markClass }: { orgName: string; markClass: string }) {
 }
 
 /** Fixed Night sidebar on desktop (the app's one search lives in it); a Night top bar with a navigation drawer below 1024px. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel }: AppShellProps) {
+export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -114,7 +118,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
             shortcut={SEARCH_SHORTCUT}
           />
         </form>
-        <SidebarNav footer={<SidebarAccount email={email} signOut={signOut} />} />
+        <SidebarNav words={words} footer={<SidebarAccount email={email} signOut={signOut} />} />
       </aside>
 
       <div className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-night px-2 lg:hidden">
@@ -168,7 +172,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
                 <Icon name="close" />
               </button>
             </div>
-            <SidebarNav onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
+            <SidebarNav words={words} onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
           </div>
         </div>
       )}
@@ -184,7 +188,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
             </div>
           </div>
         </header>
-        <main className="px-4 py-6 md:px-6 lg:px-8 lg:py-7">{children}</main>
+        <main className="px-4 py-6 md:px-6 lg:px-8 lg:py-7">{words ? <ItemWordsProvider words={words}>{children}</ItemWordsProvider> : children}</main>
       </div>
     </div>
   );

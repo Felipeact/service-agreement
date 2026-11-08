@@ -223,8 +223,23 @@ export function itemWords(singular: string, plural: string): ItemWords {
 
 export const DEFAULT_ITEM_WORDS: ItemWords = itemWords(DEFAULT_ITEM_WORD, DEFAULT_ITEM_WORD);
 
+/** A mass noun such as equipment takes the singular form of a verb; a countable one takes the plural. */
+export const itemVerb = (words: ItemWords, mass: string, plural: string) => (words.singular === words.plural ? mass : plural);
+
 /** The past-tense verb for the plural word: "was" for a mass noun such as equipment, else "were". */
-export const itemWas = (words: ItemWords) => (words.singular === words.plural ? "was" : "were");
+export const itemWas = (words: ItemWords) => itemVerb(words, "was", "were");
+
+/**
+ * Copy written for the default word, spoken in the org's: "equipment list" and "equipment type" take the singular as a
+ * modifier, any other "equipment" the plural, a capital stays a capital, and "an" before it follows the new word. With the default words nothing changes.
+ */
+export function itemText(text: string, words: ItemWords): string {
+  return text.replace(/\b(?:([Aa])n )?([Ee])quipment( (?:list|type|import)s?)?\b/g, (_match, a: string | undefined, first: string, tail: string | undefined) => {
+    const word = tail ? words.singular : words.plural;
+    const article = a ? a + (/^[aeiou]/i.test(word) ? "n " : " ") : "";
+    return article + (first === "E" ? capitalise(word) : word) + (tail ?? "");
+  });
+}
 
 /** "1 station", "0 stations", "2 stations". */
 export function countItems(count: number, words: ItemWords): string {

@@ -17,12 +17,12 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 /** Reads the job, its rows and `?show` / `?page` at request time. */
 export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
   if (!isUuid(jobId)) notFound();
-  const { currentMember, reviewImport, listAssetTypes, siteRegister } = await getContainer();
+  const { currentMember, reviewImport, listAssetTypes, siteRegister, getItemWords } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const review = await reviewImport(jobId);
   if (!review) notFound();
-  const [types, site, params] = await Promise.all([listAssetTypes(), siteRegister(review.job.siteId), searchParams]);
+  const [types, site, params, words] = await Promise.all([listAssetTypes(), siteRegister(review.job.siteId), searchParams, getItemWords(member.orgId)]);
 
   // The register lists assets by type code; the flags compare type ids.
   const idOf = new Map(types.map((type) => [type.code, type.id]));
@@ -47,6 +47,7 @@ export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
       show={first(params.show) === "attention" ? "attention" : "all"}
       page={first(params.page)}
       actions={actions}
+      words={words}
       agreementId={isUuid(first(params.agreement) ?? "") ? first(params.agreement) : undefined}
     />
   );

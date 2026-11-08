@@ -10,7 +10,7 @@ const redirect = vi.fn((path: string) => {
 });
 
 const pipelineBoard = vi.fn(async () => [] as unknown[]);
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut, pipelineBoard, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut, pipelineBoard, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }), clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
 vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline" }));
 
 const { MemberGate } = await import("./member-gate");

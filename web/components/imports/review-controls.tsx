@@ -2,17 +2,20 @@
 
 import { useActionState, useState } from "react";
 import type { AssetTypeOption } from "@/application/ports";
+import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { fixLine } from "@/domain/imports";
+import { itemText } from "@/domain/org-settings";
 import { REVIEW_MESSAGES, type CommitState, type MapState, type RowState } from "./state";
 
 function Alert({ message }: { message: string | null }) {
+  const words = useItemWords();
   if (!message) return null;
   return (
     <p role="alert" className="text-[13px] font-medium text-danger">
-      {message}
+      {itemText(message, words)}
     </p>
   );
 }
@@ -48,12 +51,13 @@ type RowEditorProps = {
 
 /** One row's fields as the asset form has them, with Save and Cancel. */
 export function RowEditor({ row, types, state, pending, onCancel, action }: RowEditorProps) {
+  const words = useItemWords();
   const errors = state.status === "invalid" && "errors" in state ? state.errors : {};
   const id = (field: string) => `${row.id}-${field}`;
   return (
     <form action={action} className="flex flex-col gap-3 rounded-control border border-hairline bg-ground p-3">
       <div className="grid gap-3 md:grid-cols-2">
-        <Select id={id("assetTypeId")} name="assetTypeId" label="Equipment type" defaultValue={row.assetTypeId ?? ""} error={errors.assetTypeId}>
+        <Select id={id("assetTypeId")} name="assetTypeId" label={itemText("Equipment type", words)} defaultValue={row.assetTypeId ?? ""} error={errors.assetTypeId && itemText(errors.assetTypeId, words)}>
           <option value="">Choose a type</option>
           {types.map((type) => (
             <option key={type.id} value={type.id}>
@@ -169,16 +173,17 @@ type MappingSectionProps = {
  * refresh that removes the spelling it was applied to.
  */
 export function MappingSection({ spellings, types, map }: MappingSectionProps) {
+  const words = useItemWords();
   const [applied, setApplied] = useState<number | null>(null);
   if (spellings.length === 0 && applied === null) return null;
   return (
     <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
-      {spellings.length > 0 && <h2 className="text-[15px] font-semibold">Equipment types not recognised</h2>}
+      {spellings.length > 0 && <h2 className="text-[15px] font-semibold">{itemText("Equipment types not recognised", words)}</h2>}
       {spellings.map((spelling, index) => (
         <MapControl key={spelling.key} spelling={spelling} types={types} index={index} map={map} onMapped={setApplied} />
       ))}
       {spellings.length === 0 && applied !== null && (
-        <p role="status" className="text-[13px] text-ink">{`Applied to ${applied} ${applied === 1 ? "row" : "rows"}. Every equipment type is recognised.`}</p>
+        <p role="status" className="text-[13px] text-ink">{itemText(`Applied to ${applied} ${applied === 1 ? "row" : "rows"}. Every equipment type is recognised.`, words)}</p>
       )}
     </section>
   );

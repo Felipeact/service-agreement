@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 let pathname = "/pipeline";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 
+const { itemWords } = await import("@/domain/org-settings");
 const { SidebarNav } = await import("./sidebar-nav");
 const { FOOTER_NAV, MAIN_NAV } = await import("./nav-items");
 
@@ -81,5 +82,14 @@ describe("navigation", () => {
     const link = /<a\b[^>]*href="\/members"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Members<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
+  });
+});
+
+describe("navigation, item words", () => {
+  test("C2011: the Sites link is named after the org's plural, and still goes to /sites", () => {
+    pathname = "/sites";
+    const html = renderToStaticMarkup(createElement(SidebarNav, { words: itemWords("station", "stations") }));
+    expect(html).toMatch(/<a\b[^>]*href="\/sites"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Sites &amp; stations<\/a>/);
+    expect(html).not.toMatch(/equipment/i);
   });
 });

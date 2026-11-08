@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { IMPORT_ACCEPT, IMPORT_MESSAGES, validateImportFile } from "@/domain/imports";
+import { itemText } from "@/domain/org-settings";
+import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { uploadFile, uploadMessage, type ConfirmState, type ReadState, type StartState, type UploadState } from "./state";
@@ -18,14 +20,16 @@ type FieldsProps = {
 
 /** The picker, the hint, the failure message and Upload. Presentational: the caller owns the state. */
 export function ImportUploadFields({ state, fileName, onChoose, onSubmit, formRef }: FieldsProps) {
+  const words = useItemWords();
   const reading = state.status === "reading";
   const uploading = state.status === "uploading" || reading;
-  const message = uploadMessage(state);
+  const found = uploadMessage(state);
+  const message = found && itemText(found, words);
   return (
     <form ref={formRef} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
       <FileDropzone
         id="importFile"
-        label="Equipment list"
+        label={itemText("Equipment list", words)}
         accept={IMPORT_ACCEPT}
         hint="Excel, CSV, Word or PDF, up to 20 MB"
         file={fileName ? { name: fileName } : null}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
+import { itemText } from "@/domain/org-settings";
 import { EXTRACT_MESSAGES, runExtraction, type ExtractState } from "./state";
 
 type Progress = { done: number; total: number };
@@ -20,8 +22,10 @@ type PromptProps = {
 
 /** "Extract equipment" on a read job, or "Continue extraction" on one left part way. */
 export function ExtractPrompt({ pending, progress, state, resume = false, action }: PromptProps) {
-  const message = state.status in EXTRACT_MESSAGES ? EXTRACT_MESSAGES[state.status as keyof typeof EXTRACT_MESSAGES] : null;
-  const label = pending ? (progress ? `Extracting… ${progress.done} of ${progress.total}` : "Extracting…") : resume ? "Continue extraction" : "Extract equipment";
+  const words = useItemWords();
+  const found = state.status in EXTRACT_MESSAGES ? EXTRACT_MESSAGES[state.status as keyof typeof EXTRACT_MESSAGES] : null;
+  const message = found && itemText(found, words);
+  const label = pending ? (progress ? `Extracting… ${progress.done} of ${progress.total}` : "Extracting…") : resume ? "Continue extraction" : itemText("Extract equipment", words);
   return (
     <form action={action} className="flex flex-col gap-2">
       <div>
