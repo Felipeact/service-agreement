@@ -864,7 +864,7 @@ begin
   perform tests.ok('C1669 failed and voided do not count', (select count(*) from public.contract_signature_requests where contract_id in (c, d)) = 4, 'wrong row count');
 end $$;
 
--- C1670: complete opens the request, stores the provider's answer and writes one event, with no outbox row.
+-- C1670: complete opens the request, stores the provider's answer and writes one event, with one outbox row (door 3 of contract-automation; it was none).
 do $$
 declare c uuid := tests.sg_contract('sg9'); r uuid; s public.contract_signature_requests; e record; outbox_before bigint;
 begin
@@ -883,7 +883,9 @@ begin
   select * into e from public.events where entity_type = 'contract' and entity_id = c and type = 'contract.sent_for_signature';
   perform tests.ok('C1670 payload', e.payload = jsonb_build_object('requestId', r, 'provider', 'docuseal', 'versionNo', 1), 'wrong payload ' || e.payload::text);
   perform tests.ok('C1670 actor', e.actor_id = tests.id('uD') and e.org_id = tests.id('orgA'), 'wrong actor or org');
-  perform tests.ok('C1670 no outbox', (select count(*) from public.outbox where org_id = tests.id('orgA')) = outbox_before, 'an outbox row was written');
+  -- Amended by contract-automation door 3 (AD-152): the send event now has exactly one pending outbox row, for W2b.
+  perform tests.ok('C1670 one outbox row', (select count(*) from public.outbox where org_id = tests.id('orgA')) = outbox_before + 1
+    and (select count(*) from public.outbox o where o.event_id = e.id and o.status = 'pending') = 1, 'not exactly one pending outbox row for the send event');
 end $$;
 
 -- C1671: complete refuses a request that is not creating, a malformed answer and a caller who may not; nothing changes.

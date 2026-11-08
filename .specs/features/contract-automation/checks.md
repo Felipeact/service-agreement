@@ -246,3 +246,6 @@ Proof: `npm run test:db transitions` (assertion `C1821`, 3 cases)
 ### Regression found when `transitions` was first run after the migration (2026-11-08)
 
 - Neither the author nor Verifier round 2 ran `npm run test:db transitions` after `20261108100000`; only `outbox_dispatch` was run. `transitions` fails at **C1604** (contract-generation, structural: `create_contract`'s own source must hold `for update` before `from public.contracts`), because the body moved to `private.make_contract`. The check is correct and unchanged. Migration `20261108220000_create_contract_lock_order` puts the lock and the existing-contract lookup back in `create_contract` (drafted, not applied). Lesson for the next round: run every recipe whose subject a migration touches, not only the feature's own.
+
+- **Applied and measured (2026-11-08, with the owner's go-ahead):** `20261108210000_signature_webhook_documents_fallback` and `20261108220000_create_contract_lock_order`. `npm run test:db`: all 23 recipes pass (C1604 green again, C1820 and C1821 green).
+- **Amendment to an existing assertion, listed:** `transitions.sql` C1670 `no outbox` ("an outbox row was written" must not happen) pinned what door 3 / AD-152 deliberately reverses; it is now `one outbox row`: exactly one more row than before and exactly one `pending` row for the send event. Stricter, not weaker.
