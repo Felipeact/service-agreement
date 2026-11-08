@@ -50,6 +50,8 @@ export async function ContractForRequest({ contractId }: { contractId: string })
         customerLinkUrl,
         contractorSrc,
         send: sendForSignatureAction.bind(null, contract.id),
+        contractId: contract.id,
+        signed: contract.signed ?? null,
       }}
     />
   );

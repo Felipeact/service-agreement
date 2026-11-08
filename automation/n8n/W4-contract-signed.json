@@ -1,0 +1,251 @@
+{
+  "name": "W4 contract signed",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b4180648-3d3e-5542-85ab-2c4abc19db9d",
+      "name": "When called by events",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1249f49-5d11-51f8-9575-be10eb83f463",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "e21376ad-45f9-5378-b4af-8e83829d77ae",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w4:' + $('When called by events').first().json.eventId + ':copy', kind: 'contract_signed_copy', eventId: $('When called by events').first().json.eventId, contractId: $('When called by events').first().json.contractId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "f7db4b63-2daf-5a06-ac9e-7f10d0fb9bb1",
+      "name": "Signed copy body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "__SA_HMAC_SECRET__",
+        "encoding": "hex"
+      },
+      "id": "399649bc-88eb-5a31-a50d-40c8c856ecab",
+      "name": "Sign signed copy",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "0173dd8a-3a5e-58ff-88c7-5113fe7ace7c",
+      "name": "Notify signed copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c595b2a2-b6c4-50ec-845c-99dec1ae8484",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "6612df87-b0aa-5d65-81c1-8e372b5239c0",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "90332611-b977-5041-b6cd-c55473227470",
+      "name": "Retry signed copy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "cd01a41a-e6bc-55b5-b32c-b8d17d296dc6",
+      "name": "Wait 10 minutes (signed copy)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "f7781d16-dedc-5f69-a993-29dffb93da17"
+    }
+  ],
+  "connections": {
+    "When called by events": {
+      "main": [
+        [
+          {
+            "node": "Signed copy body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signed copy body": {
+      "main": [
+        [
+          {
+            "node": "Sign signed copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign signed copy": {
+      "main": [
+        [
+          {
+            "node": "Notify signed copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify signed copy": {
+      "main": [
+        [
+          {
+            "node": "Retry signed copy?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry signed copy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry signed copy?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (signed copy)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (signed copy)": {
+      "main": [
+        [
+          {
+            "node": "Signed copy body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

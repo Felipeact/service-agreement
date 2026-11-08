@@ -135,7 +135,7 @@ describe("contract reader: signature requests", () => {
   test("C1690: the read asks for the requests of the contract", async () => {
     const { typed, calls } = stubClient({ contracts: { data: row({ contract_signature_requests: [] }), error: null } });
     await supabaseContractReader(typed).get(CON);
-    expect(String(calls.find((call) => call.method === "select")?.args[0])).toContain("contract_signature_requests(id, status, created_at)");
+    expect(String(calls.find((call) => call.method === "select")?.args[0])).toContain("contract_signature_requests(id, status, created_at,");
   });
 
   test.each([
@@ -146,5 +146,104 @@ describe("contract reader: signature requests", () => {
   ])("C1690: a %s request is live: %s", async (status, live) => {
     const { isLiveRequest } = await import("@/domain/contract");
     expect(isLiveRequest(status as "creating" | "open" | "failed" | "voided")).toBe(live);
+  });
+});
+
+describe("contract reader: the signed copy", () => {
+  const SHA_A = "a".repeat(64);
+  const SHA_B = "b".repeat(64);
+  const signers = [
+    { role: "contractor", name: "Dana Admin", signed_at: "2026-11-07T22:30:00Z", signed_ip: "198.51.100.7" },
+    { role: "customer", name: "Pat Lee", signed_at: "2026-11-07T22:14:00Z", signed_ip: "203.0.113.9" },
+  ];
+  const documents = [
+    { kind: "audit_log", size_bytes: 14, sha256: SHA_B },
+    { kind: "signed", size_bytes: 15, sha256: SHA_A },
+  ];
+  const request = (status: string, over: Record<string, unknown> = {}) => ({
+    id: "req-1",
+    status,
+    created_at: "2026-11-06T10:00:00Z",
+    contract_signers: signers,
+    contract_signed_documents: documents,
+    ...over,
+  });
+  const read = async (rows: unknown[]) => (await supabaseContractReader(stubClient({ contracts: { data: row({ contract_signature_requests: rows }), error: null } }).typed).get(CON))?.signed;
+
+  test("C1758: a completed request gives both files and the signers, the customer first", async () => {
+    expect(await read([request("completed")])).toEqual({
+      documents: [
+        { kind: "audit_log", sizeBytes: 14, sha256: SHA_B },
+        { kind: "signed", sizeBytes: 15, sha256: SHA_A },
+      ],
+      signers: [
+        { role: "customer", name: "Pat Lee", signedAt: new Date("2026-11-07T22:14:00Z"), ip: "203.0.113.9" },
+        { role: "contractor", name: "Dana Admin", signedAt: new Date("2026-11-07T22:30:00Z"), ip: "198.51.100.7" },
+      ],
+    });
+  });
+
+  test.each(["creating", "open", "failed", "voided", "declined"])("C1758: a %s request has signed null even when files are embedded", async (status) => {
+    expect(await read([request(status)])).toBeNull();
+  });
+
+  test("C1758: a signer who has not signed has no time and no address, and a completed request without files is null", async () => {
+    const unsigned = [{ role: "customer", name: "Pat Lee", signed_at: null, signed_ip: null }];
+    expect((await read([request("completed", { contract_signers: unsigned })]))?.signers).toEqual([{ role: "customer", name: "Pat Lee", signedAt: null, ip: null }]);
+    expect(await read([request("completed", { contract_signed_documents: [] })])).toBeNull();
+  });
+
+  test("C1758: only the newest request counts", async () => {
+    const older = request("completed", { id: "old", created_at: "2026-11-01T10:00:00Z" });
+    expect(await read([older, request("open", { id: "new", created_at: "2026-11-06T10:00:00Z" })])).toBeNull();
+  });
+
+  test("C1758: the read selects the files' kind, size and hash and never their content", async () => {
+    const { typed, calls } = stubClient({ contracts: { data: row({ contract_signature_requests: [] }), error: null } });
+    await supabaseContractReader(typed).get(CON);
+    const select = String(calls.find((call) => call.method === "select")?.args[0]);
+    expect(select).toContain("contract_signed_documents(kind, size_bytes, sha256)");
+    expect(select).toContain("contract_signers(role, name, signed_at, signed_ip)");
+    expect(select).not.toMatch(/content/);
+  });
+
+  test("C1758: a row that did not ask for requests leaves signed undefined", async () => {
+    const { typed } = stubClient({ contracts: { data: row({}), error: null } });
+    expect((await supabaseContractReader(typed).get(CON))?.signed).toBeUndefined();
+  });
+});
+
+describe("contract reader, the signing-link email (contract-automation AC 13)", () => {
+  const withRequests = row({ contract_signature_requests: [{ id: "req-1", status: "open", created_at: "2026-11-06T10:00:00Z" }] });
+  const read = async (notification: unknown, event: unknown = { id: "ev-1" }) => {
+    const { typed, calls } = stubClient({
+      contracts: { data: withRequests, error: null },
+      events: { data: event, error: null },
+      notifications: { data: notification, error: null },
+    });
+    return { view: await supabaseContractReader(typed).get(CON), calls };
+  };
+
+  test("C1796: a sent notification is sent with the address and time, read for the latest contract.sent_for_signature event", async () => {
+    const { view, calls } = await read({ status: "sent", skip_reason: null, recipients: ["pat@customer.ca"], sent_at: "2026-11-08T18:00:00Z" });
+    expect(view?.signingLinkEmail).toEqual({ status: "sent", to: "pat@customer.ca", sentAt: new Date("2026-11-08T18:00:00Z") });
+    expect(calls).toContainEqual({ table: "events", method: "eq", args: ["type", "contract.sent_for_signature"] });
+    expect(calls).toContainEqual({ table: "notifications", method: "eq", args: ["kind", "customer_signing_link"] });
+    // The latest send: newest first, one row.
+    expect(calls).toContainEqual({ table: "events", method: "order", args: ["created_at", { ascending: false }] });
+    expect(calls).toContainEqual({ table: "events", method: "limit", args: [1] });
+  });
+
+  test.each([
+    ["failed", { status: "failed", skip_reason: null, recipients: [], sent_at: null }, { status: "not_sent", reason: "failed" }],
+    ["skipped not_signable", { status: "skipped", skip_reason: "not_signable", recipients: [], sent_at: null }, { status: "not_sent", reason: "not_signable" }],
+    ["claimed", { status: "claimed", skip_reason: null, recipients: [], sent_at: null }, { status: "pending" }],
+    ["no row yet", null, { status: "pending" }],
+  ])("C1796: %s is read as %j", async (_label, notification, expected) => {
+    expect((await read(notification)).view?.signingLinkEmail).toEqual(expected);
+  });
+
+  test("C1796: a contract never sent for signature has null", async () => {
+    expect((await read(null, null)).view?.signingLinkEmail).toBeNull();
   });
 });

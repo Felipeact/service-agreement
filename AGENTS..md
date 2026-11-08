@@ -24,7 +24,7 @@ Web  | nothin in git  | see below |
 
 # Web validation — Playwright screen & touch (mandatory)
 
-ALWAYS finish every implementation that touches the web app (`web/`) by validating it in a real browser with the Playwright MCP tools. An implementation is NOT done until this passes. These checks are run live and are not committed to git.
+ALWAYS finish every implementation that touches the web app (`web/`) by validating it in a real browser with the Playwright MCP tools. An implementation is NOT done until this passes. These checks are run live in the browser and nothing from them (screenshots, captures) is committed to git.
 
 1. Start the app (`npm run dev` in `web/`) and open the changed pages with `browser_navigate`.
 2. Check each changed page on these screen sizes, using `browser_resize`:
@@ -32,7 +32,7 @@ ALWAYS finish every implementation that touches the web app (`web/`) by validati
    - Tablet: 768x1024
    - Desktop: 1440x900
 3. On every screen size:
-   - Take a `browser_snapshot` and a `browser_take_screenshot`, then review them.
+   - Look at the page in the Playwright browser window that `browser_navigate` opens (keep it open and visible, resized with `browser_resize`), and take a `browser_snapshot` to review the page structure. Do NOT use `browser_take_screenshot` and never save image files; if a screenshot slips in, delete it before finishing.
    - Check there is no horizontal scroll, no overlapping or cut-off content, and no broken layout.
    - Make sure the text is readable and every touch target is at least 44x44px on mobile and tablet.
 4. Touch validation (mobile and tablet): use touch emulation (`hasTouch`/`isMobile` through `browser_run_code_unsafe`, or tap with `browser_click`) to exercise every changed interactive element: buttons, links, forms, menus, modals, and dropdowns. Confirm each one responds correctly and that nothing depends on hover alone.

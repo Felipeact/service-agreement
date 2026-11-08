@@ -14,8 +14,8 @@ do $$ begin
     = (select array_agg(t order by t) from unnest(array['orgs','memberships','org_settings','customers','contacts',
         'sites','asset_types','asset_type_tasks','assets','agreements','agreement_versions','service_lines',
         'contracts','events','outbox','import_jobs','import_rows','portal_links','notifications','service_line_asset_types','invitations',
-        'contract_signature_requests','contract_signers']) as t),
-    'public tables differ from the 23 in the plans (supabase-init, import-upload, import-extract, customer-portal, outbox-dispatch, cadence, members-page, signature-provider)');
+        'contract_signature_requests','contract_signers','contract_signed_documents']) as t),
+    'public tables differ from the 24 in the plans (supabase-init, import-upload, import-extract, customer-portal, outbox-dispatch, cadence, members-page, signature-provider, signature-webhook)');
 end $$;
 
 -- C36

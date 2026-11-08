@@ -3,6 +3,15 @@ import type { EmailSender } from "@/application/ports";
 
 const RESEND_URL = "https://api.resend.com/emails";
 
+/** AD-149's cap on one stored document; a bigger attachment is refused before any request (contract-automation AC 21). */
+const MAX_ATTACHMENT_BYTES = 10_485_760;
+
+/** The decoded size of a base64 string, from its length and padding. */
+function base64Bytes(value: string): number {
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  return Math.floor((value.length * 3) / 4) - padding;
+}
+
 /** `"<name>" <address>`, with `"` and `\` escaped inside the quotes (RFC 5322 quoted-string). */
 export function fromHeader(name: string, address: string): string {
   return `"${name.replace(/[\\"]/g, (char) => `\\${char}`)}" <${address}>`;
@@ -17,6 +26,7 @@ export function resendEmailSender(options: { apiKey: string; from: string }): Em
   return {
     async send(message) {
       if (message.to.length === 0 || message.to.some(isReservedAddress)) return { ok: false, code: "reserved_domain" };
+      if (message.attachments?.some((file) => base64Bytes(file.contentBase64) > MAX_ATTACHMENT_BYTES)) return { ok: false, code: "rejected" };
       let response: Response;
       try {
         response = await fetch(RESEND_URL, {
@@ -33,6 +43,9 @@ export function resendEmailSender(options: { apiKey: string; from: string }): Em
             subject: message.subject,
             html: message.html,
             text: message.text,
+            ...(message.attachments?.length
+              ? { attachments: message.attachments.map((file) => ({ filename: file.filename, content: file.contentBase64 })) }
+              : {}),
           }),
           cache: "no-store",
         });

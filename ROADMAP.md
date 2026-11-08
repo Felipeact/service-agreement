@@ -288,8 +288,8 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 4: Contract & e-signature
 - [x] Contract generated from the accepted agreement version
 - [x] `SignatureProvider` with a DocuSeal adapter and embedded signing. Staff send a pending contract for signature; the customer signs on a tenant-branded `/sign/<token>` page; the owner or admin countersigns inside the contract page. The status still moves only with item 3's webhook. Live run 2026-11-06 on the demo (sandbox key); countersigning is proven with the fake provider until item 3
-- [ ] Verified DocuSeal webhook, storage of the signed PDF and audit log
-- [ ] n8n W2 and W4
+- [ ] Verified DocuSeal webhook, storage of the signed PDF and audit log. Built 2026-11-07 (`POST /api/webhooks/docuseal`, `contract_signed_documents`, AD-148, AD-149); to be ticked after the verification and the live run, which wait for the owner's DocuSeal webhook and Vault secret
+- [ ] n8n W2 and W4. Built 2026-11-08 (`.specs/features/contract-automation/`, AD-150 to AD-153): W2 makes the contract on accept and tells the owners, emails the customer's signer the signing link on Send; W4 emails both signers the signed PDF and audit log. To be ticked after the migration is applied, the Verifier and the live run
 
 ### Phase 4.5: Multi-trade catalog (M18, M6)
 - [ ] Add, rename and remove equipment types in the task library, and reset a type to its pack. A new type gets a code made from its name, and the code never changes after that (frozen snapshots, `?type=` links and import matching all key on it); a rename changes the name only. Names are unique per org, ignoring case. A type can be removed only while no asset, service line or import row uses it

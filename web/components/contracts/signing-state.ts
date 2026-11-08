@@ -20,3 +20,13 @@ export const SIGNING_MESSAGES = {
 export function signingMessageFor(status: string): string | null {
   return status in SIGNING_MESSAGES ? SIGNING_MESSAGES[status as keyof typeof SIGNING_MESSAGES] : null;
 }
+
+/** When a party signed, in the tenant's time zone: `Nov 7, 2026, 2:14 PM` (signature-webhook AC 25; the house zone is America/Vancouver). */
+export function formatSignedAt(at: Date): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Vancouver", dateStyle: "medium", timeStyle: "short" }).format(at);
+}
+
+/** One signer's line on the signed contract: `Pat Lee · Nov 7, 2026, 2:14 PM · 203.0.113.9`, leaving out what was not recorded. */
+export function signerLine(signer: { name: string; signedAt: Date | null; ip: string | null }): string {
+  return [signer.name, signer.signedAt ? formatSignedAt(signer.signedAt) : null, signer.ip].filter(Boolean).join(" · ");
+}

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AutomationCallbacks, CallbackFailure, ClaimResult, NotificationMessage } from "@/application/ports";
+import { isContractRefusal } from "@/domain/notifications";
 import type { Database, Json } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -105,6 +106,56 @@ function toMessage(raw: Raw): NotificationMessage {
         customer: { name: isRecord(raw.customer) ? (text(raw.customer.name) ?? "") : "" },
         site: { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" },
         validUntil,
+      };
+    }
+    case "staff_contract_ready": {
+      const contract = isRecord(raw.contract) && text(raw.contract.id) ? { id: raw.contract.id as string } : null;
+      const refusal = isContractRefusal(raw.refusal) ? raw.refusal : null;
+      // Neither a contract nor a reason: the email would say nothing, so the whole claim is refused.
+      if (!isRecord(raw.agreement) || (!contract && !refusal)) throw new Error("automation_claim returned a malformed staff_contract_ready message");
+      return { ...base, kind: "staff_contract_ready", agreement, site: { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" }, contract, refusal };
+    }
+    case "customer_signing_link": {
+      const linkSealed = text(raw.linkSealed);
+      if (!isRecord(raw.agreement) || !linkSealed) throw new Error("automation_claim returned a malformed customer_signing_link message");
+      return {
+        ...base,
+        kind: "customer_signing_link",
+        agreement,
+        site: { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" },
+        signerName: text(raw.signerName) ?? "",
+        linkSealed,
+      };
+    }
+    case "contract_signed_copy": {
+      const key = text(raw.idempotencyKey);
+      const documents = (Array.isArray(raw.documents) ? raw.documents.filter(isRecord) : []).flatMap((item) =>
+        (item.kind === "signed" || item.kind === "audit_log") && text(item.contentBase64) ? [{ kind: item.kind as "signed" | "audit_log", contentBase64: item.contentBase64 as string }] : [],
+      );
+      if (!isRecord(raw.agreement) || !key || documents.length !== 2) throw new Error("automation_claim returned a malformed contract_signed_copy message");
+      return {
+        ...base,
+        kind: "contract_signed_copy",
+        idempotencyKey: key,
+        agreement,
+        site: { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" },
+        signerName: text(raw.signerName) ?? "",
+        documents,
+      };
+    }
+    case "staff_contract_signed": {
+      const key = text(raw.idempotencyKey);
+      if (!isRecord(raw.agreement) || !isRecord(raw.contract) || !text(raw.contract.id) || !key) {
+        throw new Error("automation_claim returned a malformed staff_contract_signed message");
+      }
+      return {
+        ...base,
+        kind: "staff_contract_signed",
+        idempotencyKey: key,
+        agreement,
+        contract: { id: raw.contract.id as string },
+        site: { name: isRecord(raw.site) ? (text(raw.site.name) ?? "") : "" },
+        customer: { name: isRecord(raw.customer) ? (text(raw.customer.name) ?? "") : "" },
       };
     }
     default:

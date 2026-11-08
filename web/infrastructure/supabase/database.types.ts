@@ -330,6 +330,7 @@ export type Database = {
       }
       contract_signature_requests: {
         Row: {
+          completed_at: string | null
           contract_id: string
           created_at: string
           created_by: string | null
@@ -341,6 +342,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          completed_at?: string | null
           contract_id: string
           created_at?: string
           created_by?: string | null
@@ -352,6 +354,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          completed_at?: string | null
           contract_id?: string
           created_at?: string
           created_by?: string | null
@@ -379,6 +382,51 @@ export type Database = {
           },
         ]
       }
+      contract_signed_documents: {
+        Row: {
+          content: string
+          kind: string
+          org_id: string
+          request_id: string
+          sha256: string
+          size_bytes: number
+          stored_at: string
+        }
+        Insert: {
+          content: string
+          kind: string
+          org_id: string
+          request_id: string
+          sha256: string
+          size_bytes: number
+          stored_at?: string
+        }
+        Update: {
+          content?: string
+          kind?: string
+          org_id?: string
+          request_id?: string
+          sha256?: string
+          size_bytes?: number
+          stored_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signed_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_signed_documents_request_id_org_id_fkey"
+            columns: ["request_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "contract_signature_requests"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
       contract_signers: {
         Row: {
           email: string
@@ -389,6 +437,9 @@ export type Database = {
           provider_submitter_id: string | null
           request_id: string
           role: string
+          signed_at: string | null
+          signed_ip: string | null
+          signed_ua: string | null
           token_hash: string | null
         }
         Insert: {
@@ -400,6 +451,9 @@ export type Database = {
           provider_submitter_id?: string | null
           request_id: string
           role: string
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_ua?: string | null
           token_hash?: string | null
         }
         Update: {
@@ -411,6 +465,9 @@ export type Database = {
           provider_submitter_id?: string | null
           request_id?: string
           role?: string
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_ua?: string | null
           token_hash?: string | null
         }
         Relationships: [
@@ -1459,6 +1516,7 @@ export type Database = {
         Returns: string[]
       }
       signature_view: { Args: { p_token_hash: string }; Returns: Json }
+      signature_webhook: { Args: { p_body: string; p_documents?: Json; p_signature: string }; Returns: Json }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
     }
     Enums: {

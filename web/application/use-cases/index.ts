@@ -70,4 +70,5 @@ export {
 } from "./portal";
 export { makeNotify, type NotifyResult } from "./notify";
 export { makeInviteMember, type InviteOutcome, type InviteState } from "./invite-member";
+export { makeReceiveSignatureEvent } from "./signature-webhook";
 export { makeContractDocuments, makeSendForSignature, makeViewSigning, type SendForSignatureInput, type ViewSigningResult } from "./signing";

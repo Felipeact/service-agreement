@@ -5,10 +5,12 @@ import type { ContractStatus, SignatureRequestStatus } from "@/domain/contract";
 import { canSignContracts, isLiveRequest, SIGNER_NAME_MAX } from "@/domain/contract";
 import { Button } from "@/components/ui/button";
 import { SigningForm } from "@/components/signing/signing-form";
-import { signingMessageFor, type SendSignatureState } from "./signing-state";
+import type { SignedCopyView } from "@/application/ports";
+import { signerLine, signingMessageFor, type SendSignatureState } from "./signing-state";
 
 export const WAITING_FOR_CUSTOMER = "Waiting for the customer to sign.";
 export const NO_REQUEST_RECORDED = "No signature request was recorded for this contract.";
+export const CONTRACT_DECLINED = "This contract was declined.";
 
 function Alert({ state }: { state: SendSignatureState }) {
   const message = signingMessageFor(state.status);
@@ -96,6 +98,34 @@ export function SigningLinkPanel({ url, copied = false, onCopy }: LinkPanelProps
   );
 }
 
+const downloadLink = "inline-flex min-h-11 items-center font-medium text-action lg:min-h-0";
+
+/** The signed contract, its audit log and who signed when and from where (signature-webhook S5). Plain anchors: they are downloads. */
+export function SignedCopy({ contractId, signed }: { contractId?: string; signed: SignedCopyView | null }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[13px] text-ink-2">Both parties have signed.</p>
+      {contractId && signed && (
+        <div className="flex flex-wrap gap-x-4">
+          <a href={`/contracts/${contractId}/signed-pdf`} className={downloadLink}>
+            Signed contract
+          </a>
+          <a href={`/contracts/${contractId}/audit-log-pdf`} className={downloadLink}>
+            Audit log
+          </a>
+        </div>
+      )}
+      {signed && (
+        <ul className="flex flex-col gap-1 text-[13px]">
+          {signed.signers.map((signer) => (
+            <li key={signer.role}>{signerLine(signer)}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export type SigningAreaProps = {
   contractStatus: ContractStatus;
   /** The newest request, or `null` (the reader's `signing`). */
@@ -109,14 +139,19 @@ export type SigningAreaProps = {
   contractorSrc: string | null;
   /** The send action bound to this contract. */
   send: (name: string) => Promise<SendSignatureState>;
+  /** The contract's id, for the download links of the signed copy. */
+  contractId?: string;
+  /** What the webhook stored once both parties signed (signature-webhook S5). */
+  signed?: SignedCopyView | null;
 };
 
 /** What the signing section holds for a contract: one of these, decided only from the status, the request and the role. */
-export type SigningAreaKind = "send" | "sending" | "waiting" | "countersign" | "no_request" | "none";
+export type SigningAreaKind = "send" | "sending" | "waiting" | "countersign" | "no_request" | "signed" | "declined" | "none";
 
 export function signingAreaKind(props: Pick<SigningAreaProps, "contractStatus" | "request" | "role">): SigningAreaKind {
   const { contractStatus, request, role } = props;
   const canSign = canSignContracts(role);
+  if (contractStatus === "declined") return "declined";
   if (contractStatus === "pending_signature") {
     if (request?.status === "open") return "waiting";
     if (request?.status === "creating") return canSign ? "sending" : "none";
@@ -126,13 +161,13 @@ export function signingAreaKind(props: Pick<SigningAreaProps, "contractStatus" |
     if (!request || !isLiveRequest(request.status)) return "no_request";
     return canSign && request.status === "open" ? "countersign" : "none";
   }
-  if (contractStatus === "completed" && !request) return "no_request";
+  if (contractStatus === "completed") return !request ? "no_request" : request.status === "completed" ? "signed" : "none";
   return "none";
 }
 
 /** The signing section of the contract page (signature-provider S2, S4). */
 export function SigningArea(props: SigningAreaProps) {
-  const { customer, memberEmail, customerLinkUrl, contractorSrc, send, role } = props;
+  const { customer, memberEmail, customerLinkUrl, contractorSrc, send, role, contractId, signed } = props;
   const kind = signingAreaKind(props);
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -182,6 +217,8 @@ export function SigningArea(props: SigningAreaProps) {
           </p>
         ))}
       {kind === "no_request" && <p className="text-[13px] text-ink-2">{NO_REQUEST_RECORDED}</p>}
+      {kind === "declined" && <p className="text-[13px] text-ink-2">{CONTRACT_DECLINED}</p>}
+      {kind === "signed" && <SignedCopy contractId={contractId} signed={signed ?? null} />}
     </section>
   );
 }

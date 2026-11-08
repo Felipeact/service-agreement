@@ -47,4 +47,37 @@ describe("the automation container", () => {
     expect(typeof (await getAutomationContainer("http://localhost:3000")).notify).toBe("function");
     expect(fetchMock).toHaveBeenCalledTimes(0);
   });
+
+  test("C1817: the signing link is opened with SIGNING_LINK_KEY, and a link sealed with PORTAL_LINK_KEY does not open", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("SIGNING_LINK_KEY", Buffer.alloc(32, 9).toString("base64"));
+    vi.stubEnv("APP_BASE_URL", "https://agreements.northwind.ca");
+    const { makePortalTokens } = await import("@/infrastructure/portal-tokens");
+    const sealedWithSigning = makePortalTokens(process.env.SIGNING_LINK_KEY).seal("tok-signing");
+    const sealedWithPortal = makePortalTokens(process.env.PORTAL_LINK_KEY).seal("tok-portal");
+    const message = (sealed: string) => ({
+      decision: "send",
+      messages: [
+        { notificationId: "11111111-1111-4111-8111-111111111111", kind: "customer_signing_link", to: ["pat@customer.ca"], tenant: { legalName: "Northwind", phone: null, accent: null }, agreement: { id: "a1", number: "AG-1" }, site: { name: "S" }, signerName: "Pat", linkSealed: sealed },
+      ],
+    });
+    const answers: unknown[] = [message(sealedWithSigning), message(sealedWithPortal)];
+    const sentBodies: string[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/rpc/automation_claim")) return Response.json(answers.shift());
+      if (url.includes("/rpc/automation_complete")) return new Response(null, { status: 204 });
+      sentBodies.push(String(init?.body));
+      return Response.json({ id: "re_1" });
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { getAutomationContainer } = await import("./index");
+    const { notify } = await getAutomationContainer("http://localhost:3000");
+    const callback = { body: JSON.stringify({ idempotencyKey: "w2:e:link" }), timestamp: "1", signature: `sha256=${"a".repeat(64)}` };
+    expect(await notify(callback)).toEqual({ ok: true, outcome: "sent" });
+    expect(sentBodies).toHaveLength(1);
+    expect(sentBodies[0]).toContain("https://agreements.northwind.ca/sign/tok-signing");
+    expect(await notify(callback)).toEqual({ ok: false, code: "unavailable" });
+    expect(sentBodies).toHaveLength(1);
+  });
 });

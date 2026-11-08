@@ -1,0 +1,251 @@
+{
+  "name": "W2b signing link",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "cd5eb417-14a7-5338-afb8-990ff2c74af7",
+      "name": "When called by events",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c46e8b9b-307a-5902-a7f8-c4f3383b9ec3",
+              "name": "timestamp",
+              "value": "={{ Math.floor(Date.now() / 1000).toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "a18917cc-4309-5dfc-aca8-ac7b884efa21",
+              "name": "body",
+              "value": "={{ JSON.stringify({ idempotencyKey: 'w2:' + $('When called by events').first().json.eventId + ':link', kind: 'customer_signing_link', eventId: $('When called by events').first().json.eventId, contractId: $('When called by events').first().json.contractId, executionId: $execution.id }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "9e14acb4-1432-58e0-8a64-78055c4bf550",
+      "name": "Signing link body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.timestamp }}.{{ $json.body }}",
+        "dataPropertyName": "signature",
+        "secret": "__SA_HMAC_SECRET__",
+        "encoding": "hex"
+      },
+      "id": "e801e8d5-75a7-5f71-9bfa-175a13ed9191",
+      "name": "Sign signing link",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "__SA_APP_BASE_URL__/api/automation/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SA-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-SA-Signature",
+              "value": "=sha256={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e5865da2-b195-59cb-ab19-017fc7b88250",
+      "name": "Notify signing link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "edad2fe3-2d08-5427-800d-c8698bbb357c",
+              "leftValue": "={{ [409, 500, 502, 503, 504].includes($json.statusCode) || $json.statusCode === undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "90026f93-487c-5664-8afa-61e52e2c84e0",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e14e9488-ad54-5941-b6c7-63644af6272f",
+      "name": "Retry signing link?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "c445b83f-c2ae-575f-9fe6-64bdb425274d",
+      "name": "Wait 10 minutes (signing link)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "f7781d16-dedc-5f69-a993-29dffb93da17"
+    }
+  ],
+  "connections": {
+    "When called by events": {
+      "main": [
+        [
+          {
+            "node": "Signing link body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signing link body": {
+      "main": [
+        [
+          {
+            "node": "Sign signing link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign signing link": {
+      "main": [
+        [
+          {
+            "node": "Notify signing link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify signing link": {
+      "main": [
+        [
+          {
+            "node": "Retry signing link?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry signing link?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry signing link?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 minutes (signing link)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 10 minutes (signing link)": {
+      "main": [
+        [
+          {
+            "node": "Signing link body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Vancouver",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

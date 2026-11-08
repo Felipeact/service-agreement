@@ -9,14 +9,14 @@ import type {
   ServiceLineValue,
   TimelineEntry,
 } from "@/domain/agreement";
-import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus } from "@/domain/contract";
+import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
 import type { DomainEvent } from "@/domain/transition";
-import type { NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
+import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
@@ -699,6 +699,22 @@ export type ContractDetail = {
    * Optional in the type so older fixtures compile; the reader always sets it.
    */
   signing?: { requestId: string; status: SignatureRequestStatus } | null;
+  /**
+   * What the webhook stored for the newest request once both parties signed: the two files (never their bytes) and what each
+   * signer did, or `null` while the request is not `completed` (signature-webhook S5). Optional in the type so older fixtures compile.
+   */
+  signed?: SignedCopyView | null;
+  /**
+   * Whether W2b emailed the customer's signer the signing link: the `customer_signing_link` notification of the latest
+   * `contract.sent_for_signature` event, or `null` for a contract never sent (contract-automation AC 13). Optional so older fixtures compile.
+   */
+  signingLinkEmail?: LinkEmailView | null;
+};
+
+/** The signed copy as the contract page shows it: files by kind and signers by role. */
+export type SignedCopyView = {
+  documents: { kind: SignedDocumentKind; sizeBytes: number; sha256: string }[];
+  signers: { role: SignerRole; name: string; signedAt: Date | null; ip: string | null }[];
 };
 
 /** `null` for a malformed id, a missing row, or a row of another org. */
@@ -842,6 +858,39 @@ export type NotificationMessage =
       customer: { name: string };
       site: { name: string };
       validUntil: string;
+    })
+  /** W2a's message (contract-automation door 1); `contract` is null and `refusal` set when a rule refused. */
+  | (MessageBase & {
+      kind: "staff_contract_ready";
+      agreement: { id: string; number: string };
+      site: { name: string };
+      contract: { id: string } | null;
+      refusal: ContractRefusal | null;
+    })
+  /** W2b's message: the customer signer's name and the signing link sealed with `SIGNING_LINK_KEY`. */
+  | (MessageBase & {
+      kind: "customer_signing_link";
+      agreement: { id: string; number: string };
+      site: { name: string };
+      signerName: string;
+      linkSealed: string;
+    })
+  /** W4's party message carries its own key, `w4:<eventId>:copy:<role>`, and the two stored documents as base64. */
+  | (MessageBase & {
+      kind: "contract_signed_copy";
+      idempotencyKey: string;
+      agreement: { id: string; number: string };
+      site: { name: string };
+      signerName: string;
+      documents: { kind: "signed" | "audit_log"; contentBase64: string }[];
+    })
+  | (MessageBase & {
+      kind: "staff_contract_signed";
+      idempotencyKey: string;
+      agreement: { id: string; number: string };
+      contract: { id: string };
+      site: { name: string };
+      customer: { name: string };
     });
 
 export type ClaimDecision =
@@ -877,6 +926,8 @@ export type EmailMessage = {
   html: string;
   text: string;
   idempotencyKey: string;
+  /** Files sent with the email (contract-automation door 4): `contentBase64` is the bytes, as the provider takes them. */
+  attachments?: { filename: string; contentBase64: string }[];
 };
 
 /** `reserved_domain`: a recipient on a reserved domain, refused before any request (AC 22). */
@@ -912,6 +963,43 @@ export interface SignatureProvider {
   createRequest(input: SignatureRequestInput): Promise<SignatureRequestResult>;
   /** Archives a request at the provider. Never throws. */
   void(submissionId: string): Promise<{ ok: true } | { ok: false; code: SignatureFailure }>;
+}
+
+/** One call of `public.signature_webhook`: what it answered, or why it refused (signature-webhook door 1). */
+export type WebhookAnswer =
+  | { outcome: "applied" | "duplicate" }
+  | { outcome: "ignored"; reason: "event_not_handled" | "unknown_submission" | "signer_mismatch" | "request_closed" }
+  | { outcome: "documents_needed"; documents: { kind: SignedDocumentKind; url: string }[] };
+
+export type WebhookCallResult = { ok: true; answer: WebhookAnswer } | { ok: false; code: "unauthorized" | "malformed" };
+
+/** The two files of a second call, `content` in base64. */
+export type WebhookDocument = { kind: SignedDocumentKind; content: string };
+
+/** DocuSeal's signed delivery, handed to the database to verify and apply. Anything but the two refusals is thrown. */
+export interface SignatureWebhooks {
+  receive(input: { body: string; signature: string; documents?: WebhookDocument[] }): Promise<WebhookCallResult>;
+}
+
+export type SignedFilesResult =
+  | { ok: true; files: { kind: SignedDocumentKind; bytes: Uint8Array }[] }
+  | { ok: false; code: "rejected" | "unavailable" };
+
+/** Downloads the signed contract and its audit log from the provider's file host (signature-webhook door 5). Never throws. */
+export interface SignedDocuments {
+  fetch(documents: { kind: SignedDocumentKind; url: string }[]): Promise<SignedFilesResult>;
+}
+
+/** What the route answers for one delivery. */
+export type ReceiveSignatureEventResult =
+  | { ok: true; outcome: "applied" | "duplicate" | "ignored"; reason?: string }
+  | { ok: false; code: "unauthorized" | "malformed" | "unavailable" };
+
+export type SignedCopy = { bytes: Uint8Array; sha256: string };
+
+/** A stored signed file of a contract for a member of its org, or `null` (signature-webhook door 6). */
+export interface SignedCopyReader {
+  get(contractId: string, kind: SignedDocumentKind): Promise<SignedCopy | null>;
 }
 
 export interface TaskLibraryReader {

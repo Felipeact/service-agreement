@@ -9,13 +9,27 @@ export type NotificationKind =
   | "staff_stale"
   | "customer_renewal"
   | "staff_renewal"
-  | "staff_expired";
+  | "staff_expired"
+  | "staff_contract_ready"
+  | "customer_signing_link"
+  | "contract_signed_copy"
+  | "staff_contract_signed";
 
 /** Why W7 drafted a renewal instead of renewing on its own (renewal door 3). */
 export type RenewalReason = "at_threshold" | "cpi_unset" | "cpi_stale";
 
 /** Why a notification was not sent: the six stored skip reasons, and `failed` for a provider refusal or outage. */
-export type NotEmailedReason = "decided" | "superseded" | "viewed" | "no_recipient" | "no_link_secret" | "reserved_domain" | "failed";
+export type NotEmailedReason =
+  | "decided"
+  | "superseded"
+  | "viewed"
+  | "no_recipient"
+  | "no_link_secret"
+  | "reserved_domain"
+  | "not_signable"
+  | "not_completed"
+  | "no_documents"
+  | "failed";
 
 export type Tenant = { legalName: string; phone: string | null; accent: string | null };
 
@@ -41,6 +55,9 @@ const NOT_EMAILED: Record<NotEmailedReason, string> = {
   no_recipient: "the site has no contact email",
   no_link_secret: "the link cannot be sent again; get a new link",
   reserved_domain: "the contact email is a test address",
+  not_signable: "the contract can no longer be signed",
+  not_completed: "the contract is not signed by both parties",
+  no_documents: "the signed copy is not stored",
   failed: "the email service did not accept it",
 };
 
@@ -273,5 +290,112 @@ export function staffExpiredEmail(input: StaffExpiredInput): EmailContent {
     ].join(""),
   );
   const text = [intro, "", valid, "", `Open ${agreement.number}: ${href}`].join("\n");
+  return { subject, html, text };
+}
+
+/** Why `create_contract`'s rules refused when W2 tried to make the contract (contract-automation AC 4). */
+export type ContractRefusal = "not_accepted" | "auto_renewal" | "site_inactive" | "no_term_start" | "no_signer";
+
+const REFUSAL_WORDS: Record<ContractRefusal, string> = {
+  not_accepted: "the agreement is no longer accepted",
+  auto_renewal: "it renewed on its own, so there is nothing to sign",
+  site_inactive: "the site is inactive",
+  no_term_start: "the agreement has no start date",
+  no_signer: "nobody at the site has an email address to sign",
+};
+
+/** The reason a contract was not made, in words for the office. */
+export function refusalWords(refusal: ContractRefusal): string {
+  return REFUSAL_WORDS[refusal];
+}
+
+export function isContractRefusal(value: unknown): value is ContractRefusal {
+  return typeof value === "string" && value in REFUSAL_WORDS;
+}
+
+export type ContractReadyInput = {
+  appBaseUrl: string;
+  tenant: Tenant;
+  agreement: { id: string; number: string };
+  siteName: string;
+  /** The contract W2 made or found; null when a rule refused. */
+  contract: { id: string } | null;
+  refusal: ContractRefusal | null;
+};
+
+/** Owners' and admins' email when an agreement is accepted: the contract is ready to send, or why it could not be made (AC 4, 7). */
+export function contractReadyEmail(input: ContractReadyInput): EmailContent {
+  const { appBaseUrl, tenant, agreement, siteName, contract, refusal } = input;
+  const made = contract !== null && refusal === null;
+  const subject = made
+    ? `${agreement.number} was accepted: the contract is ready to send (${tenant.legalName})`
+    : `${agreement.number} was accepted, but the contract could not be made (${tenant.legalName})`;
+  const href = made ? `${base(appBaseUrl)}/contracts/${contract.id}` : `${base(appBaseUrl)}/agreements/${agreement.id}`;
+  const label = made ? "Open the contract" : `Open ${agreement.number}`;
+  const intro = made
+    ? `The customer accepted ${agreement.number} for ${siteName}. The contract is ready; send it for signature from its page.`
+    : `The customer accepted ${agreement.number} for ${siteName}, but no contract was made because ${REFUSAL_WORDS[refusal ?? "not_accepted"]}.`;
+  const html = page(
+    [`<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`, button(label, href, tenant.accent)].join(""),
+  );
+  const text = [intro, "", `${label}: ${href}`].join("\n");
+  return { subject, html, text };
+}
+
+export type SigningLinkInput = { tenant: Tenant; agreementNumber: string; siteName: string; signerName: string; signingUrl: string };
+
+/** The customer signer's email with the signing page's address (AC 10). */
+export function signingLinkEmail(input: SigningLinkInput): EmailContent {
+  const { tenant, agreementNumber, siteName, signerName, signingUrl } = input;
+  const name = tenant.legalName;
+  const subject = `Please sign service agreement ${agreementNumber} from ${name}`;
+  const intro = `${signerName}, ${name} sent you the contract for service agreement ${agreementNumber} to sign.`;
+  const how = "You read it and sign it on that page. No account is needed.";
+  const contact = tenant.phone ? `Questions? Call ${name} at ${tenant.phone}.` : `Questions? Reply to this email.`;
+  const html = page(
+    [
+      `<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`,
+      `<p style="margin:0">Site: <strong>${escapeHtml(siteName)}</strong></p>`,
+      button("Review and sign the contract", signingUrl, tenant.accent),
+      `<p style="margin:0 0 12px">${escapeHtml(how)}</p>`,
+      `<p style="margin:0;color:#4b5563">${escapeHtml(contact)}</p>`,
+    ].join(""),
+  );
+  const text = [intro, "", `Site: ${siteName}`, "", `Review and sign the contract: ${signingUrl}`, how, "", contact].join("\n");
+  return { subject, html, text };
+}
+
+export type SignedCopyInput = { tenant: Tenant; agreementNumber: string; siteName: string; signerName: string };
+
+/** A party's email when both have signed: the signed contract and the audit log are attached (AC 16). Nothing in it signs. */
+export function signedCopyEmail(input: SignedCopyInput): EmailContent {
+  const { tenant, agreementNumber, siteName, signerName } = input;
+  const name = tenant.legalName;
+  const subject = `Signed contract for service agreement ${agreementNumber} (${name})`;
+  const intro = `${signerName}, the contract for service agreement ${agreementNumber} at ${siteName} is signed by both parties.`;
+  const attached = `Attached: ${agreementNumber}-signed.pdf is the signed contract and ${agreementNumber}-audit-log.pdf records who signed and when. Keep both for your records.`;
+  const html = page([`<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`, `<p style="margin:0">${escapeHtml(attached)}</p>`].join(""));
+  const text = [intro, "", attached].join("\n");
+  return { subject, html, text };
+}
+
+export type StaffContractSignedInput = {
+  appBaseUrl: string;
+  agreement: { id: string; number: string };
+  contract: { id: string };
+  siteName: string;
+  customerName: string;
+};
+
+/** Owners' and admins' note that a contract is fully signed; the files are on the contract page (AC 16). */
+export function staffContractSignedEmail(input: StaffContractSignedInput): EmailContent {
+  const { agreement, contract, siteName, customerName } = input;
+  const subject = `${agreement.number} is signed by both parties`;
+  const href = `${base(input.appBaseUrl)}/contracts/${contract.id}`;
+  const intro = `${customerName} (${siteName}) and your company have both signed the contract for ${agreement.number}. Each signer was emailed the signed copy.`;
+  const html = page(
+    [`<p style="margin:0 0 12px">${escapeHtml(intro)}</p>`, `<p style="margin:16px 0 0"><a href="${escapeHtml(href)}">Open the contract</a></p>`].join(""),
+  );
+  const text = [intro, "", `Open the contract: ${href}`].join("\n");
   return { subject, html, text };
 }

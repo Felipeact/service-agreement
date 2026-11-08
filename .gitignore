@@ -1,2 +1,5 @@
 # Playwright MCP captures: live validation evidence, never committed (AGENTS..md)
 .playwright-mcp/
+
+# Screenshots are not kept: validate in the Playwright browser window instead (AGENTS..md)
+/*.png

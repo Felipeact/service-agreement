@@ -11,6 +11,7 @@ import {
   makeExtractImport,
   makeNotify,
   makeReadImport,
+  makeReceiveSignatureEvent,
   makeRecordPortalView,
   makeReissueLink,
   makeRequestSignInLink,
@@ -25,6 +26,7 @@ import {
 import { systemClock } from "@/infrastructure/clock";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
+import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
 import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
 import { makePortalTokens } from "@/infrastructure/portal-tokens";
@@ -41,6 +43,8 @@ import {
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
+import { supabaseSignatureWebhooks } from "@/infrastructure/supabase/signature-webhook";
+import { supabaseSignedCopyReader } from "@/infrastructure/supabase/signed-copy";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseTaskLibraryReader, supabaseTaskLibraryStore } from "@/infrastructure/supabase/task-library";
 import { supabaseInvitationAcceptor, supabaseInvitationLinkSender, supabaseMemberAdmin, supabaseMemberRoster } from "@/infrastructure/supabase/members";
@@ -208,6 +212,8 @@ export async function getContainer() {
       provider: docusealSignatureProvider({ apiKey: process.env.DOCUSEAL_API_KEY, apiUrl: process.env.DOCUSEAL_API_URL }),
       tokens: signingTokens,
     }),
+    // The stored signed contract and audit log, read as the member (signature-webhook door 6).
+    signedCopyReader: supabaseSignedCopyReader(supabase),
     signingSecrets: supabaseSigningSecrets(supabase),
     signingTokens,
     viewSigning: makeViewSigning(supabaseSigningReader(supabase), signingTokens),
@@ -244,8 +250,23 @@ export async function getAutomationContainer(requestOrigin: string) {
       resendEmailSender({ apiKey, from }),
       makePortalTokens(process.env.PORTAL_LINK_KEY),
       process.env.APP_BASE_URL || requestOrigin,
+      makePortalTokens(process.env.SIGNING_LINK_KEY),
     ),
   };
 }
 
 export type AutomationContainer = Awaited<ReturnType<typeof getAutomationContainer>>;
+
+/**
+ * Wires DocuSeal's signed webhook (signature-webhook doors 1, 4, 5). No user session: the client is `anon` with the
+ * publishable key, and the database verifies the signature with its own Vault secret, so no service-role key and no
+ * DocuSeal key are read here; the signed files are downloaded from DocuSeal's file host with no credentials.
+ */
+export async function getWebhookContainer() {
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const supabase = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return { receive: makeReceiveSignatureEvent(supabaseSignatureWebhooks(supabase), docusealSignedDocuments()) };
+}
+
+export type WebhookContainer = Awaited<ReturnType<typeof getWebhookContainer>>;
