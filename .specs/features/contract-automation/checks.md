@@ -231,3 +231,14 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - **C1782-C1815 (SQL):** `npm run test:db outbox_dispatch` passes against `gnxebrtcpbujhvcamtoe` (author run, then Verifier round 2).
 - **C1818:** `get_advisors` (security) lists 7 `anon` and 26 `authenticated` `SECURITY DEFINER` findings, the baseline plus item 3's `signature_webhook`, and nothing for `private.make_contract` or `private.create_contract_for_system` (private schema, `execute` revoked). The result's `observed_at` is 2026-11-07T18:45Z, so it may be cached from before the migration; the two new functions would not appear either way, because the linter reads the exposed schema only.
 - **Verifier round 2:** 37 of 39 proven, 0 failed, no surviving mutant; C1819 (live run) open. Weak spots it listed and I left: C1792 does not assert tenant or site name; C1810 and C1811 check "nothing written" narrowly; C1812's anon half also gives 42501 without schema USAGE; C1794 counts skipped rows with a running total.
+
+### Found in the live run (2026-11-08): amendment to item 3, additive checks
+
+- The live DocuSeal account sends `combined_document_url: null` on `submission.completed`; the signed PDF is `documents[0].url`. `signature_webhook` raised `22023` ("has no document urls"), so the contract stayed `client_signed` after both parties signed. Fixed by migration `20261108210000_signature_webhook_documents_fallback`.
+
+**C1820** - With `combined_document_url` null, `signature_webhook` asks for `documents[0].url` as the signed file; a non-null `combined_document_url` is still preferred, and the first call writes nothing
+Proof: `npm run test:db transitions` (assertion `C1820`)
+
+**C1821** - With `combined_document_url` null and no `documents`, an empty `documents` or a non-string `documents[0].url`, `signature_webhook` raises `22023` and writes nothing
+Proof: `npm run test:db transitions` (assertion `C1821`, 3 cases)
+

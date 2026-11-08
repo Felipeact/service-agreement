@@ -1777,6 +1777,29 @@ begin
   perform tests.ok('C1780 open', (select completed_at is null from public.contract_signature_requests where id = o and status = 'open'), 'an open request has completed_at');
 end $$;
 
+-- C1820: a null combined_document_url falls back to documents[0].url (found in the live run); with no usable url it still raises.
+do $$
+declare c uuid := tests.sg_contract('sw20'); r uuid := tests.sw_open(c, '2001'); before_state text := tests.sw_state();
+  null_combined jsonb := '{"combined_document_url": null, "documents": [{"name": "AG-sw20-contract", "url": "https://docuseal.com/file/b/contract.pdf"}]}';
+begin
+  perform tests.ok('C1820 fallback', tests.sw_post(tests.sw_done('2001', null_combined)) = jsonb_build_object('outcome', 'documents_needed', 'documents', jsonb_build_array(
+      jsonb_build_object('kind', 'signed', 'url', 'https://docuseal.com/file/b/contract.pdf'),
+      jsonb_build_object('kind', 'audit_log', 'url', 'https://docuseal.com/file/a/audit-log.pdf'))), 'wrong answer');
+  perform tests.ok('C1820 unchanged', tests.sw_state() = before_state, 'the first call wrote something');
+  perform tests.ok('C1820 combined wins', tests.sw_post(tests.sw_done('2001', '{"documents": [{"url": "https://docuseal.com/file/b/other.pdf"}]}'))
+    -> 'documents' -> 0 ->> 'url' = 'https://docuseal.com/file/a/document.pdf', 'combined_document_url was not preferred');
+end $$;
+
+-- C1821: null combined and no usable documents[0].url raises 22023.
+do $$
+declare c uuid := tests.sg_contract('sw21'); r uuid := tests.sw_open(c, '2101'); before_state text := tests.sw_state();
+begin
+  perform tests.expect_error('C1821 no documents', tests.sw_post_sql(tests.sw_done('2101', '{"combined_document_url": null}')), '22023');
+  perform tests.expect_error('C1821 empty documents', tests.sw_post_sql(tests.sw_done('2101', '{"combined_document_url": null, "documents": []}')), '22023');
+  perform tests.expect_error('C1821 url number', tests.sw_post_sql(tests.sw_done('2101', '{"combined_document_url": null, "documents": [{"url": 7}]}')), '22023');
+  perform tests.ok('C1821 unchanged', tests.sw_state() = before_state, 'a refused delivery wrote something');
+end $$;
+
 reset role;
 rollback;
 select 'transitions: pass' as result;
