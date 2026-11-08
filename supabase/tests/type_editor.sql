@@ -160,20 +160,20 @@ begin
   foreach u in array array['asset', 'line', 'import'] loop
     execute 'reset role';
     perform set_config('request.jwt.claims', '', true);
-    insert into public.asset_types (org_id, code, name) values (a, 'USED_' || u, 'Used by ' || u) returning id into v_id;
+    insert into public.asset_types (org_id, code, name) values (a, 'USED_' || upper(u), 'Used by ' || u) returning id into v_id;
     insert into public.asset_type_tasks (org_id, asset_type_id, position, description) values (a, v_id, 1, 'One'), (a, v_id, 2, 'Two');
     if u = 'asset' then
       insert into public.assets (org_id, site_id, asset_type_id, unit_no) values (a, tests.id('siteA'), v_id, 'U-USED');
     elsif u = 'line' then
       insert into public.service_line_asset_types (org_id, service_line_id, asset_type_id) values (a, tests.id('lineA'), v_id);
     else
-      update public.import_rows set asset_type_id = v_id where id = tests.id('rowA');
+      insert into public.import_rows (org_id, job_id, position, confidence, asset_type_id) values (a, tests.id('jobA'), 77, 'low', v_id);
     end if;
-    v_state := tests.te_state(a, 'USED_' || u);
+    v_state := tests.te_state(a, 'USED_' || upper(u));
 
     perform tests.act_as('uA');
-    perform tests.expect_error('C1916 ' || u, format('select public.remove_task_library_type(%L)', 'USED_' || u), '23503');
-    perform tests.ok('C1918 ' || u, tests.te_state(a, 'USED_' || u) = v_state, 'the type or its tasks changed after the refusal');
+    perform tests.expect_error('C1916 ' || u, format('select public.remove_task_library_type(%L)', 'USED_' || upper(u)), '23503');
+    perform tests.ok('C1918 ' || u, tests.te_state(a, 'USED_' || upper(u)) = v_state, 'the type or its tasks changed after the refusal');
     execute 'reset role';
   end loop;
 end $$;
@@ -213,7 +213,13 @@ end $$;
 reset role;
 delete from public.asset_types where org_id = tests.id('orgA') and code = 'RTU_HAND';
 
--- C1926: reset restores name, months and checklist from the pack, keeping id and code.
+-- C1926: reset restores name, months and checklist from the pack, keeping id and code. The template is read as the owner.
+create table tests.te_tpl as
+  select (select default_visit_months::text from private.catalog_asset_types where pack = 'hvac' and code = 'RTU') as months,
+         string_agg(t.position || ':' || t.description || ':' || coalesce(t.visit_months::text, 'null'), ' | ' order by t.position) as tasks,
+         count(*) as n
+  from private.catalog_asset_type_tasks t where t.pack = 'hvac' and t.code = 'RTU';
+grant select on tests.te_tpl to anon, authenticated;
 select tests.act_as('uA');
 do $$
 declare
@@ -223,10 +229,8 @@ declare
   v_tasks text;
   v_count bigint;
 begin
-  select default_visit_months::text into v_months from private.catalog_asset_types where pack = 'hvac' and code = 'RTU';
+  select months, tasks, n into v_months, v_tasks, v_count from tests.te_tpl;
   perform public.reset_task_library_type('RTU');
-  select string_agg(t.position || ':' || t.description || ':' || coalesce(t.visit_months::text, 'null'), ' | ' order by t.position), count(*)
-  into v_tasks, v_count from private.catalog_asset_type_tasks t where t.pack = 'hvac' and t.code = 'RTU';
   perform tests.ok('C1926 name', tests.te_state(a, 'RTU') like 'RTU|' || v_months || '|hvac|' || v_count || '|' || v_id, tests.te_state(a, 'RTU'));
   perform tests.ok('C1926 tasks', tests.te_tasks(a, 'RTU') = v_tasks, 'checklist is not the template');
   perform tests.ok('C1926 ten', v_count = 10, 'the RTU template has ' || v_count || ' tasks');
