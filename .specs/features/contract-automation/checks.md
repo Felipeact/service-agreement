@@ -262,3 +262,5 @@ Passed end to end on production (project `gnxebrtcpbujhvcamtoe`, Railway `web`, 
 
 **C1822** - The contract page passes the contract's `signed` copy (or `null`) and its id to the signing section (signature-webhook Verifier gap M28, M29)
 Proof: `npx vitest run "app/(app)/contracts/[contractId]/page.test.ts" -t "C1822:"`
+
+- **C1818 re-measured after both fix migrations (2026-11-08):** `get_advisors` (security) on `gnxebrtcpbujhvcamtoe`, `observed_at` 2026-11-08T20:02:33Z: 7 `anon_security_definer_function_executable` (automation_claim, automation_complete, portal_decide, portal_record_view, portal_view, signature_view, signature_webhook), 26 `authenticated_security_definer_function_executable` (no new name against the earlier reading; `create_contract` was already listed), 1 INFO `outbox` no policy, 1 auth leaked-password WARN. No finding names `private.make_contract`, `private.create_contract_for_system`, `private.claim_contract_ready`, `private.claim_signing_link` or `private.claim_signed_copy`.

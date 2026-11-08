@@ -2,19 +2,19 @@
 
 **Verdict**: FAIL
 **Profile**: standard
-**Diff range**: 0557e89..b6c529d
-**Round**: 2 - full
+**Diff range**: 0557e89..caa7f88
+**Round**: 3 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-Summary: 39 checks. 37 PASS, 0 FAIL, 2 Unproven (C1818 advisors, C1819 live run; both open by design, and the Verifier has no Supabase MCP and must not run advisors). The FAIL verdict comes only from those two rows; no code or test finding is open. The round-1 gaps (C1796 order, C1797 discovery, C1789 key guard) are fixed and each fix kills its round-1 mutant. Residual weak assertions, not failures: C1792 tenant and site unasserted, C1810 and C1811 written-nothing breadth, C1812 anon half, C1794 running count.
+Summary: 42 checks (C1781-C1822). 41 PASS, 0 FAIL, 1 Unproven (C1818). C1819 is proven from specific, code-consistent recorded evidence. Round-2 mutants stay killed; the new surfaces (C1820, C1821, C1822) had every injected mutant killed. No code or test finding is open. The one open row is an evidence-timing gap in C1818, not a code defect.
 
 ## Binding sources
 
-No binding source: the plan marks none; Step 1 does not run (verified at b6c529d).
+No binding source: the plan marks none; Step 1 does not run (verified at caa7f88).
 
 ## Checks
 
-Proofs verified at b6c529d. The TypeScript proofs ran in one batched vitest invocation across 8 files (43 tests, each listed individually). The SQL proofs ran as `npm run test:db outbox_dispatch` from `web/` (PASS, rolled back). Every `tests.ok` raises on a false condition, so a PASS means every labelled assertion executed and held. Labels C1782, C1783, C1784, C1786, C1787, C1790, C1792, C1794, C1798, C1801, C1803, C1804, C1806 and C1810-C1815 all appear in `supabase/tests/outbox_dispatch.sql` (found with `rg`).
+Proofs re-run in full at caa7f88: `cd web && npx vitest run` (175 files, 3,372 tests passed; round 2 had 3,370, the +2 are the two C1822 tests) and `npm run test:db` (all 23 recipes PASS, rolled back). Rows C1781-C1817 are carried from b6c529d (round 2 evidence; citations unchanged because none of the files they cite changed in b6c529d..caa7f88, whose diff touches only the two migrations, `supabase/tests/transitions.sql`, `page.test.ts` and docs). Their named tests are in the full vitest run (all pass) and `outbox_dispatch` PASS in test:db. New or re-judged rows say "verified at caa7f88".
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
@@ -55,77 +55,66 @@ Proofs verified at b6c529d. The TypeScript proofs ran in one batched vitest invo
 | C1815 | SQL: four kinds accepted, unknown 23514 | test:db PASS | `outbox_dispatch.sql:1764` `... = 'ok'` per kind; `:1773` `... = '23514'` for `staff_made_up` | PASS |
 | C1816 | in_flight, unavailable, duplicate for the new kinds; route maps through | `notify-contract.test.ts -t "C1816:"` exit 0 | `notify-contract.test.ts:131-143` `{ ok: false, code: "in_flight" }`, `duplicate`, `unavailable`, `unauthorized`, `not_found`; route map is pre-existing `route.test.ts:60-112` | PASS |
 | C1817 | container: signing tokens from SIGNING_LINK_KEY, portal from PORTAL_LINK_KEY | `automation-container.test.ts -t "C1817:"` exit 0 | assembly read: `web/composition/index.ts:253` `makePortalTokens(process.env.SIGNING_LINK_KEY)`, `:250` portal `PORTAL_LINK_KEY`; test drives the real `getAutomationContainer` | PASS |
-| C1818 | advisors after the migration show no new lints | not run (open by design; no Supabase MCP for the Verifier) | no evidence | Unproven - open by design |
-| C1819 | live run | not run (open by design; needs the owner's sandbox and Resend keys) | no evidence | Unproven - open by design |
+| C1818 | advisors after the migration show no new lints (re-judged at caa7f88) | not re-runnable by the Verifier (no Supabase MCP); recorded in `checks.md` line 232 | recorded: baseline 7 anon plus 26 authenticated SECURITY DEFINER findings, none for the private functions; but the same line states `observed_at` 2026-11-07T18:45Z, before the migrations were applied (2026-11-08), so it may be cached from before the change and cannot show the post-migration state. The private-schema argument is reasoning, not an observation. | Unproven - observation predates the migration; re-run get_advisors and record a post-migration observed_at |
+| C1819 | live run end to end (judged from recorded evidence at caa7f88) | cannot be re-observed (test rows deleted); evidence in `checks.md` lines 253-261 | specific and consistent with the code: n8n execution 23; event `via: "w2"` (matches `supabase/tests/outbox_dispatch.sql` C1782); three `400 malformed` refusals with `combined_document_url: null` (matches `web/infrastructure/supabase/signature-webhook.ts:49` 22023 to malformed, and the pre-fix raise "has no document urls"); after migration 20261108210000 the contract is `completed` with `signed` 97,544 bytes and `audit_log` 129,963 bytes stored and W4 `contract_signed_copy` and `staff_contract_signed` both `sent` (matches C1801 and C1814); same-address case (C1804); cleanup stated. Sizes, execution id, status sequence and root cause all line up with the code and with C1820. | PASS (recorded evidence) |
+| C1820 | null combined_document_url falls back to documents[0].url; a non-null combined is still preferred; first call writes nothing (verified at caa7f88) | `npm run test:db transitions` PASS (23/23) | `supabase/tests/transitions.sql:1787-1789` `tests.sw_post(tests.sw_done('2001', null_combined)) = jsonb_build_object('outcome','documents_needed','documents', ... 'url','https://docuseal.com/file/b/contract.pdf' ...)`; `:1790` `tests.sw_state() = before_state`; `:1791-1792` `-> 'documents' -> 0 ->> 'url' = 'https://docuseal.com/file/a/document.pdf'`; code `supabase/migrations/20261108210000_signature_webhook_documents_fallback.sql:157` `coalesce(nullif(v_data -> 'combined_document_url','null'::jsonb), v_data #> '{documents,0,url}')` | PASS |
+| C1821 | null combined with no documents, empty documents, non-string url each raise 22023 and write nothing (verified at caa7f88) | `npm run test:db transitions` PASS | `transitions.sql:1799-1801` three `tests.expect_error(..., '22023')` (no `documents`, `"documents": []`, `"url": 7`); `:1802` `tests.sw_state() = before_state` | PASS |
+| C1822 | contract page passes `signed` (or null) and `contractId` to the signing section (verified at caa7f88) | `npx vitest run "app/(app)/contracts/[contractId]/page.test.ts" -t "C1822:"` 2 tests, in the full run | `web/app/(app)/contracts/[contractId]/page.test.ts:175-176` `expect(signing.signed).toEqual(SIGNED)` and `expect(signing.contractId).toBe(CON)`; `:181` `expect(signing.signed).toBeNull()`; code `page.tsx:53-54` `contractId: contract.id`, `signed: contract.signed ?? null` | PASS |
 
-### SQL reading and fixture assumptions
+### Judgment of the C1670 amendment
 
-- The migration is applied and the recipe passes, so the fixture assumptions round 1 flagged are settled by a real run: direct `update public.contracts set status`, `update public.contract_signature_requests set status = 'creating'` and `insert into public.contract_signed_documents` are not blocked by any trigger or constraint (C1794 and C1801 pass).
-- Execution proof: with the last assertion (`C1786`, `outbox_dispatch.sql:1779`) mutated to expect `no_recipientX`, `npm run test:db outbox_dispatch` fails with `C1786: gave {"reason": "no_recipient"...}`. The script therefore runs through to its end and no labelled block is skipped. The recipe was restored byte-for-byte (`git diff` empty).
-- Weak, not failing: C1792 does not assert tenant or site name; C1810 "nothing written" counts contracts and notifications only; C1811 "nothing claimed" is one `like` on a single key; C1812 anon half also fails with 42501 if anon lacks schema `private` USAGE, so only the authenticated half isolates the function revoke; C1794 `= i` running count holds only while no earlier block leaves a `not_signable` link row.
-- SQL fault injection into the migration was not done: the project cannot be mutated safely (no scratch database, no MCP writes), so SQL assertions are judged by reading plus the passing run, and no SQL mutant kills are claimed.
+`supabase/tests/transitions.sql:887-888` `'C1670 one outbox row'`: `count(*) from public.outbox where org_id = orgA = outbox_before + 1 and (select count(*) from public.outbox o where o.event_id = e.id and o.status = 'pending') = 1`. This is a legitimate amendment and stricter, not weaker: the old `= outbox_before` pinned the behaviour AD-152 reverses (door 3 gives the send event one outbox row for W2b), and the new form is exact (a delta of exactly 1 and exactly one pending row bound to that event), so a duplicate, a missing or a non-pending row all fail it. C1790 (`outbox_dispatch.sql:1557`) independently asserts the same one pending row. Sweep (`rg "no outbox|outbox_before|sent_for_signature"` over `supabase/tests`): C1601 (`transitions.sql:371-388`, event `contract.pending_signature`) and C1742 (`:1415-1425`, contractor `form.completed`) concern other events and still hold; `customer_portal.sql` outbox counts are agreement events. All 23 recipes pass, so no other assertion pins the old behaviour.
+
+### C1604 regression fix
+
+`supabase/migrations/20261108220000_create_contract_lock_order.sql` defines `create_contract` with `perform 1 from public.agreements a where a.id = p_agreement_id for update;` before `from public.contracts c`, which is what C1604 requires of its own source. C1604 is unchanged (the `transitions.sql` diff touches only C1670, C1820, C1821) and `transitions` passes; `outbox_dispatch` (C1782-C1784, through `private.make_contract`) still passes.
 
 ## Coverage
 
-Members recomputed from the migration, the TypeScript unions and the plan `Surface` (verified at b6c529d; SQL members now run).
+Recomputed for the rows whose authority the diff touched (verified at caa7f88); every other row is carried from b6c529d and nothing it enumerates changed.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| `create_contract` refusals (5) | migration `make_contract` hints | 5 x C1784 (run); words C1785 | - |
-| not-signable situations (9) | request statuses (6) and contract statuses (5) minus open and pending_signature | 9 x C1794 (run) | - |
-| new request kinds (3) | `automation_request` kind list | `contract_ready` C1782 · `customer_signing_link` C1792 · `contract_signed_copy` C1801 | - |
-| new notification kinds (4) | `notifications_kind_check` and domain union | C1782 · C1792 · C1801 (copy and staff) · constraint C1815; builders C1788, C1799, C1809 | - |
-| new idempotency keys (4) | migration keys | `w2:<e>:ready` C1787 · `w2:<e>:link` C1798 · `w4:<e>:copy` C1806 · `w4:<e>:staff` C1814 | - |
-| bad-signature faults per kind (6) | 3 kinds x {bad, stale} | all C1810 | - |
-| event/entity mismatches (4) | `claim_*` lookups | all C1811 | - |
-| key/kind mismatches (3) | `automation_request` | all C1813 | - |
-| roles that may not call the private creators (2) | revokes in migration | `anon`, `authenticated` C1812 | - |
-| outcomes of `makeNotify` for the new kinds (5) | `NotifyResult`, `notify.ts` | sent C1793 · skipped reserved C1805 · duplicate C1816 · in_flight C1816 · unavailable C1795, C1816 | - |
-| `POST /api/automation/notify` statuses (6) | plan `Surface`, `route.ts` | 200 C1793 · 400 C1813 · 401 C1810 · 404 C1811 (SQL raises, run) · 409 C1816 · 503 C1795; mapping pre-existing `route.test.ts:60-112` | - |
-| delivery line states (3) | AC 13 | sent, not sent, none C1797 (now discovered); reader C1796 with newest-first and limit 1 | - |
-| attachments (3 cases) | `EmailMessage.attachments` | present C1807 · absent C1807 · over cap C1808 | - |
-| `Landing` doors (5) | plan `Landing` | door 1 C1815 · door 2 C1812 · door 3 C1790 · door 4 C1807, C1808 · door 5 C1781, C1791, C1800 | - |
-| `Relations` entities (1) | plan `Relations` | `notifications` kinds C1815 | - |
-| n8n exports (4) | `automation/n8n/` | W2a C1781 · W2b C1791 · W4 C1800 · routes C1781, C1791, C1800 | - |
-| startup config, places that build notify (1) | `rg "makeNotify\("`: `composition/index.ts:250` is the only non-test call | C1817 | - |
-| startup config, environment names (2) | `composition/index.ts:253`, `:250` | `SIGNING_LINK_KEY` C1817 · `PORTAL_LINK_KEY` C1817 | - |
-
-Door 2 also names advisors (C1818), which stays open and is reported as its own Unproven row above, not as a coverage member.
+| signed-url sources in `signature_webhook` (2) | migration `20261108210000...sql:157` | `documents[0].url` C1820 fallback · `combined_document_url` C1820 combined wins | - |
+| no-usable-url cases (3) | no `documents`, empty array, non-string url | all C1821 | - |
+| props the contract page hands the signing section (2) | `page.tsx:53-54` | `contractId` C1822 · `signed` C1822 (value and null) | - |
+| recipes in `npm run test:db` (23) | runner output | all 23 PASS | - |
+| the rest of the round-2 sets | carried from b6c529d | unchanged | - |
 
 ## Test policy rows
 
-`checks.md` adds no `Test policy` rows; its evidence rows are judged against the repo convention (verified at b6c529d).
+`checks.md` adds no `Test policy` rows; judged against the repo convention (verified at caa7f88).
 
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| `automation_claim` new branches decide, one assertion per branch | `supabase/migrations/20261108100000_contract_automation.sql` | SQL assertion per branch in `outbox_dispatch.sql` | yes - ran and passed against the applied migration |
-| `notify.ts` content and deliver gain 3 cases, proven with fakes | `application/use-cases/notify.ts` | fake-based test per case | yes - `notify-contract.test.ts` C1793, C1795, C1802, C1805, C1816 |
+| `automation_claim` new branches decide, one assertion per branch | `supabase/migrations/20261108100000_contract_automation.sql` | SQL assertion per branch in `outbox_dispatch.sql` | yes - `outbox_dispatch` PASS at caa7f88 |
+| `notify.ts` content and deliver gain 3 cases, proven with fakes | `application/use-cases/notify.ts` | fake-based test per case | yes - `notify-contract.test.ts` in the full run |
 
 ## Faults injected
 
-Real tree mutated (no shared node_modules in a worktree), each file restored with `git checkout --` and confirmed by an empty `git diff` and unchanged porcelain. The first three rows were run in round 2 at b6c529d; the rest are carried from 7caae17 and were all killed.
+Edits were made in the real tree and restored (`git checkout --` or a byte copy); `git status --porcelain` and `git diff` are empty afterwards. Nothing was applied to the project. The first eight rows ran in round 3 at caa7f88; the last is carried.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| reader orders events ascending (`ascending: false` to `true`), re-run at b6c529d | `web/infrastructure/supabase/contracts.ts:88` | yes (C1796, 1 failed 5 passed) |
-| `staff_contract_signed` `!key` guard removed, re-run at b6c529d | `web/infrastructure/supabase/automation.ts:148` | yes (C1789, 1 failed 6 passed) |
-| last SQL assertion expectation changed (`no_recipient` to `no_recipientX`), proves the recipe executes to its end | `supabase/tests/outbox_dispatch.sql:1779` | yes (test:db FAIL at C1786) |
-| carried from 7caae17: signing link opened with portal tokens | `notify.ts:95` | yes (C1793, C1795) |
-| carried from 7caae17: attachment names swapped, attachments removed, added to staff, copy provider key dropped | `notify.ts` | yes (C1802) |
-| carried from 7caae17: error text changed, sealed link logged | `notify.ts:168-169` | yes (C1795) |
-| carried from 7caae17: reserved filter removed, reason changed | `notify.ts` deliver | yes (C1805) |
-| carried from 7caae17: email builder links, subjects, sentences, filenames (8 mutants) | `domain/notifications/index.ts` | yes (C1785, C1788, C1799, C1809) |
-| carried from 7caae17: documents count, refusal guards, sealed-link guard (4 mutants) | `automation.ts` | yes (C1789) |
-| carried from 7caae17: size cap `>` to `>=`, field rename, empty array posted | `infrastructure/email/index.ts` | yes (C1807, C1808) |
-| carried from 7caae17: container passes portal tokens as signing | `composition/index.ts:253` | yes (C1817) |
-| carried from 7caae17: reader wrong event type, wrong kind, failed branch dropped | `contracts.ts` | yes (C1796) |
-| carried from 7caae17: page line shown for pending, text changed | `contract-view.tsx` | yes (C1797) |
-| carried from 7caae17: n8n key, kind, routing, HMAC mutants (4) | `automation/n8n/*.json` | yes (C1781, C1791, C1800) |
+| C1820 fallback expectation `contract.pdf` to `contractX.pdf` | `supabase/tests/transitions.sql:1788` | yes (FAIL `C1820 fallback: wrong answer`) |
+| C1820 combined-wins expectation `document.pdf` to `documentX.pdf` | `transitions.sql:1792` | yes (FAIL `C1820 combined wins`) |
+| C1820 unchanged expectation inverted (`=` to `<>`) | `transitions.sql:1790` | yes (FAIL `C1820 unchanged`) |
+| C1821 empty-documents expects 22024 instead of 22023 | `transitions.sql:1800` | yes (FAIL, got 22023) |
+| C1821 non-string url expects 22024 | `transitions.sql:1801` | yes (FAIL, got 22023) |
+| `signed: contract.signed ?? null` to `signed: undefined` | `web/app/(app)/contracts/[contractId]/page.tsx:54` | yes (both C1822 tests fail) |
+| `contractId: contract.id` to `contractId: ""` | `page.tsx:53` | yes (first C1822 test fails) |
+| `signed: contract.signed ?? null` to `signed: contract.signed` | `page.tsx:54` | yes (null C1822 test fails) |
+| carried from b6c529d and earlier: round-2 mutants (reader order, `!key` guard, last SQL assertion, notify.ts, email builders, adapter, Resend, container, n8n, page line) | see round 2 | yes (all killed) |
+
+Method note: SQL mutants flip a recipe expectation, because the applied migration cannot be mutated and the Verifier may not apply anything. They show the C1820 and C1821 assertions execute and can fail; the first two flips distinguish the fallback and the combined-wins branches (removing either behaviour changes the answer those expectations compare). The C1821 "no documents" case was not flipped separately; it shares the helper with the two that were.
+
+## Changed status since round 2
+
+Recipes: none changed status in the wrong direction. 23 of 23 PASS now; in round 2 only `outbox_dispatch` had been run against the applied migration, and `transitions` was red at C1604 until `20261108220000`, now green. Tests: 3,370 to 3,372 passed (+2, C1822), no test went red. C1670 amended (judged above). C1818 moved from "open by design" to "measured, observation predates the migration" (still Unproven). C1819 moved from Unproven to PASS on recorded evidence.
 
 ## Gate
 
-`cd web && npx vitest run` - 175 files, 3,370 tests passed, 0 failed (contract-view test now included)
+`cd web && npx vitest run` - 175 files, 3,372 tests passed, 0 failed
 `cd web && npx tsc --noEmit` - exit 0
 `cd web && npx eslint .` - exit 0
-Named proofs, batched: 8 files, 43 passed, 0 failed (`-t "C17(8[1589]|9[1-9])|C18(0[0-9]|1[67])"`)
-`cd web && npm run test:db outbox_dispatch` - 1 passed, 0 failed
+`cd web && npm run test:db` - 23 passed, 0 failed
