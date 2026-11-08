@@ -242,3 +242,7 @@ Proof: `npm run test:db transitions` (assertion `C1820`)
 **C1821** - With `combined_document_url` null and no `documents`, an empty `documents` or a non-string `documents[0].url`, `signature_webhook` raises `22023` and writes nothing
 Proof: `npm run test:db transitions` (assertion `C1821`, 3 cases)
 
+
+### Regression found when `transitions` was first run after the migration (2026-11-08)
+
+- Neither the author nor Verifier round 2 ran `npm run test:db transitions` after `20261108100000`; only `outbox_dispatch` was run. `transitions` fails at **C1604** (contract-generation, structural: `create_contract`'s own source must hold `for update` before `from public.contracts`), because the body moved to `private.make_contract`. The check is correct and unchanged. Migration `20261108220000_create_contract_lock_order` puts the lock and the existing-contract lookup back in `create_contract` (drafted, not applied). Lesson for the next round: run every recipe whose subject a migration touches, not only the feature's own.
