@@ -24,6 +24,8 @@ function readInput(formData: FormData): OrgSettingsInput {
     renewalCpiPct: text("renewalCpiPct"),
     renewalCpiAsOf: text("renewalCpiAsOf"),
     proposalValidityDays: text("proposalValidityDays"),
+    itemSingular: text("itemSingular"),
+    itemPlural: text("itemPlural"),
   };
 }
 

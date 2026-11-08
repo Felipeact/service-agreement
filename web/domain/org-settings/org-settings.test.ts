@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { PROVINCES, formatSettingNumber, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
+import { PROVINCES, countItems, formatSettingNumber, itemWords, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
 
 const valid: OrgSettingsInput = {
   legalName: "Kettle Ridge Mechanical Ltd.",
@@ -17,7 +17,7 @@ const valid: OrgSettingsInput = {
   cpiRenegotiationThresholdPct: "5",
   renewalCpiPct: "",
   renewalCpiAsOf: "",
-  proposalValidityDays: "30",
+  proposalValidityDays: "30", itemSingular: "equipment", itemPlural: "equipment",
 };
 
 const run = (patch: Partial<OrgSettingsInput>) => validateOrgSettings({ ...valid, ...patch });
@@ -182,5 +182,36 @@ describe("renewal CPI (renewal S1)", () => {
       ok: false,
       errors: { proposalValidityDays: "Proposal validity must be a whole number of days from 1 to 365" },
     });
+  });
+});
+
+const WORD_MESSAGE = "Use 1 to 30 letters, spaces, hyphens or apostrophes, starting with a letter";
+
+describe("item words", () => {
+  test("C2001: Station and STATIONS are stored trimmed and lowercased", () => {
+    const result = run({ itemSingular: "  Station ", itemPlural: "STATIONS" });
+    expect(result.ok && [result.value.itemSingular, result.value.itemPlural]).toEqual(["station", "stations"]);
+  });
+
+  test.each(["itemSingular", "itemPlural"] as const)("C2003: %s rejects the shapes that cannot be printed and accepts the others", (field) => {
+    for (const bad of ["", "   ", a(31), "Station1", "-station", "Sta<b>", "Étage"]) {
+      const result = run({ [field]: bad });
+      expect(result.ok, `${field}=${JSON.stringify(bad)} should be rejected`).toBe(false);
+      if (!result.ok) expect(result.errors).toEqual({ [field]: WORD_MESSAGE });
+    }
+    for (const good of ["a", a(30), "walk-in", "O'Brien area"]) {
+      const result = run({ [field]: good });
+      expect(result.ok, `${field}=${JSON.stringify(good)} should be accepted`).toBe(true);
+    }
+  });
+
+  test("C2010: the words give four forms, capitalise only the first letter, and count with the singular for one", () => {
+    expect(itemWords("station", "stations")).toEqual({ singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" });
+    const hyphen = itemWords("walk-in", "walk-ins");
+    expect([hyphen.Singular, hyphen.Plural]).toEqual(["Walk-in", "Walk-ins"]);
+    const mass = itemWords("equipment", "equipment");
+    expect([mass.Singular, mass.Plural]).toEqual(["Equipment", "Equipment"]);
+    const words = itemWords("station", "stations");
+    expect([countItems(1, words), countItems(0, words), countItems(2, words)]).toEqual(["1 station", "0 stations", "2 stations"]);
   });
 });

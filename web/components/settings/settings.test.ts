@@ -23,7 +23,7 @@ const settings: OrgSettings = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
-  proposalValidityDays: 30,
+  proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment",
 };
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'");
@@ -189,7 +189,7 @@ describe("renewal CPI fields", () => {
 
 describe("proposal validity", () => {
   test.each<[OrgSettings, string]>([
-    [{ ...settings, proposalValidityDays: 14 }, "14"],
+    [{ ...settings, proposalValidityDays: 14, itemSingular: "equipment", itemPlural: "equipment" }, "14"],
     [settings, "30"],
   ])("C1223: an owner gets an input labelled Proposals valid for, holding the saved days", (stored, value) => {
     const out = view("owner", stored);
@@ -200,7 +200,7 @@ describe("proposal validity", () => {
   });
 
   test("C1223: a viewer gets it read-only, as the term months input is", () => {
-    const out = view("viewer", { ...settings, proposalValidityDays: 14 });
+    const out = view("viewer", { ...settings, proposalValidityDays: 14, itemSingular: "equipment", itemPlural: "equipment" });
     const tag = control(out, "proposalValidityDays");
     expect(tag).toContain('value="14"');
     expect(hasAttr(tag, "readOnly")).toBe(true);
@@ -211,5 +211,22 @@ describe("proposal validity", () => {
 describe("settings link to the task library", () => {
   test.each(["owner", "estimator"] as const)("C1933: %s sees a link to /task-library", (role) => {
     expect(view(role)).toMatch(/<a[^>]*href="\/task-library"[^>]*>[^<]*Task library/);
+  });
+});
+
+describe("settings form, item words", () => {
+  test("C2008: two fields hold the words, and a field error shows beside the field that failed", () => {
+    const out = view("owner", { ...settings, itemSingular: "station", itemPlural: "stations" });
+    expect(out).toMatch(/<label[^>]*for="itemSingular"[^>]*>Item, singular</);
+    expect(out).toMatch(/<label[^>]*for="itemPlural"[^>]*>Item, plural</);
+    expect(control(out, "itemSingular")).toContain('value="station"');
+    expect(control(out, "itemPlural")).toContain('value="stations"');
+    expect(control(view("owner"), "itemSingular")).toContain('value="equipment"');
+
+    const message = "Use 1 to 30 letters, spaces, hyphens or apostrophes, starting with a letter";
+    const values = { ...toInput(settings), itemSingular: "Station1" };
+    const failed = fields({ status: "invalid", errors: { itemSingular: message }, values }, false, false, values);
+    expect(failed).toContain(message);
+    expect(control(failed, "itemSingular")).toContain('value="Station1"');
   });
 });

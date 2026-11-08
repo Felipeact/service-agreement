@@ -106,6 +106,11 @@ export function SettingsFields({ values, state, pending, readOnly, action }: Set
             {text("legalName", "Legal name")}
             {text("phone", "Phone", { inputMode: "tel" })}
             <div className="sm:col-span-2">{text("address", "Address")}</div>
+            {text("itemSingular", "Item, singular")}
+            {text("itemPlural", "Item, plural")}
+            <p className="text-[13px] text-ink-2 sm:col-span-2">
+              What you call the things you service, as customers read it: &ldquo;station&rdquo; and &ldquo;stations&rdquo;, or &ldquo;equipment&rdquo; for both.
+            </p>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-end gap-2">
                 <div className="min-w-0 flex-1">{text("accentColor", "Accent colour")}</div>

@@ -1,3 +1,4 @@
+import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
 import { describe, expect, test } from "vitest";
 import { DRAFT_MARK, type AgreementDocument } from "@/domain/agreement";
 import { reactPdfDocumentRenderer } from "./index";
@@ -7,6 +8,7 @@ const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "
 
 const base: AgreementDocument = {
   tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" },
+  words: DEFAULT_ITEM_WORDS,
   number: "AG-1052",
   versionNo: 1,
   customerName: "Fernwood Dental",

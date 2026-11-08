@@ -38,6 +38,8 @@ export type OrgSettingsInput = {
   renewalCpiPct: string;
   renewalCpiAsOf: string;
   proposalValidityDays: string;
+  itemSingular: string;
+  itemPlural: string;
 };
 
 export type OrgSettingsField = keyof OrgSettingsInput;
@@ -62,6 +64,9 @@ export type OrgSettingsValue = {
   renewalCpiAsOf: string | null;
   /** How many days a sent proposal stays open for a decision (proposal-expiry door 2). */
   proposalValidityDays: number;
+  /** The org's words for the serviced item, lowercase (item-vocabulary door 1). */
+  itemSingular: string;
+  itemPlural: string;
 };
 
 export type OrgSettingsErrors = Partial<Record<OrgSettingsField, string>>;
@@ -74,6 +79,7 @@ const MAX_TERM_MONTHS = 60;
 export const RENEWAL_CPI_ERROR = "CPI must be a number from -20 to 100 with at most two decimals";
 export const RENEWAL_CPI_AS_OF_ERROR = "Enter the date this CPI was published";
 export const RENEWAL_CPI_PAIR_ERROR = "Set both CPI and its date, or neither";
+export const ITEM_WORD_ERROR = "Use 1 to 30 letters, spaces, hyphens or apostrophes, starting with a letter";
 export const PROPOSAL_VALIDITY_ERROR = `Proposal validity must be a whole number of days from 1 to ${MAX_DAYS}`;
 
 function optionalText(raw: string, max: number, label: string, errors: OrgSettingsErrors, field: OrgSettingsField) {
@@ -108,6 +114,15 @@ function wholeNumber(raw: string, min: number, max: number, message: string, err
     return min;
   }
   return Number(text);
+}
+
+/** The same shape the `org_settings` check constraints enforce (item-vocabulary door 1), applied to the trimmed, lowercased word. */
+const ITEM_WORD = /^[a-z][a-z' -]{0,29}$/;
+
+function itemWord(raw: string, errors: OrgSettingsErrors, field: OrgSettingsField) {
+  const word = raw.trim().toLowerCase();
+  if (!ITEM_WORD.test(word)) errors[field] = ITEM_WORD_ERROR;
+  return word;
 }
 
 /** Checks the form on the server; the same rules back the database's own constraints. */
@@ -154,6 +169,9 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
   if (cpiRaw === "" && asOfRaw !== "") errors.renewalCpiPct = RENEWAL_CPI_PAIR_ERROR;
   if (cpiRaw !== "" && asOfRaw === "") errors.renewalCpiAsOf = RENEWAL_CPI_PAIR_ERROR;
 
+  const itemSingular = itemWord(input.itemSingular, errors, "itemSingular");
+  const itemPlural = itemWord(input.itemPlural, errors, "itemPlural");
+
   const provinceRaw = input.governingProvince.trim();
   if (provinceRaw !== "" && !(PROVINCES as readonly string[]).includes(provinceRaw)) {
     errors.governingProvince = "Choose a province or territory from the list";
@@ -179,6 +197,8 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
       renewalCpiPct,
       renewalCpiAsOf: asOfRaw === "" ? null : asOfRaw,
       proposalValidityDays,
+      itemSingular,
+      itemPlural,
     },
   };
 }
@@ -186,4 +206,24 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
 /** A stored number as the form shows it: up to two decimals, no trailing zeros, `null` as empty. */
 export function formatSettingNumber(value: number | null): string {
   return value === null ? "" : String(Number(value.toFixed(2)));
+}
+
+/** What the copy needs from the org's two stored words: each form lowercase and capitalised (item-vocabulary door 3). */
+export type ItemWords = { singular: string; plural: string; Singular: string; Plural: string };
+
+/** What an org that never chose a word is called, and what a payload without the words falls back to. */
+export const DEFAULT_ITEM_WORD = "equipment";
+
+const capitalise = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
+
+/** The only place an item word changes case: screens and documents take the form they need from here. */
+export function itemWords(singular: string, plural: string): ItemWords {
+  return { singular, plural, Singular: capitalise(singular), Plural: capitalise(plural) };
+}
+
+export const DEFAULT_ITEM_WORDS: ItemWords = itemWords(DEFAULT_ITEM_WORD, DEFAULT_ITEM_WORD);
+
+/** "1 station", "0 stations", "2 stations". */
+export function countItems(count: number, words: ItemWords): string {
+  return `${count} ${count === 1 ? words.singular : words.plural}`;
 }

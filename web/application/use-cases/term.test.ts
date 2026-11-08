@@ -40,7 +40,7 @@ describe("the customer PDF's term", () => {
       renewedBy: null,
     };
     // The staff side's settings differ, and a frozen version must ignore them.
-    const settings = { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accentColor: null, renewalNoticeDays: 90, cpiRenegotiationThresholdPct: 9 } as OrgSettingsValue;
+    const settings = { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accentColor: null, itemSingular: "equipment", itemPlural: "equipment", renewalNoticeDays: 90, cpiRenegotiationThresholdPct: 9 } as OrgSettingsValue;
     const staff = buildAgreementDocument(detail, settings);
     const customer = portalDocument(view);
     expect(customer?.term).toBe("Term: Jan 1, 2027 – Dec 31, 2027 (12 months)");

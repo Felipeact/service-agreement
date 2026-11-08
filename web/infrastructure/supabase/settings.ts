@@ -27,6 +27,8 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
         renewalCpiPct: data.renewal_cpi_pct === null ? null : Number(data.renewal_cpi_pct),
         renewalCpiAsOf: data.renewal_cpi_as_of,
         proposalValidityDays: data.proposal_validity_days,
+        itemSingular: data.item_singular,
+        itemPlural: data.item_plural,
       };
     },
 
@@ -51,6 +53,8 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
             renewal_cpi_pct: value.renewalCpiPct,
             renewal_cpi_as_of: value.renewalCpiAsOf,
             proposal_validity_days: value.proposalValidityDays,
+            item_singular: value.itemSingular,
+            item_plural: value.itemPlural,
             updated_at: at.toISOString(),
           })
           .eq("org_id", orgId)

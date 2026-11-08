@@ -1,5 +1,5 @@
-import type { OrgSettingsValue } from "../org-settings";
-import { formatSettingNumber } from "../org-settings";
+import type { ItemWords, OrgSettingsValue } from "../org-settings";
+import { formatSettingNumber, itemWords } from "../org-settings";
 import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
 import { formatTermDate, termLine, termMonthsLabel, type AgreementTerm } from "./term";
@@ -23,6 +23,8 @@ export type DocumentScope = { kind: "listed"; recordedOn: Date | null; types: Sc
  */
 export type AgreementDocument = {
   tenant: { name: string; address: string | null; phone: string | null; accent: string };
+  /** The org's words for the serviced item, as the sections name it (item-vocabulary door 3). */
+  words: ItemWords;
   number: string;
   versionNo: number;
   customerName: string;
@@ -107,6 +109,7 @@ export function documentBody(source: DocumentSource) {
 export function buildAgreementDocument(source: DocumentSource, settings: OrgSettingsValue): AgreementDocument {
   return {
     tenant: { name: settings.legalName, address: settings.address, phone: settings.phone, accent: settings.accentColor ?? NEUTRAL_ACCENT },
+    words: itemWords(settings.itemSingular, settings.itemPlural),
     number: source.number,
     versionNo: source.shown.versionNo,
     customerName: source.customer.name,

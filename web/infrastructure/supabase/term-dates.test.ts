@@ -34,7 +34,7 @@ const SETTINGS: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 4.75,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
-  proposalValidityDays: 30,
+  proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment",
 };
 
 describe("renewal settings in the settings store", () => {
