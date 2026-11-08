@@ -29,6 +29,7 @@ const ALL = [
   "contact_roles",
   "members",
   "search",
+  "type_editor",
   "demo_seed",
 ];
 
@@ -102,18 +103,18 @@ describe("test:db runner", () => {
     expect(parts.demo_seed).toEqual(["fixture.sql", "SEED_BODY", "demo_seed.sql", "SEED_BODY", "demo_seed_rerun.sql"]);
   });
 
-  test("C830: service_included is a plain recipe, one of 23, over 25 SQL files", () => {
-    expect(RECIPES).toHaveLength(23);
+  test("C830: service_included is a plain recipe, one of 24, over 26 SQL files", () => {
+    expect(RECIPES).toHaveLength(24);
     expect(RECIPES.find((recipe) => recipe.name === "service_included")?.parts).toEqual(["fixture.sql", "service_included.sql"]);
     expect(REAL_FILES).toContain("service_included.sql");
-    expect(REAL_FILES).toHaveLength(25);
+    expect(REAL_FILES).toHaveLength(26);
   });
 
-  test("C1045: outbox_dispatch is a plain recipe, one of 23, over 25 SQL files", () => {
-    expect(RECIPES).toHaveLength(23);
+  test("C1045: outbox_dispatch is a plain recipe, one of 24, over 26 SQL files", () => {
+    expect(RECIPES).toHaveLength(24);
     expect(RECIPES.find((recipe) => recipe.name === "outbox_dispatch")?.parts).toEqual(["fixture.sql", "outbox_dispatch.sql"]);
     expect(REAL_FILES).toContain("outbox_dispatch.sql");
-    expect(REAL_FILES).toHaveLength(25);
+    expect(REAL_FILES).toHaveLength(26);
   });
 
   test("C202: the seed body drops only begin; and commit;, and replaces only an exact SEED_BODY line", () => {
@@ -137,19 +138,19 @@ describe("test:db runner", () => {
     );
   });
 
-  test("C203: no argument runs all 23, one connection each, in order, and prints PASS per recipe", async () => {
+  test("C203: no argument runs all 24, one connection each, in order, and prints PASS per recipe", async () => {
     const f = fake();
     await runSuite(f.io);
-    expect(f.connects).toBe(23);
-    expect(f.sent).toHaveLength(23);
-    expect(f.ended).toBe(23);
-    expect(f.out.slice(0, 23)).toEqual(ALL.map((name) => `PASS ${name}`));
+    expect(f.connects).toBe(24);
+    expect(f.sent).toHaveLength(24);
+    expect(f.ended).toBe(24);
+    expect(f.out.slice(0, 24)).toEqual(ALL.map((name) => `PASS ${name}`));
   });
 
-  test("C204: all passing prints 23 passed, 0 failed and exits 0", async () => {
+  test("C204: all passing prints 24 passed, 0 failed and exits 0", async () => {
     const f = fake();
     const code = await runSuite(f.io);
-    expect(f.out.at(-1)).toBe("23 passed, 0 failed");
+    expect(f.out.at(-1)).toBe("24 passed, 0 failed");
     expect(code).toBe(0);
   });
 
@@ -159,9 +160,9 @@ describe("test:db runner", () => {
     });
     const code = await runSuite(f.io);
     expect(f.out).toContain("FAIL events_outbox: C3: anon can read");
-    expect(f.connects).toBe(23);
-    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(22);
-    expect(f.out.at(-1)).toBe("22 passed, 1 failed");
+    expect(f.connects).toBe(24);
+    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(23);
+    expect(f.out.at(-1)).toBe("23 passed, 1 failed");
     expect(code).toBe(1);
   });
 
@@ -228,7 +229,7 @@ describe("test:db runner", () => {
     expect(f.connects).toBe(0);
     expect(code).toBe(2);
 
-    expect(REAL_FILES).toHaveLength(25);
+    expect(REAL_FILES).toHaveLength(26);
     const covered = new Set(RECIPES.flatMap((recipe) => recipe.parts));
     for (const file of REAL_FILES) expect(covered.has(file), file).toBe(true);
   });
@@ -252,15 +253,15 @@ describe("test:db runner", () => {
     const f = fake({ read });
     f.io.readSeed = () => seed;
     expect(await runSuite(f.io)).toBe(0);
-    expect(f.connects).toBe(23);
+    expect(f.connects).toBe(24);
   });
 
   test("C212: a connection error fails that recipe and the rest still run", async () => {
     const f = fake({ connectError: (index) => (index === 0 ? new Error("connect ECONNREFUSED") : undefined) });
     const code = await runSuite(f.io);
     expect(f.out[0]).toBe("FAIL catalog_seed: connect ECONNREFUSED");
-    expect(f.connects).toBe(23);
-    expect(f.out.at(-1)).toBe("22 passed, 1 failed");
+    expect(f.connects).toBe(24);
+    expect(f.out.at(-1)).toBe("23 passed, 1 failed");
     expect(code).toBe(1);
   });
 
