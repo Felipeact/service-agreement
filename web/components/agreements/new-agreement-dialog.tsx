@@ -9,11 +9,12 @@ import { Icon } from "@/components/ui/icons";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
+import { NoticeText, ProgressLine } from "./new-agreement-text";
 import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
 import { runExtraction, uploadFile, uploadMessage, type ConfirmState, type ExtractState, type ReadState, type StartState } from "@/components/imports/state";
-import { FILE_HINT, firstCustomerChoice, listNotice, NEW_CHOICE, phaseLine, START_MESSAGES, type Phase, type StartAgreementState } from "./new-agreement-state";
+import { FILE_HINT, firstCustomerChoice, LIST_FAILED, NEW_CHOICE, START_MESSAGES, type Phase, type StartAgreementState } from "./new-agreement-state";
 
 type Customer = { id: string; name: string };
 
@@ -174,7 +175,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
       });
 
       if (sent.status !== "parsed" || !jobId) {
-        setNotice({ text: listNotice(uploadMessage(sent), words), href: agreementHref, linkText: "Open the agreement" });
+        setNotice({ text: uploadMessage(sent) ?? LIST_FAILED, href: agreementHref, linkText: "Open the agreement" });
         setPhase("idle");
         return setCreated({ siteId: started.siteId });
       }
@@ -188,7 +189,6 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
     });
   }
 
-  const progressText = phaseLine(phase, progress, words);
   const submitLabel = busy ? "Working…" : file ? "Create agreement and read the list" : "Create agreement";
 
   return (
@@ -312,11 +312,11 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
           </fieldset>
 
           <div role="status" aria-live="polite" className="min-h-5 text-[13px] text-ink-2">
-            {progressText}
+            <ProgressLine phase={phase} progress={progress} />
           </div>
           {notice && (
             <p role="alert" className="rounded-control bg-attention-bg px-3 py-2.5 text-[13px] text-attention-fg">
-              {notice.text}{" "}
+              <NoticeText text={notice.text} />{" "}
               {notice.href && (
                 <Link href={notice.href} className="inline-flex min-h-11 items-center font-semibold underline lg:min-h-0">
                   {notice.linkText}

@@ -6,11 +6,13 @@ const currentMember = vi.fn<() => Promise<CurrentMember>>();
 let words: ItemWords = DEFAULT_ITEM_WORDS;
 const getItemWords = vi.fn(async () => words);
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, getItemWords }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, getItemWords, siteRegister: async () => ({ id: "s1" }), listAssetTypes: async () => [] }) }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn(), notFound: vi.fn() }));
 
 const sites = await import("./sites/page");
 const importPage = await import("./sites/[siteId]/import/page");
+const newAsset = await import("./sites/[siteId]/assets/new/page");
+const { renderToStaticMarkup } = await import("react-dom/server");
 
 beforeEach(() => {
   words = DEFAULT_ITEM_WORDS;
@@ -32,5 +34,17 @@ describe("page titles, item words", () => {
     getItemWords.mockClear();
     expect((await sites.generateMetadata()).title).toBe("Sites & equipment");
     expect(getItemWords).not.toHaveBeenCalled();
+  });
+});
+
+describe("the add-asset page, item words", () => {
+  test("C2013: with no types the empty catalog panel names the org's item, read for the member's own org", async () => {
+    words = itemWords("station", "stations");
+    getItemWords.mockClear();
+    currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "u@example.com", orgId: "org-1", orgName: "Org", role: "owner" });
+    const out = renderToStaticMarkup(await newAsset.default({ params: Promise.resolve({ siteId: "s1" }) } as never));
+    expect(out).toContain("Your station catalog is empty.");
+    expect(out).toContain("Station types come from your task library.");
+    expect(getItemWords).toHaveBeenCalledWith("org-1");
   });
 });

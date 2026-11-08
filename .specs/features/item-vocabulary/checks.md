@@ -92,8 +92,8 @@ Proof: `npx vitest run -t "C2020:"`
 **C2021** - No string literal or JSX text under `components/` and `app/(app)/` outside tests contains the word `equipment`, except the files on a named allowlist in the test (identifiers are not strings and are not scanned) (AC 6, door 3)
 Proof: `npx vitest run domain/purity.test.ts -t "C2021:"`
 
-**C2022** - The places AC 6 leaves out still print today's wording: the extraction prompt (`infrastructure/claude`), the login page and the root layout (AC 6 "and no others")
-Proof: `npx vitest run infrastructure/claude app/login`
+**C2022** - The places outside the feature still print today's wording: the extraction prompt (`infrastructure/claude`), the login page and the root layout (AC 6 "and no others")
+Proof: `npx vitest run infrastructure/claude app/product-copy.test.ts`
 
 ### S3 - The agreement PDF says the word · 0 migrations, 3 web files · ~22 KB · ~7k
 
@@ -106,7 +106,7 @@ Proof: `npx vitest run infrastructure/documents -t "C2024:"`
 **C2025** - Withdrawn by the owner on 2026-11-09 ("go with recommendations"): the PDF visit schedule has no item column or heading, so the claim cannot be met without changing the default output. AC 9's schedule clause is dropped with it. Replaced by the contract PDF claim in C2023's second test: the contract's covered-items section is headed with the org's plural (AC 9 as amended)
 Proof: `npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C2023:"`
 
-**C2026** - With the default words the PDF prints today's section heading, sentence and column, so the existing PDF suites pass unedited (AC 8)
+**C2026** - With the default words the PDF prints today's section heading and sentence, so the existing PDF suites pass unedited (AC 8)
 Proof: `npx vitest run infrastructure/documents composition/pdf-route.test.ts app/(app)/agreements/[agreementId]/pdf/route.test.ts`
 
 **C2027** - Rendering the PDF of a sent version, changing the org's words, then rendering again prints "Equipment" in the first and "Stations" in the second (AC 10)
@@ -167,7 +167,7 @@ Evidence:
 - `validateOrgSettings` gains 2 fields x 3 rules (empty, length, shape) = 6 branch points -> decides (C2001, C2003)
 - the words helper has 2 branch points (capitalise the first letter; count equals 1) -> decides (C2010)
 - the column check is one pattern on 2 columns -> decides at the database (C2004)
-- screens and PDF sections replace a literal by a helper call with no conditional -> instrumentation, proven by one render each (C2011 to C2019, C2023 to C2025)
+- screens and PDF sections replace a literal by a helper call with no conditional -> instrumentation, proven by one render each (C2011 to C2019, C2023 and C2024)
 - closest analogue in the repo: the term and renewal settings (`proposalValidityDays`), validated in `domain/org-settings` and checked by a column constraint, proven at both layers
 
 Cost: 4 decision proofs at their own layer (C2001, C2003, C2004, C2010), 1 source scan (C2021). Without these rows, a rejected word shape would be proven only by the settings screen that happens to pass through the validator.
@@ -193,6 +193,6 @@ Cost: 4 decision proofs at their own layer (C2001, C2003, C2004, C2010), 1 sourc
 - Files touched: 41 non-test files under `app/`, `components/`, `infrastructure/documents`, plus `portal.ts`, `domain/agreement/document.ts`, `domain/org-settings`, `infrastructure/supabase/settings.ts` = 215 KB by `wc -c` -> ~54k tokens; new tests, the migration and `item_vocabulary.sql` ~15k; total ~70k, S1 12k + S2 50k + S3 7k + S4 6k, under the 150k budget - one builder
 - Mechanism: one builder (fits)
 
-- **Boundary:** C2001-C2024, C2026-C2032 closed at the feature's last commit; the database recipe was run with the migration inside its rolled-back transaction (`item_vocabulary: pass`), the migration is not applied to the project
+- **Boundary:** C2001-C2024, C2026-C2032 closed at the feature's last commit; the database recipe was run with the migration inside its rolled-back transaction (`item_vocabulary: pass`), the owner applied the migration to the project on 2026-11-09 and `npm run test:db item_vocabulary` passes there (it has no `schema_migrations` row yet)
 - **Settled mid-build:** 2026-11-09, owner: "go with recommendations": drop the schedule-column clause of AC 9 and C2025; localise the contract PDF, the asset form, the add-asset page and the Settings link (the C2021 allowlist keeps only the login copy and the settings help text). Verifier round 1 survivors closed with C2009 (item-words reader), C2011 (shell wiring), C2013 (placeholder), C2014 (progress words, review grid), C2015 (list-failed), C2022 (wording) and a search-query-verbatim assertion
-- **Abandoned:** C2025 ("the visit schedule's item column is headed Stations"): the PDF visit schedule has no item column or heading, so the check cannot be met without a new heading that would change the default output. Not built, not edited; a stop-and-ask. Also found: the contract PDF prints the covered-items section through the same `ScopeSections` component and still says Equipment for a station org, and the asset form, the add-asset page and the Settings link to the task library are outside the plan's AC 6 list and stay in the C2021 allowlist
+- **Abandoned:** C2025 ("the visit schedule's item column is headed Stations"): the PDF visit schedule has no item column or heading, so the check cannot be met without a new heading that would change the default output. Not built, not edited; a stop-and-ask. Also found: the contract PDF prints the covered-items section through the same `ScopeSections` component and still says Equipment for a station org, and the asset form, the add-asset page and the Settings link were outside AC 6 and were localised on the owner's call, so the C2021 allowlist keeps only the login copy and the settings help text

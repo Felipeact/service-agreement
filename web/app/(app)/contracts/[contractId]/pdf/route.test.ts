@@ -161,3 +161,15 @@ describe("GET /contracts/[contractId]/pdf", () => {
     await expect(call()).rejects.toThrow("db down");
   });
 });
+
+describe("GET /contracts/[contractId]/pdf, item words", () => {
+  test("C2023: the document is built with the org's stored words, and an org on the default gets equipment", async () => {
+    getOrgSettings.mockResolvedValue({ ...SETTINGS, itemSingular: "station", itemPlural: "stations" });
+    await call();
+    expect(renderContract.mock.calls[0][0].words).toEqual({ singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" });
+    renderContract.mockClear();
+    getOrgSettings.mockResolvedValue(SETTINGS);
+    await call();
+    expect(renderContract.mock.calls[0][0].words?.Plural).toBe("Equipment");
+  });
+});

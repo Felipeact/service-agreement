@@ -48,8 +48,3 @@ export function phaseLine(phase: Phase, progress: { done: number; total: number 
   const text = phase === "extracting" && progress ? `${PHASE_TEXT.extracting} ${progress.done} of ${progress.total}` : PHASE_TEXT[phase];
   return itemText(text, words);
 }
-
-/** What the dialog says when the list could not be sent or read: the upload's own message, else the list-failed one. */
-export function listNotice(uploadText: string | null, words: ItemWords): string {
-  return itemText(uploadText ?? LIST_FAILED, words);
-}

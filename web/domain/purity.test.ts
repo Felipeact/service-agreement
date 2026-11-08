@@ -60,7 +60,13 @@ const ITEM_COPY_ALLOWED = [
 ];
 
 /** Strings that stay literal because they are a default or a table row, spoken in the org's words where they are shown. */
-const ITEM_COPY_LITERALS = ["Equipment", "Equipment type", "Sites & equipment", "Sending the equipment list…", "Finding the equipment…"];
+const ITEM_COPY_LITERALS = [
+  "components/agreements/version-compare.tsx: Equipment",
+  "components/imports/review-view.tsx: Equipment type",
+  "components/shell/nav-items.ts: Sites & equipment",
+  "components/agreements/new-agreement-state.ts: Sending the equipment list…",
+  "components/agreements/new-agreement-state.ts: Finding the equipment…",
+];
 
 function appSources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -71,7 +77,7 @@ function appSources(dir: string): string[] {
 }
 
 /** String literals and JSX text that say "equipment" and are not handed to itemText on the way out. */
-function unlocalisedItemCopy(source: string): string[] {
+function unlocalisedItemCopy(source: string, relative: string): string[] {
   const code = source
     .replace(/\/\*[\s\S]*?\*\//g, (m) => " ".repeat(m.length))
     .replace(/(^|[^:])\/\/.*$/gm, (m, lead) => lead + " ".repeat(m.length - lead.length))
@@ -83,10 +89,10 @@ function unlocalisedItemCopy(source: string): string[] {
     if (/itemText\(\s*$/.test(before)) continue;
     const inner = match[0].slice(1, -1);
     // "equipment" alone is a field name; the listed strings are defaults or table rows spoken in the org's words where shown.
-    if (inner === "equipment" || ITEM_COPY_LITERALS.includes(inner)) continue;
+    if (inner === "equipment" || ITEM_COPY_LITERALS.includes(`${relative}: ${inner}`)) continue;
     found.push(match[0]);
   }
-  for (const match of code.matchAll(/>([^<>{}\n]*equipment[^<>{}\n]*)</gi)) found.push(match[1]);
+  for (const match of code.matchAll(/>([^<>{}=]*equipment[^<>{}=]*)</gi)) found.push(match[1]);
   return found;
 }
 
@@ -98,7 +104,7 @@ describe("item copy goes through the org's words", () => {
       for (const file of appSources(root)) {
         const relative = path.relative(webRoot, file).split(path.sep).join("/");
         if (ITEM_COPY_ALLOWED.includes(relative)) continue;
-        for (const copy of unlocalisedItemCopy(readFileSync(file, "utf8"))) offenders.push(`${relative}: ${copy}`);
+        for (const copy of unlocalisedItemCopy(readFileSync(file, "utf8"), relative)) offenders.push(`${relative}: ${copy}`);
       }
     }
     expect(offenders).toEqual([]);

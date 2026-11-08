@@ -130,3 +130,16 @@ describe("org settings store, item words", () => {
     expect([fresh?.itemSingular, fresh?.itemPlural]).toEqual(["equipment", "equipment"]);
   });
 });
+
+describe("org settings store, rows from before the words existed", () => {
+  test("C2009: a row without the two columns reads equipment for both instead of failing", async () => {
+    const row = {
+      org_id: ORG, legal_name: "Acme Ltd.", address: null, phone: null, logo_path: null, accent_color: null,
+      repair_discount_pct: 0, cpi_cap_pct: 0, cancellation_notice_days: null, payment_days: null, governing_province: null,
+      tax_note: null, default_term_months: 12, renewal_notice_days: 30, cpi_renegotiation_threshold_pct: 5,
+      renewal_cpi_pct: null, renewal_cpi_as_of: null, proposal_validity_days: 30,
+    };
+    const found = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row, error: null } }).typed).get(ORG);
+    expect([found?.itemSingular, found?.itemPlural]).toEqual(["equipment", "equipment"]);
+  });
+});

@@ -214,6 +214,9 @@ export type ItemWords = { singular: string; plural: string; Singular: string; Pl
 /** What an org that never chose a word is called, and what a payload without the words falls back to. */
 export const DEFAULT_ITEM_WORD = "equipment";
 
+/** "an area", "an hour", "a unit", "a user": the sound decides, not the letter, for the few English words that differ. */
+const startsWithVowelSound = (word: string) => (/^(hour|honest|heir)/i.test(word) ? true : /^(uni|use|usu|uti|eu|one)/i.test(word) ? false : /^[aeiou]/i.test(word));
+
 const capitalise = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
 
 /** The only place an item word changes case: screens and documents take the form they need from here. */
@@ -234,9 +237,9 @@ export const itemWas = (words: ItemWords) => itemVerb(words, "was", "were");
  * modifier, any other "equipment" the plural, a capital stays a capital, and "an" before it follows the new word. With the default words nothing changes.
  */
 export function itemText(text: string, words: ItemWords): string {
-  return text.replace(/\b(?:([Aa])n )?([Ee])quipment( (?:list|type|import)s?)?\b/g, (_match, a: string | undefined, first: string, tail: string | undefined) => {
+  return text.replace(/\b(?:([Aa])n )?([Ee])quipment( (?:list|type|import|catalog)s?)?\b/g, (_match, a: string | undefined, first: string, tail: string | undefined) => {
     const word = tail ? words.singular : words.plural;
-    const article = a ? a + (/^[aeiou]/i.test(word) ? "n " : " ") : "";
+    const article = a ? a + (startsWithVowelSound(word) ? "n " : " ") : "";
     return article + (first === "E" ? capitalise(word) : word) + (tail ?? "");
   });
 }

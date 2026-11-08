@@ -239,3 +239,13 @@ describe("item text, articles", () => {
     expect(itemText("Choose an equipment type", DEFAULT_ITEM_WORDS)).toBe("Choose an equipment type");
   });
 });
+
+describe("item text, sound of the article", () => {
+  test("C2010: a before a consonant sound and an before a vowel sound, and catalog takes the singular", () => {
+    expect(itemText("Choose an equipment list", itemWords("unit", "units"))).toBe("Choose a unit list");
+    expect(itemText("Choose an equipment list", itemWords("hour", "hours"))).toBe("Choose an hour list");
+    expect(itemText("Choose an equipment list", itemWords("user", "users"))).toBe("Choose a user list");
+    expect(itemText("Your equipment catalog is empty.", itemWords("station", "stations"))).toBe("Your station catalog is empty.");
+    expect(itemText("Your equipment catalog is empty.", DEFAULT_ITEM_WORDS)).toBe("Your equipment catalog is empty.");
+  });
+});

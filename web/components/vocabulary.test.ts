@@ -24,7 +24,9 @@ const { ImportPageView } = await import("./imports/import-page-view");
 const { ReviewView } = await import("./imports/review-view");
 const { NewAgreementDialog } = await import("./agreements/new-agreement-dialog");
 const { SitesLoading, ImportLoading } = await import("./sites/loading-titles");
-const { phaseLine, listNotice } = await import("./agreements/new-agreement-state");
+const { phaseLine } = await import("./agreements/new-agreement-state");
+const { NoticeText, ProgressLine } = await import("./agreements/new-agreement-text");
+const { LIST_FAILED } = await import("./agreements/new-agreement-state");
 
 const stations = itemWords("station", "stations");
 /** The output with the words set to station/stations, as a member of an org that chose them would get it. */
@@ -170,8 +172,30 @@ describe("staff screens, item words, the parts the first pass left unrendered", 
     expect(phaseLine("uploading", null, itemWords("equipment", "equipment"))).toBe("Sending the equipment list…");
   });
 
-  test("C2015: the list-failed message names the item, and an upload's own message is kept", () => {
-    expect(listNotice(null, stations)).toBe("The agreement was created, but we couldn't read the station list. You can add it from the agreement's site.");
-    expect(listNotice("The upload didn't finish. Try again.", stations)).toBe("The upload didn't finish. Try again.");
+  test("C2015: the notice and the progress line render in the org's words", () => {
+    expect(asStations(createElement(NoticeText, { text: LIST_FAILED }))).toBe("The agreement was created, but we couldn't read the station list. You can add it from the agreement's site.");
+    expect(asStations(createElement(NoticeText, { text: "The upload didn't finish. Try again." }))).toBe("The upload didn't finish. Try again.");
+    expect(asStations(createElement(ProgressLine, { phase: "extracting", progress: { done: 2, total: 5 } }))).toBe("Finding the stations… 2 of 5");
+    expect(renderToStaticMarkup(createElement(ProgressLine, { phase: "uploading", progress: null }))).toBe("Sending the equipment list…");
+  });
+});
+
+describe("staff screens, item words, the last forms", () => {
+  test("C2013: the asset form labels its type field with the org's word, and its error too", async () => {
+    const { AssetFields } = await import("./records/asset-form");
+    const out = asStations(createElement(AssetFields, {
+      values: { assetTypeId: "", unitNo: "", typeModel: "", location: "" },
+      state: { status: "invalid", errors: { assetTypeId: "Choose an equipment type" }, values: { assetTypeId: "", unitNo: "", typeModel: "", location: "" } },
+      types: [], submitLabel: "Add asset", cancelHref: "/sites/s1",
+    } as unknown as Parameters<typeof AssetFields>[0]));
+    expect(out).toContain("Station type");
+    expect(out).toContain("Choose a station type");
+    noEquipment(out);
+  });
+
+  test("C2018: the Settings link to the task library names the item", async () => {
+    const { SettingsView } = await import("./settings/settings-view");
+    const out = asStations(createElement(SettingsView, { settings: null, role: "owner", action: async () => ({ status: "idle" as const }) } as unknown as Parameters<typeof SettingsView>[0]));
+    expect(out).toContain("Task library: station types and checklists");
   });
 });
