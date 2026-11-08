@@ -6,6 +6,7 @@ const typeRow = (code: string, name: string, months: number[], tasks: { descript
   id: `id-${code}`,
   code,
   name,
+  pack: "hvac",
   default_visit_months: months,
   asset_type_tasks: tasks,
 });
@@ -27,11 +28,12 @@ describe("TaskLibraryReader", () => {
     const types = await supabaseTaskLibraryReader(typed).list();
 
     expect(types).toEqual([
-      { id: "id-BOILER", code: "BOILER", name: "Boiler", defaultVisitMonths: [10], tasks: [{ description: "Check flue", visitMonths: null }] },
+      { id: "id-BOILER", code: "BOILER", name: "Boiler", pack: "hvac", defaultVisitMonths: [10], tasks: [{ description: "Check flue", visitMonths: null }] },
       {
         id: "id-RTU",
         code: "RTU",
         name: "Rooftop unit",
+        pack: "hvac",
         defaultVisitMonths: [3, 6, 9, 12],
         tasks: [
           { description: "Inspect belts", visitMonths: null },
@@ -87,5 +89,48 @@ describe("TaskLibraryStore", () => {
     const { typed, client } = stubClient({});
     client.rpc.mockResolvedValue({ data: null, error: { code, message: "boom" } });
     expect(await supabaseTaskLibraryStore(typed).save("RTU", value)).toEqual({ ok: false, code: expected });
+  });
+});
+
+describe("TaskLibraryStore type functions", () => {
+  const calls = {
+    create: (store: ReturnType<typeof supabaseTaskLibraryStore>) => store.createType("org-1", "Sump pump"),
+    rename: (store: ReturnType<typeof supabaseTaskLibraryStore>) => store.renameType("SUMP_PUMP", "Sump"),
+    remove: (store: ReturnType<typeof supabaseTaskLibraryStore>) => store.removeType("SUMP_PUMP"),
+    reset: (store: ReturnType<typeof supabaseTaskLibraryStore>) => store.resetType("RTU"),
+  } as const;
+  const failures = [
+    ["42501", "forbidden"],
+    ["P0002", "not_found"],
+    ["23505", "conflict"],
+    ["23514", "invalid"],
+    ["23503", "in_use"],
+    ["55000", "no_pack"],
+    ["XX000", "unavailable"],
+  ] as const;
+
+  test.each(Object.keys(calls).flatMap((fn) => failures.map(([sqlstate, expected]) => [fn, sqlstate, expected] as const)))(
+    "C1938: %s maps SQLSTATE %s to %s",
+    async (fn, sqlstate, expected) => {
+      const { typed, client } = stubClient({});
+      client.rpc.mockResolvedValue({ data: null, error: { code: sqlstate, message: "boom" } });
+      expect(await calls[fn as keyof typeof calls](supabaseTaskLibraryStore(typed))).toEqual({ ok: false, code: expected });
+    },
+  );
+
+  test("C1938: each function calls its own rpc with the names it is given and success returns ok", async () => {
+    const { typed, client } = stubClient({});
+    client.rpc.mockResolvedValue({ data: "SUMP_PUMP", error: null });
+    const store = supabaseTaskLibraryStore(typed);
+    expect(await calls.create(store)).toEqual({ ok: true, code: "SUMP_PUMP" });
+    expect(await calls.rename(store)).toEqual({ ok: true });
+    expect(await calls.remove(store)).toEqual({ ok: true });
+    expect(await calls.reset(store)).toEqual({ ok: true });
+    expect(client.rpc.mock.calls).toEqual([
+      ["create_task_library_type", { p_org_id: "org-1", p_name: "Sump pump" }],
+      ["rename_task_library_type", { p_type_code: "SUMP_PUMP", p_name: "Sump" }],
+      ["remove_task_library_type", { p_type_code: "SUMP_PUMP" }],
+      ["reset_task_library_type", { p_type_code: "RTU" }],
+    ]);
   });
 });

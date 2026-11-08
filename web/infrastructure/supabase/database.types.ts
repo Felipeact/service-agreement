@@ -182,6 +182,7 @@ export type Database = {
           id: string
           name: string
           org_id: string
+          pack: string | null
         }
         Insert: {
           code: string
@@ -190,6 +191,7 @@ export type Database = {
           id?: string
           name: string
           org_id: string
+          pack?: string | null
         }
         Update: {
           code?: string
@@ -198,6 +200,7 @@ export type Database = {
           id?: string
           name?: string
           org_id?: string
+          pack?: string | null
         }
         Relationships: [
           {
@@ -1375,6 +1378,10 @@ export type Database = {
       }
       create_agreement: { Args: { p_site_id: string }; Returns: string }
       create_contract: { Args: { p_agreement_id: string }; Returns: string }
+      create_task_library_type: { Args: { p_name: string; p_org_id: string }; Returns: string }
+      rename_task_library_type: { Args: { p_name: string; p_type_code: string }; Returns: undefined }
+      remove_task_library_type: { Args: { p_type_code: string }; Returns: undefined }
+      reset_task_library_type: { Args: { p_type_code: string }; Returns: undefined }
       create_invitation: { Args: { p_email: string; p_role: string }; Returns: string }
       customer_signing_link: {
         Args: { p_contract_id: string }

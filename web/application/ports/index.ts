@@ -1009,9 +1009,22 @@ export interface TaskLibraryReader {
 
 export type SaveLibraryResult = { ok: true } | { ok: false; code: WriteFailure };
 
+/** Why a type add, rename, removal or reset changed nothing (type-editor Surface). */
+export type TypeFailure = WriteFailure | "conflict" | "invalid" | "in_use" | "no_pack";
+export type TypeResult = { ok: true } | { ok: false; code: TypeFailure };
+export type CreateTypeResult = { ok: true; code: string } | { ok: false; code: TypeFailure };
+
 export interface TaskLibraryStore {
   /** Replaces the type's default months and its whole checklist in one transaction (task-library-page doors 2 and 3). */
   save(typeCode: string, value: TaskLibraryValue): Promise<SaveLibraryResult>;
+  /** Adds a type to the org; its code is made from the name and returned (type-editor doors 4 and 5). */
+  createType(orgId: string, name: string): Promise<CreateTypeResult>;
+  /** Changes the name only; the code never changes. */
+  renameType(typeCode: string, name: string): Promise<TypeResult>;
+  /** Removes a type and its tasks while no asset, service line or import row uses it. */
+  removeType(typeCode: string): Promise<TypeResult>;
+  /** Restores a seeded type's name, default months and checklist from its pack. */
+  resetType(typeCode: string): Promise<TypeResult>;
 }
 
 /** One member of the signed-in member's org, as the roster lists them (members-page door 4). */

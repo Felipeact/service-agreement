@@ -207,3 +207,9 @@ describe("proposal validity", () => {
     expect(hasAttr(control(out, "defaultTermMonths"), "readOnly")).toBe(true);
   });
 });
+
+describe("settings link to the task library", () => {
+  test.each(["owner", "estimator"] as const)("C1933: %s sees a link to /task-library", (role) => {
+    expect(view(role)).toMatch(/<a[^>]*href="\/task-library"[^>]*>[^<]*Task library/);
+  });
+});
