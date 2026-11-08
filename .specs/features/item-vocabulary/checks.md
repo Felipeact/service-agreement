@@ -192,3 +192,7 @@ Cost: 4 decision proofs at their own layer (C2001, C2003, C2004, C2010), 1 sourc
 
 - Files touched: 41 non-test files under `app/`, `components/`, `infrastructure/documents`, plus `portal.ts`, `domain/agreement/document.ts`, `domain/org-settings`, `infrastructure/supabase/settings.ts` = 215 KB by `wc -c` -> ~54k tokens; new tests, the migration and `item_vocabulary.sql` ~15k; total ~70k, S1 12k + S2 50k + S3 7k + S4 6k, under the 150k budget - one builder
 - Mechanism: one builder (fits)
+
+- **Boundary:** C2001-C2024, C2026-C2032 closed at the feature's last commit; the database recipe was run with the migration inside its rolled-back transaction (`item_vocabulary: pass`), the migration is not applied to the project
+- **Settled mid-build:** none yet; C2025 is renegotiation (see Abandoned)
+- **Abandoned:** C2025 ("the visit schedule's item column is headed Stations"): the PDF visit schedule has no item column or heading, so the check cannot be met without a new heading that would change the default output. Not built, not edited; a stop-and-ask. Also found: the contract PDF prints the covered-items section through the same `ScopeSections` component and still says Equipment for a station org, and the asset form, the add-asset page and the Settings link to the task library are outside the plan's AC 6 list and stay in the C2021 allowlist
