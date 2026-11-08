@@ -382,6 +382,7 @@ do $$ begin
   perform tests.expect_rows('C1934 name', format('update public.asset_types set name = ''Rooftop'' where id = %L', tests.id('typeA')), 1);
 end $$;
 reset role;
+select set_config('request.jwt.claims', '', true);
 do $$ begin
   perform tests.expect_error('C1934 org', format('update public.asset_types set org_id = %L where id = %L', tests.id('orgB'), tests.id('typeA')), '23514');
 end $$;
