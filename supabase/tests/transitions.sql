@@ -864,7 +864,7 @@ begin
   perform tests.ok('C1669 failed and voided do not count', (select count(*) from public.contract_signature_requests where contract_id in (c, d)) = 4, 'wrong row count');
 end $$;
 
--- C1670: complete opens the request, stores the provider's answer and writes one event, with no outbox row.
+-- C1670: complete opens the request, stores the provider's answer and writes one event, with one outbox row (door 3 of contract-automation; it was none).
 do $$
 declare c uuid := tests.sg_contract('sg9'); r uuid; s public.contract_signature_requests; e record; outbox_before bigint;
 begin
@@ -883,7 +883,9 @@ begin
   select * into e from public.events where entity_type = 'contract' and entity_id = c and type = 'contract.sent_for_signature';
   perform tests.ok('C1670 payload', e.payload = jsonb_build_object('requestId', r, 'provider', 'docuseal', 'versionNo', 1), 'wrong payload ' || e.payload::text);
   perform tests.ok('C1670 actor', e.actor_id = tests.id('uD') and e.org_id = tests.id('orgA'), 'wrong actor or org');
-  perform tests.ok('C1670 no outbox', (select count(*) from public.outbox where org_id = tests.id('orgA')) = outbox_before, 'an outbox row was written');
+  -- Amended by contract-automation door 3 (AD-152): the send event now has exactly one pending outbox row, for W2b.
+  perform tests.ok('C1670 one outbox row', (select count(*) from public.outbox where org_id = tests.id('orgA')) = outbox_before + 1
+    and (select count(*) from public.outbox o where o.event_id = e.id and o.status = 'pending') = 1, 'not exactly one pending outbox row for the send event');
 end $$;
 
 -- C1671: complete refuses a request that is not creating, a malformed answer and a caller who may not; nothing changes.
@@ -1775,6 +1777,29 @@ begin
   perform tests.ok('C1780 hash kept', (select document_sha256 from public.contract_signature_requests where id = r) = repeat('a', 64), 'document_sha256 changed');
   perform tests.ok('C1780 completed', (select completed_at is not null from public.contract_signature_requests where id = r and status = 'completed'), 'a completed request has no completed_at');
   perform tests.ok('C1780 open', (select completed_at is null from public.contract_signature_requests where id = o and status = 'open'), 'an open request has completed_at');
+end $$;
+
+-- C1820: a null combined_document_url falls back to documents[0].url (found in the live run); with no usable url it still raises.
+do $$
+declare c uuid := tests.sg_contract('sw20'); r uuid := tests.sw_open(c, '2001'); before_state text := tests.sw_state();
+  null_combined jsonb := '{"combined_document_url": null, "documents": [{"name": "AG-sw20-contract", "url": "https://docuseal.com/file/b/contract.pdf"}]}';
+begin
+  perform tests.ok('C1820 fallback', tests.sw_post(tests.sw_done('2001', null_combined)) = jsonb_build_object('outcome', 'documents_needed', 'documents', jsonb_build_array(
+      jsonb_build_object('kind', 'signed', 'url', 'https://docuseal.com/file/b/contract.pdf'),
+      jsonb_build_object('kind', 'audit_log', 'url', 'https://docuseal.com/file/a/audit-log.pdf'))), 'wrong answer');
+  perform tests.ok('C1820 unchanged', tests.sw_state() = before_state, 'the first call wrote something');
+  perform tests.ok('C1820 combined wins', tests.sw_post(tests.sw_done('2001', '{"documents": [{"url": "https://docuseal.com/file/b/other.pdf"}]}'))
+    -> 'documents' -> 0 ->> 'url' = 'https://docuseal.com/file/a/document.pdf', 'combined_document_url was not preferred');
+end $$;
+
+-- C1821: null combined and no usable documents[0].url raises 22023.
+do $$
+declare c uuid := tests.sg_contract('sw21'); r uuid := tests.sw_open(c, '2101'); before_state text := tests.sw_state();
+begin
+  perform tests.expect_error('C1821 no documents', tests.sw_post_sql(tests.sw_done('2101', '{"combined_document_url": null}')), '22023');
+  perform tests.expect_error('C1821 empty documents', tests.sw_post_sql(tests.sw_done('2101', '{"combined_document_url": null, "documents": []}')), '22023');
+  perform tests.expect_error('C1821 url number', tests.sw_post_sql(tests.sw_done('2101', '{"combined_document_url": null, "documents": [{"url": 7}]}')), '22023');
+  perform tests.ok('C1821 unchanged', tests.sw_state() = before_state, 'a refused delivery wrote something');
 end $$;
 
 reset role;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { pickType, validateTaskLibraryType, type LibraryType, type TaskLibraryInput } from "./index";
+import { pickType, validateTaskLibraryType, validateTypeName, TYPE_NAME_MESSAGE, type LibraryType, type TaskLibraryInput } from "./index";
 
-const type = (code: string): LibraryType => ({ id: `id-${code}`, code, name: code, defaultVisitMonths: [3, 6, 9, 12], tasks: [] });
+const type = (code: string): LibraryType => ({ id: `id-${code}`, code, name: code, pack: null, defaultVisitMonths: [3, 6, 9, 12], tasks: [] });
 const TYPES = [type("BOILER"), type("RTU")];
 
 const input = (patch: Partial<TaskLibraryInput> = {}): TaskLibraryInput => ({
@@ -96,5 +96,20 @@ describe("validateTaskLibraryType, tasks", () => {
     expect(result.ok).toBe(false);
     expect(!result.ok && result.errors.rows?.[1]?.visitMonths).toBeTruthy();
     expect(!result.ok && result.errors.rows?.[0]).toBeUndefined();
+  });
+});
+
+describe("validateTypeName", () => {
+  test.each([["empty", ""], ["spaces", "   "], ["61 characters", "a".repeat(61)], ["no letter or number", "--- !!!"]])(
+    "C1906: %s is refused with the message",
+    (_label, raw) => {
+      expect(validateTypeName(raw)).toEqual({ ok: false, message: "Name the type in 1 to 60 characters, with at least one letter or number" });
+      expect(TYPE_NAME_MESSAGE).toBe("Name the type in 1 to 60 characters, with at least one letter or number");
+    },
+  );
+
+  test("C1906: the name comes back trimmed, and 60 characters are allowed", () => {
+    expect(validateTypeName("  Sump pump  ")).toEqual({ ok: true, name: "Sump pump" });
+    expect(validateTypeName("a".repeat(60))).toEqual({ ok: true, name: "a".repeat(60) });
   });
 });

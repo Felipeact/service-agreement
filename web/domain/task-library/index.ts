@@ -2,11 +2,21 @@ import { isVisitMonths } from "../agreement/cadence";
 
 export const MAX_LIBRARY_TASKS = 40;
 export const MAX_TASK_DESCRIPTION = 200;
+export const MAX_TYPE_NAME = 60;
+export const TYPE_NAME_MESSAGE = `Name the type in 1 to ${MAX_TYPE_NAME} characters, with at least one letter or number`;
 
 export type LibraryTask = { description: string; visitMonths: number[] | null };
 
 /** An equipment type with its default visit months and checklist (task-library-page). */
-export type LibraryType = { id: string; code: string; name: string; defaultVisitMonths: number[]; tasks: LibraryTask[] };
+export type LibraryType = {
+  id: string;
+  code: string;
+  name: string;
+  /** The pack the type was seeded from, or `null` for one made by hand (type-editor door 2). */
+  pack: string | null;
+  defaultVisitMonths: number[];
+  tasks: LibraryTask[];
+};
 
 /** A checklist row as the form submits it: month numbers as text, no months meaning every visit. */
 export type TaskInput = { description: string; visitMonths: string[] };
@@ -54,4 +64,11 @@ export function validateTaskLibraryType(input: TaskLibraryInput): { ok: true; va
 
   if (errors.defaultVisitMonths || errors.tasks || errors.rows || !defaults) return { ok: false, errors };
   return { ok: true, value: { defaultVisitMonths: defaults, tasks } };
+}
+
+/** The name an owner or admin typed for a type, trimmed, or why it cannot be used (type-editor AC 4). */
+export function validateTypeName(raw: string): { ok: true; name: string } | { ok: false; message: string } {
+  const name = raw.trim();
+  if (name.length < 1 || name.length > MAX_TYPE_NAME || !/[A-Za-z0-9]/.test(name)) return { ok: false, message: TYPE_NAME_MESSAGE };
+  return { ok: true, name };
 }

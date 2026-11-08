@@ -293,11 +293,11 @@ declare
 begin
   foreach v in array array['rtu', 'Rooftop unit', '1RTU', 'RTU-2'] loop
     perform tests.expect_error('C6 ' || v,
-      format('insert into public.asset_types (org_id, code, name) values (%L, %L, ''x'')', a, v), '23514');
+      format('insert into public.asset_types (org_id, code, name) values (%L, %L, %L)', a, v, 'x ' || v), '23514');
   end loop;
   foreach v in array array['RTU_2', 'A'] loop
     perform tests.expect_rows('C6 ' || v,
-      format('insert into public.asset_types (org_id, code, name) values (%L, %L, ''x'')', a, v), 1);
+      format('insert into public.asset_types (org_id, code, name) values (%L, %L, %L)', a, v, 'x ' || v), 1);
   end loop;
   perform tests.expect_error('C6 template rtu',
     'insert into private.catalog_asset_types (code, name, default_visit_months) values (''rtu'', ''x'', ''{3,6,9,12}'')', '23514');

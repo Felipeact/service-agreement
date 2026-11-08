@@ -231,3 +231,36 @@ Size, with the arithmetic (`wc -c` of the files each slice touches, divided by f
 - **C1782-C1815 (SQL):** `npm run test:db outbox_dispatch` passes against `gnxebrtcpbujhvcamtoe` (author run, then Verifier round 2).
 - **C1818:** `get_advisors` (security) lists 7 `anon` and 26 `authenticated` `SECURITY DEFINER` findings, the baseline plus item 3's `signature_webhook`, and nothing for `private.make_contract` or `private.create_contract_for_system` (private schema, `execute` revoked). The result's `observed_at` is 2026-11-07T18:45Z, so it may be cached from before the migration; the two new functions would not appear either way, because the linter reads the exposed schema only.
 - **Verifier round 2:** 37 of 39 proven, 0 failed, no surviving mutant; C1819 (live run) open. Weak spots it listed and I left: C1792 does not assert tenant or site name; C1810 and C1811 check "nothing written" narrowly; C1812's anon half also gives 42501 without schema USAGE; C1794 counts skipped rows with a running total.
+
+### Found in the live run (2026-11-08): amendment to item 3, additive checks
+
+- The live DocuSeal account sends `combined_document_url: null` on `submission.completed`; the signed PDF is `documents[0].url`. `signature_webhook` raised `22023` ("has no document urls"), so the contract stayed `client_signed` after both parties signed. Fixed by migration `20261108210000_signature_webhook_documents_fallback`.
+
+**C1820** - With `combined_document_url` null, `signature_webhook` asks for `documents[0].url` as the signed file; a non-null `combined_document_url` is still preferred, and the first call writes nothing
+Proof: `npm run test:db transitions` (assertion `C1820`)
+
+**C1821** - With `combined_document_url` null and no `documents`, an empty `documents` or a non-string `documents[0].url`, `signature_webhook` raises `22023` and writes nothing
+Proof: `npm run test:db transitions` (assertion `C1821`, 3 cases)
+
+
+### Regression found when `transitions` was first run after the migration (2026-11-08)
+
+- Neither the author nor Verifier round 2 ran `npm run test:db transitions` after `20261108100000`; only `outbox_dispatch` was run. `transitions` fails at **C1604** (contract-generation, structural: `create_contract`'s own source must hold `for update` before `from public.contracts`), because the body moved to `private.make_contract`. The check is correct and unchanged. Migration `20261108220000_create_contract_lock_order` puts the lock and the existing-contract lookup back in `create_contract` (drafted, not applied). Lesson for the next round: run every recipe whose subject a migration touches, not only the feature's own.
+
+- **Applied and measured (2026-11-08, with the owner's go-ahead):** `20261108210000_signature_webhook_documents_fallback` and `20261108220000_create_contract_lock_order`. `npm run test:db`: all 23 recipes pass (C1604 green again, C1820 and C1821 green).
+- **Amendment to an existing assertion, listed:** `transitions.sql` C1670 `no outbox` ("an outbox row was written" must not happen) pinned what door 3 / AD-152 deliberately reverses; it is now `one outbox row`: exactly one more row than before and exactly one `pending` row for the send event. Stricter, not weaker.
+
+### Live run C1819 (2026-11-08, Playwright browser + the owner's own inbox)
+
+Passed end to end on production (project `gnxebrtcpbujhvcamtoe`, Railway `web`, n8n, DocuSeal cloud) with a test agreement `AG-LIVE1` whose signer and the owner were the same address (so also the same-address case, C1804):
+
+1. `agreement.accepted` -> W2a -> contract made by the system (event `via: "w2"`), "contract is ready" email sent (n8n execution 23).
+2. The owner pressed Send -> `contract.sent_for_signature` -> W2b -> signing-link email sent.
+3. Customer and contractor signed in DocuSeal; `form.completed` applied (`client_signed`).
+4. `submission.completed` was refused three times with `400 malformed`: this account sends `combined_document_url: null` (found here). After migration `20261108210000` the owner's Playwright session pressed Resend in the DocuSeal console: contract `completed`, `signed` (97,544 bytes) and `audit_log` (129,963 bytes) stored, W4 notifications `contract_signed_copy` and `staff_contract_signed` both `sent`.
+5. The test rows were deleted afterwards (no `AG-LIVE1`, no `LIVE TEST` customer left).
+
+**C1822** - The contract page passes the contract's `signed` copy (or `null`) and its id to the signing section (signature-webhook Verifier gap M28, M29)
+Proof: `npx vitest run "app/(app)/contracts/[contractId]/page.test.ts" -t "C1822:"`
+
+- **C1818 re-measured after both fix migrations (2026-11-08):** `get_advisors` (security) on `gnxebrtcpbujhvcamtoe`, `observed_at` 2026-11-08T20:02:33Z: 7 `anon_security_definer_function_executable` (automation_claim, automation_complete, portal_decide, portal_record_view, portal_view, signature_view, signature_webhook), 26 `authenticated_security_definer_function_executable` (no new name against the earlier reading; `create_contract` was already listed), 1 INFO `outbox` no policy, 1 auth leaked-password WARN. No finding names `private.make_contract`, `private.create_contract_for_system`, `private.claim_contract_ready`, `private.claim_signing_link` or `private.claim_signed_copy`.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import type { MemberRole, OrgSettings } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
@@ -27,6 +28,9 @@ export function SettingsView(props: SettingsViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
+      <Link href="/task-library" className="text-[13px] font-semibold text-action hover:underline">
+        Task library: equipment types and checklists
+      </Link>
       {props.settings ? (
         <SettingsForm {...props} settings={props.settings} />
       ) : (

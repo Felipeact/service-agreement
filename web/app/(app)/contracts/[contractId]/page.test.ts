@@ -160,3 +160,24 @@ describe("a secret that cannot be read", () => {
     }
   });
 });
+
+describe("the signed copy on the contract page (signature-webhook verifier gap)", () => {
+  const SIGNED = {
+    documents: [
+      { kind: "signed" as const, sizeBytes: 97544, sha256: "a".repeat(64) },
+      { kind: "audit_log" as const, sizeBytes: 129963, sha256: "b".repeat(64) },
+    ],
+    signers: [{ role: "customer" as const, name: "Pat Lee", signedAt: new Date("2026-11-08T19:42:41Z"), ip: "203.0.113.9" }],
+  };
+
+  test("C1822: the contract's signed copy and its id reach the signing section", async () => {
+    const signing = (await render({ status: "completed", signed: SIGNED }, "viewer")) as unknown as { signed: unknown; contractId: string };
+    expect(signing.signed).toEqual(SIGNED);
+    expect(signing.contractId).toBe(CON);
+  });
+
+  test("C1822: a contract with no signed copy passes null, not undefined", async () => {
+    const signing = (await render({ status: "pending_signature", signed: undefined }, "owner")) as unknown as { signed: unknown };
+    expect(signing.signed).toBeNull();
+  });
+});
