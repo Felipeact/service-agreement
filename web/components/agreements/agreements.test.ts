@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, AgreementServiceScope, MemberRole, ServiceLineView } from "@/application/ports";
 import type { AgreementStatus, EquipmentChoice } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
+import { itemWords } from "@/domain/org-settings";
 import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./agreement-view";
 import { LineForm } from "./line-form";
@@ -12,6 +13,7 @@ import { GenerateContractControl, GenerateContractPrompt } from "./contract-cont
 import { CONTRACT_MESSAGES } from "./contract-state";
 import { LinkPanel, ReissuePrompt, SendPrompt } from "./link-controls";
 import { RevisePrompt, WithdrawPrompt } from "./move-controls";
+import { VersionCompare } from "./version-compare";
 import type { LineState, MoveState } from "./state";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
@@ -693,5 +695,48 @@ describe("the generate contract control", () => {
 
   test("C1626: idle renders no alert", () => {
     expect(prompt({ confirming: true })).not.toContain('role="alert"');
+  });
+});
+
+describe("the agreement builder, item words", () => {
+  const stations = itemWords("station", "stations");
+  const noEquipment = (html: string) => expect(html).not.toMatch(/equipment/i);
+  const render = (a: AgreementDetail, role: MemberRole = "estimator") =>
+    renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions, words: stations }));
+
+  test("C2015: the covered legend, the type message and the no-choices line use the org's words", () => {
+    const form = renderToStaticMarkup(
+      createElement(LineForm, {
+        idPrefix: "x", initial: { description: "", visitMonths: [], costPerVisit: "", assetTypeIds: [] }, submitLabel: "Add line", pending: false,
+        state: { status: "invalid", errors: { assetTypeIds: "Choose at least one equipment type" }, values: { description: "", visitMonths: [], costPerVisit: "", assetTypeIds: [] } },
+        choices: CHOICES, words: stations,
+      }),
+    );
+    expect(form).toContain("Stations covered");
+    expect(form).toContain("Choose at least one station type");
+    noEquipment(form);
+    const none = render(agreement({ equipmentChoices: [] }));
+    expect(none).toContain("Add stations to this site before adding a service line");
+    noEquipment(none);
+  });
+
+  test("C2016: the panel heading and its empty lines use the org's words", () => {
+    const live = render(agreement({ status: "sent", serviceScope: { source: "live", takenAt: null, types: [] } }));
+    expect(live).toContain("<h2");
+    expect(live).toMatch(/<h2[^>]*>Stations<\/h2>/);
+    expect(live).toContain("No stations on this site yet.");
+    expect(live).toContain("Add stations");
+    noEquipment(live);
+    const frozen = render(agreement({ status: "sent", serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [] } }));
+    expect(frozen).toContain("No stations were recorded for this version.");
+    noEquipment(frozen);
+  });
+
+  test("C2016: the comparison names the changed field with the org's plural", () => {
+    const [first] = LINES;
+    const changed = { ...first, equipment: [{ id: "t-blr", code: "BLR", name: "Boiler" }] };
+    const html = renderToStaticMarkup(createElement(VersionCompare, { fromNo: 1, toNo: 2, from: [first], to: [changed], words: stations }));
+    expect(html).toMatch(/Stations(<!-- -->)?: /);
+    noEquipment(html);
   });
 });

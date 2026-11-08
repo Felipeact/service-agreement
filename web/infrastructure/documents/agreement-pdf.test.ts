@@ -1,4 +1,4 @@
-import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
+import { DEFAULT_ITEM_WORDS, itemWords } from "@/domain/org-settings";
 import { describe, expect, test } from "vitest";
 import { DRAFT_MARK, type AgreementDocument } from "@/domain/agreement";
 import { reactPdfDocumentRenderer } from "./index";
@@ -239,5 +239,24 @@ describe("the agreement PDF, rendered", () => {
     expect(all.split(winAnsi(name)).length - 1).toBe(3);
     const straight = text(await render({ customerName: "Rénée's Café" }));
     expect(straight).toContain("Rénée's Café");
+  });
+});
+
+describe("the agreement PDF, item words", () => {
+  const stations = itemWords("station", "stations");
+  const listed = { kind: "listed" as const, recordedOn: null, types: [type("AHU", ["Replace filters"], [asset("A-1")])] };
+
+  test("C2023: the covered-items section is headed with the org's plural", async () => {
+    const all = text(await render({ words: stations, scope: listed }));
+    expect(all).toContain("Stations\n");
+    expect(all).not.toMatch(/Equipment/i);
+  });
+
+  test("C2024: the not-recorded sentence uses the org's plural and a plural verb, and the default keeps today's sentence", async () => {
+    const set = text(await render({ words: stations, scope: { kind: "not_recorded" } }));
+    expect(set).toContain("The stations covered by this version were not recorded");
+    expect(set).not.toMatch(/equipment/i);
+    const fallback = text(await render({ scope: { kind: "not_recorded" } }));
+    expect(fallback).toContain("The equipment covered by this version was not recorded");
   });
 });

@@ -104,3 +104,29 @@ describe("the PDF route with the real renderer", () => {
     expect(pdfPages(Buffer.from(await response.arrayBuffer())).join("\n")).toContain("The equipment covered by this version was not recorded");
   });
 });
+
+describe("the PDF route, item words", () => {
+  test("C2027: a version sent earlier prints Equipment, then Stations after the org changes its words", async () => {
+    const types = [{ code: "AHU", name: "AHU", tasks: [{ description: "Inspect", visitMonths: null }], assets: [{ unitNo: "A-1", typeModel: null, location: null }] }];
+    const sent = { ...detail, serviceScope: { source: "frozen" as const, takenAt: new Date("2026-10-20T15:00:00Z"), types } };
+    const original = container.agreementReader.get;
+    container.agreementReader.get = async () => sent;
+    const render = async () => {
+      const response = await GET(new NextRequest(`http://localhost:3000/agreements/${AGR}/pdf`), { params: Promise.resolve({ agreementId: AGR }) });
+      return pdfPages(Buffer.from(await response.arrayBuffer())).join("\n");
+    };
+    try {
+      const before = await render();
+      expect(before).toContain("Equipment\n");
+      SETTINGS.itemSingular = "station";
+      SETTINGS.itemPlural = "stations";
+      const after = await render();
+      expect(after).toContain("Stations\n");
+      expect(after).not.toContain("Equipment\n");
+    } finally {
+      SETTINGS.itemSingular = "equipment";
+      SETTINGS.itemPlural = "equipment";
+      container.agreementReader.get = original;
+    }
+  });
+});

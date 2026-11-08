@@ -223,6 +223,9 @@ export function itemWords(singular: string, plural: string): ItemWords {
 
 export const DEFAULT_ITEM_WORDS: ItemWords = itemWords(DEFAULT_ITEM_WORD, DEFAULT_ITEM_WORD);
 
+/** The past-tense verb for the plural word: "was" for a mass noun such as equipment, else "were". */
+export const itemWas = (words: ItemWords) => (words.singular === words.plural ? "was" : "were");
+
 /** "1 station", "0 stations", "2 stations". */
 export function countItems(count: number, words: ItemWords): string {
   return `${count} ${count === 1 ? words.singular : words.plural}`;

@@ -1,5 +1,6 @@
 import type { ServiceLineView } from "@/application/ports";
 import { diffVersions, monthsLabel, type DiffLine, type FieldChange, type LineDiff } from "@/domain/agreement";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 
 type VersionCompareProps = {
@@ -7,6 +8,7 @@ type VersionCompareProps = {
   toNo: number;
   from: ServiceLineView[];
   to: ServiceLineView[];
+  words?: ItemWords;
 };
 
 const toDiffLine = (line: ServiceLineView): DiffLine => ({
@@ -38,7 +40,7 @@ function show(field: FieldChange["field"], value: FieldChange["from"]): string {
 const summary = (line: DiffLine) =>
   `${line.visitsPerYear} × ${formatCadExact(line.costPerVisitCents)} · ${monthsLabel(line.visitMonths)} · ${line.equipment.join(", ")} · ${formatCadExact(line.annualCents)} per year`;
 
-function Entry({ entry }: { entry: LineDiff }) {
+function Entry({ entry, words }: { entry: LineDiff; words: ItemWords }) {
   if (entry.kind === "changed") {
     return (
       <li data-diff="changed" className="flex flex-col gap-1 px-4 py-3 text-[13px]">
@@ -46,7 +48,7 @@ function Entry({ entry }: { entry: LineDiff }) {
         <ul className="flex flex-col gap-0.5 text-ink-2">
           {entry.changes.map((change) => (
             <li key={change.field}>
-              {FIELD_LABELS[change.field]}: <span className="line-through">{show(change.field, change.from)}</span> → <span className="text-ink">{show(change.field, change.to)}</span>
+              {change.field === "equipment" ? words.Plural : FIELD_LABELS[change.field]}: <span className="line-through">{show(change.field, change.from)}</span> → <span className="text-ink">{show(change.field, change.to)}</span>
             </li>
           ))}
         </ul>
@@ -70,7 +72,7 @@ function signed(deltaCents: number): string {
 }
 
 /** What changed from version `fromNo` to version `toNo`: line by line, then the annual totals (versioning S3). */
-export function VersionCompare({ fromNo, toNo, from, to }: VersionCompareProps) {
+export function VersionCompare({ fromNo, toNo, from, to, words = DEFAULT_ITEM_WORDS }: VersionCompareProps) {
   const diff = diffVersions(from.map(toDiffLine), to.map(toDiffLine));
   return (
     <section aria-label="Comparison" className="overflow-hidden rounded-panel border border-hairline bg-surface">
@@ -80,7 +82,7 @@ export function VersionCompare({ fromNo, toNo, from, to }: VersionCompareProps) 
       ) : (
         <ul className="divide-y divide-hairline">
           {diff.lines.map((entry) => (
-            <Entry key={entry.position} entry={entry} />
+            <Entry key={entry.position} entry={entry} words={words} />
           ))}
         </ul>
       )}

@@ -1,7 +1,7 @@
 import { Font, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { MONTH_NAMES, taskLabel, type DocumentScope } from "@/domain/agreement";
 import type { ScheduleRow } from "@/domain/agreement";
-import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
+import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 
 /** Ordinary words stay whole; a word longer than a column can hold is cut every 12 characters, so it wraps instead of running off the page. */
@@ -119,7 +119,7 @@ export function ScheduleSection({ schedule, accent }: { schedule: ScheduleRow[];
 /** "Service included" and the org's item heading ("Equipment" by default), or the sentence that the version never recorded them. */
 export function ScopeSections({ scope, accent, words = DEFAULT_ITEM_WORDS }: { scope: DocumentScope; accent: string; words?: ItemWords }) {
   if (scope.kind === "not_recorded") {
-    return <Text style={[styles.muted, { marginTop: 18 }]}>{`The ${words.plural} covered by this version ${words.singular === words.plural ? "was" : "were"} not recorded`}</Text>;
+    return <Text style={[styles.muted, { marginTop: 18 }]}>{`The ${words.plural} covered by this version ${itemWas(words)} not recorded`}</Text>;
   }
   return (
     <>

@@ -8,6 +8,7 @@ const container = {
   currentMember,
   siteRegister: vi.fn(),
   agreementReader: { get: vi.fn() },
+  getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }),
   agreementStore: { create: vi.fn() },
   serviceLineStore: { add: vi.fn(), update: vi.fn(), remove: vi.fn() },
   agreementTermStore: { save: vi.fn() },

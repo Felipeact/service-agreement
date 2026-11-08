@@ -197,3 +197,14 @@ describe("the sealed token reaches the new overloads (outbox-dispatch door 5)", 
     expect(client.rpc.mock.calls[0]).toStrictEqual(["reissue_portal_link", { p_agreement_id: AGR, p_token_hash: HASH, p_token_sealed: SEALED }]);
   });
 });
+
+describe("portal reader, item words", () => {
+  test("C2031: tenant.itemSingular and itemPlural become the view's words, and their absence gives equipment", async () => {
+    const { client, typed } = stubClient({});
+    const tenant = (DOCUMENT as { tenant: object }).tenant;
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, tenant: { ...tenant, itemSingular: "station", itemPlural: "stations" } }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.tenant?.words).toEqual({ singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" });
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, tenant }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.tenant?.words).toEqual({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
+  });
+});

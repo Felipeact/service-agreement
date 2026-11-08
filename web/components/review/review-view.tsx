@@ -94,7 +94,7 @@ function Content({ view }: { view: PortalView }) {
 
       <VisitScheduleSection schedule={visitSchedule(view.lines, scope.source === "not_recorded" ? [] : scope.types)} />
 
-      <ServiceScopeSections scope={scope} siteId="" canAddEquipment={false} />
+      <ServiceScopeSections scope={scope} siteId="" canAddEquipment={false} words={view.tenant?.words} />
 
       {terms.length > 0 && (
         <section aria-label="Terms" className={panel}>

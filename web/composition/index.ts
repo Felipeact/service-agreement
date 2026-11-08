@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { OrgSettingsValue } from "@/domain/org-settings";
+import { DEFAULT_ITEM_WORDS, itemWords, type OrgSettingsValue } from "@/domain/org-settings";
 import {
   makeDecidePortal,
   makeInviteMember,
@@ -147,6 +147,11 @@ export async function getContainer() {
     customerDetail: customers.detail,
     siteRegister: sites.get,
     getOrgSettings: settings.get,
+    /** The org's item words for the screens that name the item; the defaults for an org with no settings row (item-vocabulary AC 4). */
+    getItemWords: async (orgId: string) => {
+      const found = await settings.get(orgId);
+      return found ? itemWords(found.itemSingular, found.itemPlural) : DEFAULT_ITEM_WORDS;
+    },
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
     contactForEdit: customers.contact,
     assetForEdit: sites.asset,
