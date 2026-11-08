@@ -160,10 +160,11 @@
 
 ## Handoff
 
-**Feature**: contract-automation (ROADMAP Phase 4 item 4, n8n W2 and W4) - BUILT, not verified. 35 checks (C1781-C1819), profile standard, one builder; plan `.specs/features/contract-automation/plan.md`. The previous snapshot (signature-provider, DONE) and the rest of this section follow.
-**Where**: on `development`, three local commits after `36ad805` (migration + SQL proofs, TypeScript + n8n + vitest, docs). Nothing pushed.
-**Proofs**: `npx vitest run` 174 files and 3,363 tests, `tsc --noEmit` and `eslint .` clean. SQL proofs C1782-C1815 are written and parse but have not run: migration `20261108100000_contract_automation` is **not applied** (owner's go-ahead). C1818 (advisors) and C1819 (live run) open.
-**Next for the owner**: say yes to applying the migration, then `npm run test:db outbox_dispatch`; import W2a, W2b, W4 and the new `events.json` into n8n; run the live path (accept, Send, sign twice). Also pending from item 3: DocuSeal webhook + Vault secret + public URL, and its Verifier gap (a page test for the `signed` and `contractId` props).
+**Feature**: contract-automation (ROADMAP Phase 4 item 4, n8n W2 and W4) - DONE. 42 checks (C1781-C1822), profile standard, one builder; Verifier round 4 PASS (`validate_verification.py` exit 0). Plan `.specs/features/contract-automation/plan.md`. Item 3 (signature-webhook) also ticked: live run passed, blocking Verifier gap closed by C1822.
+**Where**: on `development` (commits through the one that contains this text); PR #3 merged to `main` earlier and deployed to Railway `web`.
+**Proofs**: `npx vitest run` 175 files and 3,372 tests, `tsc` and `eslint` clean, `npm run test:db` 23 of 23 recipes. Migrations `20261108100000`, `20261108210000`, `20261108220000` applied. Live run C1819 passed on production 2026-11-08 (test rows deleted afterwards).
+**Open, not blocking**: signature-webhook non-blocking SQL gaps (`completed` request x `form.declined`/`form.completed`; `anon` refusal on `contract_signed_documents`); weak assertions C1792, C1810, C1811, C1812, C1794; counsel has not read the generated clauses or the e-signature flow (go-live); the n8n API key and DocuSeal webhook secret were pasted into a chat and should be rotated.
+**Next**: ROADMAP Phase 4.5 (type editor and `seed_org_catalog(pack)`, decision 22)
 
 **Previous snapshot:**
 

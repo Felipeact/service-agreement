@@ -1,20 +1,20 @@
 # Contract automation verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: standard
-**Diff range**: 0557e89..caa7f88
-**Round**: 3 - scoped
+**Diff range**: 0557e89..d9fc0fe
+**Round**: 4 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-Summary: 42 checks (C1781-C1822). 41 PASS, 0 FAIL, 1 Unproven (C1818). C1819 is proven from specific, code-consistent recorded evidence. Round-2 mutants stay killed; the new surfaces (C1820, C1821, C1822) had every injected mutant killed. No code or test finding is open. The one open row is an evidence-timing gap in C1818, not a code defect.
+Summary: 42 checks (C1781-C1822). 42 PASS, 0 FAIL, 0 Unproven. Round 3 left one open row, C1818, an evidence-timing gap. Commit d9fc0fe recorded a fresh advisors reading taken after the migrations were applied, and it holds up (judged below). `git diff --stat caa7f88..HEAD` touches only `checks.md` (2 lines) and `verification.md`: no code, test or migration changed, so every other row is carried from round 3.
 
 ## Binding sources
 
-No binding source: the plan marks none; Step 1 does not run (verified at caa7f88).
+No binding source: the plan marks none; Step 1 does not run (verified at d9fc0fe).
 
 ## Checks
 
-Proofs re-run in full at caa7f88: `cd web && npx vitest run` (175 files, 3,372 tests passed; round 2 had 3,370, the +2 are the two C1822 tests) and `npm run test:db` (all 23 recipes PASS, rolled back). Rows C1781-C1817 are carried from b6c529d (round 2 evidence; citations unchanged because none of the files they cite changed in b6c529d..caa7f88, whose diff touches only the two migrations, `supabase/tests/transitions.sql`, `page.test.ts` and docs). Their named tests are in the full vitest run (all pass) and `outbox_dispatch` PASS in test:db. New or re-judged rows say "verified at caa7f88".
+Proofs re-run in full at d9fc0fe: `cd web && npx vitest run` (175 files, 3,372 tests passed) and `npm run test:db` (all 23 recipes PASS, rolled back). Rows C1781-C1817 and C1819-C1822 are carried from round 3 (verified at caa7f88; C1781-C1817 originally from b6c529d). Carrying is safe: `git diff --stat caa7f88..HEAD` lists only `.specs/features/contract-automation/checks.md` and `verification.md`, so every file those rows cite is unchanged since b6c529d..caa7f88's last change. Only C1818 is re-judged here (verified at d9fc0fe).
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
@@ -55,7 +55,7 @@ Proofs re-run in full at caa7f88: `cd web && npx vitest run` (175 files, 3,372 t
 | C1815 | SQL: four kinds accepted, unknown 23514 | test:db PASS | `outbox_dispatch.sql:1764` `... = 'ok'` per kind; `:1773` `... = '23514'` for `staff_made_up` | PASS |
 | C1816 | in_flight, unavailable, duplicate for the new kinds; route maps through | `notify-contract.test.ts -t "C1816:"` exit 0 | `notify-contract.test.ts:131-143` `{ ok: false, code: "in_flight" }`, `duplicate`, `unavailable`, `unauthorized`, `not_found`; route map is pre-existing `route.test.ts:60-112` | PASS |
 | C1817 | container: signing tokens from SIGNING_LINK_KEY, portal from PORTAL_LINK_KEY | `automation-container.test.ts -t "C1817:"` exit 0 | assembly read: `web/composition/index.ts:253` `makePortalTokens(process.env.SIGNING_LINK_KEY)`, `:250` portal `PORTAL_LINK_KEY`; test drives the real `getAutomationContainer` | PASS |
-| C1818 | advisors after the migration show no new lints (re-judged at caa7f88) | not re-runnable by the Verifier (no Supabase MCP); recorded in `checks.md` line 232 | recorded: baseline 7 anon plus 26 authenticated SECURITY DEFINER findings, none for the private functions; but the same line states `observed_at` 2026-11-07T18:45Z, before the migrations were applied (2026-11-08), so it may be cached from before the change and cannot show the post-migration state. The private-schema argument is reasoning, not an observation. | Unproven - observation predates the migration; re-run get_advisors and record a post-migration observed_at |
+| C1818 | advisors after the migrations show the lints they already had and none for the private functions (re-judged at d9fc0fe) | not re-runnable by the Verifier (no Supabase MCP); recorded in `checks.md` line 266 (commit d9fc0fe) | Specific: `observed_at` 2026-11-08T20:02:33Z, after migrations 20261108100000, 20261108210000 and 20261108220000 were applied (the earlier 2026-11-07T18:45Z reading is superseded); lists 7 anon names (automation_claim, automation_complete, portal_decide, portal_record_view, portal_view, signature_view, signature_webhook) and 26 authenticated; names the five private functions as absent. Consistent with the baseline: AD-143 (`.specs/STATE.md:149`) gives 6 anon / 25 authenticated after `signature_view`, AD-148 (`:154`) adds `signature_webhook` (anon 7, authenticated 26), and the 7 recorded anon names are exactly that set; migrations 100000/210000/220000 add no public function (`create_contract` and `signature_webhook` are redefinitions, `create_contract` already listed), so 7/26 is the expected count. Consistent with the code: `supabase/migrations/20261108100000_contract_automation.sql:75,82,341,406,522` carry `revoke execute ... from public, anon, authenticated` for make_contract, create_contract_for_system, claim_contract_ready, claim_signing_link, claim_signed_copy, and they live in `private`, which the linter does not read. Limit: the 26 authenticated names are not enumerated in the record, only stated as no new name against the earlier reading; the count arithmetic closes it. | PASS (recorded evidence) |
 | C1819 | live run end to end (judged from recorded evidence at caa7f88) | cannot be re-observed (test rows deleted); evidence in `checks.md` lines 253-261 | specific and consistent with the code: n8n execution 23; event `via: "w2"` (matches `supabase/tests/outbox_dispatch.sql` C1782); three `400 malformed` refusals with `combined_document_url: null` (matches `web/infrastructure/supabase/signature-webhook.ts:49` 22023 to malformed, and the pre-fix raise "has no document urls"); after migration 20261108210000 the contract is `completed` with `signed` 97,544 bytes and `audit_log` 129,963 bytes stored and W4 `contract_signed_copy` and `staff_contract_signed` both `sent` (matches C1801 and C1814); same-address case (C1804); cleanup stated. Sizes, execution id, status sequence and root cause all line up with the code and with C1820. | PASS (recorded evidence) |
 | C1820 | null combined_document_url falls back to documents[0].url; a non-null combined is still preferred; first call writes nothing (verified at caa7f88) | `npm run test:db transitions` PASS (23/23) | `supabase/tests/transitions.sql:1787-1789` `tests.sw_post(tests.sw_done('2001', null_combined)) = jsonb_build_object('outcome','documents_needed','documents', ... 'url','https://docuseal.com/file/b/contract.pdf' ...)`; `:1790` `tests.sw_state() = before_state`; `:1791-1792` `-> 'documents' -> 0 ->> 'url' = 'https://docuseal.com/file/a/document.pdf'`; code `supabase/migrations/20261108210000_signature_webhook_documents_fallback.sql:157` `coalesce(nullif(v_data -> 'combined_document_url','null'::jsonb), v_data #> '{documents,0,url}')` | PASS |
 | C1821 | null combined with no documents, empty documents, non-string url each raise 22023 and write nothing (verified at caa7f88) | `npm run test:db transitions` PASS | `transitions.sql:1799-1801` three `tests.expect_error(..., '22023')` (no `documents`, `"documents": []`, `"url": 7`); `:1802` `tests.sw_state() = before_state` | PASS |
@@ -92,7 +92,7 @@ Recomputed for the rows whose authority the diff touched (verified at caa7f88); 
 
 ## Faults injected
 
-Edits were made in the real tree and restored (`git checkout --` or a byte copy); `git status --porcelain` and `git diff` are empty afterwards. Nothing was applied to the project. The first eight rows ran in round 3 at caa7f88; the last is carried.
+Edits were made in the real tree and restored (`git checkout --` or a byte copy); `git status --porcelain` and `git diff` are empty afterwards. Nothing was applied to the project. Round 4 changed no code, so no new faults were injected; every row below is carried from round 3 (verified at caa7f88).
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
@@ -108,7 +108,11 @@ Edits were made in the real tree and restored (`git checkout --` or a byte copy)
 
 Method note: SQL mutants flip a recipe expectation, because the applied migration cannot be mutated and the Verifier may not apply anything. They show the C1820 and C1821 assertions execute and can fail; the first two flips distinguish the fallback and the combined-wins branches (removing either behaviour changes the answer those expectations compare). The C1821 "no documents" case was not flipped separately; it shares the helper with the two that were.
 
-## Changed status since round 2
+## Changed status since round 3
+
+C1818 moved from Unproven to PASS on the post-migration advisors reading recorded in d9fc0fe. Nothing else changed; no recipe or test changed status.
+
+## Changed status since round 2 (carried from round 3)
 
 Recipes: none changed status in the wrong direction. 23 of 23 PASS now; in round 2 only `outbox_dispatch` had been run against the applied migration, and `transitions` was red at C1604 until `20261108220000`, now green. Tests: 3,370 to 3,372 passed (+2, C1822), no test went red. C1670 amended (judged above). C1818 moved from "open by design" to "measured, observation predates the migration" (still Unproven). C1819 moved from Unproven to PASS on recorded evidence.
 
