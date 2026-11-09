@@ -294,7 +294,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 4.5: Multi-trade catalog (M18, M6)
 - [x] Add, rename and remove equipment types in the task library, and reset a type to its pack. A new type gets a code made from its name, and the code never changes after that (frozen snapshots, `?type=` links and import matching all key on it); a rename changes the name only. Names are unique per org, ignoring case. A type can be removed only while no asset, service line or import row uses it
 - [x] `seed_org_catalog(org, pack)`: the catalog template tables gain a pack, and the current 40-type catalog becomes the `hvac` pack. Each org type records the pack it came from, so "reset to pack" knows which template row to restore (null for a type made by hand). The one-argument call keeps working and defaults to `hvac`
-- [ ] Per-org vocabulary for the serviced item, used by the UI, PDFs and portal
+- [x] Per-org vocabulary for the serviced item, used by the UI, PDFs and portal. Owners and admins set a singular and a plural in Company settings (default "equipment"); the staff screens, the agreement and contract PDFs and the customer review page say them (`.specs/features/item-vocabulary/`, AD-157 to AD-159, migration `20261109140000`). Verifier rounds 1 to 3 failed on test gaps that were closed; three rounds ended with two dialog wiring gaps the owner accepted (2026-11-09)
 - [ ] Synonyms as data (per pack and per org) and a trade context in the extraction prompt
 - [ ] Plumbing and electrical starter packs, reviewed by a practitioner
 - [ ] Trade-neutral product copy (`app/layout.tsx`, PRODUCT.md)
