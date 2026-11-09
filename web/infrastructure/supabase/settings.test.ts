@@ -23,7 +23,7 @@ const value: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
-  proposalValidityDays: 30,
+  proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment",
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -106,7 +106,40 @@ describe("org settings store", () => {
     const read = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row, error: null } }).typed).get(ORG);
     expect(read?.proposalValidityDays).toBe(14);
     const { typed, calls } = stubClient({ org_settings: { data: [{ org_id: ORG }], error: null } });
-    await supabaseOrgSettingsStore(typed).save(ORG, { ...value, proposalValidityDays: 14 }, AT);
+    await supabaseOrgSettingsStore(typed).save(ORG, { ...value, proposalValidityDays: 14, itemSingular: "equipment", itemPlural: "equipment" }, AT);
     expect(calls.find((call) => call.method === "update")?.args[0]).toMatchObject({ proposal_validity_days: 14 });
+  });
+});
+
+describe("org settings store, item words", () => {
+  test("C2009: save writes both words and get reads them back, defaulting to equipment", async () => {
+    const saving = stubClient({ org_settings: { data: [{ org_id: ORG }], error: null } });
+    await supabaseOrgSettingsStore(saving.typed).save(ORG, { ...value, itemSingular: "station", itemPlural: "stations" }, AT);
+    const update = saving.calls.find((call) => call.method === "update");
+    expect(update?.args[0]).toMatchObject({ item_singular: "station", item_plural: "stations" });
+
+    const row = (words: { item_singular: string; item_plural: string }) => ({
+      org_id: ORG, legal_name: "Acme Ltd.", address: null, phone: null, logo_path: null, accent_color: null,
+      repair_discount_pct: 0, cpi_cap_pct: 0, cancellation_notice_days: null, payment_days: null, governing_province: null,
+      tax_note: null, default_term_months: 12, renewal_notice_days: 30, cpi_renegotiation_threshold_pct: 5,
+      renewal_cpi_pct: null, renewal_cpi_as_of: null, proposal_validity_days: 30, ...words,
+    });
+    const set = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row({ item_singular: "station", item_plural: "stations" }), error: null } }).typed).get(ORG);
+    expect([set?.itemSingular, set?.itemPlural]).toEqual(["station", "stations"]);
+    const fresh = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row({ item_singular: "equipment", item_plural: "equipment" }), error: null } }).typed).get(ORG);
+    expect([fresh?.itemSingular, fresh?.itemPlural]).toEqual(["equipment", "equipment"]);
+  });
+});
+
+describe("org settings store, rows from before the words existed", () => {
+  test("C2009: a row without the two columns reads equipment for both instead of failing", async () => {
+    const row = {
+      org_id: ORG, legal_name: "Acme Ltd.", address: null, phone: null, logo_path: null, accent_color: null,
+      repair_discount_pct: 0, cpi_cap_pct: 0, cancellation_notice_days: null, payment_days: null, governing_province: null,
+      tax_note: null, default_term_months: 12, renewal_notice_days: 30, cpi_renegotiation_threshold_pct: 5,
+      renewal_cpi_pct: null, renewal_cpi_as_of: null, proposal_validity_days: 30,
+    };
+    const found = await supabaseOrgSettingsStore(stubClient({ org_settings: { data: row, error: null } }).typed).get(ORG);
+    expect([found?.itemSingular, found?.itemPlural]).toEqual(["equipment", "equipment"]);
   });
 });

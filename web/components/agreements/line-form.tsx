@@ -8,6 +8,7 @@ import {
   type MonthPreset,
   type ServiceLineInput,
 } from "@/domain/agreement";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { Button } from "@/components/ui/button";
 import { MonthGrid, monthBox as box, monthChoice as choice } from "@/components/ui/month-grid";
 import { TextInput } from "@/components/ui/text-input";
@@ -32,6 +33,8 @@ type LineFormProps = {
   /** The add or save action; absent in tests that only render markup. */
   action?: (formData: FormData) => void;
   onCancel?: () => void;
+  /** The org's item words; the default when absent (item-vocabulary AC 5). */
+  words?: ItemWords;
 };
 
 const legend = "text-[13px] font-medium text-ink";
@@ -50,6 +53,7 @@ export function LineForm({
   onPreset,
   action,
   onCancel,
+  words = DEFAULT_ITEM_WORDS,
 }: LineFormProps) {
   const values = state.status === "invalid" ? state.values : initial;
   const errors = state.status === "invalid" ? state.errors : {};
@@ -79,7 +83,7 @@ export function LineForm({
       </div>
 
       <fieldset className="flex flex-col gap-1.5" aria-describedby={errors.assetTypeIds ? typesError : undefined}>
-        <legend className={`${legend} mb-1.5`}>Equipment covered</legend>
+        <legend className={`${legend} mb-1.5`}>{`${words.Plural} covered`}</legend>
         <div className="flex flex-wrap gap-1.5">
           {choices.map((type) => (
             <label key={type.id} className={`${choice} px-3`}>
@@ -97,7 +101,7 @@ export function LineForm({
         </div>
         {errors.assetTypeIds && (
           <p id={typesError} className="text-[12px] font-medium text-danger">
-            {errors.assetTypeIds}
+            {`Choose at least one ${words.singular} type`}
           </p>
         )}
       </fieldset>

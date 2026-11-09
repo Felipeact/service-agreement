@@ -10,7 +10,7 @@ import type {
   TimelineEntry,
 } from "@/domain/agreement";
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
-import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
@@ -763,7 +763,7 @@ export interface PortalTokens {
 export type PortalView = {
   link: { versionNo: number; current: boolean; revoked: boolean; revokedAt: Date | null; firstViewedAt: Date | null };
   agreement: { number: string; status: AgreementStatus };
-  tenant: { name: string; address: string | null; phone: string | null; accent: string | null } | null;
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; words: ItemWords } | null;
   customer: { name: string };
   site: { name: string };
   lines: {

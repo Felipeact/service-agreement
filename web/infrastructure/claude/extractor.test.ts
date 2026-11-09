@@ -160,3 +160,10 @@ describe("claudeAssetExtractor", () => {
     expect(request.max_tokens as number).toBeGreaterThanOrEqual(16000);
   });
 });
+
+describe("the extraction prompt, item words", () => {
+  test("C2022: the prompt still says the HVAC and mechanical equipment sentence (item 4 of the roadmap changes it, not this feature)", async () => {
+    const { SYSTEM_PROMPT } = await import("./index");
+    expect(SYSTEM_PROMPT).toContain("You extract the equipment units listed in a customer's equipment list for an HVAC and mechanical service contractor.");
+  });
+});

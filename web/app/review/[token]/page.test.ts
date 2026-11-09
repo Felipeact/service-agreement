@@ -1,3 +1,4 @@
+import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -91,7 +92,7 @@ describe("the open page", () => {
   });
 
   test("C909: with address and phone null the page holds no null or undefined text", async () => {
-    answer(portalView({ tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: null } }));
+    answer(portalView({ tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: null, words: DEFAULT_ITEM_WORDS } }));
     const html = await render();
     expect(html).not.toMatch(/null|undefined/);
   });
@@ -154,19 +155,19 @@ describe("the brand", () => {
   });
 
   test("C912: with accent null the neutral accent is used", async () => {
-    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: null } }));
+    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: null, words: DEFAULT_ITEM_WORDS } }));
     expect(await render()).toContain("background-color:#374151;color:#ffffff");
   });
 
   test("C912: an accent that is not #rrggbb never reaches a style", async () => {
-    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: "red;background:url(x)" } }));
+    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: "red;background:url(x)", words: DEFAULT_ITEM_WORDS } }));
     const html = await render();
     expect(html).not.toContain("url(x)");
     expect(html).toContain("#374151");
   });
 
   test("C912: a pale accent gets near-black button text", async () => {
-    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: "#ffeb3b" } }));
+    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: "#ffeb3b", words: DEFAULT_ITEM_WORDS } }));
     expect(await render()).toContain("background-color:#ffeb3b;color:#050505");
   });
 });
@@ -193,7 +194,7 @@ describe("the states", () => {
   });
 
   test("C914: without a phone the message stands alone", async () => {
-    answer(portalView({ link: revokedLink, tenant: { name: "Acme", address: null, phone: null, accent: null } }));
+    answer(portalView({ link: revokedLink, tenant: { name: "Acme", address: null, phone: null, accent: null, words: DEFAULT_ITEM_WORDS } }));
     const page = text(await render());
     expect(page).toContain("This link has been replaced. Ask Acme for the new one.");
     expect(page).not.toContain("Phone");

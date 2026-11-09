@@ -33,11 +33,14 @@ function versionOf(value: string | undefined): number | undefined {
 /** Reads the agreement and `?version` at request time. */
 export async function AgreementForRequest({ agreementId, searchParams }: AgreementProps) {
   if (!isUuid(agreementId)) notFound();
-  const { currentMember, agreementReader } = await getContainer();
+  const { currentMember, agreementReader, getItemWords } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const params = await searchParams;
-  const agreement = await agreementReader.get(agreementId, versionOf(first(params.version)), versionOf(first(params.compare)));
+  const [agreement, words] = await Promise.all([
+    agreementReader.get(agreementId, versionOf(first(params.version)), versionOf(first(params.compare))),
+    getItemWords(member.orgId),
+  ]);
   if (!agreement) notFound();
 
   const actions: AgreementActions | undefined = canWriteRecords(member.role)
@@ -55,7 +58,7 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
       }
     : undefined;
 
-  return <AgreementView agreement={agreement} role={member.role} actions={actions} />;
+  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} />;
 }
 
 export default async function AgreementPage({ params, searchParams }: PageProps<"/agreements/[agreementId]">) {

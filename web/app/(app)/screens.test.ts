@@ -121,6 +121,8 @@ function form(patch: Record<string, string> = {}) {
     renewalNoticeDays: "30",
     cpiRenegotiationThresholdPct: "5",
     proposalValidityDays: "30",
+    itemSingular: "equipment",
+    itemPlural: "equipment",
     ...patch,
   };
   for (const [name, value] of Object.entries(fields)) data.set(name, value);

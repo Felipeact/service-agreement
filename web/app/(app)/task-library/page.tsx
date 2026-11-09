@@ -12,11 +12,11 @@ export const metadata: Metadata = { title: "Task library" };
 
 /** `?type=<code>` picks the type shown; an unknown or repeated value shows the first one (task-library-page Surface). */
 export async function TaskLibraryForRequest({ params }: { params: { type?: string | string[] } }) {
-  const { currentMember, listTaskLibrary } = await getContainer();
+  const { currentMember, listTaskLibrary, getItemWords } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
-  const types = await listTaskLibrary();
-  return <TaskLibraryView types={types} selected={pickType(types, params.type)} role={member.role} action={saveTaskLibraryAction} typeActions={TYPE_ACTIONS} />;
+  const [types, words] = await Promise.all([listTaskLibrary(), getItemWords(member.orgId)]);
+  return <TaskLibraryView types={types} selected={pickType(types, params.type)} role={member.role} words={words} action={saveTaskLibraryAction} typeActions={TYPE_ACTIONS} />;
 }
 
 export default async function TaskLibraryPage({ searchParams }: PageProps<"/task-library">) {

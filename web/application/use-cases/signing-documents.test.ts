@@ -104,3 +104,11 @@ describe("what sending does before it begins", () => {
     expect(provider.createRequest).not.toHaveBeenCalled();
   });
 });
+
+describe("the document the contract is sent as, item words", () => {
+  test("C2023: the org's stored words reach the document that goes to the signature provider", async () => {
+    settings.mockResolvedValue({ accentColor: null, itemSingular: "station", itemPlural: "stations" } as never);
+    await makeContractDocuments({ get }, { get: agreementGet } as never, settings).load("c1", "org-1");
+    expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, null, { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" });
+  });
+});

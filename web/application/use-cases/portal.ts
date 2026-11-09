@@ -86,6 +86,8 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       renewalCpiPct: null,
       renewalCpiAsOf: null,
       proposalValidityDays: 30,
+      itemSingular: view.tenant.words.singular,
+      itemPlural: view.tenant.words.plural,
     },
   );
 }

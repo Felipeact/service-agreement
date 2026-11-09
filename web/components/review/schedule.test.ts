@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import { portalView } from "@/application/portal-view.testing";
 import type { PortalView } from "@/application/ports";
+import { itemWords } from "@/domain/org-settings";
 import { ReviewView } from "./review-view";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
@@ -43,5 +44,23 @@ describe("the review page's visit schedule", () => {
   test("C1085: with no lines it says No visits scheduled yet", () => {
     const out = render(portalView({ lines: [], annualCents: 0 }));
     expect(out.slice(out.indexOf("Visit schedule"), out.indexOf("Service included"))).toContain("No visits scheduled yet");
+  });
+});
+
+describe("the review page, item words", () => {
+  test("C2032: the covered-items panel is headed with the org's plural, and its empty line uses it", () => {
+    const base = portalView({});
+    const tenant = { ...(base.tenant as NonNullable<PortalView["tenant"]>), words: itemWords("station", "stations") };
+    const out = renderToStaticMarkup(
+      createElement(ReviewView, {
+        token: "t",
+        view: { ...base, tenant, scope: { schema: 2, takenAt: "2026-10-20T15:00:00Z", types: [] } },
+        state: "open",
+        actions: { decide: async () => ({ status: "idle" as const }), record: async () => undefined },
+      }),
+    );
+    expect(out).toMatch(/<h2[^>]*>Stations<\/h2>/);
+    expect(text(out)).toContain("No stations were recorded for this version.");
+    expect(out).not.toMatch(/equipment/i);
   });
 });

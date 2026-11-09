@@ -68,6 +68,7 @@ import {
 } from "@/infrastructure/supabase/readers";
 import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supabaseSiteStore } from "@/infrastructure/supabase/records";
 import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
+import { itemWordsReader } from "@/application/use-cases/item-words";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
 
 function required(name: string, value: string | undefined): string {
@@ -147,6 +148,7 @@ export async function getContainer() {
     customerDetail: customers.detail,
     siteRegister: sites.get,
     getOrgSettings: settings.get,
+    getItemWords: itemWordsReader(settings.get),
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
     contactForEdit: customers.contact,
     assetForEdit: sites.asset,

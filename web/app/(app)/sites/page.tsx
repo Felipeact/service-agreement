@@ -2,9 +2,16 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SitesListView } from "@/components/sites/sites-list";
 import { getContainer } from "@/composition";
+import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
 import { parseSiteFilter } from "@/domain/records";
 
-export const metadata: Metadata = { title: "Sites & equipment" };
+/** The tab title names the org's item like the page does; a member with no workspace gets the default (item-vocabulary AC 6). */
+export async function generateMetadata(): Promise<Metadata> {
+  const { currentMember, getItemWords } = await getContainer();
+  const member = await currentMember();
+  const words = member.status === "member" ? await getItemWords(member.orgId) : DEFAULT_ITEM_WORDS;
+  return { title: `Sites & ${words.plural}` };
+}
 
 type Params = Parameters<typeof parseSiteFilter>[0];
 

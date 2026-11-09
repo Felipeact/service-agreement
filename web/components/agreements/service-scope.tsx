@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AgreementServiceScope } from "@/application/ports";
+import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
 import { isUnreached, taskLabel, type ScheduleLine, type ScopeType } from "@/domain/agreement";
 
 type ServiceScopeSectionsProps = {
@@ -10,6 +11,8 @@ type ServiceScopeSectionsProps = {
   canAddEquipment: boolean;
   /** The shown version's lines, on the staff page only: a seasonal task none of them visits is flagged (seasonal-tasks AC 14). */
   lines?: readonly ScheduleLine[];
+  /** The org's item words; the default when a caller has none (item-vocabulary AC 5). */
+  words?: ItemWords;
 };
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
@@ -20,8 +23,8 @@ const note = "px-4 py-6 text-center text-[13px] text-ink-2";
 
 const units = (count: number) => `${count} ${count === 1 ? "unit" : "units"}`;
 
-/** "Service included" and "Equipment": what the shown version covers, one entry per equipment type. */
-export function ServiceScopeSections({ scope, siteId, canAddEquipment, lines }: ServiceScopeSectionsProps) {
+/** "Service included" and the item panel ("Equipment" by default): what the shown version covers, one entry per type. */
+export function ServiceScopeSections({ scope, siteId, canAddEquipment, lines, words = DEFAULT_ITEM_WORDS }: ServiceScopeSectionsProps) {
   const types: ScopeType[] = scope.source === "not_recorded" ? [] : scope.types;
   const recorded = scope.source === "frozen" && scope.takenAt ? `As recorded on ${date.format(scope.takenAt)}` : null;
 
@@ -29,14 +32,14 @@ export function ServiceScopeSections({ scope, siteId, canAddEquipment, lines }: 
   if (scope.source === "not_recorded") {
     empty = <p className={note}>Not recorded for this version.</p>;
   } else if (types.length === 0 && scope.source === "frozen") {
-    empty = <p className={note}>No equipment was recorded for this version.</p>;
+    empty = <p className={note}>{`No ${words.plural} ${itemWas(words)} recorded for this version.`}</p>;
   } else if (types.length === 0) {
     empty = (
       <div className={`${note} flex flex-col items-center gap-1`}>
-        <p>No equipment on this site yet.</p>
+        <p>{`No ${words.plural} on this site yet.`}</p>
         {canAddEquipment && (
           <Link href={`/sites/${siteId}`} className="inline-flex min-h-11 items-center font-medium text-action">
-            Add equipment
+            {`Add ${words.plural}`}
           </Link>
         )}
       </div>
@@ -75,8 +78,8 @@ export function ServiceScopeSections({ scope, siteId, canAddEquipment, lines }: 
         )}
       </section>
 
-      <section aria-label="Equipment" className={panel}>
-        <h2 className={heading}>Equipment</h2>
+      <section aria-label={words.Plural} className={panel}>
+        <h2 className={heading}>{words.Plural}</h2>
         {recordedNote}
         {empty ?? (
           <div className="divide-y divide-hairline">

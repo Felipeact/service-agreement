@@ -10,6 +10,7 @@ import { Spot } from "@/components/ui/illustrations";
 import { FilterChips, type Chip } from "@/components/ui/list-panel";
 import { Select } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { ATTENTION, date, outcomeLine, REVIEWABLE, STATUS_LABELS } from "./job-list";
 
 const LINK = "inline-flex min-h-11 items-center text-action hover:underline lg:min-h-0";
@@ -31,6 +32,7 @@ type Props = {
   filter: ImportFilter;
   /** The drop banner for writers, above the history. */
   banner?: ReactNode;
+  words?: ItemWords;
 };
 
 /** `/imports` with the site kept and the status replaced. */
@@ -43,7 +45,7 @@ function importsHref(filter: ImportFilter, status?: ImportFilter["status"]): str
 }
 
 /** The Imports page body: header with a count, the filters, then one row per import job (imports-page S1, S2). */
-export function ImportHistoryView({ rows, sites, filter, banner }: Props) {
+export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT_ITEM_WORDS }: Props) {
   const filtered = Boolean(filter.status || filter.siteId);
   const attention = rows.filter((job) => ATTENTION.has(job.status)).length;
   const standing = [`${rows.length} ${rows.length === 1 ? "import" : "imports"}`, attention > 0 ? `${attention} need attention` : null].filter(Boolean).join(" · ");
@@ -82,16 +84,17 @@ export function ImportHistoryView({ rows, sites, filter, banner }: Props) {
         filtered ? (
           <EmptyPanel title="No imports match these filters." text="Try a different status or site, or clear the filters." />
         ) : (
-          <EmptyPanel title="No imports yet" text="Equipment lists you upload to a site appear here." art={<Spot kind="sheet" />}>
+          <EmptyPanel title="No imports yet" text={itemText("Equipment lists you upload to a site appear here.", words)} art={<Spot kind="sheet" />}>
             <Link href="/sites" className={`${LINK} text-[13px] font-medium`}>
-              Go to Sites &amp; equipment
+              {`Go to Sites & ${words.plural}`}
             </Link>
           </EmptyPanel>
         )
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((job) => {
-            const line = outcomeLine(job);
+            const found0 = outcomeLine(job);
+            const line = found0 && itemText(found0, words);
             const found = job.extraction?.status === "extracted" ? job.extraction : null;
             const recognized = found ? Math.max(0, found.rows - found.unmatched) : 0;
             const percent = found && found.rows > 0 ? Math.round((recognized / found.rows) * 100) : 0;

@@ -3,9 +3,11 @@
 import { useActionState, useState } from "react";
 import { MONTH_PRESETS, monthRunsLabel, type MonthPreset } from "@/domain/agreement";
 import { MAX_LIBRARY_TASKS, MAX_TASK_DESCRIPTION, type LibraryType } from "@/domain/task-library";
+import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
 import { MonthGrid, monthBox, monthChoice } from "@/components/ui/month-grid";
 import { TextInput } from "@/components/ui/text-input";
+import { itemText } from "@/domain/org-settings";
 import { TASK_LIBRARY_STATUS_MESSAGES, type TaskLibraryFormState } from "./state";
 
 type Row = { key: number; description: string; months: number[] };
@@ -20,6 +22,7 @@ const toggled = (months: number[], month: number) =>
 
 /** One type's default months and checklist as a form; nothing is stored until Save (task-library-page S2, S3). */
 export function TaskLibraryEditor({ type, action }: EditorProps) {
+  const words = useItemWords();
   const [state, formAction, pending] = useActionState(action, { status: "idle" } as TaskLibraryFormState);
   const [defaults, setDefaults] = useState<number[]>(type.defaultVisitMonths);
   const [rows, setRows] = useState<Row[]>(() => type.tasks.map((task, key) => ({ key, description: task.description, months: task.visitMonths ?? [] })));
@@ -33,7 +36,7 @@ export function TaskLibraryEditor({ type, action }: EditorProps) {
       return copy;
     });
   const errors = state.status === "invalid" ? state.errors : {};
-  const message = state.status === "idle" || state.status === "invalid" ? null : TASK_LIBRARY_STATUS_MESSAGES[state.status];
+  const message = state.status === "idle" || state.status === "invalid" ? null : itemText(TASK_LIBRARY_STATUS_MESSAGES[state.status], words);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">

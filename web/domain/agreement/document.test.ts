@@ -18,7 +18,7 @@ const SETTINGS: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
-  proposalValidityDays: 30,
+  proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment",
 };
 
 const SOURCE: DocumentSource = {

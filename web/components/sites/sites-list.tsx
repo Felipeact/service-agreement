@@ -15,6 +15,7 @@ import { Spot } from "@/components/ui/illustrations";
 import { ListPanel, ROW_CLASSES } from "@/components/ui/list-panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
+import { useItemWords } from "@/components/shell/item-words";
 import { StatusPill } from "@/components/ui/status-pill";
 
 const COLUMNS = "md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.8fr)_minmax(0,1.4fr)]";
@@ -50,7 +51,8 @@ function sitesHref(filter: SiteFilter, showInactive: boolean): string {
 
 /** The equipment types on a site as small tiles ("RTU ×4"), the first few and then "+n more". */
 function EquipmentCell({ row }: { row: SiteListRow }) {
-  if (row.equipment.length === 0) return <span className="text-ink-2">No equipment</span>;
+  const words = useItemWords();
+  if (row.equipment.length === 0) return <span className="text-ink-2">{`No ${words.plural}`}</span>;
   const rest = row.equipment.length - EQUIPMENT_SHOWN;
   return (
     <span className="flex flex-wrap items-center gap-1">
@@ -84,6 +86,7 @@ function Stat({ label, icon, value, note }: { label: string; icon: IconName; val
  * URL (the picker navigates on change); the segment and the search narrow the rows on the page.
  */
 export function SitesListView({ rows, customers, filter }: Props) {
+  const words = useItemWords();
   const router = useRouter();
   const [query, setQuery] = useState(filter.q ?? "");
   const [segment, setSegment] = useState<Segment>("all");
@@ -102,13 +105,13 @@ export function SitesListView({ rows, customers, filter }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Sites & equipment" subtitle="Every site you maintain, the equipment on it, and the agreement that covers it." />
+      <PageHeader title={`Sites & ${words.plural}`} subtitle={`Every site you maintain, the ${words.plural} on it, and the agreement that covers it.`} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <Stat label="Sites" icon="pin" value={String(rows.length)} note={filtered ? "Matching this view" : showing ? "Including inactive" : "Active in your workspace"} />
         <Stat label="Assets" icon="pipeline" value={assets.toLocaleString("en-CA")} note="Across these sites" />
         <Stat label="Live agreements" icon="document" value={String(live)} note="Sites under agreement" />
-        <Stat label="Ready to quote" icon="bell" value={String(ready)} note="Equipment, no agreement yet" />
+        <Stat label="Ready to quote" icon="bell" value={String(ready)} note={`${words.Plural}, no agreement yet`} />
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -183,7 +186,7 @@ export function SitesListView({ rows, customers, filter }: Props) {
           </Button>
         </EmptyPanel>
       ) : (
-        <ListPanel columns={COLUMNS} headings={["Site", "Customer", "Equipment", "Live agreement"]}>
+        <ListPanel columns={COLUMNS} headings={["Site", "Customer", words.Plural, "Live agreement"]}>
           {shown.map((row) => (
             <li key={row.id} className={`grid grid-cols-1 gap-x-4 gap-y-1.5 px-5 py-4 md:items-center ${ROW_CLASSES} ${COLUMNS}`}>
               <span className="flex flex-col">

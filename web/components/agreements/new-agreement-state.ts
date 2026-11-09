@@ -1,4 +1,5 @@
 import { NEW_CHOICE, type NewAgreementField, type NewAgreementInput } from "@/domain/agreement/new-agreement";
+import { itemText, type ItemWords } from "@/domain/org-settings";
 
 export { NEW_CHOICE, type NewAgreementInput };
 
@@ -30,4 +31,20 @@ export const FILE_HINT = "Excel, CSV, Word or PDF, up to 20 MB";
 /** The dialog's start choice for a customer: the only customer when there is just one, otherwise none yet. */
 export function firstCustomerChoice(customers: readonly { id: string }[]): string {
   return customers.length === 0 ? NEW_CHOICE : "";
+}
+
+export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting";
+
+const PHASE_TEXT: Record<Exclude<Phase, "idle">, string> = {
+  creating: "Creating the agreement…",
+  uploading: "Sending the equipment list…",
+  reading: "Reading the file…",
+  extracting: "Finding the equipment…",
+};
+
+/** The progress line under the form, in the org's words ("Finding the stations… 2 of 5"). */
+export function phaseLine(phase: Phase, progress: { done: number; total: number } | null, words: ItemWords): string {
+  if (phase === "idle") return "";
+  const text = phase === "extracting" && progress ? `${PHASE_TEXT.extracting} ${progress.done} of ${progress.total}` : PHASE_TEXT[phase];
+  return itemText(text, words);
 }

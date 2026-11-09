@@ -12,7 +12,7 @@ const { saveSettingsAction } = await import("@/app/(app)/settings/actions");
 const FIELDS = {
   legalName: "Kettle Ridge Mechanical Ltd.", address: "", phone: "", accentColor: "", repairDiscountPct: "10", cpiCapPct: "5",
   cancellationNoticeDays: "30", paymentDays: "30", governingProvince: "BC", taxNote: "", defaultTermMonths: "12",
-  renewalNoticeDays: "30", cpiRenegotiationThresholdPct: "5", proposalValidityDays: "30",
+  renewalNoticeDays: "30", cpiRenegotiationThresholdPct: "5", proposalValidityDays: "30", itemSingular: "equipment", itemPlural: "equipment",
 };
 
 function form(renewalCpiPct: string, renewalCpiAsOf: string) {
@@ -47,5 +47,19 @@ describe("saveSettingsAction with the proposal validity", () => {
     expect(state.status === "invalid" ? state.errors : {}).toEqual({
       proposalValidityDays: "Proposal validity must be a whole number of days from 1 to 365",
     });
+  });
+});
+
+describe("saveSettingsAction with the item words", () => {
+  test("C2005: a singular of Station1 returns the field error, keeps what was typed and never saves", async () => {
+    const data = form("", "");
+    data.set("itemSingular", "Station1");
+    const state = await saveSettingsAction({ status: "idle" }, data);
+    expect(saveOrgSettings).not.toHaveBeenCalled();
+    expect(state.status).toBe("invalid");
+    if (state.status === "invalid") {
+      expect(state.errors).toEqual({ itemSingular: "Use 1 to 30 letters, spaces, hyphens or apostrophes, starting with a letter" });
+      expect(state.values.itemSingular).toBe("Station1");
+    }
   });
 });

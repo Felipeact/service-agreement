@@ -6,7 +6,7 @@ import type { CurrentMember } from "@/application/ports";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listImportHistory = vi.fn();
 const listSites = vi.fn();
-const container = { currentMember, listImportHistory, listSites };
+const container = { currentMember, listImportHistory, listSites, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }) };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);

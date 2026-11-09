@@ -84,7 +84,7 @@ describe("buildAgreementDocument, schedule", () => {
     cpiRenegotiationThresholdPct: 5,
     renewalCpiPct: null,
     renewalCpiAsOf: null,
-    proposalValidityDays: 30,
+    proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment",
   };
   const line = (description: string, l: typeof HVAC) => ({ description, visitsPerYear: l.visitMonths.length, costPerVisitCents: 100, annualCents: 100 * l.visitMonths.length, ...l });
   const source: DocumentSource = {

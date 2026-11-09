@@ -1,3 +1,4 @@
+import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
 import { describe, expect, test } from "vitest";
 import type { AgreementDocument } from "@/domain/agreement";
 import { reactPdfDocumentRenderer } from "./index";
@@ -5,6 +6,7 @@ import { pdfPages } from "./pdf-text.testing";
 
 const base: AgreementDocument = {
   tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: "#1f6f8b" },
+  words: DEFAULT_ITEM_WORDS,
   number: "AG-1046",
   versionNo: 1,
   customerName: "Fernwood Dental",

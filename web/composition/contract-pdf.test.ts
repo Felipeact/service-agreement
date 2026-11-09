@@ -26,7 +26,7 @@ const SETTINGS: OrgSettingsValue = {
   cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
-  proposalValidityDays: 30,
+  proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment",
 };
 
 const TERMS = { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 60, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: 30, cpiRenegotiationThresholdPct: 5 };

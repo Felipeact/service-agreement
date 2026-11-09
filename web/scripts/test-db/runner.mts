@@ -50,6 +50,7 @@ export const RECIPES: Recipe[] = [
   plain("members"),
   plain("search"),
   plain("type_editor"),
+  { name: "item_vocabulary", parts: ["fixture.sql", SEED_BODY, "item_vocabulary.sql"] },
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
 ];
 

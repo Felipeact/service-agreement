@@ -6,6 +6,7 @@ import type { MemberRole, SiteView } from "@/application/ports";
 import type { CreateAgreementState } from "@/components/agreements/state";
 import { ShowInactiveToggle } from "@/components/records/show-inactive";
 import { canWriteRecords } from "@/components/records/state";
+import { useItemWords } from "@/components/shell/item-words";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
@@ -13,6 +14,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { SearchInput } from "@/components/ui/search-input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { statusLabel } from "@/domain/agreement";
+import { itemVerb } from "@/domain/org-settings";
 import { filterAssets, groupAssets } from "./assets";
 import { NewAgreementControl } from "./new-agreement";
 
@@ -31,6 +33,7 @@ type SiteRegisterViewProps = {
 
 /** The site page body: who and where, then the equipment grouped by type. */
 export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, showInactive = false }: SiteRegisterViewProps) {
+  const words = useItemWords();
   const [query, setQuery] = useState(initialQuery);
   const searchRef = useRef<HTMLInputElement>(null);
   const listed = showInactive ? site.assets : site.assets.filter((asset) => asset.active);
@@ -71,8 +74,8 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
                 {listed.length > 0 && (
                   <SearchInput
                     ref={searchRef}
-                    label="Search equipment"
-                    placeholder="Search equipment…"
+                    label={`Search ${words.plural}`}
+                    placeholder={`Search ${words.plural}…`}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     className="w-full md:w-60"
@@ -86,7 +89,7 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
             canWrite ? (
               <div className="flex flex-wrap gap-2.5">
                 <LinkButton href={`/sites/${site.id}/edit`}>Edit site</LinkButton>
-                {canAdd && <LinkButton href={`/sites/${site.id}/import`}>Import equipment list</LinkButton>}
+                {canAdd && <LinkButton href={`/sites/${site.id}/import`}>{`Import ${words.singular} list`}</LinkButton>}
                 {addAsset}
               </div>
             ) : undefined
@@ -108,13 +111,13 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
       </div>
 
       {site.assets.length === 0 ? (
-        <EmptyPanel title="No equipment recorded yet" text="Equipment appears here once it is added or imported.">
+        <EmptyPanel title={`No ${words.plural} recorded yet`} text={`${words.Plural} ${itemVerb(words, "appears", "appear")} here once ${itemVerb(words, "it is", "they are")} added or imported.`}>
           {addAsset}
         </EmptyPanel>
       ) : listed.length === 0 ? (
         <EmptyPanel title="No active assets.">{toggle}</EmptyPanel>
       ) : groups.length === 0 ? (
-        <EmptyPanel title={`No equipment matches "${query}"`}>
+        <EmptyPanel title={`No ${words.plural} ${itemVerb(words, "matches", "match")} "${query}"`}>
           <Button onClick={clearSearch}>Clear search</Button>
         </EmptyPanel>
       ) : (

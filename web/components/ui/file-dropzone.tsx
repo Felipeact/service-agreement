@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, type DragEvent } from "react";
+import { useItemWords } from "@/components/shell/item-words";
+import { itemText } from "@/domain/org-settings";
 import { Spot } from "./illustrations";
 
 type FileDropzoneProps = {
@@ -26,6 +28,7 @@ type FileDropzoneProps = {
  * once a file is chosen, names the file with a way to remove it.
  */
 export function FileDropzone({ id, label, accept, hint, file, error, disabled = false, onFile, sizeLabel }: FileDropzoneProps) {
+  const words = useItemWords();
   const [over, setOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const hintId = `${id}-hint`;
@@ -97,7 +100,7 @@ export function FileDropzone({ id, label, accept, hint, file, error, disabled = 
         ) : (
           <>
             <p className="text-[13.5px] font-semibold text-ink">
-              Drag an equipment list here <span className="font-normal text-ink-2">or</span> <span className="text-action">choose a file</span>
+              {itemText("Drag an equipment list here", words)} <span className="font-normal text-ink-2">or</span> <span className="text-action">choose a file</span>
             </p>
             <p id={hintId} className="text-[12px] text-ink-2">
               {hint}

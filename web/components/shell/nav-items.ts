@@ -1,4 +1,5 @@
 import type { IconName } from "@/components/ui/icons";
+import type { ItemWords } from "@/domain/org-settings";
 
 export type NavItem = {
   label: string;
@@ -14,6 +15,10 @@ export const MAIN_NAV: NavItem[] = [
   { label: "Sites & equipment", href: "/sites", icon: "pin" },
   { label: "Imports", href: "/imports", icon: "upload" },
 ];
+
+/** The main nav with the Sites link named after the org's item ("Sites & stations"). */
+export const mainNav = (words: ItemWords): NavItem[] =>
+  MAIN_NAV.map((item) => (item.href === "/sites" ? { ...item, label: `Sites & ${words.plural}` } : item));
 
 export const FOOTER_NAV: NavItem[] = [
   { label: "Settings", href: "/settings", icon: "gear" },

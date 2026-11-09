@@ -27,6 +27,8 @@ export function toInput(settings: OrgSettings): OrgSettingsInput {
     renewalCpiPct: formatSettingNumber(settings.renewalCpiPct),
     renewalCpiAsOf: settings.renewalCpiAsOf ?? "",
     proposalValidityDays: String(settings.proposalValidityDays),
+    itemSingular: settings.itemSingular,
+    itemPlural: settings.itemPlural,
   };
 }
 

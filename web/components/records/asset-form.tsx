@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import type { AssetTypeOption } from "@/application/ports";
 import type { AssetInput } from "@/domain/records";
+import { itemText } from "@/domain/org-settings";
+import { useItemWords } from "@/components/shell/item-words";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { RecordForm } from "./record-form";
@@ -23,10 +25,11 @@ type FieldsProps = {
 
 /** Fields in register order: type, unit #, type/model, location/access. */
 export function AssetFields({ values, state, types, ...form }: FieldsProps) {
+  const words = useItemWords();
   const errors = fieldErrors(state);
   return (
     <RecordForm status={state.status} {...form}>
-      <Select id="assetTypeId" name="assetTypeId" label="Equipment type" defaultValue={values.assetTypeId} error={errors.assetTypeId}>
+      <Select id="assetTypeId" name="assetTypeId" label={itemText("Equipment type", words)} defaultValue={values.assetTypeId} error={errors.assetTypeId && itemText(errors.assetTypeId, words)}>
         <option value="">Choose a type</option>
         {types.map((type) => (
           <option key={type.id} value={type.id}>

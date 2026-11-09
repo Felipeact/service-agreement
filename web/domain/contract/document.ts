@@ -1,5 +1,5 @@
 import { documentBody, NEUTRAL_ACCENT, termMonthsLabel, type AgreementDocument, type AgreementTerms, type DocumentSource } from "../agreement";
-import { formatSettingNumber, PROVINCE_NAMES } from "../org-settings";
+import { DEFAULT_ITEM_WORDS, formatSettingNumber, PROVINCE_NAMES, type ItemWords } from "../org-settings";
 import type { ContractParties } from "./parties";
 
 /**
@@ -8,6 +8,8 @@ import type { ContractParties } from "./parties";
  */
 export type ContractDocument = Pick<AgreementDocument, "number" | "versionNo" | "lines" | "totalCents" | "schedule" | "scope" | "term"> & {
   contractor: { name: string; address: string | null; phone: string | null; accent: string };
+  /** The org's item words, for the covered-items section (item-vocabulary AC 9). */
+  words?: ItemWords;
   customerName: string;
   site: { name: string; address: string | null };
   signer: { name: string; email: string } | null;
@@ -43,7 +45,7 @@ export function contractClauses(terms: AgreementTerms | null, termMonths: number
 }
 
 /** `accent` is the tenant's colour as the settings hold it now; a colour is branding, not who is bound. */
-export function buildContractDocument(source: DocumentSource, parties: ContractParties, accent: string | null): ContractDocument {
+export function buildContractDocument(source: DocumentSource, parties: ContractParties, accent: string | null, words: ItemWords = DEFAULT_ITEM_WORDS): ContractDocument {
   const body = documentBody(source);
   return {
     number: source.number,
@@ -54,6 +56,7 @@ export function buildContractDocument(source: DocumentSource, parties: ContractP
     scope: body.scope,
     term: body.term,
     contractor: { name: parties.contractor.legalName, address: parties.contractor.address, phone: parties.contractor.phone, accent: accent ?? NEUTRAL_ACCENT },
+    words,
     customerName: parties.customer.name,
     site: parties.site,
     signer: parties.signer,

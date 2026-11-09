@@ -1,3 +1,4 @@
+import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
 import { createHash } from "node:crypto";
 import type { PortalTokens, PortalView } from "@/application/ports";
 
@@ -23,7 +24,7 @@ export function portalView(over: Partial<PortalView> = {}): PortalView {
   return {
     link: { versionNo: 1, current: true, revoked: false, revokedAt: null, firstViewedAt: null },
     agreement: { number: "AG-1052", status: "sent" },
-    tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" },
+    tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b", words: DEFAULT_ITEM_WORDS },
     customer: { name: "Fernwood Dental" },
     site: { name: "Fernwood Dental, Main" },
     lines: [

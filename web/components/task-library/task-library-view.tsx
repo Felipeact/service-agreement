@@ -3,6 +3,7 @@ import type { MemberRole } from "@/application/ports";
 import { monthRunsLabel, monthsLabel } from "@/domain/agreement";
 import type { LibraryType } from "@/domain/task-library";
 import { PageHeader } from "@/components/shell/page-header";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { TaskLibraryEditor } from "./task-library-editor";
 import { AddTypeForm, TypeControls } from "./type-controls";
@@ -16,18 +17,19 @@ type Props = {
   action: (state: TaskLibraryFormState, formData: FormData) => Promise<TaskLibraryFormState>;
   /** Add, rename, remove and reset; without them the page only edits checklists. */
   typeActions?: TypeActions;
+  words?: ItemWords;
 };
 
 const ROW = "flex min-h-11 flex-col justify-center gap-0.5 px-3 py-2 lg:min-h-0";
 
 /** The Task library page body: the equipment types, and the selected type's checklist and default months (task-library-page S1). */
-export function TaskLibraryView({ types, selected, role, action, typeActions }: Props) {
+export function TaskLibraryView({ types, selected, role, action, typeActions, words = DEFAULT_ITEM_WORDS }: Props) {
   const editable = canEditTaskLibrary(role);
   if (!selected) {
     return (
       <div className="flex flex-col gap-4">
         <PageHeader title="Task library" />
-        <EmptyPanel title="No equipment types yet" text="The equipment types and checklists of your company appear here." />
+        <EmptyPanel title={itemText("No equipment types yet", words)} text={itemText("The equipment types and checklists of your company appear here.", words)} />
         {editable && typeActions && <AddTypeForm action={typeActions.create} />}
       </div>
     );
@@ -37,7 +39,7 @@ export function TaskLibraryView({ types, selected, role, action, typeActions }: 
     <div className="flex flex-col gap-4">
       <PageHeader title="Task library" />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-start">
-        <nav aria-label="Equipment types">
+        <nav aria-label={itemText("Equipment types", words)}>
           <ul className="flex flex-col divide-y divide-hairline rounded-panel border border-hairline bg-surface">
             {types.map((type) => (
               <li key={type.id}>

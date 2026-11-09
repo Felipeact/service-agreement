@@ -2,17 +2,20 @@
 
 import { useActionState, useState } from "react";
 import type { LibraryType } from "@/domain/task-library";
+import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
+import { itemText } from "@/domain/org-settings";
 import { TYPE_STATUS_MESSAGES, type TypeAction, type TypeActions, type TypeFormState } from "./state";
 
 const IDLE: TypeFormState = { status: "idle" };
 
 function TypeAlert({ state }: { state: TypeFormState }) {
+  const words = useItemWords();
   if (state.status === "idle") return null;
   return (
     <p role="alert" className="text-[13px] font-medium text-danger">
-      {TYPE_STATUS_MESSAGES[state.status]}
+      {itemText(TYPE_STATUS_MESSAGES[state.status], words)}
     </p>
   );
 }
@@ -21,9 +24,10 @@ type NameFormProps = { action: TypeAction; id: string; label: string; submit: st
 
 /** One name field and its button; used to add a type and to rename one (type-editor S1, S2). */
 function NameForm({ action, id, label, submit, typeCode, initial }: NameFormProps) {
+  const words = useItemWords();
   const [state, formAction, pending] = useActionState(action, IDLE);
   const shown = state.status === "idle" ? initial : state.name;
-  const error = state.status === "idle" ? undefined : TYPE_STATUS_MESSAGES[state.status];
+  const error = state.status === "idle" ? undefined : itemText(TYPE_STATUS_MESSAGES[state.status], words);
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       {typeCode && <input type="hidden" name="typeCode" value={typeCode} />}
@@ -37,7 +41,8 @@ function NameForm({ action, id, label, submit, typeCode, initial }: NameFormProp
 
 /** The Add form under the type list; the view shows it to owners and admins only. */
 export function AddTypeForm({ action }: { action: TypeAction }) {
-  return <NameForm action={action} id="newTypeName" label="New equipment type" submit="Add type" initial="" />;
+  const words = useItemWords();
+  return <NameForm action={action} id="newTypeName" label={itemText("New equipment type", words)} submit="Add type" initial="" />;
 }
 
 type PromptProps = {

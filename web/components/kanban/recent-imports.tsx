@@ -3,6 +3,8 @@ import type { ImportHistoryRow } from "@/application/ports";
 import { Icon } from "@/components/ui/icons";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ATTENTION, outcomeLine, REVIEWABLE, STATUS_LABELS } from "@/components/imports/job-list";
+import { useItemWords } from "@/components/shell/item-words";
+import { itemText } from "@/domain/org-settings";
 
 /** How many imports the Pipeline names; the rest wait behind "View all". */
 export const RECENT_IMPORTS = 3;
@@ -13,6 +15,7 @@ export const RECENT_IMPORTS = 3;
  * Nothing renders until a list has been imported.
  */
 export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
+  const words = useItemWords();
   if (jobs.length === 0) return null;
   const shown = jobs.slice(0, RECENT_IMPORTS);
   return (
@@ -20,7 +23,7 @@ export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col">
           <h2 id="recent-imports-title" className="font-display text-[19px] font-semibold tracking-tight">
-            Recent equipment imports
+            {itemText("Recent equipment imports", words)}
           </h2>
           <p className="text-[13px] text-ink-2">Messy files, structured into priceable assets.</p>
         </div>
@@ -32,6 +35,7 @@ export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
         {shown.map((job) => {
           const found = job.extraction?.status === "extracted" ? job.extraction : null;
           const line = found ? `${Math.max(0, found.rows - found.unmatched)} of ${found.rows} rows recognized` : outcomeLine(job);
+          const shownLine = line && itemText(line, words);
           const href = REVIEWABLE.has(job.status) ? `/imports/${job.id}` : `/sites/${job.site.id}/import`;
           return (
             <li key={job.id} data-import={job.id}>
@@ -40,7 +44,7 @@ export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
                   <span className="text-[13.5px] font-semibold break-all text-ink">{job.originalName}</span>
                   <span className="text-[12px] text-ink-2">{`${job.site.name} · ${job.customer.name}`}</span>
                 </span>
-                {line && <span className="text-[12px] text-ink-2 sm:w-52">{line}</span>}
+                {shownLine && <span className="text-[12px] text-ink-2 sm:w-52">{shownLine}</span>}
                 <span className="flex items-center gap-2">
                   <StatusPill tone={ATTENTION.has(job.status) ? "attention" : "neutral"} label={STATUS_LABELS[job.status]} />
                   <Icon name="chevron" className="size-4 text-ink-2" />

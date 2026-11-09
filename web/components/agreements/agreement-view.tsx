@@ -7,6 +7,7 @@ import { labelFor, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
 import { formatTermDate } from "@/domain/agreement/term";
 import { notEmailedWords } from "@/domain/notifications";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
@@ -43,6 +44,8 @@ type AgreementViewProps = {
   role: MemberRole;
   /** Without actions, or for a viewer, the agreement is read-only. */
   actions?: AgreementActions;
+  /** The org's item words (item-vocabulary AC 5); the default when absent. */
+  words?: ItemWords;
 };
 
 /** The empty add form suggests the usual first line; a stored $0 line would look like a real price. */
@@ -61,7 +64,7 @@ function deliveryLine(email: LinkEmailView | null): string {
 }
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
-export function AgreementView({ agreement, role, actions }: AgreementViewProps) {
+export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
   const latest = agreement.versions[0]?.versionNo ?? shown.versionNo;
@@ -143,7 +146,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         <LinkControls number={agreement.number} canSend={canSend} canReissue={canReissue} send={writer.send} reissue={writer.reissue} />
       )}
 
-      {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} />}
+      {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
 
       <TermSection term={agreement.term} action={lineActions?.saveTerm} />
 
@@ -170,6 +173,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
                   key={line.id}
                   line={line}
                   choices={agreement.equipmentChoices}
+                  words={words}
                   actions={lineActions && { update: lineActions.update(line.id), remove: lineActions.remove(line.id) }}
                 />
               ))}
@@ -190,7 +194,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
             // A line covers at least one equipment type (cadence AC 13), so the site needs some first.
             <p className="text-[13px] text-ink-2">
               <Link href={`/sites/${agreement.site.id}`} className={link}>
-                Add equipment to this site before adding a service line
+                {`Add ${words.plural} to this site before adding a service line`}
               </Link>
             </p>
           ) : (
@@ -198,6 +202,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
               idPrefix="new-line"
               initial={shown.lines.length === 0 ? FIRST_LINE : NEXT_LINE}
               choices={agreement.equipmentChoices}
+              words={words}
               submitLabel="Add line"
               action={lineActions.add}
             />
@@ -212,6 +217,7 @@ export function AgreementView({ agreement, role, actions }: AgreementViewProps) 
         siteId={agreement.site.id}
         canAddEquipment={canWriteRecords(role)}
         lines={shown.lines}
+        words={words}
       />
 
       {hasVersionStory(agreement.versions) && (

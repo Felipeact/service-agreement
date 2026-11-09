@@ -7,7 +7,7 @@ import type { LibraryType } from "@/domain/task-library";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listTaskLibrary = vi.fn<() => Promise<LibraryType[]>>();
 const saveTaskLibraryType = vi.fn();
-const container = { currentMember, listTaskLibrary, saveTaskLibraryType };
+const container = { currentMember, listTaskLibrary, saveTaskLibraryType, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }) };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);

@@ -1,5 +1,5 @@
-import { PageLoading } from "@/components/shell/page-loading";
+import { SitesLoading } from "@/components/sites/loading-titles";
 
 export default function Loading() {
-  return <PageLoading title="Sites & equipment" />;
+  return <SitesLoading />;
 }

@@ -5,6 +5,7 @@ import type { ServiceLineView } from "@/application/ports";
 import { monthsLabel, type EquipmentChoice } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
 import { formatCadExact } from "@/lib/money";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { LineFormControl } from "./line-form";
 import { messageFor, type LineState } from "./state";
 
@@ -54,6 +55,7 @@ type LineRowProps = {
   choices?: EquipmentChoice[];
   /** Present for a writer on an editable version only. */
   actions?: { update: (formData: FormData) => Promise<LineState>; remove: () => Promise<LineState> };
+  words?: ItemWords;
 };
 
 /** Dollars as the edit form shows them: 89250 -> "892.50". */
@@ -73,7 +75,7 @@ export const cadenceLabel = (months: number[]) => `${monthsLabel(months)} · ${m
  * One line: description with its months and covered equipment, visits, cost per visit and annual amount; a writer
  * edits or removes it in place.
  */
-export function LineRow({ line, choices = [], actions }: LineRowProps) {
+export function LineRow({ line, choices = [], actions, words = DEFAULT_ITEM_WORDS }: LineRowProps) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [state, removeAction, pending] = useActionState<LineState>(
@@ -93,6 +95,7 @@ export function LineRow({ line, choices = [], actions }: LineRowProps) {
             assetTypeIds: line.equipment.map((type) => type.id),
           }}
           choices={choices}
+          words={words}
           submitLabel="Save"
           action={actions.update}
           onSaved={() => setEditing(false)}

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { SearchInput } from "@/components/ui/search-input";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 
 const ROW = "flex min-h-11 min-w-0 flex-col justify-center gap-0.5 px-4 py-2 hover:bg-ground lg:min-h-0";
 const TITLE = "text-[13px] font-semibold break-words text-action";
@@ -31,7 +32,7 @@ function Group<T extends { id: string }>({ title, group, row }: { title: string;
 }
 
 /** The search page: its own field, then Customers, Sites and Equipment, or the prompt, or the no-match panel (global-search S1 to S3). */
-export function SearchView({ query, results }: { query: string; results: SearchResults | null }) {
+export function SearchView({ query, results, words = DEFAULT_ITEM_WORDS }: { query: string; results: SearchResults | null; words?: ItemWords }) {
   const empty = results !== null && results.customers.hits.length + results.sites.hits.length + results.equipment.hits.length === 0;
   return (
     <div className="flex flex-col gap-4">
@@ -44,9 +45,9 @@ export function SearchView({ query, results }: { query: string; results: SearchR
       </form>
 
       {results === null ? (
-        <EmptyPanel title="Search customers, sites and equipment by name, address or unit number." />
+        <EmptyPanel title={itemText("Search customers, sites and equipment by name, address or unit number.", words)} />
       ) : empty ? (
-        <EmptyPanel title={`No customers, sites or equipment match “${query}”.`} text="Deactivated records are not searched." />
+        <EmptyPanel title={`${itemText("No customers, sites or equipment match “", words)}${query}”.`} text="Deactivated records are not searched." />
       ) : (
         <div className="flex flex-col gap-5">
           <Group
@@ -72,7 +73,7 @@ export function SearchView({ query, results }: { query: string; results: SearchR
             )}
           />
           <Group
-            title="Equipment"
+            title={words.Plural}
             group={results.equipment}
             row={(hit) => (
               <Link href={`/sites/${hit.siteId}`} className={ROW}>

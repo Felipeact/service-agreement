@@ -30,7 +30,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
 
         <PriceSection lines={document.lines} totalCents={document.totalCents} accent={tenant.accent} />
         <ScheduleSection schedule={document.schedule} accent={tenant.accent} />
-        <ScopeSections scope={document.scope} accent={tenant.accent} />
+        <ScopeSections scope={document.scope} accent={tenant.accent} words={document.words} />
 
         {document.terms.length > 0 && (
           <>

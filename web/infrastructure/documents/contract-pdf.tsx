@@ -56,7 +56,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
         <PriceSection lines={document.lines} totalCents={document.totalCents} accent={contractor.accent} />
         {document.taxNote && <Text style={[styles.muted, { textAlign: "right" }]}>{document.taxNote}</Text>}
         <ScheduleSection schedule={document.schedule} accent={contractor.accent} />
-        <ScopeSections scope={document.scope} accent={contractor.accent} />
+        <ScopeSections scope={document.scope} accent={contractor.accent} words={document.words} />
 
         {document.clauses.length > 0 && (
           <>

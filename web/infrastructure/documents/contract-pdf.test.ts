@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { contractClauses, type ContractDocument } from "@/domain/contract";
 import type { AgreementTerms } from "@/domain/agreement";
+import { itemWords } from "@/domain/org-settings";
 import { reactPdfContractRenderer } from "./index";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
 
@@ -218,5 +219,15 @@ describe("the DocuSeal tags in the signature blocks", () => {
     expect(last).toContain("FortheCustomer:PatLee");
     expect(last).toContain("ForKettleRidgeMechanicalLtd.");
     for (const tag of TAGS) expect(last, tag).toContain(tag);
+  });
+});
+
+describe("the contract PDF, item words", () => {
+  test("C2023: the contract's covered-items section is headed with the org's plural, and the default keeps Equipment", async () => {
+    const scope = { kind: "listed" as const, recordedOn: null, types: [{ code: "AHU", name: "AHU", tasks: [], assets: [{ unitNo: "A-1", typeModel: null, location: null }] }] };
+    const set = text(await pages({ scope, words: itemWords("station", "stations") }));
+    expect(set).toContain("Stations");
+    expect(set).not.toMatch(/Equipment/i);
+    expect(text(await pages({ scope }))).toContain("Equipment");
   });
 });

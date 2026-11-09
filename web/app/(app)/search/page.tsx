@@ -10,12 +10,12 @@ type Params = Parameters<typeof parseSearchQuery>[0];
 
 /** `?q=` is the whole input; a blank one reads nothing (global-search Surface, AC 15). */
 export async function SearchForRequest({ params }: { params: Params }) {
-  const { currentMember, searchRecords } = await getContainer();
+  const { currentMember, searchRecords, getItemWords } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const query = parseSearchQuery(params);
-  const results = query ? await searchRecords(query) : null;
-  return <SearchView query={query} results={results} />;
+  const [results, words] = await Promise.all([query ? searchRecords(query) : null, getItemWords(member.orgId)]);
+  return <SearchView query={query} results={results} words={words} />;
 }
 
 export default async function SearchPage({ searchParams }: PageProps<"/search">) {

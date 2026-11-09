@@ -9,7 +9,7 @@ const CON = "66666666-6666-4666-8666-666666666666";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const create = vi.fn();
 const get = vi.fn();
-const container = { currentMember, agreementReader: { get }, contractStore: { create } };
+const container = { currentMember, agreementReader: { get }, contractStore: { create }, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }) };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 vi.mock("next/navigation", () => ({

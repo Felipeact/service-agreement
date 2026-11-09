@@ -949,6 +949,8 @@ export type Database = {
           payment_days: number | null
           phone: string | null
           proposal_validity_days: number
+          item_plural: string
+          item_singular: string
           renewal_cpi_as_of: string | null
           renewal_cpi_pct: number | null
           renewal_notice_days: number
@@ -970,6 +972,8 @@ export type Database = {
           payment_days?: number | null
           phone?: string | null
           proposal_validity_days?: number
+          item_plural?: string
+          item_singular?: string
           renewal_cpi_as_of?: string | null
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
@@ -991,6 +995,8 @@ export type Database = {
           payment_days?: number | null
           phone?: string | null
           proposal_validity_days?: number
+          item_plural?: string
+          item_singular?: string
           renewal_cpi_as_of?: string | null
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
