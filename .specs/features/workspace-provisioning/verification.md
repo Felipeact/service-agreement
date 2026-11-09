@@ -1,14 +1,16 @@
 # Workspace provisioning verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: standard
-**Diff range**: 7376a23..HEAD (HEAD = d144116)
-**Round**: 1 - full
+**Diff range**: 7376a23..HEAD (HEAD = 31daf97; round 1 verified d144116)
+**Round**: 2 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-All 30 checks C2700-C2729 are green at HEAD and every one has a located assertion. The verdict is FAIL because the Coverage recompute from the migration's actual branches found members with no proof (the `customer_email` owner-email fallback, a malformed or over-long email, more than four trades, a whitespace-only company), and the `Test policy` row for `private.provision_workspace` asks for one asserted case per invalid-metadata case. The mutation run also covered only the SQL surfaces (see Faults injected).
+Round 2 (scoped to fix commit 31daf97, which changes only `supabase/tests/workspace_provisioning.sql` and `checks.md`; no production code changed). All 33 checks C2700-C2732 are green at 31daf97 and each has a located assertion. The round 1 gaps are closed: the `customer_email` fallback (C2730), five more invalid-metadata cases (C2731), the refusal order (C2732), and fault injection on the TypeScript surfaces (5 new faults, 5 killed). Sections marked `carried from d144116` were not re-derived because the fix diff cannot touch them; all proofs were re-run in full at the new HEAD.
 
 ## Binding sources
+
+(carried from d144116)
 
 The plan marks no source binding. Its Sources are prior features' ADs (AD-131, AD-154, AD-163, AD-003, AD-037, AD-073, AD-169, AD-170, AD-172) and billing-checkout's plan and checks, and the profile is `standard`, so step 1 does not run. The prior-feature contract still held: `stripe_events` (billing-checkout) passes with the migration applied inside it (C2728).
 
@@ -18,7 +20,7 @@ The plan marks no source binding. Its Sources are prior features' ADs (AD-131, A
 
 ## Checks
 
-Proofs run at HEAD. Vitest: `cd web && npx vitest run application/use-cases/stripe-provisioning.test.ts infrastructure/supabase/stripe-events.test.ts composition/provisioning-wiring.test.ts app/api/webhooks/stripe/route.test.ts -t "C27(11|18|19|20|21|29):" --reporter=verbose` - 23 passed, each named test shown in the output. SQL: `npm run test:db workspace_provisioning stripe_events` - `PASS workspace_provisioning`, `PASS stripe_events`. SQL assertions are in `supabase/tests/workspace_provisioning.sql` (WP below); every label named by the check exists in the file (searched by label).
+Proofs re-run in full at 31daf97 (rows C2700-C2729 carried from d144116 with the same results; `WP:` citations before line 446 are unchanged because the fix only appended). Vitest: `cd web && npx vitest run application/use-cases/stripe-provisioning.test.ts infrastructure/supabase/stripe-events.test.ts composition/provisioning-wiring.test.ts app/api/webhooks/stripe/route.test.ts -t "C27(11|18|19|20|21|29):" --reporter=verbose` - 23 passed, each named test shown in the output. SQL: `npm run test:db workspace_provisioning stripe_events` - `PASS workspace_provisioning`, `PASS stripe_events`. SQL assertions are in `supabase/tests/workspace_provisioning.sql` (WP below); every label named by the check exists in the file (searched by label).
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
@@ -52,21 +54,24 @@ Proofs run at HEAD. Vitest: `cd web && npx vitest run application/use-cases/stri
 | C2727 | ledger columns nullable; no privilege for anon/authenticated; definer, empty search_path, execute for anon+authenticated | same SQL run | `WP:430-431` - `column_name in ('processed_at','process_error') and is_nullable = 'YES') = 2`; `WP:433-434` - `not has_table_privilege(... 'select') and not ... 'update'`; `WP:435` execute true; `WP:438-439` no public grantee; `WP:440` - `prosecdef and proconfig = array['search_path=""']`. Assertion proves anon and authenticated may execute and public may not; it does not assert the grantee list is exactly those two | PASS |
 | C2728 | `stripe_events` recipe passes with the migration inside it | `npm run test:db workspace_provisioning stripe_events` | output `PASS stripe_events`; recipe parts at `web/scripts/test-db/runner.mts:59` - `{ name: "stripe_events", parts: ["fixture.sql", WORKSPACE_MIGRATION, "stripe_events.sql"] }`; its C2528 one-write assertion is `supabase/tests/stripe_events.sql:219` | PASS |
 | C2729 | no second `signInWithOtp` caller in `web/infrastructure` | `-t "C2729:"` | `composition/provisioning-wiring.test.ts:70` - `expect(callers).toEqual(["infrastructure/supabase/auth.ts", "infrastructure/supabase/members.ts"])`; `:72` - `expect(outside).toEqual([])`. File-level, not call-level: a second call inside either file would pass | PASS |
+| C2730 | owner email from `customer_details.email`, else `customer_email` (trimmed, lower-cased); details win | `npm run test:db workspace_provisioning` exit 0 (`PASS workspace_provisioning`) | `WP:451` - `tests.wp_post(... customer_details null, customer_email " FB@Shop.test " ...) = '{"outcome": "recorded", "provisioned": {"email": "fb@shop.test"}}'::jsonb`; `WP:454` - invitation `i.email = 'fb@shop.test'`; `WP:455` - both present, answer `provisioned.email` `"details@shop.test"`; `WP:457` - `not exists (... email = 'other@shop.test')` | PASS |
+| C2731 | five more invalid-metadata cases refused `invalid_metadata` | same SQL run | `WP:476` - `wp_refused('C2731 '||name, ..., 'invalid_metadata', ...)` over `WP:468-472` (malformed email `not-an-email`, 257-character email, trades `hvac` x5, seats `1000`, company `'   '`); `WP:479` - `i = 5`; `wp_refused` also asserts answer exactly `recorded`, no `processed_at`, no org, settings, invitation or type rows | PASS |
+| C2732 | same subscription is `already_provisioned` even when its email is in use | same SQL run | `WP:485` - fixture email `owner.one@shop.test` has a membership (precondition named by the claim); `WP:486-487` - `wp_refused('C2732 order', ..., sub_wp_1, 'owner.one@shop.test', ..., 'already_provisioned', 'Order Co', ...)` | PASS |
 
 ## Coverage
 
-Recomputed from the plan's Surface/Relations/Landing and from the migration's branches (`supabase/migrations/20261110100000_workspace_provisioning.sql`), not from the checks' table.
+Rows for the invalid-metadata cases, the owner-email source and the refusal order were recomputed at 31daf97; every other row is carried from d144116 (the fix touched no production code). Recomputed from the plan's Surface/Relations/Landing and from the migration's branches (`supabase/migrations/20261110100000_workspace_provisioning.sql`), not from the checks' table.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
 | trade selections (6) | AC 2-3, migration `:87-114` | hvac/plumbing/electrical C2701 (`WP:112`), other alone / other+pack / pack alone C2702 | - |
 | process_error codes (6) | migration CHECK `:29-30`, mapping `:146-150` | invalid_metadata C2712, email_in_use C2713, already_provisioned C2709, no_pack C2714 (`WP:293`), not_a_subscription C2715, failed C2714 (`WP:287`); `WP:317-319` asserts each stored | - |
 | stored event types (6) | migration `:224-225` | checkout C2700, five others C2706 (`WP:174`) | - |
-| invalid-metadata conditions in the migration (13) | migration `:80-95` | plan not a key C2712, plan missing C2712, trades empty C2712, trade not in list `fire` C2712, seats below included C2712, seats above 50 C2712, seats non-numeric C2712, company empty C2712, company 121 chars C2712, email missing C2712 | email present but malformed (regex `:80`) and over 254 characters (`:80`); trades list longer than 4 (`:82`); seats text of 4+ digits (`:83`); company whitespace-only (`:77`, `btrim`) |
-| owner-email sources (2) | plan Assumptions row 1, migration `:70-72` | `customer_details.email` C2700 and all `wp_session` fixtures | `customer_email` fallback: no test builds a session without `customer_details` and with `customer_email` (`grep customer_email supabase/tests/workspace_provisioning.sql` finds nothing). "email missing" (C2712) removes `customer_details` only, with no `customer_email` present |
+| invalid-metadata conditions in the migration (15) | migration `:77-95` | plan not a key C2712, plan missing C2712, trades empty C2712, trade not in list `fire` C2712, seats below included C2712, seats above 50 C2712, seats non-numeric C2712, company empty C2712, company 121 chars C2712, email missing C2712, email malformed C2731 (`WP:468`), email over 254 C2731 (`WP:469`), five trades C2731 (`WP:470`), seats of four digits C2731 (`WP:471`), company only spaces C2731 (`WP:472`) | - |
+| owner-email sources (2) | plan Assumptions row 1, migration `:70-72` | `customer_details.email` C2700 and all `wp_session` fixtures; `customer_email` fallback C2730 (`WP:451`), details win when both are present C2730 (`WP:455`) | - |
 | email collisions (4) | AC 14, migration `:98-103` | membership C2713 (`WP:251`), live invitation C2713 (`WP:253`), expired allowed (`WP:255`), accepted allowed (`WP:256`) | - |
 | non-subscription shapes (3) | AC 16, migration `:60` | mode payment, no customer, no subscription C2715 (`WP:302-307`) | - |
-| refusal order (already_provisioned before email_in_use, migration `:64-68`) | migration comment | C2709 uses a fresh email (`someone.else@shop.test`), so email_in_use cannot trigger either way; the order is not pinned | order unproven (a precision gap, not a plan member) |
+| refusal order (already_provisioned before email_in_use, migration `:64-68`) | migration comment | C2732 (`WP:486`) reuses a subscription whose owner email already has a membership; the swapped-order fault below confirms it | - |
 | use-case sender calls (4) | AC 12, 19, 21 | provisioned (recorded) and provisioned duplicate C2718, plain duplicate / ignored / recorded without provisioned C2711 | - |
 | sender failure modes (3) | AC 20 | not ok x2 (rate_limited, unavailable) and throws C2720 | - |
 | adapter answer shapes (6) | `stripe-events.ts:309-313` | present, absent, `provisioned: {}`, non-string, empty, non-object C2718 | - |
@@ -83,35 +88,47 @@ Notes from the recompute, not set members:
 - C2717 second clause: the added ledger columns are only `processed_at` and `process_error`. What is asserted is the closed-code CHECK (`WP:316`) and the `'[@ ]'` scan (`WP:322`). There is no per-refused-case assertion on the body or any other column. The constraint makes it structurally true, so PASS, but a reader should know it rests on the constraint.
 - Concurrency (Swept) is honestly named: C2710 proves mechanism through a regex over `prosrc` (`WP:330`) and index shapes, not an interleaving. One case the mechanism does not turn into a clean code: two simultaneous deliveries with different event ids and the same subscription would both pass the `exists` check at migration `:66` and the loser would hit the unique index and be stamped `failed`, not `already_provisioned`. One org still results. No check claims otherwise.
 - Swept rows marked existing, read against the code: webhook signature gate (billing-checkout) is in `stripe_receive_event` `:180-206` and re-run by C2728 (`PASS stripe_events`); "event id is the primary key" is `private.stripe_events` keyed by id, asserted at `WP:331-332`; the `on conflict (id) do nothing` write is at migration `:229`. All present.
-- Unclaimed shapes without a row: repeated trades (`hvac,hvac`) pass the guard at `:82` and `:88` and call `seed_org_catalog` twice (`on conflict do nothing`), and `org_billing.trades` keeps the duplicate. Not asserted.
+- Unclaimed shape, not a plan or migration enumeration: a repeated trade within the four-trade limit (`hvac,hvac`) passes the guard and seeds again with `on conflict do nothing`. Recorded, not blocking.
 - Name nit: the `test.each` titles in `route.test.ts` render `status NaN` (a `%i` on the wrong argument). Cosmetic; selection by `C2721:` still works.
 
 ## Test policy rows
 
+(row 1 re-judged at 31daf97 because the fix touched `workspace_provisioning.sql`; rows 2-4 carried from d144116)
+
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| `private.provision_workspace` and the changed `stripe_receive_event` (decide, across a boundary) | `supabase/migrations/20261110100000_workspace_provisioning.sql` | route (C2721, present) + SQL layer (present: `workspace_provisioning.sql`); one asserted case per trade selection (6/6), per error code (6/6), per collision case (4/4), per invalid-metadata case | no - trade, code and collision cases are all asserted, but the invalid-metadata expectation is met only for the 10 listed cases; the migration has 4 more condition branches with no case (malformed or over-long email, more than four trades, four-plus-digit seats, whitespace-only company), and the `customer_email` source branch is unasserted |
+| `private.provision_workspace` and the changed `stripe_receive_event` (decide, across a boundary) | `supabase/migrations/20261110100000_workspace_provisioning.sql` | route (C2721, present) + SQL layer (present: `workspace_provisioning.sql`); one asserted case per trade selection (6/6), per error code (6/6), per collision case (4/4), per invalid-metadata case | yes - trade (6/6), code (6/6), collision (4/4) and all 15 invalid-metadata conditions (10 in C2712, 5 in C2731) have an asserted case; the `customer_email` source is asserted by C2730 |
 | `makeReceiveStripeEvent` sender branch (decides) | `web/application/use-cases/stripe-webhook.ts` | one at its own layer; one case per branch of the sender-call table | yes - `stripe-provisioning.test.ts:31-32`, `:42`, `:58-61`: 2 provisioned, 3 not-provisioned, 3 failure cases |
 | `supabaseStripeEvents` pass-through of `provisioned` (maps, one conditional) | `web/infrastructure/supabase/stripe-events.ts` | present, absent, malformed at its own layer | yes - `stripe-events.test.ts:45` present, `:56` absent plus 4 malformed shapes |
 | `route.ts` (unchanged) | `web/app/api/webhooks/stripe/route.ts` | existing route tests plus C2721 | yes - the existing C2513-C2515 tests and C2721 all run in the batch (C2513-C2515 skipped by the `-t` filter; the full suite ran green, 3885 passed) |
 
 ## Faults injected
 
-Isolated in a `git worktree` under the session scratchpad (removed afterwards, `git worktree list` shows only the real tree and a pre-existing unrelated one). Real tree `git status --porcelain` before and after: both empty, identical. Each fault was applied to the migration only and run with `npm run test:db workspace_provisioning`; the worktree was reset between faults. No stash.
+Round 1 faults (verified at d144116, carried; the migration did not change): all five killed.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| invitation lifetime `interval '30 days'` -> `'14 days'` | migration `:116` | yes - `FAIL workspace_provisioning: C2703 invitation: invitation differs` |
-| drop the row lock: `... where e.id = p_event_id for update;` -> `... where e.id = p_event_id;` | migration `:137` | yes - `FAIL ... C2710 row lock: the retry path does not lock the event row` |
-| loosen the `org_billing` select policy from `has_org_role(org_id, array['owner','admin'])` to `is_org_member(org_id)` | migration `:23` | yes - `FAIL ... C2723 wpEst: wpEst reads a billing row` |
-| map a seed `55000` to `failed`: `when sqlstate = '55000' then 'no_pack'` -> `then 'failed'` | migration `:147` | yes - `FAIL ... C2714 no_pack code: process_error was failed` |
-| make the answer carry `provisioned` on every outcome: `if v_email is not null then` -> `if true then` | migration `:235` | yes - `FAIL ... C2707 answer: not a plain duplicate` |
+| invitation lifetime `30 days` -> `14 days` (carried from d144116) | migration `:116` | yes - `C2703 invitation` |
+| drop `for update` (carried from d144116) | migration `:137` | yes - `C2710 row lock` |
+| `org_billing` select policy -> `is_org_member` (carried from d144116) | migration `:23` | yes - `C2723 wpEst` |
+| seed `55000` mapped to `failed` (carried from d144116) | migration `:147` | yes - `C2714 no_pack code` |
+| `provisioned` on every outcome (carried from d144116) | migration `:235` | yes - `C2707 answer` |
 
-The cap of five was spent on the SQL surfaces. No behaviour-level mutation was run against the TypeScript surfaces (`stripe-webhook.ts` sender branch, `stripe-events.ts` pass-through, `composition/index.ts:283`), so those tests have not been shown able to fail. The refusal-order fault suggested in the brief was not run; reading the C2709 fixture shows it would survive (the second event uses a fresh email), so that is recorded as a precision gap in Coverage, not as a killed mutant.
+Round 2 faults (verified at 31daf97), in a fresh `git worktree` under the session scratchpad, removed afterwards. Real tree `git status --porcelain` before and after: identical (both empty). No stash. Each fault was killed by a different proof.
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| use case sends whenever a sender exists: `if (answer.provisionedEmail && links) await sendOwnerLink(...)` -> `if (links) await sendOwnerLink(links, answer.provisionedEmail ?? "")` | `web/application/use-cases/stripe-webhook.ts:25` | yes - three `C2711: ... never calls the sender` cases fail (`expected "vi.fn()" to not be called at all, but actually been called 1 times`) |
+| adapter drops the pass-through: the `...(typeof email === "string" && email !== "" ? { provisionedEmail: email } : {})` spread removed | `web/infrastructure/supabase/stripe-events.ts:312` | yes - `C2718: a provisioned answer hands on the owner's email` (`expected { ok: true, outcome: 'recorded' } to deeply equal ...`) |
+| container builds the use case without the sender: second argument `supabaseInvitationLinkSender(supabase)` removed | `web/composition/index.ts:283` | yes - `C2719: a provisioned delivery reaches signInWithOtp ...` (`expected "vi.fn()" to be called 1 times, but got 0 times`) |
+| route answers `{ ...result }` instead of `{ outcome: result.outcome }` | `web/app/api/webhooks/stripe/route.ts:26` | yes - `C2721: the body is exactly the outcome ...` (`expected '{"ok":true,"outcome":"recorded"}' to be '{"outcome":"recorded"}'`) |
+| refusal order swapped: the `already_provisioned` block moved after the `email_in_use` check | migration `:64-68` | yes - `FAIL workspace_provisioning: C2732 order code: process_error was email_in_use` |
 
 ## Gate
 
+At 31daf97, all proofs re-run in full:
+
 - `cd web && npm run test:db workspace_provisioning stripe_events` - 2 passed, 0 failed (`PASS workspace_provisioning`, `PASS stripe_events`).
-- `cd web && npm run test:db` (all recipes) - 28 passed, 1 failed. The one failure is `FAIL customer_portal: view tenant: ...`, a pre-existing failure that also occurs at 925cb5e (per checks.md, the brief and the plan's handoff); it is not caused by this feature and is not counted against it.
-- `cd web && npx vitest run` (whole suite) - 208 files, 3885 passed, 0 failed (includes `scripts/test-db/runner.test.ts` with the 29-recipe, 31-file counts).
-- Targeted C27xx vitest batch - 23 passed, 0 failed.
+- `cd web && npx vitest run application/use-cases/stripe-provisioning.test.ts infrastructure/supabase/stripe-events.test.ts composition/provisioning-wiring.test.ts app/api/webhooks/stripe/route.test.ts -t "C27(11|18|19|20|21|29):"` - 23 passed, 0 failed (same named set as round 1).
+- `cd web && npm run test:db` (all recipes) - 28 passed, 1 failed. The one failure is `FAIL customer_portal: view tenant: ...`, a pre-existing failure that also occurs at 925cb5e; it is not caused by this feature and is not counted against it.
+- `cd web && npx vitest run` - 208 files, 3885 passed, 0 failed.
