@@ -18,6 +18,7 @@ import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
 import type { DomainEvent } from "@/domain/transition";
 import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
+import type { CheckoutSelection } from "@/domain/billing";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -1126,4 +1127,12 @@ export interface SigningReader {
 /** The contract as the renderer draws it, with the agreement number (signature-provider Flow hop 3). `null` when there is nothing to draw. */
 export interface ContractDocuments {
   load(contractId: string, orgId: string): Promise<{ number: string; document: ContractDocument } | null>;
+}
+
+/** What the checkout seam answers (pricing-page door 3). `url` is where the visitor goes next. */
+export type CheckoutResult = { ok: true; url: string } | { ok: false; code: "not_configured" | "unavailable" };
+
+/** Begins a trial for a validated selection. The Stripe adapter (billing-checkout) is its first real implementation. */
+export interface CheckoutStarter {
+  start(selection: CheckoutSelection): Promise<CheckoutResult>;
 }

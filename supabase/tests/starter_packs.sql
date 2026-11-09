@@ -477,5 +477,18 @@ begin
 end $$;
 reset role;
 
+-- pricing-page C2425 (.specs/features/pricing-page/checks.md): the trade codes the pricing page offers are the released packs.
+-- The expected list is copied from that plan (door 2: hvac, plumbing, electrical), never read back from web/domain/billing.
+select tests.ok(
+  'C2425 released packs',
+  (select array_agg(pack order by pack) from private.catalog_packs where released_at is not null) = array['electrical', 'hvac', 'plumbing'],
+  'the released packs are not exactly electrical, hvac and plumbing'
+);
+select tests.ok(
+  'C2425 other is not a pack',
+  not exists (select 1 from private.catalog_packs where pack = 'other'),
+  'other must not be a registered pack: it is a trade with no starter catalog'
+);
+
 rollback;
 select 'starter_packs: pass' as result;

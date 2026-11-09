@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
-/** Reachable without a session, exactly (door 1). */
-const PUBLIC_PATHS = ["/login", "/auth/confirm"];
+/** Reachable without a session, exactly (door 1). `/pricing` is the public price page (pricing-page door 1); an exact path, so no `/pricing/...` route is public by accident. */
+const PUBLIC_PATHS = ["/login", "/auth/confirm", "/pricing"];
 /**
  * Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`,
  * the customer signs at `/sign/<token>` (signature-provider door 7), and n8n's signed callbacks post to
