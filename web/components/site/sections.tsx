@@ -91,7 +91,7 @@ export function PlansTeaser() {
             <span className="text-ink-2">a month</span>
           </p>
           <p className="pt-2 text-ink-2">
-            {plan.liveAgreements} live agreements · {plan.aiImports} AI imports a month · unlimited seats
+            {plan.liveAgreements} live agreements · {plan.aiImports} AI imports a month · {plan.includedSeats} seats included
           </p>
         </div>
       ))}

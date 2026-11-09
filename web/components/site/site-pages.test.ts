@@ -64,3 +64,14 @@ describe("the public site", () => {
     for (const faq of FAQS) expect(faq.a.length).toBeGreaterThan(10);
   });
 });
+
+describe("the seat answer (register-seats)", () => {
+  test("C2616: the FAQ answer to 'Do you charge per seat?' names the included seats and the extra-seat price", () => {
+    const answer = FAQS.find((faq) => faq.q === "Do you charge per seat?")?.a ?? "";
+    expect(answer).toContain("$15 a month");
+    expect(answer).toContain("Starter 2");
+    expect(answer).toContain("Team 5");
+    expect(answer).toContain("Business 10");
+    expect(answer.toLowerCase()).not.toContain("unlimited");
+  });
+});

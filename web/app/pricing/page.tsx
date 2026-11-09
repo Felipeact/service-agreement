@@ -4,7 +4,7 @@ import { FAQS } from "@/components/site/content";
 import { FaqList, PageHero, Wrap } from "@/components/site/sections";
 import { SiteShell } from "@/components/site/site-shell";
 import { LinkButton } from "@/components/ui/link-button";
-import { PLANS, formatPlanPrice } from "@/domain/billing";
+import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -38,7 +38,7 @@ export default function PricingPage() {
                 <ul className="flex flex-col gap-2 border-t border-hairline pt-4 text-[13px]">
                   <li>{plan.liveAgreements} live agreements</li>
                   <li>{plan.aiImports} AI imports a month</li>
-                  <li>Unlimited seats</li>
+                  <li>{plan.includedSeats} seats included</li>
                 </ul>
                 <LinkButton href={`/register?plan=${plan.key}`} variant="primary" aria-label={`Start 14-day trial, ${plan.name} plan`} className="mt-auto w-full">
                   Start 14-day trial
@@ -55,7 +55,7 @@ export default function PricingPage() {
         <Wrap className="grid gap-8 py-12 lg:grid-cols-[1fr_1.4fr] lg:py-16">
           <div className="flex flex-col gap-3">
             <h2 className="font-display text-[28px] leading-[1.1] font-semibold tracking-tight">Every plan has everything.</h2>
-            <p className="max-w-[44ch] text-ink-2">Templates, reports and signatures are the same on every plan. Plans differ only in volume, and seats are never charged.</p>
+            <p className="max-w-[44ch] text-ink-2">Templates, reports and signatures are the same on every plan. Plans differ in volume and in the seats they include. Extra seats {formatPlanPrice(EXTRA_SEAT_CENTS)} a month.</p>
             <Link href="/faq" className="inline-flex min-h-11 w-fit items-center font-semibold text-action hover:underline">
               All questions
             </Link>

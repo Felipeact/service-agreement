@@ -1,12 +1,13 @@
 import type { CheckoutStarter } from "@/application/ports";
-import { parseCheckoutSelection } from "@/domain/billing";
+import { parseCheckoutSelection, type FieldErrors, type SelectionInput } from "@/domain/billing";
 
 export type StartTrialOutcome =
   | { status: "redirect"; url: string }
-  | { status: "no_trade" | "invalid_choice" | "not_configured" | "unavailable" };
+  | { status: "no_trade" | "invalid_choice" | "invalid_details"; fields: FieldErrors }
+  | { status: "not_configured" | "unavailable" };
 
-/** What a form posted, before anything is trusted (pricing-page S2). */
-export type StartTrialInput = { plan: unknown; trades: readonly unknown[] };
+/** What a form posted, before anything is trusted (pricing-page S2, register-seats). */
+export type StartTrialInput = SelectionInput;
 
 const isHttps = (url: string) => {
   try {
@@ -22,8 +23,8 @@ const isHttps = (url: string) => {
  */
 export function makeStartTrial(checkout: CheckoutStarter) {
   return async function startTrial(input: StartTrialInput): Promise<StartTrialOutcome> {
-    const parsed = parseCheckoutSelection(input.plan, input.trades);
-    if (!parsed.ok) return { status: parsed.code };
+    const parsed = parseCheckoutSelection(input);
+    if (!parsed.ok) return { status: parsed.code, fields: parsed.fields };
 
     let answer;
     try {

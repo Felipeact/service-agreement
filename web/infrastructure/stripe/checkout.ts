@@ -1,5 +1,5 @@
 import type { CheckoutStarter } from "@/application/ports";
-import { PLANS, knownTrades } from "@/domain/billing";
+import { EXTRA_SEAT_CENTS, PLANS, knownTrades } from "@/domain/billing";
 
 const SESSIONS_URL = "https://api.stripe.com/v1/checkout/sessions";
 
@@ -34,10 +34,11 @@ function errorCode(body: unknown): string | undefined {
 export function stripeCheckoutStarter(options: { secretKey: string; appBaseUrl: string }): CheckoutStarter {
   const base = options.appBaseUrl.replace(/\/+$/, "");
   return {
-    async start({ plan, trades }) {
+    async start({ plan, trades, seats, email, company, phone }) {
       const chosen = PLANS.find((candidate) => candidate.key === plan);
       if (!chosen) return { ok: false, code: "unavailable" };
-      const metadata = { plan, trades: knownTrades(trades).join(",") };
+      const metadata = { plan, trades: knownTrades(trades).join(","), seats, company, phone };
+      const extraSeats = seats - chosen.includedSeats;
       const body = encodeForm({
         mode: "subscription",
         line_items: [
@@ -50,7 +51,16 @@ export function stripeCheckoutStarter(options: { secretKey: string; appBaseUrl: 
               product_data: { name: `${chosen.name} plan` },
             },
           },
+          ...(extraSeats > 0
+            ? [
+                {
+                  quantity: extraSeats,
+                  price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product_data: { name: "Extra seat" } },
+                },
+              ]
+            : []),
         ],
+        customer_email: email,
         payment_method_collection: "always",
         subscription_data: {
           trial_period_days: TRIAL_DAYS,

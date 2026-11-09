@@ -25,7 +25,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const SELECTION = { plan: "team", trades: ["hvac"] };
+const SELECTION = { plan: "team", trades: ["hvac"], seats: "8", email: "owner@shop.ca", company: "Shop Ltd", phone: "604-555-0199" };
 
 describe("the billing container with Stripe configured", () => {
   test.each([
@@ -33,7 +33,7 @@ describe("the billing container with Stripe configured", () => {
     { name: "STRIPE_SECRET_KEY is empty", key: "", base: "https://app.example.com" },
     { name: "APP_BASE_URL is unset", key: "sk_test_x", base: undefined },
     { name: "APP_BASE_URL is empty", key: "sk_test_x", base: "" },
-  ])("C2507: when $name the answer is not_configured and fetch is never called", async ({ key, base }) => {
+  ])("C2623: C2507: when $name the answer is not_configured and fetch is never called", async ({ key, base }) => {
     if (key === undefined) vi.stubEnv("STRIPE_SECRET_KEY", undefined as unknown as string);
     else vi.stubEnv("STRIPE_SECRET_KEY", key);
     if (base === undefined) vi.stubEnv("APP_BASE_URL", undefined as unknown as string);
@@ -43,7 +43,7 @@ describe("the billing container with Stripe configured", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("C2512: with both set a valid selection reaches Stripe once and redirects, touching no cookie, connection or Supabase client", async () => {
+  test("C2623: C2512: with both set a valid selection reaches Stripe once and redirects, touching no cookie, connection or Supabase client", async () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_x");
     vi.stubEnv("APP_BASE_URL", "https://app.example.com");
     const { startTrial } = await getBillingContainer();

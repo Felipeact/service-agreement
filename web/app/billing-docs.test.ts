@@ -26,3 +26,23 @@ test("C2536: ROADMAP, CONTEXT and STATE record billing-checkout", () => {
   const ad072 = rows.find((row) => row.startsWith("| AD-072 |"));
   expect(ad072).toContain("/register/success");
 });
+
+test("C2622: ROADMAP, CONTEXT, STATE and PRODUCT record that seats are charged beyond the included ones", () => {
+  const roadmap = document("ROADMAP.md");
+  expect(roadmap).toContain("| Plan | Per month | Live agreements | AI imports a month | Seats included |");
+  for (const row of ["| Starter | $49 | 15 | 10 | 2 |", "| Team | $99 | 60 | 40 | 5 |", "| Business | $199 | 200 | 120 | 10 |"]) expect(roadmap).toContain(row);
+  expect(roadmap).toContain("$15");
+  const decision = (number: number) => lines(roadmap).find((line) => line.startsWith(`| ${number} |`)) ?? "";
+  expect(decision(10)).toContain("per seat beyond");
+  expect(decision(20)).toContain("include seats");
+  expect(roadmap.toLowerCase()).not.toContain("seats not charged separately");
+
+  const context = document("CONTEXT.md");
+  expect(context).toContain("register-seats");
+  expect(lines(context).some((line) => line.includes("2026-11-09") && line.includes("register-seats"))).toBe(true);
+
+  const rows = lines(document(".specs/STATE.md")).filter((line) => /^\| AD-\d+ \|/.test(line) && /\| active \|/.test(line));
+  expect(rows.filter((row) => ["EXTRA_SEAT_CENTS", "customer_email", "metadata", "seats"].every((word) => row.includes(word)))).toHaveLength(1);
+
+  expect(document("PRODUCT.md").toLowerCase()).not.toContain("unlimited seats");
+});

@@ -5,7 +5,9 @@ import { stripeCheckoutStarter } from "./checkout";
 const KEY = "sk_test_unit_key_0000";
 const BASE = "https://app.example.com";
 
-const SELECTION: CheckoutSelection = { plan: "team", trades: ["hvac", "plumbing"] };
+const DETAILS = { seats: 10, email: "owner@shop.ca", company: "Shop Ltd", phone: "604-555-0199" };
+type Selection = Pick<CheckoutSelection, "plan" | "trades"> & Partial<CheckoutSelection>;
+const SELECTION: Selection = { plan: "team", trades: ["hvac", "plumbing"] };
 
 type Call = { url: string; init: RequestInit };
 let calls: Call[];
@@ -30,7 +32,7 @@ afterEach(() => {
   errorLog.mockRestore();
 });
 
-const start = (selection: CheckoutSelection = SELECTION, base = BASE) => stripeCheckoutStarter({ secretKey: KEY, appBaseUrl: base }).start(selection);
+const start = (selection: Selection = SELECTION, base = BASE) => stripeCheckoutStarter({ secretKey: KEY, appBaseUrl: base }).start({ ...DETAILS, ...selection });
 const form = () => new URLSearchParams(calls[0].init.body as string);
 const headers = () => calls[0].init.headers as Record<string, string>;
 
@@ -161,5 +163,52 @@ describe("the Stripe checkout starter", () => {
     for (const forbidden of [KEY, "business", "electrical", "other", "@", "https://", "cs_"]) expect(line).not.toContain(forbidden);
     expect(line).toContain(LOGGED[name]);
     if (name === "400") expect(line).toContain("parameter_invalid_empty");
+  });
+
+  const INCLUDED = [
+    { plan: "starter", included: 2 },
+    { plan: "team", included: 5 },
+    { plan: "business", included: 10 },
+  ] as const;
+
+  test.each(INCLUDED)("C2613: $plan with exactly $included seats sends the plan line and no extra-seat line", async ({ plan, included }) => {
+    await start({ plan, trades: ["hvac"], seats: included });
+    const keys = [...form().keys()];
+    expect(form().get("line_items[0][price_data][product_data][name]")).toMatch(/ plan$/);
+    expect(keys.filter((key) => key.startsWith("line_items[1]"))).toEqual([]);
+  });
+
+  test.each(INCLUDED.flatMap((p) => [p.included + 1, 50].map((seats) => ({ ...p, seats }))))(
+    "C2614: $plan with $seats seats adds an Extra seat line of quantity seats minus $included",
+    async ({ plan, included, seats }) => {
+      await start({ plan, trades: ["hvac"], seats });
+      const body = form();
+      expect(body.get("line_items[1][price_data][product_data][name]")).toBe("Extra seat");
+      expect(body.get("line_items[1][price_data][currency]")).toBe("cad");
+      expect(body.get("line_items[1][price_data][unit_amount]")).toBe("1500");
+      expect(body.get("line_items[1][price_data][recurring][interval]")).toBe("month");
+      expect(body.get("line_items[1][quantity]")).toBe(String(seats - included));
+    },
+  );
+
+  test("C2615: the buyer's email prefills Checkout and the seats, company and phone ride on the session and the subscription", async () => {
+    await start({ plan: "team", trades: ["hvac"], seats: 8, email: "owner@shop.ca", company: "Shop Ltd", phone: "+1 604 555 0199" });
+    const body = form();
+    expect(body.get("customer_email")).toBe("owner@shop.ca");
+    for (const prefix of ["metadata", "subscription_data[metadata]"]) {
+      expect(body.get(`${prefix}[seats]`)).toBe("8");
+      expect(body.get(`${prefix}[company]`)).toBe("Shop Ltd");
+      expect(body.get(`${prefix}[phone]`)).toBe("+1 604 555 0199");
+      expect(body.get(`${prefix}[plan]`)).toBe("team");
+    }
+  });
+
+  test.each(FAILURES)("C2607: $name logs no email, company or phone", async ({ name, arrange }) => {
+    arrange();
+    const pending = start({ plan: "team", trades: ["hvac"], seats: 6, email: "secret.owner@shop.ca", company: "Secret Plumbing Ltd", phone: "604-555-0188" });
+    if (name === TIMEOUT) await vi.advanceTimersByTimeAsync(10_000);
+    await pending;
+    const line = String(errorLog.mock.calls.flat().join(" "));
+    for (const secret of ["secret.owner", "shop.ca", "Secret Plumbing", "604-555-0188"]) expect(line).not.toContain(secret);
   });
 });

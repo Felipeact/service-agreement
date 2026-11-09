@@ -1,3 +1,4 @@
+import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
 /**
  * Everything the public site says, in one place so every page and every home-page concept reads the same facts.
  * Rule (PRODUCT.md, Evidence on Hand): there are no customers, testimonials or measured results yet, so none appear here.
@@ -142,7 +143,7 @@ export const FAQS: readonly Faq[] = [
   { q: "What about Quebec?", a: "Quebec has its own e-signature framework and language rules. It is a later, separate item." },
   { q: "How does the free trial work?", a: "14 days free. A card is required to start, and billing is monthly after the trial. Stripe handles payment." },
   { q: "What is a live agreement?", a: "One that is in progress, or sent and waiting for the customer. Plans limit volume only: features, templates and reports are the same on every plan." },
-  { q: "Do you charge per seat?", a: "No. Every plan has unlimited seats." },
+  { q: "Do you charge per seat?", a: `Each plan includes some seats (${PLANS.map((plan) => `${plan.name} ${plan.includedSeats}`).join(", ")}). Every extra seat is ${formatPlanPrice(EXTRA_SEAT_CENTS)} a month.` },
   { q: "What does it not do?", a: "Dispatch, GPS, payroll, construction or project contracts, and a Word-style document editor." },
   { q: "Can I use more than one trade?", a: "Yes. Pick every trade you work in when you register, and your workspace is set up for all of them." },
 ];
