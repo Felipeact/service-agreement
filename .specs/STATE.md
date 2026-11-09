@@ -174,6 +174,7 @@
 
 **Feature**: starter-packs (ROADMAP Phase 4.5 item 5). Profile standard, one builder; plan and checks in `.specs/features/starter-packs/`
 **Where**: DONE. Verifier round 2 (scoped) PASS (28 of 28, `validate_verification.py` exit 0); round 1 failed on one surviving mutant on the role gate (F7, C2213), closed by a stronger proof. All 28 checks built; vitest (`npm test` 185 files, 3,525 tests) and `npm run test:db` green (26 of 27 recipes; `customer_portal` is the stale one below). Migration `20261109163948_starter_packs` applied 2026-11-09 with the owner's go-ahead; hosted state read: `hvac` released, `plumbing` (20 types, 95 tasks) and `electrical` (20 types, 101 tasks) unreleased
+**Prepared, not applied**: the release of the two packs is drafted in `supabase/packs/pending/` (guarded `release.sql`, the after-release recipe, README steps) with checks C2301 and C2302 in `.specs/features/pack-release/checks.md`; it waits for the reviewers' names and the owner's go-ahead to apply
 **Next step**: a practitioner reviews both packs (`select * from private.pack_review_sheet('plumbing')`), a later migration sets `released_at` (name the reviewer in its header), and only then tick ROADMAP item 5. After that, ROADMAP Phase 4.5 item 6, trade-neutral copy (independent of the reviewer). Also open: `supabase/tests/customer_portal.sql:322` still expects the old four-key `tenant` (stale since item-vocabulary)
 **Blockers**: none for the build; releasing the packs blocks go-live and needs the reviewer (decision 5)
 **Branch**: development; nothing pushed
