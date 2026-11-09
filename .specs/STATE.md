@@ -170,8 +170,8 @@
 ## Handoff
 
 **Feature**: synonyms-as-data (ROADMAP Phase 4.5 item 4). Profile standard, one builder; plan and checks in `.specs/features/synonyms-as-data/`
-**Where**: all 27 checks are built and green: vitest (`npm test` 184 files, 3,512 tests), `tsc`, `eslint`, and the SQL recipe `synonyms_as_data` plus the other 25 `test:db` recipes except `customer_portal`, which fails on a stale `view tenant` assertion from item-vocabulary (the tenant now carries `itemSingular` and `itemPlural`); not this feature's, not fixed. Migration applied 2026-11-09 as `20261109154806_synonyms_as_data` (owner's go-ahead); demo org read: 40 types equal to the pack, 27 with spellings, 59 spellings, context "HVAC and mechanical"
-**Next step**: dispatch the Verifier over `c29fe10..HEAD` with every check; tick ROADMAP Phase 4.5 item 4 after it passes
+**Where**: DONE. Verifier round 3 PASS (27 of 27, `validate_verification.py` exit 0). All 27 checks are built and green: vitest (`npm test` 184 files, 3,512 tests), `tsc`, `eslint`, and the SQL recipe `synonyms_as_data` plus the other 25 `test:db` recipes except `customer_portal`, which fails on a stale `view tenant` assertion from item-vocabulary (the tenant now carries `itemSingular` and `itemPlural`); not this feature's, not fixed. Migration applied 2026-11-09 as `20261109154806_synonyms_as_data` (owner's go-ahead); demo org read: 40 types equal to the pack, 27 with spellings, 59 spellings, context "HVAC and mechanical"
+**Next step**: ROADMAP Phase 4.5 item 5, plumbing and electrical starter packs (register the pack row first, AD-161; needs a practitioner reviewer, decision 5), then item 6, trade-neutral copy. Also open: `supabase/tests/customer_portal.sql:322` still expects the old four-key `tenant` (stale since item-vocabulary)
 **Blockers**: none
 **Branch**: development; nothing pushed
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor and is still not in the project's migration history; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`
