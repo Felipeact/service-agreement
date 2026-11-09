@@ -50,6 +50,16 @@ describe("the pricing action", () => {
     expect(refused).toEqual({ status: "not_configured", trades: ["hvac", "other"] });
   });
 
+  test("C2420: an unavailable starter is the unavailable state carrying the known trades", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    start.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect(await startTrialAction(INITIAL_PRICING_STATE, post([["plan", "team"], ["trade", "plumbing"]]))).toEqual({ status: "unavailable", trades: ["plumbing"] });
+
+    start.mockRejectedValue(new Error("down"));
+    expect(await startTrialAction(INITIAL_PRICING_STATE, post([["plan", "team"], ["trade", "hvac"]]))).toEqual({ status: "unavailable", trades: ["hvac"] });
+    errorSpy.mockRestore();
+  });
+
   test("C2420: no trade is no_trade with no trades carried", async () => {
     expect(await startTrialAction(INITIAL_PRICING_STATE, post([["plan", "team"]]))).toEqual({ status: "no_trade", trades: [] });
   });
