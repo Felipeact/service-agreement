@@ -183,3 +183,7 @@ Cost: 3 proofs at their own layer across 4 vitest files plus 1 SQL file. Without
 - S1 to S3 = the migration (~14 KB), the SQL test (~35 KB) and `supabase/tests/fixture.sql`-style helpers: ~12k tokens; S4 = `stripe-webhook.ts`, the port, the adapter, `composition/index.ts` (15 KB), three vitest files: ~15k; S5 shares the SQL file: ~3k. Total ~30k, under the 150k budget - one builder, no ask
 - The migration is written and tested inside the rolled-back recipe but applied to the hosted project only with the owner's go-ahead (rule 8)
 - Mechanism: one builder
+
+- **Boundary:** C2700-C2729 closed at `f03c7c9` (migration and SQL tests at `ff56d41`)
+- **Settled mid-build:** the user's "implement" accepted the plan as written. Plan edits made before any check existed: AC 17 lost its log clause (the database cannot log; the code on the event is the record), and door 3 reuses the existing `InvitationLinkSender`
+- **Abandoned:** stamping `processed_at` inside `stripe_receive_event`: it broke billing-checkout C2528 (the function's one write is the insert), so the stamping moved to `private.process_checkout_event`. `runner.test.ts` counts (28 to 29 recipes, 30 to 31 files) were updated for the new recipe. The `customer_portal` recipe fails on the hosted database before and after this feature (checked at `925cb5e`)
