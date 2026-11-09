@@ -35,6 +35,7 @@ const ALL = [
   "starter_packs",
   "demo_seed",
   "stripe_events",
+  "workspace_provisioning",
 ];
 
 const REAL_FILES = readdirSync(testsDir).filter((name) => name.endsWith(".sql"));
@@ -107,18 +108,18 @@ describe("test:db runner", () => {
     expect(parts.demo_seed).toEqual(["fixture.sql", "SEED_BODY", "demo_seed.sql", "SEED_BODY", "demo_seed_rerun.sql"]);
   });
 
-  test("C830: service_included is a plain recipe, one of 28, over 30 SQL files", () => {
-    expect(RECIPES).toHaveLength(28);
+  test("C830: service_included is a plain recipe, one of 29, over 31 SQL files", () => {
+    expect(RECIPES).toHaveLength(29);
     expect(RECIPES.find((recipe) => recipe.name === "service_included")?.parts).toEqual(["fixture.sql", "service_included.sql"]);
     expect(REAL_FILES).toContain("service_included.sql");
-    expect(REAL_FILES).toHaveLength(30);
+    expect(REAL_FILES).toHaveLength(31);
   });
 
-  test("C1045: outbox_dispatch is a plain recipe, one of 28, over 30 SQL files", () => {
-    expect(RECIPES).toHaveLength(28);
+  test("C1045: outbox_dispatch is a plain recipe, one of 29, over 31 SQL files", () => {
+    expect(RECIPES).toHaveLength(29);
     expect(RECIPES.find((recipe) => recipe.name === "outbox_dispatch")?.parts).toEqual(["fixture.sql", "outbox_dispatch.sql"]);
     expect(REAL_FILES).toContain("outbox_dispatch.sql");
-    expect(REAL_FILES).toHaveLength(30);
+    expect(REAL_FILES).toHaveLength(31);
   });
 
   test("C202: the seed body drops only begin; and commit;, and replaces only an exact SEED_BODY line", () => {
@@ -150,19 +151,19 @@ describe("test:db runner", () => {
     expect(REAL_FILES).toContain("starter_packs.sql");
   });
 
-  test("C203: no argument runs all 28, one connection each, in order, and prints PASS per recipe", async () => {
+  test("C203: no argument runs all 29, one connection each, in order, and prints PASS per recipe", async () => {
     const f = fake();
     await runSuite(f.io);
-    expect(f.connects).toBe(28);
-    expect(f.sent).toHaveLength(28);
-    expect(f.ended).toBe(28);
-    expect(f.out.slice(0, 28)).toEqual(ALL.map((name) => `PASS ${name}`));
+    expect(f.connects).toBe(29);
+    expect(f.sent).toHaveLength(29);
+    expect(f.ended).toBe(29);
+    expect(f.out.slice(0, 29)).toEqual(ALL.map((name) => `PASS ${name}`));
   });
 
-  test("C204: all passing prints 28 passed, 0 failed and exits 0", async () => {
+  test("C204: all passing prints 29 passed, 0 failed and exits 0", async () => {
     const f = fake();
     const code = await runSuite(f.io);
-    expect(f.out.at(-1)).toBe("28 passed, 0 failed");
+    expect(f.out.at(-1)).toBe("29 passed, 0 failed");
     expect(code).toBe(0);
   });
 
@@ -172,9 +173,9 @@ describe("test:db runner", () => {
     });
     const code = await runSuite(f.io);
     expect(f.out).toContain("FAIL events_outbox: C3: anon can read");
-    expect(f.connects).toBe(28);
-    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(27);
-    expect(f.out.at(-1)).toBe("27 passed, 1 failed");
+    expect(f.connects).toBe(29);
+    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(28);
+    expect(f.out.at(-1)).toBe("28 passed, 1 failed");
     expect(code).toBe(1);
   });
 
@@ -241,7 +242,7 @@ describe("test:db runner", () => {
     expect(f.connects).toBe(0);
     expect(code).toBe(2);
 
-    expect(REAL_FILES).toHaveLength(30);
+    expect(REAL_FILES).toHaveLength(31);
     const covered = new Set(RECIPES.flatMap((recipe) => recipe.parts));
     for (const file of REAL_FILES) expect(covered.has(file), file).toBe(true);
   });
@@ -265,15 +266,15 @@ describe("test:db runner", () => {
     const f = fake({ read });
     f.io.readSeed = () => seed;
     expect(await runSuite(f.io)).toBe(0);
-    expect(f.connects).toBe(28);
+    expect(f.connects).toBe(29);
   });
 
   test("C212: a connection error fails that recipe and the rest still run", async () => {
     const f = fake({ connectError: (index) => (index === 0 ? new Error("connect ECONNREFUSED") : undefined) });
     const code = await runSuite(f.io);
     expect(f.out[0]).toBe("FAIL catalog_seed: connect ECONNREFUSED");
-    expect(f.connects).toBe(28);
-    expect(f.out.at(-1)).toBe("27 passed, 1 failed");
+    expect(f.connects).toBe(29);
+    expect(f.out.at(-1)).toBe("28 passed, 1 failed");
     expect(code).toBe(1);
   });
 
