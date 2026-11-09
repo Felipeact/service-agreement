@@ -300,6 +300,11 @@ declare
   r text;
 begin
   foreach r in array array['anon', 'authenticated'] loop
+    -- the grants themselves: both functions are invoker, so a call would also fail at the closed tables
+    perform tests.ok('C2213 ' || r || ' seed grant', not has_function_privilege(r, 'private.seed_org_catalog(uuid, text)', 'execute'), r || ' can execute seed_org_catalog');
+    perform tests.ok('C2213 ' || r || ' sheet grant', not has_function_privilege(r, 'private.pack_review_sheet(text)', 'execute'), r || ' can execute pack_review_sheet');
+    perform tests.ok('C2213 ' || r || ' column grant', not has_column_privilege(r, 'private.catalog_packs', 'released_at', 'select')
+      and not has_column_privilege(r, 'private.catalog_packs', 'released_at', 'update'), r || ' holds a privilege on released_at');
     if r = 'anon' then perform tests.act_as_anon(); else perform tests.act_as('uA'); end if;
     perform tests.expect_error('C2213 ' || r || ' read', 'select released_at from private.catalog_packs', '42501');
     perform tests.expect_error('C2213 ' || r || ' update', $q$update private.catalog_packs set released_at = now() where pack = 'plumbing'$q$, '42501');
