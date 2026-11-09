@@ -92,7 +92,7 @@ function unlocalisedItemCopy(source: string, relative: string): string[] {
     if (inner === "equipment" || ITEM_COPY_LITERALS.includes(`${relative}: ${inner}`)) continue;
     found.push(match[0]);
   }
-  for (const match of code.matchAll(/>([^<>{}=]*equipment[^<>{}=]*)</gi)) found.push(match[1]);
+  for (const match of code.replace(/\{[^{}]*\}/g, (m) => " ".repeat(m.length)).matchAll(/>([^<>{}=]*equipment[^<>{}=]*)</gi)) found.push(match[1]);
   return found;
 }
 
