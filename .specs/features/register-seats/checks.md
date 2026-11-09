@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/register-seats/plan.md`
 
-24 checks in 3 slices · 3 one-way doors (all approved) · 2 open, of which 1 blocks go-live and 0 block the build
+25 checks in 3 slices · 3 one-way doors (all approved) · 2 open, of which 1 blocks go-live and 0 block the build
 
 ## How proofs run
 
@@ -73,6 +73,9 @@ Proof: `npx vitest run components/site/site-pages.test.ts -t "C2616:"`
 
 ### S3 - Failure and the screen · 3 files · 8 KB · ~3k
 
+**C2624** - Each of the three home-page concepts shows "2 seats included", "5 seats included", "10 seats included" and "Extra seats $15 a month" in its rendered text (AC 14; added in round 1 after the Verifier found the home page never stated the extra-seat price)
+Proof: `npx vitest run components/site/site-pages.test.ts -t "C2624:"` (3 concepts)
+
 **C2617** - After the starter answers `unavailable` or `not_configured`, the form shows the existing message and every typed value, the trades and the plan are kept (AC 15)
 Proof: `npx vitest run app/register/register.test.ts -t "C2617:"` (2 states)
 
@@ -112,6 +115,7 @@ Proof: `npx vitest run composition/billing-container.stripe.test.ts -t "C2623:"`
 | form states (6) | idle C2600, C2610 · `no_trade` C2606 · `invalid_choice` C2606 · `invalid_details` C2606 · `not_configured` C2617 · `unavailable` C2617 | - |
 | `GET /register` statuses (1) | `200` C2600 | - |
 | `POST /register` statuses (2) | `303` C2615 with the existing redirect proofs · `200` C2606, C2617 | - |
+| home-page concepts stating the seats and the extra-seat price (3) | concept A C2624 · concept B C2624 · concept C C2624 | - |
 | copy places free of "unlimited seats" (4) | pricing page C2616 · `content.ts` C2616 · `sections.tsx` C2616 · `home-concepts.tsx` C2616 | - |
 | doors (3) | 1 line items C2613, C2614 · 2 metadata and email C2615 · 3 seam C2621 | - |
 | startup config (1 assembly) | `getBillingContainer` C2623 (no new variable; the same two) | - |

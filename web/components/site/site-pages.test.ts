@@ -74,4 +74,13 @@ describe("the seat answer (register-seats)", () => {
     expect(answer).toContain("Business 10");
     expect(answer.toLowerCase()).not.toContain("unlimited");
   });
+
+  test.each([["home (concept A)", HomeA], ["concept B", HomeB], ["concept C", HomeC]] as [string, ComponentType][])(
+    "C2624: %s shows the seats included per plan and 'Extra seats $15 a month'",
+    (_name, Home) => {
+      const text = renderToStaticMarkup(createElement(Home)).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      for (const included of ["2 seats included", "5 seats included", "10 seats included"]) expect(text).toContain(included);
+      expect(text).toContain("Extra seats $15 a month");
+    },
+  );
 });

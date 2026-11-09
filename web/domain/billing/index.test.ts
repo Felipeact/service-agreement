@@ -166,3 +166,10 @@ describe("the seats", () => {
     expect(seatsAfterPlanChange(from, to, seats)).toBe(expected);
   });
 });
+
+describe("seat text the form can post", () => {
+  test("a leading zero or surrounding spaces are read as the number they spell", () => {
+    expect(parseCheckoutSelection({ ...OK, seats: "08" })).toMatchObject({ ok: true, value: { seats: 8 } });
+    expect(parseCheckoutSelection({ ...OK, seats: " 5 " })).toMatchObject({ ok: true, value: { seats: 5 } });
+  });
+});
