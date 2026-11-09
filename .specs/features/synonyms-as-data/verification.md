@@ -2,9 +2,72 @@
 
 **Verdict**: FAIL
 **Profile**: standard
-**Diff range**: c29fe10..62cf32d (HEAD)
-**Round**: 1 - full
+**Diff range**: c29fe10..94d1d80 (HEAD); round 2 scope 62cf32d..94d1d80
+**Round**: 2 - scoped (round 1 below, carried from 62cf32d)
 **Verifier**: independent sub-agent (author != verifier), no inherited context
+
+
+## Round 2 (scoped, verified at 94d1d80)
+
+Scope: the fix diff (62cf32d..94d1d80) is tests only, plus a Handoff note in `checks.md`; no source or migration changed
+(`git diff 62cf32d..HEAD --stat`: `synonyms_as_data.sql`, `extract.test.ts`, `extractor.test.ts`, `readers.test.ts`, `checks.md`,
+`verification.md`). Everything outside the touched proofs carries forward from round 1 unchanged.
+
+Proofs re-run in full at 94d1d80: `npm test` 184 files, 3518 tests passed; the 25 tests selected by `-t "C2101:|...|C2123:"` each printed
+and passed (new: `C2101` x4 (last of several spellings `extract.test.ts:112`, middle spelling of the second of two types, punctuated
+spelling, capitalised hyphenated spelling), `C2102` multi-spelling ambiguity `extract.test.ts:120-122`, `C2107` list test
+`readers.test.ts:437-442`); `npm run test:db synonyms_as_data` `PASS`; lint exit 0; tsc exit 0.
+
+New assertions located: `extract.test.ts:113-123` (`expect(matchAssetType(raw, types)).toBe(expected)` over the added rows),
+`extractor.test.ts:187` `expect(system.split("
+")[0]).toBe("You extract ... in these trades: ${context}.")`,
+`extractor.test.ts:196-197` first sentence for null equals `"... for a service contractor."` and contains none of `null`,
+`undefined`, `these trades`, `readers.test.ts:440` `expect(await ...list()).toEqual(rows)` with three spellings,
+`synonyms_as_data.sql:177-180` seven bad-after-good arrays through the same table loop (both tables), `synonyms_as_data.sql:390`
+org B's context must equal its own and differ from org A's.
+
+### Faults re-injected (round 2)
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| S1: only a type's first spelling is read | `web/domain/imports/index.ts:148` | yes - C2101 (last of several, middle of the second type) |
+| S2: spelling compared without `normalized` | `web/domain/imports/index.ts:148` | yes - C2101 (punctuated, capitalised hyphenated) |
+| S3a: null context gives `... in these trades: .` | `web/infrastructure/claude/index.ts:15` | yes - C2121 |
+| S3b: null context gives `... in these trades: null.` | `web/infrastructure/claude/index.ts:15` | yes - C2121 |
+| context printed twice (round 1 non-breaching) | `web/infrastructure/claude/index.ts:15` | yes - C2120 x3 now |
+| `list()` returns only each type's first spelling | `web/infrastructure/supabase/readers.ts:435` | yes - C2107 list test and C323 |
+| S4: `valid_synonyms` checks only the first element | migration `:14` | yes - `C2114 catalog '{fine,Rooftop}'` |
+| `valid_synonyms` drops the null-element rule (re-check) | migration `:15` | yes - `C2114 catalog '{NULL}'` |
+| permissive select policy on `org_settings` | `public.org_settings` | yes - `C2127 owner context` (by row order; see G2) |
+| permissive select policy on `asset_types` | `public.asset_types` | yes - `C2115 other org reads` |
+
+SQL mutants ran through the rolled-back harness (baseline of the same harness passes). After all runs `git status --short` and
+`git diff --stat` are empty. Surviving mutants: none.
+
+### Round 1 items, judged
+
+| Item | Round 2 status |
+| --- | --- |
+| S1, S2, S3, S4 (surviving mutants) | closed: each killed above |
+| Test policy row 1 (decides, own layer) | met |
+| Test policy row 2 (decides across a boundary) | met: S4 closed; every listed rejected shape and transition has a proof; seed and backfill are private functions with no client path, so running them as the table owner is their boundary |
+| G3 (C2107 proof command misses the `list()` half) | closed: the list test now carries the `C2107:` id (`readers.test.ts:437`) |
+| G1 (C2101 claim text: `ROOF-TOP  UNIT` against `rooftop unit`) | acceptable as a recorded note: the claim's wording is arithmetically false but every variant it names (case, double space, full stop, hyphen) is proven by its own row (`extract.test.ts:108-111`), so no behaviour is unproven; note is in `checks.md` Handoff |
+| G4 (door 3 "letters" is ASCII only) | acceptable as a recorded note: no check claims either behaviour, so nothing is proven wrongly; it is a product question for the owner (an accented trade phrase such as "Refrigeração" is refused today), now written in `checks.md` Handoff |
+| G2 (C2127 and Test policy row 3, the real adapter against the database) | still a FAIL. See below |
+
+G2 stays a FAIL. The check's claim names "the real `supabaseAssetTypeCatalog` against the database as that role"; the proofs are
+a stub for the adapter (`readers.test.ts:430-446`) and two hand-written selects in SQL (`synonyms_as_data.sql:377-390`). A wrong
+column name or a PostgREST shape the adapter sends that the database refuses would pass both. The coordinator's note leaves the claim
+text as approved while recording that the proof is shorter, which is a self-granted waiver; the only way this gate accepts a lower
+level is the route used for C2114: the owner corrects the claim text (to "the two selects the adapter makes, run as the member, and
+the adapter against a stub"), or a proof that runs the adapter against the database is added. Test policy row 3 ("one round trip") is
+unmet for the same reason. The org-B context assertion is now stricter (`ctx` must equal org B's own context), but a leak is still
+caught only when the leaked row happens to be read first (`limit 1`, no order). With the owner's corrected claim text, G2 and row 3
+would be met and the verdict would turn PASS with no other change.
+
+
+## Round 1 (carried from 62cf32d; items above supersede it where they say so)
 
 Summary: all 27 checks have a located assertion and every named proof ran green at HEAD (3512 vitest, 26 SQL recipes
 minus one known stale one). The work fails on proof strength, not on behaviour. Fault injection found 4 surviving

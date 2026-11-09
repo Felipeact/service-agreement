@@ -126,6 +126,7 @@ Claude is told which trades the list belongs to, from the org's data.
 | `seed_org_catalog` when the org has no settings row | The types seed and the context stays null | Phase 5 creates `org_settings` before it seeds; failing the seed would block a catalog over a missing sentence | n |
 | Two packs share a spelling for different codes in one org | Both org types keep it and a row with that wording stays untyped (AC 2) | Same rule as today: a guess hides a row the review must see | n |
 | Trades joined for several packs | ", " in seed order | A list is enough for Claude; ordering carries no meaning | n |
+| "Letters" in the trade phrase (door 3, AC 19) | ASCII letters and digits only, so an accented phrase is refused | Every pack and phrase in scope is English and the app is English-only; widening is one migration | y (owner, 2026-11-09) |
 | Spellings of an `hvac` type the owner already changed by hand before this ships | Replaced by the backfill | None can exist: no screen or function writes this column today | n |
 
 **Open questions:** none - all resolved or logged above.
