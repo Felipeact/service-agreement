@@ -30,7 +30,7 @@ Reuses `private.seed_org_catalog`, `private.catalog_packs` and `reset_task_libra
 | domain | existing behaviour kept, now stated: when two packs hold the same code, the first pack seeded keeps its checklist and the second skips that type (AD-154's conflict rule). Three types are shared on purpose |
 | stored data | nothing to migrate: no org holds a plumbing or electrical type today. `hvac` gets its release stamped in the same migration; no org row changes |
 | tests | The two recipes that register their own test packs (`synonyms_as_data.sql`, `type_editor.sql`) release them in setup. Found while building: `catalog_seed.sql` (C1 to C3, C7), `cadence.sql` (C1076, C1078) and `demo_seed.sql` (C14) read the whole private template and pin it at 40 types and 174 tasks, which is the `hvac` pack; they gain `where pack = 'hvac'` with the same expected values, and the runner's pinned recipe and file counts move from 26 and 28 to 27 and 29. Written from the new checks, not edited to pass |
-| docs | `CONTEXT.md`, `ROADMAP.md` item 5 (ticked only when the reviewer has signed and the packs are released), `PRODUCT.md` pack wording |
+| docs | `CONTEXT.md`, `ROADMAP.md` item 5 (annotated, ticked only when the reviewer has signed and the packs are released), `STATE.md` AD-163 to AD-165. `PRODUCT.md` wording stays with roadmap item 6 |
 
 ## Relations
 
