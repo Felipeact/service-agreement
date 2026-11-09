@@ -300,7 +300,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Trade-neutral product copy (`app/layout.tsx`, PRODUCT.md). The root layout description, the sign-in page and the Pipeline subtitle name no trade, and PRODUCT.md, DESIGN.md and CONTEXT.md lose the HVAC-only wording (`.specs/features/trade-neutral-copy/`, no migration). The sign-in `RooftopScene` drawing is unchanged. Verifier round 1 PASS (16 of 16, 5 faults killed), 2026-11-09
 
 ### Phase 5: SaaS billing & onboarding (M14)
-- [ ] Public `/pricing` page with plan and trade selection
+- [x] Public `/pricing` page with plan and trade selection. Built 2026-11-09 (`.specs/features/pricing-page/`, AD-166, no migration): three draft plans in CAD, four trades, one start-trial button per plan; the choice goes through `makeStartTrial` to the `CheckoutStarter` port, whose only starter answers `not_configured` until the Stripe item. Verifier round 1 failed on a surviving mutant on the port, a Test policy gap and an overstated `303` row; round 2 PASS (36 of 36, 5 faults injected and killed). The page is linked from nowhere and must stay so until the price points (decision 10) are confirmed
 - [ ] Stripe plans, Checkout with a 14-day trial (card collected up front, subscription cancelled if payment fails), Customer Portal, idempotent webhooks
 - [ ] Workspace provisioning from the webhook: org, settings, seeded packs, the chosen trades stored on the org (moved here from Phase 4.5, since nothing reads them before this), vocabulary, Stripe ids, owner invitation
 - [ ] First-login setup screen (company profile, catalog review, template preview)

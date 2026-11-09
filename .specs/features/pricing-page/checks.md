@@ -156,7 +156,7 @@ Proof: `npx vitest run app/pricing/pricing-docs.test.ts -t "C2435:"`
 | refusal text and place (4) | `no_trade` text C2416 · `invalid_choice` text C2417 · `not_configured` text C2418 · `unavailable` text C2419; each in `role="alert"` C2423; each keeps the ticked trades C2420; each free of "equipment" C2411 | - |
 | banned strings (5) | `trusted by` C2407, C2408 · `most popular` C2407, C2408 · `best value` C2407, C2408 · `testimonial` C2407, C2408 · `save` C2407, C2408 | - |
 | `GET /pricing` statuses (1) | 200 C2401, C2402, C2403 (query still 200) | - |
-| `POST /pricing` statuses (2) | 303 C2415 (`redirect(url)` called; the wire status is the framework's, see How proofs run) · 200 with a refusal C2416, C2417, C2418, C2419, C2431 | - |
+| `POST /pricing` statuses (2) | 303 C2415 (`redirect(url)` called), C2436 (the status and `Location` on the wire) · 200 with a refusal C2416, C2417, C2418, C2419, C2431 | - |
 | `POST /pricing` inputs (2) | `plan` C2413, C2414, C2417 · `trade` (repeatable) C2412, C2414, C2417, C2420 | - |
 | signed-out paths through the proxy (5) | `/pricing` C2401 · `/pricing?plan=team` C2403 · `/pricing/x` C2403 · `/pricingx` C2403 · `/pricing/x/y` C2403 | - |
 | one-way doors (3) | door 1 public exact path C2401, C2402, C2403 · door 2 identifiers C2424, C2425 · door 3 port shape C2426 | - |
