@@ -107,6 +107,7 @@ Dispatch and GPS, payroll, project or construction contracts, a Word-style docum
 | M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in DESIGN.md and `.impeccable/design.json`, tokens and components | 0.5 |
 | M18 | Trades, packs & vocabulary | Starter packs per trade (types, checklists, default months, synonyms, extraction context), a per-org label for the serviced item ("Equipment", "Areas", "Stations"), per-org synonyms, catalog drafted by Claude for other trades | 4.5, 5 |
 | M19 | Document templates | Tenant-owned agreement and contract templates built from text blocks with merge variables and fixed system blocks, versioned and frozen into each agreement and contract | 5.5 |
+| M21 | Public site | Marketing front door at `/`: home, product, demo, trades, pricing, about, FAQ, contact and register. Sample-data visuals, no invented proof. Sign-in is a link | 5 |
 | M20 | Reporting | Tenant reports from `events` and agreements: recurring revenue, funnel, win rate, aging, loss reasons, renewals, revenue breakdown, CSV export | 5.6 |
 
 ## Status model
@@ -194,9 +195,9 @@ The product's shape is **a serviced item, a checklist for it, and a cadence**. "
 
 ## Onboarding
 
-Pricing page, then Stripe, then a ready workspace on first login:
+Public site, then register (trades and plan), then Stripe, then a ready workspace on first login:
 
-1. `/pricing` is public. The visitor picks a plan and their trade (one or more, or "Other") before Checkout, which starts a 14-day trial with the card collected up front. The trade rides on the Checkout session as metadata, and the Checkout email is the owner's identity.
+1. The public site (`/`) leads to `/pricing`, which shows plans only. A plan button opens `/register?plan=<key>`, where the visitor picks their trade (one or more, or "Other") and confirms the plan before Checkout, which starts a 14-day trial with the card collected up front. The trade rides on the Checkout session as metadata, and the Checkout email is the owner's identity.
 2. The Stripe webhook (`checkout.session.completed`, idempotent on the event id) provisions the workspace in one transaction: the org and its `org_settings`, the seeded catalog for the chosen trades, the vocabulary, the Stripe customer and subscription ids, and an owner invitation for the Checkout email. For "Other" it creates an empty catalog with a flag.
 3. Sign-in reuses the invitation flow (`/auth/confirm`, `accept_invitations`, the Before User Created hook). Provisioning runs as the service role, so it may create an org with an owner invitation, which the members page does not do.
 4. The first login opens a short setup screen: legal name, province, accent colour, logo, a review of the starter catalog ("We set up 38 plumbing items"), a preview of the starter templates, and for "Other" the Claude draft with a review step.
@@ -295,12 +296,15 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Add, rename and remove equipment types in the task library, and reset a type to its pack. A new type gets a code made from its name, and the code never changes after that (frozen snapshots, `?type=` links and import matching all key on it); a rename changes the name only. Names are unique per org, ignoring case. A type can be removed only while no asset, service line or import row uses it
 - [x] `seed_org_catalog(org, pack)`: the catalog template tables gain a pack, and the current 40-type catalog becomes the `hvac` pack. Each org type records the pack it came from, so "reset to pack" knows which template row to restore (null for a type made by hand). The one-argument call keeps working and defaults to `hvac`
 - [x] Per-org vocabulary for the serviced item, used by the UI, PDFs and portal. Owners and admins set a singular and a plural in Company settings (default "equipment"); the staff screens, the agreement and contract PDFs and the customer review page say them (`.specs/features/item-vocabulary/`, AD-157 to AD-159, migration `20261109140000`). Verifier rounds 1 to 3 failed on test gaps that were closed; three rounds ended with two dialog wiring gaps the owner accepted (2026-11-09)
-- [ ] Synonyms as data (per pack and per org) and a trade context in the extraction prompt
-- [ ] Plumbing and electrical starter packs, reviewed by a practitioner
-- [ ] Trade-neutral product copy (`app/layout.tsx`, PRODUCT.md)
+- [x] Synonyms as data (per pack and per org) and a trade context in the extraction prompt. Each type holds its own spellings (pack template and org copy); packs are registered with a trade phrase; `org_settings.trade_context` feeds the extraction prompt; `SYNONYMS` is gone (`.specs/features/synonyms-as-data/`, AD-160 to AD-162, migration `20261109154806`). Applied 2026-11-09 with the owner's go-ahead. Verifier round 1 and 2 failed on test gaps that were closed and on C2127's claim text, which the owner corrected; round 3 PASS (27 of 27 checks). No screen edits spellings or the trade context yet
+- [x] Plumbing and electrical starter packs, reviewed by a practitioner. Drafted and built 2026-11-09 (`.specs/features/starter-packs/`, AD-163 to AD-165, migration `20261109163948`): 20 types each in the template behind a release gate (`seed_org_catalog` refuses a pack with no release time). Released 2026-11-09 (migration `20261109171002`). Reviewed by the owner, Felipe Viana, on 2026-11-09 from `private.pack_review_sheet`, with no corrections; the owner took the practitioner's role for now, so a review by a plumber and an electrician stays welcome and any change lands as its own migration
+- [x] Trade-neutral product copy (`app/layout.tsx`, PRODUCT.md). The root layout description, the sign-in page and the Pipeline subtitle name no trade, and PRODUCT.md, DESIGN.md and CONTEXT.md lose the HVAC-only wording (`.specs/features/trade-neutral-copy/`, no migration). The sign-in `RooftopScene` drawing is unchanged. Verifier round 1 PASS (16 of 16, 5 faults killed), 2026-11-09
 
 ### Phase 5: SaaS billing & onboarding (M14)
-- [ ] Public `/pricing` page with plan and trade selection
+- [x] Public `/pricing` page with plan and trade selection. Built 2026-11-09 (`.specs/features/pricing-page/`, AD-166, no migration): three draft plans in CAD, four trades, one start-trial button per plan; the choice goes through `makeStartTrial` to the `CheckoutStarter` port, whose only starter answers `not_configured` until the Stripe item. Verifier round 1 failed on a surviving mutant on the port, a Test policy gap and an overstated `303` row; round 2 PASS (36 of 36, 5 faults injected and killed). Linked from the public site since 2026-11-09 (trades moved to `/register`); the price points (decision 10) are still drafts
+- [x] Public site as the front door (M21): `/` home, `/product`, `/demo`, `/trades`, `/about`, `/faq`, `/contact`, with Sign in as a link. Built 2026-11-09 (AD-167, no migration), with three home-page concepts under `/concepts/a|b|c` to choose from (the owner deletes two). Sample-data visuals only; `SITE.contactEmail` and `DEMO_VIDEO_URL` in `web/components/site/content.ts` are yours to confirm and fill
+- [x] Trades chosen at `/register`, not on `/pricing`: `/pricing` is plans only and each plan links to `/register?plan=<key>`; `/register` takes the trades and the plan, then the same `makeStartTrial` hand-off. Built 2026-11-09 (AD-167)
+- [ ] Record the demo video and set `DEMO_VIDEO_URL` (the `/demo` page shows a "coming soon" panel until then)
 - [ ] Stripe plans, Checkout with a 14-day trial (card collected up front, subscription cancelled if payment fails), Customer Portal, idempotent webhooks
 - [ ] Workspace provisioning from the webhook: org, settings, seeded packs, the chosen trades stored on the org (moved here from Phase 4.5, since nothing reads them before this), vocabulary, Stripe ids, owner invitation
 - [ ] First-login setup screen (company profile, catalog review, template preview)
@@ -364,7 +368,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 21 | Build order | Finish Phase 4, then 4.5, 5, 5.5, then reporting (5.6) | Nobody can be sold a contract that cannot complete (the DocuSeal webhook, signed PDF and audit log are still open). Templates decide whether a contractor adopts the product; reports need real tenant data to say anything |
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
 
-**Needs you:** a pilot contractor (2), a practitioner to review packs (5), a lawyer for the starter wording (14), plan price points (10), and the Supabase SMTP change (11).
+**Needs you:** a pilot contractor (2), a lawyer for the starter wording (14), plan price points (10), and the Supabase SMTP change (11).
 
 ## Research sources
 - n8n license FAQ (backend-only use is allowed; Cloud has separate terms): https://docs.n8n.io/n8n-community-license/community-license/license-faq

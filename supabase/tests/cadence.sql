@@ -196,11 +196,11 @@ declare
 begin
   perform tests.ok('C1076 sizes', jsonb_array_length(expected -> '{3,6,9,12}') = 19 and jsonb_array_length(expected -> '{4,10}') = 8
     and jsonb_array_length(expected -> '{10}') = 13, 'the expected table is not 19 + 8 + 13');
-  perform tests.ok('C1076 40 codes', (select count(*) from private.catalog_asset_types) = 40, 'the catalog does not have 40 codes');
+  perform tests.ok('C1076 40 codes', (select count(*) from private.catalog_asset_types where pack = 'hvac') = 40, 'the catalog does not have 40 codes');
   for r in select e.key as months, c.code from jsonb_each(expected) e, jsonb_array_elements_text(e.value) c(code) loop
     perform tests.ok('C1076 ' || r.code,
-      (select default_visit_months from private.catalog_asset_types where code = r.code) = r.months::smallint[],
-      r.code || ' is ' || coalesce((select default_visit_months::text from private.catalog_asset_types where code = r.code), 'missing'));
+      (select default_visit_months from private.catalog_asset_types where pack = 'hvac' and code = r.code) = r.months::smallint[],
+      r.code || ' is ' || coalesce((select default_visit_months::text from private.catalog_asset_types where pack = 'hvac' and code = r.code), 'missing'));
   end loop;
 end $$;
 
@@ -216,7 +216,7 @@ begin
   perform tests.ok('C1078 BOILER', (select default_visit_months from public.asset_types where org_id = o and code = 'BOILER') = '{10}', 'BOILER');
   perform tests.ok('C1078 all', (select count(*) from public.asset_types where org_id = o) = 40
     and not exists (select 1 from public.asset_types t join private.catalog_asset_types c using (code)
-                    where t.org_id = o and t.default_visit_months is distinct from c.default_visit_months),
+                    where c.pack = 'hvac' and t.org_id = o and t.default_visit_months is distinct from c.default_visit_months),
     'a seeded type differs from its catalog default');
 end $$;
 

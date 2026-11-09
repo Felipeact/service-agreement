@@ -18,6 +18,7 @@ import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
 import type { DomainEvent } from "@/domain/transition";
 import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
+import type { CheckoutSelection } from "@/domain/billing";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -283,9 +284,14 @@ export interface SiteRegister {
 
 export type AssetTypeOption = { id: string; code: string; name: string };
 
+/** An org type with the other ways a customer's list writes it (`asset_types.synonyms`), which import matching reads. */
+export type AssetTypeWithSynonyms = AssetTypeOption & { synonyms: string[] };
+
 export interface AssetTypeCatalog {
-  /** The org's asset types, ordered by name. */
-  list(): Promise<AssetTypeOption[]>;
+  /** The org's asset types with their spellings, ordered by name. */
+  list(): Promise<AssetTypeWithSynonyms[]>;
+  /** The trades the org services ("plumbing, electrical"), or `null` when none is recorded. Throws on a database error. */
+  tradeContext(): Promise<string | null>;
 }
 
 export type OrgSettings = OrgSettingsValue;
@@ -503,9 +509,12 @@ export type ExtractChunk =
 
 export type ExtractResult = { ok: true; rows: ExtractedRow[] } | { ok: false; code: "unavailable" | "too_large" };
 
-/** Turns a chunk of a read file into candidate rows. Knows nothing about orgs, sites or customers. */
+/**
+ * Turns a chunk of a read file into candidate rows. Knows nothing about orgs, sites or customers beyond `tradeContext`,
+ * the trades the list belongs to (`null` or left out: none is named).
+ */
 export interface AssetExtractor {
-  extract(chunk: ExtractChunk): Promise<ExtractResult>;
+  extract(chunk: ExtractChunk, tradeContext?: string | null): Promise<ExtractResult>;
 }
 
 export type ImportFileResult =
@@ -1118,4 +1127,12 @@ export interface SigningReader {
 /** The contract as the renderer draws it, with the agreement number (signature-provider Flow hop 3). `null` when there is nothing to draw. */
 export interface ContractDocuments {
   load(contractId: string, orgId: string): Promise<{ number: string; document: ContractDocument } | null>;
+}
+
+/** What the checkout seam answers (pricing-page door 3). `url` is where the visitor goes next. */
+export type CheckoutResult = { ok: true; url: string } | { ok: false; code: "not_configured" | "unavailable" };
+
+/** Begins a trial for a validated selection. The Stripe adapter (billing-checkout) is its first real implementation. */
+export interface CheckoutStarter {
+  start(selection: CheckoutSelection): Promise<CheckoutResult>;
 }

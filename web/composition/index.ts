@@ -17,6 +17,7 @@ import {
   makeRequestSignInLink,
   makeSendAgreement,
   makeSendForSignature,
+  makeStartTrial,
   makeTransitionAgreement,
   makeTransitionContract,
   makeViewPortal,
@@ -276,3 +277,13 @@ export async function getWebhookContainer() {
 }
 
 export type WebhookContainer = Awaited<ReturnType<typeof getWebhookContainer>>;
+
+/**
+ * Wires the pricing page's start-trial (pricing-page door 3). It reads no cookie, no database and no secret: until
+ * billing-checkout puts the Stripe adapter here, every selection answers `not_configured`.
+ */
+export async function getBillingContainer() {
+  return { startTrial: makeStartTrial({ start: async () => ({ ok: false, code: "not_configured" }) }) };
+}
+
+export type BillingContainer = Awaited<ReturnType<typeof getBillingContainer>>;

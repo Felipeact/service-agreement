@@ -1,6 +1,6 @@
 ---
 name: Service Agreement
-description: Familiar, precise SaaS for HVAC estimators, warmed up. The category standard built to the craft of Linear, Stripe, Attio and Jobber, on a navy shell with a display face, stage-tinted wells and authored drawings.
+description: Familiar, precise SaaS for trade-contractor estimators, warmed up. The category standard built to the craft of Linear, Stripe, Attio and Jobber, on a navy shell with a display face, stage-tinted wells and authored drawings.
 colors:
   ground: "#f3f5f9"
   surface: "#ffffff"
@@ -233,7 +233,7 @@ Columns are wells with 10px padding and 8px between cards; columns sit 14px apar
 
 Open columns list the longest-waiting deal first; closed columns list newest first.
 
-**Page header.** The title, a one-line standing under it, and the single primary action on the right (a plus icon and its label). The app has one search, the sidebar's (a `/` key focuses it); a page adds its own only to narrow a list on that page (Agreements, Customers). The Pipeline has none: its title is a greeting ("Good morning, Jamie", the name read from the member's email when it plainly holds one, otherwise just "Good morning") at 30-34px, over the line "Keep every PM agreement moving from equipment list to signature."
+**Page header.** The title, a one-line standing under it, and the single primary action on the right (a plus icon and its label). The app has one search, the sidebar's (a `/` key focuses it); a page adds its own only to narrow a list on that page (Agreements, Customers). The Pipeline has none: its title is a greeting ("Good morning, Jamie", the name read from the member's email when it plainly holds one, otherwise just "Good morning") at 30-34px, over the line "Keep every service agreement moving from equipment list to signature."
 
 **Control height.** Every interactive control (buttons, search, nav items, stage tabs, icon buttons) is 44px tall below 1024px; on desktop buttons and search are 34px and nav items 36px.
 
@@ -312,6 +312,10 @@ These pages carry the system's richer pieces. Ideas for several were taken from 
 - **Settings:** a section list at the left on desktop (Company, Default terms, Renewal, and a link out to Members) beside three white cards, each with a display-face heading, a line saying what the section is for and a two-column grid of fields. The Company card opens with a **brand preview**: a tile in the tenant's accent colour holding the initials of the company name in whichever of white or near-black reads better on it (`contrastText`), the name and the address and phone, updated as the form is typed; the accent field has a swatch beside it. Saving is a solid white bar pinned to the bottom of the page, so the button is never a scroll away; a member who cannot edit sees the fields read-only and a quiet note.
 - **Members:** three summary cards (members, owners and admins, and for those who manage, pending invitations), an **Invite someone** card (a plus tile, a heading, one line, and the email, role and send controls in a row), then the people as rows: an initials disc, the email with a "You" pill, the join date, and a role pill at the right (Owner in Action Tint, the others neutral). For an owner or admin each other member has a **Manage** disclosure that opens the role picker and the two-step Remove, so the list reads as people first and controls second. Pending invitations are the same rows with a mail disc, the invited and expiry dates, and Resend and Revoke.
 - **New agreement dialog:** a native modal on a blurred Ink 40% backdrop, 16px radius, Panel shadow. It leads with the equipment-list drop zone (drag a file in or choose one; a bad file is refused with its reason under the zone), then "Who is it for?": a customer select that ends in "+ Add a new customer…", then a site select (the customer's sites without a live agreement, busy ones disabled with their number, ending in "+ Add a new site…"); a new customer always gets a new site. One button creates what is missing, starts the draft, sends the list to the site, reads it, finds the equipment and opens its review with a way back to the agreement.
+
+## Public site
+
+The marketing pages (`/`, `/product`, `/demo`, `/trades`, `/pricing`, `/about`, `/faq`, `/contact`, `/register`) are a Persuade surface on the same tokens. They are built from [web/components/site/](web/components/site/): a header on the first section's own ground (light, Night or Action Blue), one 1180px content width, alternating Surface and Cool Ground bands, Night closing band and footer, and display-face headlines up to 76px on the home. Product visuals are synthetic sample-data components (`BoardMock`, `AgreementMock`, `ScheduleMock`, `PortalMock`), each labelled "Sample data". Motion is two authored moments (a signature drawing itself, visit months rising), both off under reduced motion. On Night and Action grounds the focus ring turns white (`.ring-on-dark`). Three home concepts exist for the owner to choose from (see CONTEXT.md, Public site); the others are deleted once one is chosen.
 
 ## Do's and Don'ts
 

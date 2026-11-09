@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 38,
+  "next_id": 40,
   "lessons": [
     {
       "id": "L-001",
@@ -670,6 +670,42 @@
       ],
       "created": "2026-11-06T18:47:36Z",
       "last_seen": "2026-11-06T18:47:36Z"
+    },
+    {
+      "id": "L-038",
+      "key": "surviving_mutant::when a function is security invoker over closed tables a call as anon or authenticated fails with 42501 whether or not execute was revoked so prove the grant itself with has function privilege and has column privilege",
+      "text": "When a function is security invoker over closed tables, a call as anon or authenticated fails with 42501 whether or not execute was revoked, so prove the grant itself with has_function_privilege and has_column_privilege.",
+      "signal": "surviving_mutant",
+      "scope": "supabase/tests sql grants",
+      "status": "candidate",
+      "features": [
+        "starter-packs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "F7 supabase/tests/starter_packs.sql:304 C2213 (supabase/tests sql grants)"
+      ],
+      "created": "2026-11-09T16:52:35Z",
+      "last_seen": "2026-11-09T16:52:35Z"
+    },
+    {
+      "id": "L-039",
+      "key": "spec_deviation::before claiming existing pinned counts stay valid grep the tests for reads of the whole private template adding a pack changed the totals that catalog seed cadence and demo seed asserted at 40 types and 174 tasks",
+      "text": "Before claiming existing pinned counts stay valid, grep the tests for reads of the whole private template: adding a pack changed the totals that catalog_seed, cadence and demo_seed asserted at 40 types and 174 tasks.",
+      "signal": "spec_deviation",
+      "scope": "supabase/tests private template",
+      "status": "candidate",
+      "features": [
+        "starter-packs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "plan.md Impact tests row (supabase/tests private template)"
+      ],
+      "created": "2026-11-09T16:52:36Z",
+      "last_seen": "2026-11-09T16:52:36Z"
     }
   ]
 }

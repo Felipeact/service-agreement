@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
-import { CHUNK_ROWS, chunksOf, matchAssetType, SYNONYMS, type AssetTypeRef, type ChunkSource } from ".";
+import { CHUNK_ROWS, chunksOf, matchAssetType, type AssetTypeRef, type ChunkSource } from ".";
+import * as imports from ".";
 
 const table = (source: string, rows: number, first = 2) => ({
   source,
@@ -54,7 +55,7 @@ describe("chunksOf", () => {
   });
 });
 
-const type = (code: string, name: string): AssetTypeRef => ({ id: `id-${code}`, code, name });
+const type = (code: string, name: string, synonyms: string[] = []): AssetTypeRef => ({ id: `id-${code}`, code, name, synonyms });
 const RTU = type("RTU", "Rooftop Unit");
 const HWT = type("HWT_HIGH_EFFICIENCY", "High Efficiency Water Heater");
 const MUA = type("MUA", "Make-Up Air Unit");
@@ -71,11 +72,13 @@ describe("matchAssetType", () => {
     expect(matchAssetType(raw, [RTU, HWT, MUA])).toBe(expected);
   });
 
+  const rtuSpelled = type("RTU", "Packaged Equipment", ["rooftop unit"]);
+  const muaSpelled = type("MUA", "Fresh Air", ["mau"]);
   test.each<[string, string, AssetTypeRef[], string | null]>([
-    ["Rooftop unit", "Rooftop unit", [type("RTU", "Packaged Equipment"), type("MUA", "Fresh Air")], "id-RTU"],
-    ["MAU", "MAU", [type("RTU", "Packaged Equipment"), type("MUA", "Fresh Air")], "id-MUA"],
-    ["mau in lower case", "mau", [type("RTU", "Packaged Equipment"), type("MUA", "Fresh Air")], "id-MUA"],
-    ["MAU when a type is named MAU", "MAU", [type("RTU", "Packaged Equipment"), type("MUA", "Fresh Air"), type("MAU2", "MAU")], "id-MAU2"],
+    ["Rooftop unit", "Rooftop unit", [rtuSpelled, muaSpelled], "id-RTU"],
+    ["MAU", "MAU", [rtuSpelled, muaSpelled], "id-MUA"],
+    ["mau in lower case", "mau", [rtuSpelled, muaSpelled], "id-MUA"],
+    ["MAU when a type is named MAU", "MAU", [rtuSpelled, muaSpelled, type("MAU2", "MAU")], "id-MAU2"],
   ])("C516: synonym case %s", (_name, raw, types, expected) => {
     expect(matchAssetType(raw, types)).toBe(expected);
   });
@@ -98,11 +101,56 @@ describe("matchAssetType", () => {
   });
 });
 
-describe("SYNONYMS", () => {
-  test("C520: every key is a code of the standard catalog and the roadmap's examples are present", () => {
-    const sql = readFileSync(path.join(__dirname, "../../../supabase/migrations/20261019191509_catalog_template.sql"), "utf8");
-    for (const code of Object.keys(SYNONYMS)) expect(sql, code).toContain(`('${code}',`);
-    expect(SYNONYMS.RTU).toContain("rooftop unit");
-    expect(SYNONYMS.MUA).toContain("mau");
+describe("spellings stored on the org's types (synonyms-as-data)", () => {
+  const CIRCULATOR = type("CIRC", "Circulator", ["pump"]);
+
+  test.each<[string, string, AssetTypeRef[], string | null]>([
+    ["exact", "Rooftop unit", [type("RTU", "Packaged", ["rooftop unit"]), HWT], "id-RTU"],
+    ["case and a double space", "ROOF-TOP  UNIT", [type("RTU", "Packaged", ["roof top unit"]), HWT], "id-RTU"],
+    ["a trailing full stop", "Rooftop Unit.", [type("RTU", "Packaged", ["rooftop unit"])], "id-RTU"],
+    ["a hyphen against a space", "Make-up air", [type("MUA", "Fresh Air", ["make up air"]), RTU], "id-MUA"],
+    ["the last of several spellings", "Packaged Rooftop Unit", [type("RTU", "Packaged", ["rooftop unit", "rooftop", "roof top unit", "packaged rooftop unit"]), HWT], "id-RTU"],
+    ["a middle spelling of the second of two types", "gas unit heater", [type("RTU", "Packaged", ["rooftop unit"]), type("UHG", "Heater", ["unit heater", "gas unit heater", "gas fired unit heater"])], "id-UHG"],
+    ["a spelling written with punctuation", "O'Brien Unit", [type("OB", "Obrien", ["o'brien unit"]), HWT], "id-OB"],
+    ["a spelling written with capitals and a hyphen", "walk in cooler", [type("WIC", "Cooler", ["Walk-In Cooler"]), HWT], "id-WIC"],
+  ])("C2101: wording %s is typed by the one type that holds the spelling", (_name, raw, types, expected) => {
+    expect(matchAssetType(raw, types)).toBe(expected);
+  });
+
+  test("C2102: a spelling that is not a type's first is found for the ambiguity too", () => {
+    expect(matchAssetType("pump", [type("CIRC", "Circulator", ["circulator", "pump"]), type("SUMP", "Sump", ["sump", "pump"])])).toBeNull();
+  });
+
+  test("C2102: a spelling held by two distinct types gives no type, and one type listing it twice still does", () => {
+    expect(matchAssetType("pump", [type("CIRC", "Circulator", ["pump"]), type("SUMP", "Sump", ["pump"])])).toBeNull();
+    expect(matchAssetType("pump", [type("CIRC", "Circulator", ["pump", "pump"]), type("SUMP", "Sump", ["sump"])])).toBe("id-CIRC");
+  });
+
+  test("C2103: a code or a name wins over a spelling", () => {
+    expect(matchAssetType("Pump", [type("CP", "Pump"), CIRCULATOR])).toBe("id-CP");
+    expect(matchAssetType("RTU", [type("RTU", "Roof thing"), type("OTHER", "Other", ["rtu"])])).toBe("id-RTU");
+  });
+
+  test("C2104: a type whose code equals a pack code brings no spellings with it", () => {
+    const types = [type("RTU", "Roof thing", []), type("MUA", "Make-up air", ["mau"])];
+    expect(matchAssetType("rooftop unit", types)).toBeNull();
+    expect(matchAssetType("mau", types)).toBe("id-MUA");
+  });
+
+  test("C2108: SYNONYMS is exported nowhere and appears in no source file under web/ but this scan", () => {
+    expect("SYNONYMS" in imports).toBe(false);
+    const root = path.join(__dirname, "..", "..");
+    const word = ["SYN", "ONYMS"].join("");
+    const found: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === "node_modules" || entry.name === ".next") continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name) && readFileSync(full, "utf8").includes(word)) found.push(path.relative(root, full));
+      }
+    };
+    walk(root);
+    expect(found.filter((file) => path.basename(file) !== "extract.test.ts")).toEqual([]);
   });
 });

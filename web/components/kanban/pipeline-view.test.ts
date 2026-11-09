@@ -1,11 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { createElement } from "react";
+import { createElement, type FunctionComponent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import type { PipelineCard } from "@/application/ports";
 import { PipelineView } from "./pipeline-view";
 import { KanbanCard } from "./kanban-card";
+import { ItemWordsProvider } from "@/components/shell/item-words";
+import { DEFAULT_ITEM_WORDS, itemWords, type ItemWords } from "@/domain/org-settings";
 
 const card = (patch: Partial<PipelineCard> = {}): PipelineCard => ({
   id: "a1",
@@ -303,5 +305,18 @@ describe("KanbanCard: the expiry marker", () => {
 
   test("C1261: a refused agreement's card shows none", () => {
     expect(html("refused")).not.toContain("Expired");
+  });
+});
+
+describe("PipelineView subtitle", () => {
+  const renderWith = (words: ItemWords) =>
+    renderToStaticMarkup(createElement(ItemWordsProvider as FunctionComponent<{ words: ItemWords }>, { words }, createElement(PipelineView, { cards: [] })));
+
+  test("C2308: with the default item words the subtitle says service agreement and equipment list", () => {
+    expect(renderWith(DEFAULT_ITEM_WORDS)).toContain("Keep every service agreement moving from equipment list to signature.");
+  });
+
+  test("C2309: with the item words station and stations the subtitle says station list", () => {
+    expect(renderWith(itemWords("station", "stations"))).toContain("Keep every service agreement moving from station list to signature.");
   });
 });

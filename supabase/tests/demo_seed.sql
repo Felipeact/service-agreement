@@ -50,9 +50,9 @@ do $$ begin
   perform tests.ok('C14 task set',
     not exists ((select t.code, k.position, k.description from public.asset_type_tasks k
                  join public.asset_types t on t.id = k.asset_type_id where k.org_id = tests.demo()
-                 except select code, position, description from private.catalog_asset_type_tasks)
+                 except select code, position, description from private.catalog_asset_type_tasks where pack = 'hvac')
                 union all
-                (select code, position, description from private.catalog_asset_type_tasks
+                (select code, position, description from private.catalog_asset_type_tasks where pack = 'hvac'
                  except select t.code, k.position, k.description from public.asset_type_tasks k
                  join public.asset_types t on t.id = k.asset_type_id where k.org_id = tests.demo())),
     'demo tasks differ from the template');
