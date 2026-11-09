@@ -226,10 +226,10 @@ insert into tests.expected_tasks (code, position, description) values
 do $$ begin
   perform tests.ok('C1 size', (select count(*) from tests.expected_types) = 40, 'expected list is not 40 types');
   perform tests.ok('C1 missing',
-    not exists (select code, name from tests.expected_types except select code, name from private.catalog_asset_types),
+    not exists (select code, name from tests.expected_types except select code, name from private.catalog_asset_types where pack = 'hvac'),
     'a source type is missing from the template');
   perform tests.ok('C1 extra',
-    not exists (select code, name from private.catalog_asset_types except select code, name from tests.expected_types),
+    not exists (select code, name from private.catalog_asset_types where pack = 'hvac' except select code, name from tests.expected_types),
     'the template has a type the source does not');
 end $$;
 
@@ -237,8 +237,8 @@ end $$;
 do $$
 declare r record;
 begin
-  perform tests.ok('C2 total', (select count(*) from private.catalog_asset_type_tasks) = 174, 'template does not hold 174 tasks');
-  for r in select e.code, e.task_count, (select count(*) from private.catalog_asset_type_tasks t where t.code = e.code) as n
+  perform tests.ok('C2 total', (select count(*) from private.catalog_asset_type_tasks where pack = 'hvac') = 174, 'template does not hold 174 tasks');
+  for r in select e.code, e.task_count, (select count(*) from private.catalog_asset_type_tasks t where t.pack = 'hvac' and t.code = e.code) as n
            from tests.expected_types e loop
     perform tests.ok('C2 ' || r.code, r.n = r.task_count, format('expected %s tasks, got %s', r.task_count, r.n));
   end loop;
@@ -249,14 +249,14 @@ do $$ begin
   perform tests.ok('C3 size', (select count(*) from tests.expected_tasks) = 174, 'expected list is not 174 tasks');
   perform tests.ok('C3 missing',
     not exists (select code, position, description from tests.expected_tasks
-                except select code, position, description from private.catalog_asset_type_tasks),
+                except select code, position, description from private.catalog_asset_type_tasks where pack = 'hvac'),
     'a source task is missing or differs in the template');
   perform tests.ok('C3 extra',
-    not exists (select code, position, description from private.catalog_asset_type_tasks
+    not exists (select code, position, description from private.catalog_asset_type_tasks where pack = 'hvac'
                 except select code, position, description from tests.expected_tasks),
     'the template has a task the source does not');
   perform tests.ok('C3 positions',
-    not exists (select 1 from private.catalog_asset_type_tasks group by code
+    not exists (select 1 from private.catalog_asset_type_tasks where pack = 'hvac' group by code
                 having min(position) <> 1 or max(position) <> count(*)),
     'positions do not run 1..n');
   perform tests.ok('C3 preventer',
@@ -346,17 +346,17 @@ begin
   perform tests.ok('C7 tasks', (select count(*) from public.asset_type_tasks where org_id = c) = 174, 'org C does not have 174 tasks');
   perform tests.ok('C7 type set',
     not exists ((select code, name from public.asset_types where org_id = c
-                 except select code, name from private.catalog_asset_types)
+                 except select code, name from private.catalog_asset_types where pack = 'hvac')
                 union all
-                (select code, name from private.catalog_asset_types
+                (select code, name from private.catalog_asset_types where pack = 'hvac'
                  except select code, name from public.asset_types where org_id = c)),
     'org C types differ from the template');
   perform tests.ok('C7 task set',
     not exists ((select t.code, k.position, k.description from public.asset_type_tasks k
                  join public.asset_types t on t.id = k.asset_type_id where k.org_id = c
-                 except select code, position, description from private.catalog_asset_type_tasks)
+                 except select code, position, description from private.catalog_asset_type_tasks where pack = 'hvac')
                 union all
-                (select code, position, description from private.catalog_asset_type_tasks
+                (select code, position, description from private.catalog_asset_type_tasks where pack = 'hvac'
                  except select t.code, k.position, k.description from public.asset_type_tasks k
                  join public.asset_types t on t.id = k.asset_type_id where k.org_id = c)),
     'org C tasks differ from the template');

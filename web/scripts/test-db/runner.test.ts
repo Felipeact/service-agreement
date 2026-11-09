@@ -32,6 +32,7 @@ const ALL = [
   "type_editor",
   "item_vocabulary",
   "synonyms_as_data",
+  "starter_packs",
   "demo_seed",
 ];
 
@@ -105,18 +106,18 @@ describe("test:db runner", () => {
     expect(parts.demo_seed).toEqual(["fixture.sql", "SEED_BODY", "demo_seed.sql", "SEED_BODY", "demo_seed_rerun.sql"]);
   });
 
-  test("C830: service_included is a plain recipe, one of 26, over 28 SQL files", () => {
-    expect(RECIPES).toHaveLength(26);
+  test("C830: service_included is a plain recipe, one of 27, over 29 SQL files", () => {
+    expect(RECIPES).toHaveLength(27);
     expect(RECIPES.find((recipe) => recipe.name === "service_included")?.parts).toEqual(["fixture.sql", "service_included.sql"]);
     expect(REAL_FILES).toContain("service_included.sql");
-    expect(REAL_FILES).toHaveLength(28);
+    expect(REAL_FILES).toHaveLength(29);
   });
 
-  test("C1045: outbox_dispatch is a plain recipe, one of 26, over 28 SQL files", () => {
-    expect(RECIPES).toHaveLength(26);
+  test("C1045: outbox_dispatch is a plain recipe, one of 27, over 29 SQL files", () => {
+    expect(RECIPES).toHaveLength(27);
     expect(RECIPES.find((recipe) => recipe.name === "outbox_dispatch")?.parts).toEqual(["fixture.sql", "outbox_dispatch.sql"]);
     expect(REAL_FILES).toContain("outbox_dispatch.sql");
-    expect(REAL_FILES).toHaveLength(28);
+    expect(REAL_FILES).toHaveLength(29);
   });
 
   test("C202: the seed body drops only begin; and commit;, and replaces only an exact SEED_BODY line", () => {
@@ -140,19 +141,27 @@ describe("test:db runner", () => {
     );
   });
 
-  test("C203: no argument runs all 26, one connection each, in order, and prints PASS per recipe", async () => {
-    const f = fake();
-    await runSuite(f.io);
-    expect(f.connects).toBe(26);
-    expect(f.sent).toHaveLength(26);
-    expect(f.ended).toBe(26);
-    expect(f.out.slice(0, 26)).toEqual(ALL.map((name) => `PASS ${name}`));
+  test("C2227: starter_packs is a plain recipe, after synonyms_as_data and before demo_seed, over fixture.sql and starter_packs.sql", () => {
+    const names = RECIPES.map((recipe) => recipe.name);
+    expect(RECIPES.find((recipe) => recipe.name === "starter_packs")?.parts).toEqual(["fixture.sql", "starter_packs.sql"]);
+    expect(names.indexOf("starter_packs")).toBe(names.indexOf("synonyms_as_data") + 1);
+    expect(names.indexOf("starter_packs")).toBe(names.indexOf("demo_seed") - 1);
+    expect(REAL_FILES).toContain("starter_packs.sql");
   });
 
-  test("C204: all passing prints 26 passed, 0 failed and exits 0", async () => {
+  test("C203: no argument runs all 27, one connection each, in order, and prints PASS per recipe", async () => {
+    const f = fake();
+    await runSuite(f.io);
+    expect(f.connects).toBe(27);
+    expect(f.sent).toHaveLength(27);
+    expect(f.ended).toBe(27);
+    expect(f.out.slice(0, 27)).toEqual(ALL.map((name) => `PASS ${name}`));
+  });
+
+  test("C204: all passing prints 27 passed, 0 failed and exits 0", async () => {
     const f = fake();
     const code = await runSuite(f.io);
-    expect(f.out.at(-1)).toBe("26 passed, 0 failed");
+    expect(f.out.at(-1)).toBe("27 passed, 0 failed");
     expect(code).toBe(0);
   });
 
@@ -162,9 +171,9 @@ describe("test:db runner", () => {
     });
     const code = await runSuite(f.io);
     expect(f.out).toContain("FAIL events_outbox: C3: anon can read");
-    expect(f.connects).toBe(26);
-    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(25);
-    expect(f.out.at(-1)).toBe("25 passed, 1 failed");
+    expect(f.connects).toBe(27);
+    expect(f.out.filter((line) => line.startsWith("PASS "))).toHaveLength(26);
+    expect(f.out.at(-1)).toBe("26 passed, 1 failed");
     expect(code).toBe(1);
   });
 
@@ -231,7 +240,7 @@ describe("test:db runner", () => {
     expect(f.connects).toBe(0);
     expect(code).toBe(2);
 
-    expect(REAL_FILES).toHaveLength(28);
+    expect(REAL_FILES).toHaveLength(29);
     const covered = new Set(RECIPES.flatMap((recipe) => recipe.parts));
     for (const file of REAL_FILES) expect(covered.has(file), file).toBe(true);
   });
@@ -255,15 +264,15 @@ describe("test:db runner", () => {
     const f = fake({ read });
     f.io.readSeed = () => seed;
     expect(await runSuite(f.io)).toBe(0);
-    expect(f.connects).toBe(26);
+    expect(f.connects).toBe(27);
   });
 
   test("C212: a connection error fails that recipe and the rest still run", async () => {
     const f = fake({ connectError: (index) => (index === 0 ? new Error("connect ECONNREFUSED") : undefined) });
     const code = await runSuite(f.io);
     expect(f.out[0]).toBe("FAIL catalog_seed: connect ECONNREFUSED");
-    expect(f.connects).toBe(26);
-    expect(f.out.at(-1)).toBe("25 passed, 1 failed");
+    expect(f.connects).toBe(27);
+    expect(f.out.at(-1)).toBe("26 passed, 1 failed");
     expect(code).toBe(1);
   });
 

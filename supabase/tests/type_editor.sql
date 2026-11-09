@@ -11,7 +11,7 @@ insert into public.memberships (org_id, user_id, role) values (tests.id('orgA'),
 
 -- A second template pack for C1920 and C1936, and three empty orgs to seed.
 -- A pack is registered before its types (synonyms-as-data door 2).
-insert into private.catalog_packs (pack, trade_context) values ('tl_plumb', 'plumbing');
+insert into private.catalog_packs (pack, trade_context, released_at) values ('tl_plumb', 'plumbing', now());
 insert into private.catalog_asset_types (pack, code, name, default_visit_months) values
   ('tl_plumb', 'SUMP', 'Sump pit', '{4,10}'),
   ('tl_plumb', 'GREASE', 'Grease trap', '{1,7}');

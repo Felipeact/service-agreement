@@ -10,7 +10,7 @@ insert into auth.users (id, email, aud, role) values (tests.id('uAd'), 'uAd@exam
 insert into public.memberships (org_id, user_id, role) values (tests.id('orgA'), tests.id('uAd'), 'admin');
 
 -- Two template packs for the seed claims: plumbing (SUMP has spellings, GREASE has none) and electrical.
-insert into private.catalog_packs (pack, trade_context) values ('sd_plumb', 'plumbing'), ('sd_electric', 'electrical');
+insert into private.catalog_packs (pack, trade_context, released_at) values ('sd_plumb', 'plumbing', now()), ('sd_electric', 'electrical', now());
 insert into private.catalog_asset_types (pack, code, name, default_visit_months, synonyms) values
   ('sd_plumb', 'SUMP', 'Sump pit', '{4,10}', array['pit pump', 'sump']),
   ('sd_plumb', 'GREASE', 'Grease trap', '{1,7}', '{}'),
