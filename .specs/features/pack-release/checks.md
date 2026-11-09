@@ -59,8 +59,8 @@ Decided in starter-packs: decision proofs at the boundary and at their own layer
 
 ## Handoff
 
-- Not built until a reviewer is named. Prepared 2026-11-09, applied nothing: `supabase/packs/pending/release.sql` (guarded draft), `supabase/packs/pending/starter_packs.after_release.sql` (the recipe for the released state) and `supabase/packs/pending/README.md` (the four steps)
+- Built 2026-11-09 after the owner named the reviewer (Felipe Viana, interim) and gave the go-ahead: migration applied to the hosted project, recorded as `20261109171002_release_starter_packs` (file renamed from the placeholder version, AD-006); the draft in `supabase/packs/pending/` was moved into `supabase/migrations/` and `supabase/tests/starter_packs.sql` and the folder removed. `npm run test:db` 26 of 27 recipes pass, `starter_packs` included; `customer_portal` is still the stale one from item-vocabulary
 - Simulation, in one rolled-back transaction against the hosted project, not persisted: fixture + the two `update` statements + the after-release recipe printed `starter_packs: pass`; the same recipe without the release statements failed at `C2301 plumbing: plumbing is not released`. The hosted state read afterwards is unchanged (`hvac` released, the two new packs not)
 - Size: ~9k (one new migration of 10 lines, one recipe copy of ~29 KB, a README), one builder
 - Mechanism: one builder
-- Open: the reviewer for each pack (blocks go-live); the Verifier runs after the release is applied, over every check here
+- Open: a practitioner's review of the checklists, which the interim review does not replace (blocks go-live in the sense of decision 5); the Verifier runs over every check here

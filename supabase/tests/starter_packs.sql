@@ -1,8 +1,9 @@
--- starter-packs, database side: C2201-C2221, C2223-C2225 (.specs/features/starter-packs/checks.md).
+-- starter-packs, database side, with the two packs released by 20261109171002_release_starter_packs.sql: C2201-C2221, C2223-C2224
+-- (.specs/features/starter-packs/checks.md) and C2301-C2302 (.specs/features/pack-release/checks.md).
 -- Run after fixture.sql in the same execute_sql call (npm run test:db starter_packs).
 -- Fixture: org A owner uA, org B owner uB. Setup runs as the table owner with no signed-in user.
--- The two packs ship unreleased. The checks above "test release" run on the shipped state; the release is made in this
--- transaction only and rolls back with it.
+-- The shipped migrations release the two packs; nothing here releases anything. The gate is proven on two registered test
+-- packs that stay unreleased.
 
 reset role;
 select set_config('request.jwt.claims', '', true);
@@ -225,8 +226,8 @@ declare
   o uuid := tests.sp_new_org('spN');
 begin
   perform tests.ok('C2209 hvac', (select released_at from private.catalog_packs where pack = 'hvac') is not null, 'hvac is not released');
-  perform tests.ok('C2209 plumbing', (select released_at from private.catalog_packs where pack = 'plumbing') is null, 'plumbing is released');
-  perform tests.ok('C2209 electrical', (select released_at from private.catalog_packs where pack = 'electrical') is null, 'electrical is released');
+  perform tests.ok('C2301 plumbing', (select released_at from private.catalog_packs where pack = 'plumbing') <= now(), 'plumbing is not released');
+  perform tests.ok('C2301 electrical', (select released_at from private.catalog_packs where pack = 'electrical') <= now(), 'electrical is not released');
   perform tests.ok('C2209 column', exists (
     select 1 from information_schema.columns
     where table_schema = 'private' and table_name = 'catalog_packs' and column_name = 'released_at'
@@ -236,6 +237,10 @@ begin
   perform tests.ok('C2209 new pack', (select released_at from private.catalog_packs where pack = 'sp_new') is null, 'a new pack starts released');
   insert into private.catalog_asset_types (pack, code, name, default_visit_months) values ('sp_new', 'SPX', 'Sp x', '{3}');
   perform tests.expect_error('C2209 new pack seed', format('select private.seed_org_catalog(%L, %L)', o, 'sp_new'), '55000');
+
+  -- a second registered pack that stays unreleased, so the refusal is proven for two members
+  insert into private.catalog_packs (pack, trade_context) values ('sp_new2', 'test trade two');
+  insert into private.catalog_asset_types (pack, code, name, default_visit_months) values ('sp_new2', 'SPY', 'Sp y', '{3}');
 end $$;
 
 -- C2210: an unreleased pack raises 55000 and changes nothing, for a null context and for a held one.
@@ -249,7 +254,7 @@ declare
 begin
   perform private.seed_org_catalog(h, 'hvac');
   d_h := tests.sp_digest(h);
-  foreach p in array array['plumbing', 'electrical'] loop
+  foreach p in array array['sp_new', 'sp_new2'] loop
     perform tests.expect_error('C2210 ' || p || ' null context', format('select private.seed_org_catalog(%L, %L)', n, p), '55000');
     perform tests.ok('C2210 ' || p || ' null unchanged', tests.sp_digest(n) = d_n and tests.sp_count(n) = 0 and tests.sp_ctx(n) is null,
       'the org changed after a refused seed');
@@ -259,17 +264,13 @@ begin
   end loop;
 end $$;
 
--- C2225: the shipped data cannot seed either pack: a fresh org, no hvac, no test release.
+-- C2302: both shipped packs carry a release time that is not in the future, and the two test packs do not.
 do $$
-declare
-  z uuid := tests.sp_new_org('spZ', null);
-  d text := tests.sp_digest(tests.id('spZ'));
-  p text;
 begin
-  foreach p in array array['plumbing', 'electrical'] loop
-    perform tests.expect_error('C2225 ' || p, format('select private.seed_org_catalog(%L, %L)', z, p), '55000');
-    perform tests.ok('C2225 ' || p || ' untouched', tests.sp_digest(z) = d and tests.sp_count(z) = 0, 'the fresh org changed after a refused seed');
-  end loop;
+  perform tests.ok('C2302 shipped', (select count(*) from private.catalog_packs where pack in ('hvac', 'plumbing', 'electrical') and released_at is not null and released_at <= now()) = 3,
+    'a shipped pack has no release time');
+  perform tests.ok('C2302 test packs', (select count(*) from private.catalog_packs where pack in ('sp_new', 'sp_new2') and released_at is null) = 2,
+    'a test pack is released');
 end $$;
 
 -- C2211: an unregistered pack.
@@ -342,8 +343,7 @@ begin
   perform tests.ok('C2224 unregistered', (select count(*) from private.pack_review_sheet('nope')) = 0, 'an unregistered pack returned rows');
 end $$;
 
--- ---- test release: from here the two packs are released for this transaction only.
-update private.catalog_packs set released_at = now() where pack in ('plumbing', 'electrical');
+-- ---- the two shipped packs are released by the migration, so S3 seeds them as they are.
 
 -- C2214, C2215: plumbing seeds into a fresh org.
 do $$
