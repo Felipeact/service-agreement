@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/pricing-page/plan.md`
 
-35 checks in 4 slices · 3 one-way doors · 4 open, of which 2 block go-live and none blocks the build
+36 checks in 4 slices · 3 one-way doors · 4 open, of which 2 block go-live and none blocks the build
 
 ## How proofs run
 
@@ -12,7 +12,7 @@ Plan: `.specs/features/pricing-page/plan.md`
 - **Expected values are copied from the plan**, never read back from the source: plan names and figures, the four refusal texts, the trial line, the trade labels and codes.
 - **Live proofs** (C2427 to C2431) are the Playwright MCP validation `AGENTS..md` requires for any change under `web/`: one signed-in-or-out context kept open (see the memory note on a single Playwright context), `browser_resize`, `browser_snapshot`, no screenshots, nothing committed. They are reported in the verification.
 - **`tsc` proofs** (C2426, C2433) run `npx tsc --noEmit` from `web/`; the file that C2426 names carries `@ts-expect-error` lines, so a port that grows a code fails the compile.
-- **What cannot be proven here:** the HTTP `303` of a successful submit. It needs a real Checkout url, and the only starter until billing-checkout answers `not_configured`. C2415 proves the action calls `redirect(url)` once; Next's docs say a Server Action `redirect` is a client-side navigation with JavaScript and a `303` for a plain form post (`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/redirect.md`). billing-checkout's live run is where the status is seen on the wire.
+- **The `303` on the wire** needs a Checkout url, and the only starter until billing-checkout answers `not_configured`. C2415 proves the action calls `redirect(url)` once, and C2436 proves the status in a production build of a scratch worktree whose starter is swapped for one answering an https url (the swap is never committed). Next's docs say a Server Action `redirect` is a client-side navigation with JavaScript and a `303` for a plain form post (`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/redirect.md`).
 
 ## Checks
 
@@ -124,6 +124,9 @@ Proof: live Playwright MCP run: `browser_run_code_unsafe` with `hasTouch`/`isMob
 **C2431** - In a real browser against the real Server Action: pressing Team with nothing ticked shows "Choose at least one trade."; ticking "Plumbing" and "Electrical" and pressing Team shows "Sign-up isn't open yet. Please check back soon." with exactly those two still checked and the other two unchecked; the plan figures are unchanged afterwards (plan AC 14, 16, 18 through Next's wiring)
 Proof: live Playwright MCP run at 1440 px: `browser_click`, `browser_snapshot` and `browser_evaluate` of the checkboxes' `checked`. Reported in the verification, not committed
 
+**C2436** - In a production build (`next build`, `next start`) of a scratch copy of `HEAD` whose only change is a starter answering `{ ok: true, url: "https://checkout.example.com/c/pay_1" }`, a plain form post with JavaScript disabled (plumbing ticked, the Team button pressed) gets `POST /pricing` answered `303` with `Location: https://checkout.example.com/c/pay_1` (plan AC 13 on the wire; the status in Surface)
+Proof: live run in a scratch `git worktree` outside the repo (copy `web/node_modules` and `web/.env.local` in, edit only the starter in `web/composition/index.ts`), `playwright-core` with `javaScriptEnabled: false`, reading the POST response's status and `location` header. Reported in the verification, not committed; the scratch is removed afterwards
+
 ### S4 - The change leaves the repo consistent · 5 files · 140 KB read in part · ~12k
 
 **C2432** - `app/product-copy.test.ts` and `domain/purity.test.ts` are unchanged since the base commit, and their C2305 and C2021 tests pass with the new files in place (the trade labels carry no "HVAC" and the page says no "equipment"; no allowlist row was added)
@@ -167,8 +170,8 @@ Proof: `npx vitest run app/pricing/pricing-docs.test.ts -t "C2435:"`
 | docs and decisions (3) | CONTEXT.md entry C2434 · CONTEXT.md build log C2434 · STATE.md decision C2435 | - |
 
 - Claims naming an exact string: C2404, C2405, C2406, C2410, C2413, C2416, C2417, C2418, C2419; each asserts the whole string
-- Claims naming a status or boundary: C2401, C2402, C2403 (HTTP through `proxy`), C2415 (the `redirect` call at the action boundary), C2431 (the real action in a browser); the `303` on the wire is named in How proofs run as what billing-checkout's live run adds
-- C2427 to C2431 are the only proofs that are not committed tests; they are the `AGENTS..md` live validation
+- Claims naming a status or boundary: C2401, C2402, C2403 (HTTP through `proxy`), C2415 (the `redirect` call at the action boundary), C2431 (the real action in a browser), C2436 (the `303` on the wire)
+- C2427 to C2431 and C2436 are the only proofs that are not committed tests; they are the `AGENTS..md` live validation
 - No other check claims more than the single case its proof exercises
 
 ## Test policy
@@ -216,3 +219,5 @@ Plan `## Out of scope` is the record: Stripe, provisioning, the returning-email 
 - **Boundary:** C2401-C2435 built at `0ee84e1` (feature code, tests and the C2425 assertions) with the docs commit after it; vitest 194 files, 3,660 tests, `tsc --noEmit` and `eslint` clean, `npm run test:db starter_packs` green; C2427-C2431 run live on 2026-11-09 (see Abandoned for the browser used)
 - **Abandoned:** a new `pricing_trades` SQL recipe (see Settled mid-build). The Playwright MCP browser was locked by another session's Chrome (profile `mcp-chrome-e837010`, started 10:05), so the live checks ran through `playwright-core` from the same `@playwright/mcp` package in a fresh temporary profile, driven by a script in the session scratchpad (page evaluation only, no screenshot saved, the profile deleted). The same widths, touch taps, console and network reads and the real Server Action run were made; the one false alarm was a second `[role="alert"]` that is Next's empty route announcer, not a page element
 - **UI route:** `/impeccable` was loaded but its concept round was not run: the page is a precisely specified surface inside the established world (DESIGN.md tokens, plan AC 10 to 24 fix its structure). The design detector found nothing on `web/app/pricing`; the finish reviewer was not spawned
+- **Round 1 (Verifier FAIL) and its fixes:** (1) a surviving mutant on the port's input side: the types test gained three `@ts-expect-error` lines, so `start(selection: unknown)` now fails tsc (`64b436c`); (2) the Test policy row for the action lacked `unavailable`: the action test now drives it, and a throwing starter (`64b436c`); (4) the Coverage row listed `303` as proven with only the `redirect()` call behind it: C2436 is new and additive, and proved `303` with `Location: https://checkout.example.com/c/pay_1` on 2026-11-09. No other check changed
+- **C2430 and `net::ERR_ABORTED`:** the Verifier saw Chrome report `POST /pricing net::ERR_ABORTED` after a delivered `200` on repeat submits. It is not the pricing page: the existing `/login` action does the same, in dev and in a production build (4 submits each, 2026-11-09), and the UI result is always correct. C2430's text says "no failed request"; whether that excludes a Server Action post that Next's own client aborts after its `200` is a change to a frozen check, so it is the owner's call and is left open
