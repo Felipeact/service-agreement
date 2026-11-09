@@ -990,6 +990,20 @@ export interface SignatureWebhooks {
   receive(input: { body: string; signature: string; documents?: WebhookDocument[] }): Promise<WebhookCallResult>;
 }
 
+/** One call of `public.stripe_receive_event` (billing-checkout door 3): what it answered, or why it refused. Anything else is thrown. */
+export type StripeEventCall =
+  | { ok: true; outcome: string }
+  | { ok: false; code: "unauthorized" | "malformed" | "unconfigured" };
+
+/** Stripe's signed delivery, handed to the database to verify and keep once. The database alone holds the webhook secret. */
+export interface StripeEvents {
+  receive(input: { body: string; signature: string }): Promise<StripeEventCall>;
+}
+
+export type ReceiveStripeEventResult =
+  | { ok: true; outcome: "recorded" | "duplicate" | "ignored" }
+  | { ok: false; code: "unauthorized" | "malformed" | "unavailable" };
+
 export type SignedFilesResult =
   | { ok: true; files: { kind: SignedDocumentKind; bytes: Uint8Array }[] }
   | { ok: false; code: "rejected" | "unavailable" };

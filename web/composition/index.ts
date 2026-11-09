@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
+import type { CheckoutStarter } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import {
   makeDecidePortal,
@@ -12,6 +13,7 @@ import {
   makeNotify,
   makeReadImport,
   makeReceiveSignatureEvent,
+  makeReceiveStripeEvent,
   makeRecordPortalView,
   makeReissueLink,
   makeRequestSignInLink,
@@ -25,6 +27,7 @@ import {
   type NotifyResult,
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
+import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
@@ -45,6 +48,7 @@ import {
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
 import { supabaseSignatureWebhooks } from "@/infrastructure/supabase/signature-webhook";
+import { supabaseStripeEvents } from "@/infrastructure/supabase/stripe-events";
 import { supabaseSignedCopyReader } from "@/infrastructure/supabase/signed-copy";
 import { supabaseImportReviewReader, supabaseImportRowStore } from "@/infrastructure/supabase/import-review";
 import { supabaseTaskLibraryReader, supabaseTaskLibraryStore } from "@/infrastructure/supabase/task-library";
@@ -273,17 +277,25 @@ export async function getWebhookContainer() {
   const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
   const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
   const supabase = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  return { receive: makeReceiveSignatureEvent(supabaseSignatureWebhooks(supabase), docusealSignedDocuments()) };
+  return {
+    receive: makeReceiveSignatureEvent(supabaseSignatureWebhooks(supabase), docusealSignedDocuments()),
+    receiveStripe: makeReceiveStripeEvent(supabaseStripeEvents(supabase)),
+  };
 }
 
 export type WebhookContainer = Awaited<ReturnType<typeof getWebhookContainer>>;
 
 /**
- * Wires the pricing page's start-trial (pricing-page door 3). It reads no cookie, no database and no secret: until
- * billing-checkout puts the Stripe adapter here, every selection answers `not_configured`.
+ * Wires the register page's start-trial (pricing-page door 3, billing-checkout door 1). It reads no cookie and no database.
+ * With `STRIPE_SECRET_KEY` and `APP_BASE_URL` both set it starts a Stripe Checkout session; with either missing every
+ * selection answers `not_configured` and no request is made. `STRIPE_SECRET_KEY` is read only here.
  */
 export async function getBillingContainer() {
-  return { startTrial: makeStartTrial({ start: async () => ({ ok: false, code: "not_configured" }) }) };
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const appBaseUrl = process.env.APP_BASE_URL;
+  const checkout: CheckoutStarter =
+    secretKey && appBaseUrl ? stripeCheckoutStarter({ secretKey, appBaseUrl }) : { start: async () => ({ ok: false, code: "not_configured" }) };
+  return { startTrial: makeStartTrial(checkout) };
 }
 
 export type BillingContainer = Awaited<ReturnType<typeof getBillingContainer>>;

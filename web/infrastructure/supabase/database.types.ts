@@ -1537,6 +1537,7 @@ export type Database = {
       signature_view: { Args: { p_token_hash: string }; Returns: Json }
       signature_webhook: { Args: { p_body: string; p_documents?: Json; p_signature: string }; Returns: Json }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
+      stripe_receive_event: { Args: { p_body: string; p_signature: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

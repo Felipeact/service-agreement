@@ -54,6 +54,7 @@ export const RECIPES: Recipe[] = [
   plain("synonyms_as_data"),
   plain("starter_packs"),
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
+  plain("stripe_events"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
