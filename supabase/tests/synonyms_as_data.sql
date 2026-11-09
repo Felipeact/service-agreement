@@ -35,13 +35,19 @@ $$;
 create function tests.sd_ctx(p_org uuid) returns text
 language sql security definer as $$ select s.trade_context from public.org_settings s where s.org_id = p_org $$;
 
+-- The spellings of a pack's template type, read past the privileges on the private table.
+create function tests.sd_pack_syn(p_pack text, p_code text) returns text[]
+language sql security definer as $$
+  select tests.sd_set(c.synonyms) from private.catalog_asset_types c where c.pack = p_pack and c.code = p_code
+$$;
+
 -- A digest of an org's types and spellings, read past RLS.
 create function tests.sd_digest(p_org uuid) returns text
 language sql security definer as $$
   select coalesce(md5(string_agg(t.code || ':' || t.synonyms::text, ',' order by t.code)), '-') from public.asset_types t where t.org_id = p_org
 $$;
 
-grant execute on function tests.sd_set(text[]), tests.sd_syn(uuid, text), tests.sd_ctx(uuid), tests.sd_digest(uuid) to anon, authenticated;
+grant execute on function tests.sd_set(text[]), tests.sd_syn(uuid, text), tests.sd_ctx(uuid), tests.sd_digest(uuid), tests.sd_pack_syn(text, text) to anon, authenticated;
 
 -- C2109: the hvac pack holds today's SYNONYMS (the feature base's web/domain/imports/index.ts) and nothing else.
 do $$
@@ -162,7 +168,7 @@ declare
   good text;
 begin
   for t in select * from (values
-    ('catalog', 'private.catalog_asset_types', $w$pack = 'sd_plumb' and code = 'SUMP'$w$),
+    ('catalog', 'private.catalog_asset_types', $w$pack = 'sd_electric' and code = 'PANEL'$w$),
     ('org', 'public.asset_types', format('id = %L', tests.id('typeA')))
   ) as x(name, tbl, cond)
   loop
@@ -265,7 +271,7 @@ begin
   perform public.remove_task_library_type('SUMP');
   perform tests.ok('C2112 removed', tests.sd_syn(a, 'SUMP') is null, 'org A still has SUMP');
   perform tests.ok('C2112 other org', tests.sd_syn(tests.id('orgB'), 'SUMP') = tests.sd_set(array['pit pump', 'sump']), 'org B SUMP changed');
-  perform tests.ok('C2112 pack', (select tests.sd_set(synonyms) from private.catalog_asset_types where pack = 'sd_plumb' and code = 'SUMP') = tests.sd_set(array['pit pump', 'sump']),
+  perform tests.ok('C2112 pack', tests.sd_pack_syn('sd_plumb', 'SUMP') = tests.sd_set(array['pit pump', 'sump']),
     'the pack SUMP changed');
 end $$;
 reset role;
@@ -274,7 +280,7 @@ reset role;
 do $$
 begin
   perform tests.ok('C2116 hvac', (select trade_context from private.catalog_packs where pack = 'hvac') = 'HVAC and mechanical', 'the hvac phrase is wrong');
-  perform tests.expect_error('C2116 unregistered', $q$insert into private.catalog_asset_types (pack, code, name) values ('sd_nope', 'X', 'x')$q$, '23503');
+  perform tests.expect_error('C2116 unregistered', $q$insert into private.catalog_asset_types (pack, code, name, default_visit_months) values ('sd_nope', 'X', 'x', '{3}')$q$, '23503');
   perform tests.ok('C2116 every pack', not exists (
     select 1 from private.catalog_asset_types c where not exists (select 1 from private.catalog_packs p where p.pack = c.pack)), 'a template row names an unregistered pack');
 end $$;
@@ -323,7 +329,9 @@ grant execute on function tests.sd_try_ctx(text, text, text) to anon, authentica
 
 do $$
 begin
-  perform tests.ok('C2119 default', tests.sd_ctx(tests.id('orgB')) is null, 'a new settings row did not read null');
+  insert into public.orgs (id, name) values (tests.id('orgD'), 'Org D');
+  insert into public.org_settings (org_id, legal_name) values (tests.id('orgD'), 'D');
+  perform tests.ok('C2119 default', tests.sd_ctx(tests.id('orgD')) is null, 'a new settings row did not read null');
   perform tests.sd_try_ctx('C2119 ok 200', repeat('a', 200), 'ok');
   perform tests.sd_try_ctx('C2119 ok symbols', 'HVAC & R/boiler-service, O''Brien', 'ok');
   perform tests.sd_try_ctx('C2119 empty', '', '23514');

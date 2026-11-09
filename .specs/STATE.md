@@ -170,8 +170,8 @@
 ## Handoff
 
 **Feature**: synonyms-as-data (ROADMAP Phase 4.5 item 4). Profile standard, one builder; plan and checks in `.specs/features/synonyms-as-data/`
-**Where**: all 27 checks are written; the vitest proofs (C2101 to C2108, C2120 to C2123, C2124 vitest half, C2125) pass; `npm test` 184 files and 3,512 tests, `tsc` and `eslint` clean. The SQL proofs (C2109 to C2119, C2126, C2127, and the SQL half of C2124) are written and the SQL parses, but they have not run: migration `20261109160000_synonyms_as_data.sql` is not applied to the hosted project (needs the owner's go-ahead, rule 8)
-**Next step**: with the owner's go-ahead apply the migration, run `npm run test:db synonyms_as_data catalog_seed type_editor task_library import_extract import_review demo_seed`, read the live demo org once (C2113, C2118), then dispatch the Verifier over `<feature base>..HEAD`; tick ROADMAP Phase 4.5 item 4 after it passes
-**Blockers**: the go-ahead above; C2114's whole-`NULL` case raises `23502`, not `23514` as the check says (NOT NULL is checked before CHECK), see the checks Handoff
+**Where**: all 27 checks are built and green: vitest (`npm test` 184 files, 3,512 tests), `tsc`, `eslint`, and the SQL recipe `synonyms_as_data` plus the other 25 `test:db` recipes except `customer_portal`, which fails on a stale `view tenant` assertion from item-vocabulary (the tenant now carries `itemSingular` and `itemPlural`); not this feature's, not fixed. Migration applied 2026-11-09 as `20261109154806_synonyms_as_data` (owner's go-ahead); demo org read: 40 types equal to the pack, 27 with spellings, 59 spellings, context "HVAC and mechanical"
+**Next step**: dispatch the Verifier over `c29fe10..HEAD` with every check; tick ROADMAP Phase 4.5 item 4 after it passes
+**Blockers**: none
 **Branch**: development; nothing pushed
 **Supabase project**: `service-agreement`, ref `gnxebrtcpbujhvcamtoe`. Migration `20261105120000_members_page` was applied by the owner in the SQL editor and is still not in the project's migration history; run `supabase migration repair --status applied 20261105120000` before any `supabase db push`
