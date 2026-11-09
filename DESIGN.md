@@ -1,6 +1,6 @@
 ---
 name: Service Agreement
-description: Familiar, precise SaaS for HVAC estimators, warmed up. The category standard built to the craft of Linear, Stripe, Attio and Jobber, on a navy shell with a display face, stage-tinted wells and authored drawings.
+description: Familiar, precise SaaS for trade-contractor estimators, warmed up. The category standard built to the craft of Linear, Stripe, Attio and Jobber, on a navy shell with a display face, stage-tinted wells and authored drawings.
 colors:
   ground: "#f3f5f9"
   surface: "#ffffff"
@@ -233,7 +233,7 @@ Columns are wells with 10px padding and 8px between cards; columns sit 14px apar
 
 Open columns list the longest-waiting deal first; closed columns list newest first.
 
-**Page header.** The title, a one-line standing under it, and the single primary action on the right (a plus icon and its label). The app has one search, the sidebar's (a `/` key focuses it); a page adds its own only to narrow a list on that page (Agreements, Customers). The Pipeline has none: its title is a greeting ("Good morning, Jamie", the name read from the member's email when it plainly holds one, otherwise just "Good morning") at 30-34px, over the line "Keep every PM agreement moving from equipment list to signature."
+**Page header.** The title, a one-line standing under it, and the single primary action on the right (a plus icon and its label). The app has one search, the sidebar's (a `/` key focuses it); a page adds its own only to narrow a list on that page (Agreements, Customers). The Pipeline has none: its title is a greeting ("Good morning, Jamie", the name read from the member's email when it plainly holds one, otherwise just "Good morning") at 30-34px, over the line "Keep every service agreement moving from equipment list to signature."
 
 **Control height.** Every interactive control (buttons, search, nav items, stage tabs, icon buttons) is 44px tall below 1024px; on desktop buttons and search are 34px and nav items 36px.
 

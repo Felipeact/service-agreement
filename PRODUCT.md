@@ -8,7 +8,7 @@ web
 
 ## Users
 
-**Primary: the office estimator.** An estimator or office manager at a trade contractor that maintains equipment on a recurring schedule, working at a desk on a desktop screen. HVAC and mechanical contractors are the first trade and the only one built so far; plumbing, electrical and other trades are planned (see Direction below). They take a customer's equipment list, build a preventive-maintenance (PM) service agreement, send it for review, follow it up, and turn the accepted ones into signed contracts. They work through many agreements at once, so they need to see which ones are stuck and which need a reply.
+**Primary: the office estimator.** An estimator or office manager at a trade contractor that services things on a recurring schedule (equipment, areas, stations), working at a desk on a desktop screen. HVAC and mechanical contractors are the first trade and the only one built so far; plumbing, electrical and other trades are planned (see Direction below). They take a customer's equipment list, build a recurring service agreement, send it for review, follow it up, and turn the accepted ones into signed contracts. They work through many agreements at once, so they need to see which ones are stuck and which need a reply.
 
 **Secondary: the owner.** Checks the pipeline (what's out, what's accepted, what's signed, what's aging) and countersigns contracts. Roles in the app: owner, admin, estimator, viewer.
 
@@ -16,7 +16,7 @@ web
 
 ## Product Purpose
 
-A multi-tenant micro-SaaS that takes a contractor from a customer's equipment list to a signed PM contract. It imports the equipment list, builds a priced and branded agreement for review, tracks it until the customer accepts or refuses, then turns the accepted version into a contract for e-signature. n8n handles the emails, reminders and timing in between.
+A multi-tenant micro-SaaS that takes a contractor from a customer's equipment list to a signed recurring service contract. It imports the equipment list, builds a priced and branded agreement for review, tracks it until the customer accepts or refuses, then turns the accepted version into a contract for e-signature. n8n handles the emails, reminders and timing in between.
 
 Success: an estimator goes from a messy equipment list to a sent agreement in minutes, always knows where every agreement stands, and none slips through the cracks before it is signed.
 
@@ -24,7 +24,7 @@ Success: an estimator goes from a messy equipment list to a sent agreement in mi
 
 The user confirmed three reasons, all of equal weight:
 
-1. **From equipment list to agreement, fast.** Import any messy equipment list (Excel, CSV, Word or PDF) and get a priced, tenant-branded PM agreement whose "Service included" scope is built from the equipment types actually on site.
+1. **From equipment list to agreement, fast.** Import any messy equipment list (Excel, CSV, Word or PDF) and get a priced, tenant-branded service agreement whose "Service included" scope is built from the equipment types actually on site.
 2. **Tracked to signature.** One status for each deal (In progress → Sent to customer → Accepted (awaiting signature) → Completed, with Refused as the exit), plus automatic reminders and an audit trail.
 3. **Focused and affordable.** It does this one job well for small and mid-sized shops that don't want a full field-service suite such as ServiceTitan, or a pile of Word templates and spreadsheets.
 

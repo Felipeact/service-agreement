@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s · Service Agreement",
     default: "Service Agreement",
   },
-  description: "Preventive-maintenance service agreements for HVAC and mechanical contractors.",
+  description: "Recurring service agreements for trade contractors, from the customer's list to signature.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

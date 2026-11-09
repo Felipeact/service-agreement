@@ -78,7 +78,7 @@ export function PipelineView({ cards, title = "Pipeline", canCreate = false, new
       <PageHeader
         large
         title={title}
-        subtitle={itemText("Keep every PM agreement moving from equipment list to signature.", words)}
+        subtitle={itemText("Keep every service agreement moving from equipment list to signature.", words)}
         action={
           newAgreement ??
           (canCreate ? (

@@ -28,15 +28,15 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           <ProductMark className="size-9" />
           <p className="font-display text-[18px] font-semibold tracking-tight">{PRODUCT_NAME}</p>
         </div>
-        <p className="pt-3 text-night-ink lg:hidden">Maintenance agreements for service contractors, from equipment list to signature.</p>
+        <p className="pt-3 text-night-ink lg:hidden">Recurring service agreements for trade contractors, from the customer&apos;s list to signature.</p>
 
         <div className="my-auto hidden flex-col gap-10 py-14 lg:flex">
           <p className="max-w-[13ch] font-display text-[48px] leading-[1.02] font-semibold tracking-tight text-balance">
-            From equipment list to signed agreement.
+            From service list to signed agreement.
           </p>
           <RooftopScene className="w-full max-w-[480px] text-night-ink" />
         </div>
-        <p className="hidden text-night-ink lg:block">Preventive-maintenance agreements for HVAC and mechanical contractors.</p>
+        <p className="hidden text-night-ink lg:block">Recurring service agreements for trade contractors.</p>
       </section>
 
       <section className="flex justify-center px-4 py-8 lg:items-center lg:px-10">

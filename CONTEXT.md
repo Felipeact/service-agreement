@@ -15,7 +15,7 @@ Other sources:
 ## Domain glossary
 
 ### Tenant (Org) and roles (M1)
-**What it is:** a contractor company (HVAC or mechanical) that subscribes to the app. The schema is shared, every row carries an `org_id`, and Postgres RLS enforces isolation. Members have one role: owner, admin, estimator or viewer. Login is by magic link.
+**What it is:** a trade contractor company (HVAC is the first trade built; plumbing and electrical follow) that subscribes to the app. The schema is shared, every row carries an `org_id`, and Postgres RLS enforces isolation. Members have one role: owner, admin, estimator or viewer. Login is by magic link.
 **What we built:** tables `orgs` and `memberships` (one role per user per org, `unique (org_id, user_id)`) in [supabase/migrations/20261019174738_init.sql](supabase/migrations/20261019174738_init.sql), on the Supabase project `service-agreement` (ref `gnxebrtcpbujhvcamtoe`, region `ca-central-1`).
 - **Isolation:** every tenant table has `org_id not null`, and child rows reference parents through `(id, org_id)` composite foreign keys, so a reference cannot cross orgs (AD-003).
 - **RLS:** enabled on all 16 `public` tables. Policies call `private.is_org_member(org)` and `private.has_org_role(org, roles[])`, which are security definer with an empty `search_path`, in a `private` schema the Data API does not expose (AD-004).
@@ -118,7 +118,7 @@ Other sources:
 - **Not yet:** releasing the two packs (needs the reviewer), showing which records block a removal, and service-line templates.
 - **Tests and spec:** [supabase/tests/catalog_seed.sql](supabase/tests/catalog_seed.sql) and [supabase/tests/demo_seed.sql](supabase/tests/demo_seed.sql); [.specs/features/catalog-seed/](.specs/features/catalog-seed/).
 
-### Service agreement (PM agreement) (M7, M8)
+### Service agreement (M7, M8)
 **What it is:** the preventive-maintenance proposal the contractor sends to the customer for review. It is not yet a signed contract. It contains:
 - Visit frequency: the months each line's visits fall in ("visit months"); visits per year is their number.
 - Service price lines (visits per year × cost per visit), each covering one or more equipment types.
@@ -270,6 +270,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ## Build log
 
+- **2026-11-09:** Phase 4.5 item 6, trade-neutral product copy ([.specs/features/trade-neutral-copy/](.specs/features/trade-neutral-copy/)): the root layout description, the sign-in page (mobile line, headline, desktop footer) and the Pipeline subtitle ("service agreement", no "PM") name no trade; PRODUCT.md, DESIGN.md and this file lose the HVAC-only wording (HVAC stays where it names the first trade or the pack). Copy only, no migration. The sign-in `RooftopScene` drawing is unchanged. [web/app/product-copy.test.ts](web/app/product-copy.test.ts) replaces the C2022 pin and scans the non-test source for the old words.
 - **2026-11-09:** Phase 4.5 item 5, plumbing and electrical starter packs ([.specs/features/starter-packs/](.specs/features/starter-packs/)): two drafted packs of 20 types behind a release gate (`released_at`), `private.pack_review_sheet`, `supabase/packs/sheet.sql`. Migration `20261109163948_starter_packs` applied to the hosted project 2026-11-09 (owner's go-ahead); live read: `hvac` released (40 types, 174 tasks), `plumbing` and `electrical` unreleased (95 and 101 tasks). The roadmap item stays unticked until a practitioner reviews the packs and they are released. `npm run test:db` runs 27 recipes (26 pass; `customer_portal` still fails on a stale `view tenant` assertion from item-vocabulary, not this feature's), `npm test` 3,525, tsc and eslint clean. Recipes that read the whole private template now scope to `pack = 'hvac'`.
 - **2026-11-09:** Phase 4.5 item 4, synonyms as data and the trade context ([.specs/features/synonyms-as-data/](.specs/features/synonyms-as-data/)): spellings on each type (pack template and org copy), pack registry with trade phrases, `org_settings.trade_context`, the extraction prompt takes the org's trades, `SYNONYMS` removed from `web/domain/imports`. Migration `20261109154806_synonyms_as_data` applied to the hosted project 2026-11-09 (owner's go-ahead); the demo org reads 59 spellings on 27 types and trade context "HVAC and mechanical".
 - **2026-11-09:** Phase 4.5 item 3, per-org vocabulary for the serviced item ([.specs/features/item-vocabulary/](.specs/features/item-vocabulary/)): two words in company settings, used by the staff screens, both PDFs and the customer review page. The owner applied the migration; it has no row in `supabase_migrations.schema_migrations` yet (run `supabase migration repair --status applied 20261109140000` before any `db push`). `npm run test:db` now runs 25 recipes, `npm test` 3495, tsc and eslint clean. Verifier rounds 1 to 3 failed on test gaps (closed); the owner accepted two gaps in round 3: the New agreement dialog's progress line and notice are proven as components but not as wired into the dialog. C2025 was withdrawn by the owner (the PDF visit schedule has no item heading). Not run live: the browser pass at 375, 768 and 1440 px.

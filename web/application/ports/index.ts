@@ -289,7 +289,7 @@ export type AssetTypeWithSynonyms = AssetTypeOption & { synonyms: string[] };
 export interface AssetTypeCatalog {
   /** The org's asset types with their spellings, ordered by name. */
   list(): Promise<AssetTypeWithSynonyms[]>;
-  /** The trades the org services ("HVAC and mechanical"), or `null` when none is recorded. Throws on a database error. */
+  /** The trades the org services ("plumbing, electrical"), or `null` when none is recorded. Throws on a database error. */
   tradeContext(): Promise<string | null>;
 }
 

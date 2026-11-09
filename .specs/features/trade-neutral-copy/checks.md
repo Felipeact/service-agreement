@@ -118,3 +118,6 @@ Cost: 2 decision-level proofs (C2305 with C2306) and 14 text proofs in 2 test fi
 
 - S1 = 1k (layout 0.9 KB, login 2.4 KB, the new test file 0.8 KB), S2 = 6k (pipeline-view 8.8 KB, its test 15.9 KB), S3 = 12k (PRODUCT.md 8.7 KB, DESIGN.md 36.6 KB, CONTEXT.md 131 KB read by section only, ROADMAP.md edit), S4 = 1k; `ports/index.ts` (52 KB) is one comment edit. Whole-file total 301 KB / 4 = ~75k in the worst case, ~20k as read. Under the 150k budget - one builder
 - Mechanism: one builder
+- **Boundary:** C2301-C2316 built; all proofs green at the build commit (vitest 185 files, 3,548 tests; `tsc --noEmit` and `eslint` clean); C2307 run live on the existing signed-in Playwright page (375, 768, 1440: no overflow, headline 3 lines at 1440, console clean)
+- **Settled mid-build:** none; the user approved the plan as written ("approved"), so the three Assumptions rows stay `Confirmed? n` except as approved with the plan
+- **Abandoned:** rendering the sign-in page in a vitest (async `searchParams` inside `Suspense`); the source-read pattern of C2022 was kept. The sign-in page's apostrophe is `&apos;` in JSX (lint rule `react/no-unescaped-entities`), which the test decodes
