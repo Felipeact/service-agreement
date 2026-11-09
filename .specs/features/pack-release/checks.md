@@ -36,10 +36,6 @@ Proof: `npm run test:db starter_packs` (assertions `C2302 shipped`, `C2302 test 
 - Claims naming a SQLSTATE: C2302 (`55000`), with a proof that crosses the boundary (the real function call)
 - Proven now, before the migration is applied, by the simulation in the Handoff; proven for real by `npm run test:db starter_packs` once it is applied
 
-## Test policy
-
-Decided in starter-packs: decision proofs at the boundary and at their own layer; this change adds data and moves two assertions, and decides nothing new.
-
 ## Swept
 
 - validation: C2301 (release time is not null and not in the future)
