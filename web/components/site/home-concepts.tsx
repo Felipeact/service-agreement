@@ -79,7 +79,7 @@ function Tail({ showPortal = true, flip = false }: { showPortal?: boolean; flip?
       </section>
       <section className="bg-surface">
         <Wrap className="flex flex-col gap-8 py-14 lg:py-20">
-          <SectionHead title="Priced by volume, not by seat." text="Every plan has every feature and unlimited seats. You pay for how many agreements are live and how many lists AI reads." />
+          <SectionHead title="Priced by volume, with seats included." text="Every plan has every feature and a few seats. You pay for how many agreements are live and how many lists AI reads, and a small fee for each extra seat." />
           <PlansTeaser />
           <Link href="/pricing" className="inline-flex min-h-11 w-fit items-center font-semibold text-action hover:underline">
             Compare plans

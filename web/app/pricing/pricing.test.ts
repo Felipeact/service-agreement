@@ -11,9 +11,9 @@ const textOf = (html: string) => decode(html.replace(/<[^>]+>/g, " ")).replace(/
 const renderPage = () => renderToStaticMarkup(createElement(PricingPage));
 
 const PLAN_FIGURES = [
-  { key: "starter", name: "Starter", price: "$49", live: "15", imports: "10" },
-  { key: "team", name: "Team", price: "$99", live: "60", imports: "40" },
-  { key: "business", name: "Business", price: "$199", live: "200", imports: "120" },
+  { key: "starter", name: "Starter", price: "$49", live: "15", imports: "10", seats: "2" },
+  { key: "team", name: "Team", price: "$99", live: "60", imports: "40", seats: "5" },
+  { key: "business", name: "Business", price: "$199", live: "200", imports: "120", seats: "10" },
 ] as const;
 
 function planBlock(html: string, key: string) {
@@ -29,13 +29,13 @@ describe("the plans", () => {
     expect(keys).toEqual(["starter", "team", "business"]);
   });
 
-  test.each(PLAN_FIGURES)("C2404: $name shows $price, $live live agreements, $imports AI imports a month and unlimited seats", ({ key, name, price, live, imports }) => {
+  test.each(PLAN_FIGURES)("C2404: $name shows $price, $live live agreements, $imports AI imports a month and $seats seats included", ({ key, name, price, live, imports, seats }) => {
     const block = textOf(planBlock(renderPage(), key));
     expect(block).toContain(name);
     expect(block).toContain(price);
     expect(block).toContain(`${live} live agreements`);
     expect(block).toContain(`${imports} AI imports a month`);
-    expect(block).toContain("Unlimited seats");
+    expect(block).toContain(`${seats} seats included`);
   });
 
   test.each(PLAN_FIGURES)("$name's button is a link to /register with that plan, and the page has no trade checkboxes", ({ key, name }) => {
@@ -85,5 +85,26 @@ describe("the page copy", () => {
 
   test("C2411: the page says no 'equipment'", () => {
     expect(textOf(renderPage()).toLowerCase()).not.toContain("equipment");
+  });
+});
+
+describe("seats are charged beyond the included ones (register-seats)", () => {
+  test("C2616: the pricing page shows 2, 5 and 10 seats included in order and the extra-seat price, and never says unlimited seats", () => {
+    const html = renderPage();
+    const text = textOf(html);
+    const at = ["2 seats included", "5 seats included", "10 seats included"].map((phrase) => text.indexOf(phrase));
+    expect(at.every((index) => index >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(text).toContain("Extra seats $15 a month");
+    expect(text.toLowerCase()).not.toContain("unlimited seats");
+    expect(text.toLowerCase()).not.toContain("seats are never charged");
+  });
+
+  test("C2616: the site sources say no unlimited seats and no free seats", () => {
+    for (const file of ["components/site/content.ts", "components/site/sections.tsx", "components/site/home-concepts.tsx", "app/pricing/page.tsx"]) {
+      const code = readFileSync(path.join(__dirname, "..", "..", file), "utf8").toLowerCase();
+      expect(code, file).not.toContain("unlimited seats");
+      expect(code, file).not.toContain("seats are never charged");
+    }
   });
 });

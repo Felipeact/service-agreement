@@ -7,7 +7,7 @@ import type { Database } from "./database.types";
  * the marketing site (public-site) is the front door: home, product, demo, trades, about, FAQ, contact and register.
  * Exact paths, so no `/pricing/...` route is public by accident.
  */
-const PUBLIC_PATHS = ["/", "/login", "/auth/confirm", "/pricing", "/product", "/demo", "/trades", "/about", "/faq", "/contact", "/register"];
+const PUBLIC_PATHS = ["/", "/login", "/auth/confirm", "/pricing", "/product", "/demo", "/trades", "/about", "/faq", "/contact", "/register", "/register/success"];
 /**
  * Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`,
  * the customer signs at `/sign/<token>` (signature-provider door 7), and n8n's signed callbacks post to

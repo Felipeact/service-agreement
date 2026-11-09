@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LinkButton } from "@/components/ui/link-button";
-import { PLANS, formatPlanPrice } from "@/domain/billing";
+import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
 import { FAQS, FEATURES, STEPS, TRADE_PAGES, type Faq } from "./content";
 
 /** The one content width of the public site. */
@@ -82,19 +82,22 @@ export function TradeCards() {
 /** The three plans in short, from the one catalog the pricing page and the limits read. */
 export function PlansTeaser() {
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {PLANS.map((plan) => (
-        <div key={plan.key} className="flex flex-col gap-1 rounded-panel border border-hairline bg-surface p-5 shadow-card">
-          <p className="font-display text-[16px] font-semibold">{plan.name}</p>
-          <p className="flex items-baseline gap-1.5">
-            <span className="text-[30px] leading-none font-semibold tracking-tight">{formatPlanPrice(plan.monthlyCents)}</span>
-            <span className="text-ink-2">a month</span>
-          </p>
-          <p className="pt-2 text-ink-2">
-            {plan.liveAgreements} live agreements · {plan.aiImports} AI imports a month · unlimited seats
-          </p>
-        </div>
-      ))}
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-3 md:grid-cols-3">
+        {PLANS.map((plan) => (
+          <div key={plan.key} className="flex flex-col gap-1 rounded-panel border border-hairline bg-surface p-5 shadow-card">
+            <p className="font-display text-[16px] font-semibold">{plan.name}</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-[30px] leading-none font-semibold tracking-tight">{formatPlanPrice(plan.monthlyCents)}</span>
+              <span className="text-ink-2">a month</span>
+            </p>
+            <p className="pt-2 text-ink-2">
+              {plan.liveAgreements} live agreements · {plan.aiImports} AI imports a month · {plan.includedSeats} seats included
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[13px] text-ink-2">Extra seats {formatPlanPrice(EXTRA_SEAT_CENTS)} a month.</p>
     </div>
   );
 }

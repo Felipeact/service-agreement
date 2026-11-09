@@ -47,13 +47,13 @@ Everything customer-facing carries the contractor's name, logo and accent colour
 
 Price points are **not decided** (decision 10, needs you). The table is a starting proposal to test with the pilot contractor, in CAD.
 
-| Plan | Per month | Live agreements | AI imports a month | Seats |
+| Plan | Per month | Live agreements | AI imports a month | Seats included |
 |---|---|---|---|---|
-| Starter | $49 | 15 | 10 | Unlimited |
-| Team | $99 | 60 | 40 | Unlimited |
-| Business | $199 | 200 | 120 | Unlimited |
+| Starter | $49 | 15 | 10 | 2 |
+| Team | $99 | 60 | 40 | 5 |
+| Business | $199 | 200 | 120 | 10 |
 
-- **Axis:** plans limit volume only. Features, templates and reports are the same on every plan (decisions 10 and 20). What counts as a "live agreement" is defined in Phase 5.
+- **Axis:** plans limit volume and include some seats; every seat beyond that is $15 a month in CAD, one price for all plans (draft, decisions 10 and 20 as amended 2026-11-09). Features, templates and reports are the same on every plan. What counts as a "live agreement" is defined in Phase 5.
 - **Trial and billing:** 14 days free with the card collected up front, then monthly. An annual option at two months free is worth testing. Stripe handles Checkout, the Customer Portal and failed-payment retries.
 - **Cost floor per tenant (third-party figures, unchecked against Stripe's own page):** Stripe takes about 2.9% + C$0.30 per card payment, and Stripe Billing adds about 0.7% on US pricing. On a $99 plan that is about $4 a month. Each completed signature costs about US$0.20. Claude extraction is the cost to measure: record tokens per import job in the first pilot and size the allowances with the `ai-pricing` skill before fixing numbers.
 - **Where it sits:** the market anchors below are third-party reports that disagree with each other; check each vendor's page before quoting them.
@@ -64,7 +64,7 @@ Price points are **not decided** (decision 10, needs you). The table is a starti
 | Housecall Pro | About US$59 to US$299 a month on annual billing, 1 to 8 users included | Charges for extra users; 14-day trial |
 | ServiceTitan | About US$250 to US$500 a technician a month, plus setup | Quote-only; built for large shops |
 
-Our position is a single-job tool priced below the suites, with seats not charged separately. It does not replace a field-service suite; it feeds one later (Phase 6).
+Our position is a single-job tool priced below the suites, with a few seats included and a flat fee for each extra one. It does not replace a field-service suite; it feeds one later (Phase 6).
 
 ### Not in the product
 
@@ -305,13 +305,14 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Public site as the front door (M21): `/` home, `/product`, `/demo`, `/trades`, `/about`, `/faq`, `/contact`, with Sign in as a link. Built 2026-11-09 (AD-167, no migration), with three home-page concepts under `/concepts/a|b|c` to choose from (the owner deletes two). Sample-data visuals only; `SITE.contactEmail` and `DEMO_VIDEO_URL` in `web/components/site/content.ts` are yours to confirm and fill
 - [x] Trades chosen at `/register`, not on `/pricing`: `/pricing` is plans only and each plan links to `/register?plan=<key>`; `/register` takes the trades and the plan, then the same `makeStartTrial` hand-off. Built 2026-11-09 (AD-167)
 - [ ] Record the demo video and set `DEMO_VIDEO_URL` (the `/demo` page shows a "coming soon" panel until then)
-- [ ] Stripe plans, Checkout with a 14-day trial (card collected up front, subscription cancelled if payment fails), Customer Portal, idempotent webhooks
+- [x] Stripe Checkout with a 14-day trial, card collected up front, and the signed, idempotent webhook ledger (`.specs/features/billing-checkout/`, AD-168 to AD-171, migration `20261109190000`). Built 2026-11-09 against a fake `fetch` and rolled-back SQL; the live run in Stripe test mode and applying the migration wait for the owner. Go-live blockers: the Stripe webhook endpoint and its secret in Vault, and do not set `STRIPE_SECRET_KEY` in production until provisioning ships
+- [ ] Stripe Customer Portal, and the rule that cancels a subscription when payment fails after the trial (a Stripe dashboard setting the owner makes; the session already asks for a card up front and cancels a trial with none). The portal needs the Stripe customer id that provisioning stores on the org
 - [ ] Workspace provisioning from the webhook: org, settings, seeded packs, the chosen trades stored on the org (moved here from Phase 4.5, since nothing reads them before this), vocabulary, Stripe ids, owner invitation
 - [ ] First-login setup screen (company profile, catalog review, template preview)
 - [ ] "Other" trade: Claude drafts a catalog from a description or an uploaded proposal, with a tenant review step
 - [ ] "Setting up your workspace" state while a paid org is pending
 - [ ] Checkout refuses an email that already belongs to an org, with a clear message
-- [ ] Plan limits by live agreements and an AI-import allowance; seats not charged separately at launch
+- [ ] Plan limits by live agreements and an AI-import allowance; seats beyond the included ones are billed through the Stripe quantity set at sign-up (register-seats), and enforcing the paid seat count at invite time is a later item
 - [ ] Supabase Auth SMTP sender on the verified Resend domain (blocks launch)
 
 ### Phase 5.5: Document templates (M19)
@@ -354,7 +355,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 7 | "Other" trade | Both routes. "Upload your proposal" first, "describe your trade" second | A catalog read from a real document is less likely to invent tasks than one drafted from a sentence |
 | 8 | Trial | 14-day trial with the card collected up front. Cancel the subscription if payment fails at the end | Card-required trials convert about 5x better than no-card ones (ChartMogul bands: 25-35% against 4-6%), at the cost of fewer trial starts. Third-party reports say Jobber and Housecall Pro both use 14 days (unchecked against their own pages). Stripe Checkout does this by default (`trial_period_days`) |
 | 9 | Returning email | Refuse with a clear message | There is no org switcher; attaching a plan to an existing org is a separate feature |
-| 10 | Plan limits | Limit by live agreements and an AI-import allowance. Do not charge per seat at launch. Price points still open | Field-service tools charge per user add-on; flat seats is a simple edge for a small office. Imports have a real Claude cost; each completed signature costs about $0.20 plus a DocuSeal Pro seat. Numbers: size with the `ai-pricing` skill. **Needs you** for the price points |
+| 10 | Plan limits | Limit by live agreements and an AI-import allowance. Charge a flat monthly fee per seat beyond the seats each plan includes (amended 2026-11-09: 2, 5 and 10 included, $15 an extra seat, all draft). Price points still open | Field-service tools charge per user add-on; flat seats is a simple edge for a small office. Imports have a real Claude cost; each completed signature costs about $0.20 plus a DocuSeal Pro seat. Numbers: size with the `ai-pricing` skill. **Needs you** for the price points |
 | 11 | SMTP sender | Move Supabase Auth's sender to the verified Resend domain before launch | Otherwise invitations reach only the account owner. Launch blocker |
 | 12 | Template editor | Block editor with variables, live PDF preview | Predictable output; no DOCX-to-PDF step |
 | 13 | Templates per org | One default plus clone | A picker on every new agreement is friction; several templates can follow a real request |
@@ -364,7 +365,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 17 | Money reports | Owner and admin see money; estimators see operational reports; viewers none | Least privilege; revenue figures are sensitive |
 | 18 | Per-estimator performance | Not in v1 | Events hold a role, not a person, and ranking staff is a product call |
 | 19 | v1 report list | As written in Reporting | Every number comes from data that exists |
-| 20 | Reporting as a plan tier | No. Plans limit volume only | One pricing axis is easier to explain and build |
+| 20 | Reporting as a plan tier | No. Plans limit volume and include seats (amended 2026-11-09); features, templates and reports are the same on every plan | One pricing axis is easier to explain and build |
 | 21 | Build order | Finish Phase 4, then 4.5, 5, 5.5, then reporting (5.6) | Nobody can be sold a contract that cannot complete (the DocuSeal webhook, signed PDF and audit log are still open). Templates decide whether a contractor adopts the product; reports need real tenant data to say anything |
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
 

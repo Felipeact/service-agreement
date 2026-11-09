@@ -29,8 +29,8 @@ export default function RegisterPage({ searchParams }: PageProps<"/register">) {
               Tell us your trade and we set up your workspace to match: service types, checklists and visit months, all editable.
             </p>
             <ol className="flex flex-col gap-2 text-ink-2">
-              <li>1. Your trades and plan, here.</li>
-              <li>2. Email and card, with our payment provider.</li>
+              <li>1. Your details, trades, plan and team size, here.</li>
+              <li>2. Your card, with our payment provider.</li>
               <li>3. A sign-in link, then a short setup for your company.</li>
             </ol>
           </div>

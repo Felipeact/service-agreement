@@ -1,8 +1,11 @@
-import type { TradeCode } from "@/domain/billing";
+import type { FieldErrors, TradeCode } from "@/domain/billing";
 
-/** What the pricing form shows after each submit. A refusal keeps the known trades the visitor ticked, so the boxes are not cleared. */
+/** What the visitor typed, kept so a refusal never clears the form. Text is as posted; `plan` is only a known plan key. */
+export type RegisterValues = { plan: string; email: string; company: string; phone: string; seats: string };
+
+/** What the register form shows after each submit. A refusal keeps the known trades ticked and every typed value. */
 export type PricingState =
   | { status: "idle" }
-  | { status: "no_trade" | "invalid_choice" | "not_configured" | "unavailable"; trades: TradeCode[] };
+  | { status: "no_trade" | "invalid_choice" | "invalid_details" | "not_configured" | "unavailable"; trades: TradeCode[]; values: RegisterValues; fields: FieldErrors };
 
 export const INITIAL_PRICING_STATE: PricingState = { status: "idle" };

@@ -30,16 +30,18 @@ afterEach(() => {
   }
 });
 
+const DETAILS = { seats: "10", email: "owner@shop.ca", company: "Shop Ltd", phone: "604-555-0199" };
+
 const SELECTIONS = (["starter", "team", "business"] as const).flatMap((plan) => [
-  { plan, trades: ["hvac"] },
-  { plan, trades: ["hvac", "plumbing", "electrical", "other"] },
+  { plan, trades: ["hvac"], ...DETAILS },
+  { plan, trades: ["hvac", "plumbing", "electrical", "other"], ...DETAILS },
 ]);
 
 describe("the billing container", () => {
-  test.each(SELECTIONS)("C2422: with no environment at all, $plan with $trades.length trade(s) answers not_configured and touches no cookie, connection or Supabase client", async ({ plan, trades }) => {
+  test.each(SELECTIONS)("C2422: with no environment at all, $plan with $trades.length trade(s) answers not_configured and touches no cookie, connection or Supabase client", async (selection) => {
     const { startTrial } = await getBillingContainer();
 
-    expect(await startTrial({ plan, trades })).toEqual({ status: "not_configured" });
+    expect(await startTrial(selection)).toEqual({ status: "not_configured" });
     expect(cookies).not.toHaveBeenCalled();
     expect(connection).not.toHaveBeenCalled();
     expect(createClient).not.toHaveBeenCalled();
