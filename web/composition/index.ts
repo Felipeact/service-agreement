@@ -271,7 +271,8 @@ export type AutomationContainer = Awaited<ReturnType<typeof getAutomationContain
 /**
  * Wires DocuSeal's signed webhook (signature-webhook doors 1, 4, 5). No user session: the client is `anon` with the
  * publishable key, and the database verifies the signature with its own Vault secret, so no service-role key and no
- * DocuSeal key are read here; the signed files are downloaded from DocuSeal's file host with no credentials.
+ * DocuSeal key are read here; the signed files are downloaded from DocuSeal's file host with no credentials. The same client asks
+ * Supabase Auth for the owner's sign-in link after a Stripe checkout creates a workspace (workspace-provisioning door 3).
  */
 export async function getWebhookContainer() {
   const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -279,7 +280,7 @@ export async function getWebhookContainer() {
   const supabase = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   return {
     receive: makeReceiveSignatureEvent(supabaseSignatureWebhooks(supabase), docusealSignedDocuments()),
-    receiveStripe: makeReceiveStripeEvent(supabaseStripeEvents(supabase)),
+    receiveStripe: makeReceiveStripeEvent(supabaseStripeEvents(supabase), supabaseInvitationLinkSender(supabase)),
   };
 }
 

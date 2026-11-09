@@ -19,8 +19,14 @@ export function supabaseStripeEvents(client: Client): StripeEvents {
         // The code only: a database message can quote a piece of the delivery.
         throw new Error(`stripe_receive_event failed: ${error.code}`);
       }
-      const outcome = (data as { outcome?: unknown } | null)?.outcome;
-      return { ok: true, outcome: typeof outcome === "string" ? outcome : "" };
+      const answer = data as { outcome?: unknown; provisioned?: { email?: unknown } | null } | null;
+      const outcome = answer?.outcome;
+      const email = answer?.provisioned?.email;
+      return {
+        ok: true,
+        outcome: typeof outcome === "string" ? outcome : "",
+        ...(typeof email === "string" && email !== "" ? { provisionedEmail: email } : {}),
+      };
     },
   };
 }

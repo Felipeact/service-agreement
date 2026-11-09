@@ -990,9 +990,12 @@ export interface SignatureWebhooks {
   receive(input: { body: string; signature: string; documents?: WebhookDocument[] }): Promise<WebhookCallResult>;
 }
 
-/** One call of `public.stripe_receive_event` (billing-checkout door 3): what it answered, or why it refused. Anything else is thrown. */
+/**
+ * One call of `public.stripe_receive_event` (billing-checkout door 3): what it answered, or why it refused. Anything else is thrown.
+ * `provisionedEmail` is present only when this call created a workspace, and holds the owner's address (workspace-provisioning door 3).
+ */
 export type StripeEventCall =
-  | { ok: true; outcome: string }
+  | { ok: true; outcome: string; provisionedEmail?: string }
   | { ok: false; code: "unauthorized" | "malformed" | "unconfigured" };
 
 /** Stripe's signed delivery, handed to the database to verify and keep once. The database alone holds the webhook secret. */

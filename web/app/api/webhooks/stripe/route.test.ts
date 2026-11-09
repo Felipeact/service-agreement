@@ -82,3 +82,25 @@ describe("POST /api/webhooks/stripe", () => {
     expect(line).not.toContain("1790000000");
   });
 });
+
+describe("a delivery that created a workspace", () => {
+  test("C2721: the body is exactly the outcome, with no provisioned key and no email", async () => {
+    receiveStripe.mockResolvedValue({ ok: true, outcome: "recorded" });
+    const response = await call(SIGNATURE);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).toBe('{"outcome":"recorded"}');
+    expect(text).not.toContain("provisioned");
+    expect(text).not.toContain("@");
+  });
+
+  test.each([
+    [{ ok: true, outcome: "recorded" } as ReceiveStripeEventResult, 200],
+    [{ ok: false, code: "unauthorized" } as ReceiveStripeEventResult, 401],
+    [{ ok: false, code: "malformed" } as ReceiveStripeEventResult, 400],
+    [{ ok: false, code: "unavailable" } as ReceiveStripeEventResult, 503],
+  ])("C2721: the use case answer %# keeps its status %i", async (answer, status) => {
+    receiveStripe.mockResolvedValue(answer);
+    expect((await call(SIGNATURE)).status).toBe(status);
+  });
+});

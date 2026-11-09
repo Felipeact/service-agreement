@@ -38,3 +38,21 @@ describe("the Stripe events adapter", () => {
     expect((failure as Error).message).not.toContain("evt_1");
   });
 });
+
+describe("the Stripe events adapter and the owner's email", () => {
+  test("C2718: a provisioned answer hands on the owner's email", async () => {
+    const { typed } = client({ data: { outcome: "recorded", provisioned: { email: "owner.one@shop.test" } }, error: null });
+    expect(await supabaseStripeEvents(typed).receive(DELIVERY)).toEqual({ ok: true, outcome: "recorded", provisionedEmail: "owner.one@shop.test" });
+  });
+
+  test.each([
+    ["no provisioned key", { outcome: "recorded" }],
+    ["provisioned without an email", { outcome: "recorded", provisioned: {} }],
+    ["a non-string email", { outcome: "recorded", provisioned: { email: 7 } }],
+    ["an empty email", { outcome: "recorded", provisioned: { email: "" } }],
+    ["provisioned that is not an object", { outcome: "recorded", provisioned: "owner@shop.test" }],
+  ])("C2718: %s leaves the email out", async (_name, data) => {
+    const { typed } = client({ data, error: null });
+    expect(await supabaseStripeEvents(typed).receive(DELIVERY)).toEqual({ ok: true, outcome: "recorded" });
+  });
+});
