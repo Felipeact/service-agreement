@@ -283,9 +283,14 @@ export interface SiteRegister {
 
 export type AssetTypeOption = { id: string; code: string; name: string };
 
+/** An org type with the other ways a customer's list writes it (`asset_types.synonyms`), which import matching reads. */
+export type AssetTypeWithSynonyms = AssetTypeOption & { synonyms: string[] };
+
 export interface AssetTypeCatalog {
-  /** The org's asset types, ordered by name. */
-  list(): Promise<AssetTypeOption[]>;
+  /** The org's asset types with their spellings, ordered by name. */
+  list(): Promise<AssetTypeWithSynonyms[]>;
+  /** The trades the org services ("HVAC and mechanical"), or `null` when none is recorded. Throws on a database error. */
+  tradeContext(): Promise<string | null>;
 }
 
 export type OrgSettings = OrgSettingsValue;
@@ -503,9 +508,12 @@ export type ExtractChunk =
 
 export type ExtractResult = { ok: true; rows: ExtractedRow[] } | { ok: false; code: "unavailable" | "too_large" };
 
-/** Turns a chunk of a read file into candidate rows. Knows nothing about orgs, sites or customers. */
+/**
+ * Turns a chunk of a read file into candidate rows. Knows nothing about orgs, sites or customers beyond `tradeContext`,
+ * the trades the list belongs to (`null` or left out: none is named).
+ */
 export interface AssetExtractor {
-  extract(chunk: ExtractChunk): Promise<ExtractResult>;
+  extract(chunk: ExtractChunk, tradeContext?: string | null): Promise<ExtractResult>;
 }
 
 export type ImportFileResult =

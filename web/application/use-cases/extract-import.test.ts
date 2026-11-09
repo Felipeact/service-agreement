@@ -49,7 +49,8 @@ type Setup = {
   source?: SourceOfResult | SourceOfResult[];
   parse?: ParseResult | (() => never);
   answer?: (chunk: ExtractChunk) => ReturnType<AssetExtractor["extract"]>;
-  types?: { id: string; code: string; name: string }[] | (() => never);
+  types?: { id: string; code: string; name: string; synonyms?: string[] }[] | (() => never);
+  tradeContext?: string | null | (() => never);
   record?: RecordExtractionResult;
 };
 
@@ -70,7 +71,11 @@ function setup(options: Setup = {}) {
   const catalog = {
     list: vi.fn(async () => {
       const types = options.types ?? [{ id: "t-rtu", code: "RTU", name: "RTU" }];
-      return typeof types === "function" ? types() : types;
+      return typeof types === "function" ? types() : types.map((type) => ({ synonyms: [], ...type }));
+    }),
+    tradeContext: vi.fn(async () => {
+      const context = options.tradeContext ?? null;
+      return typeof context === "function" ? context() : context;
     }),
   };
   const extractImport = makeExtractImport(
@@ -112,7 +117,7 @@ describe("extractImport", () => {
     const { store, extractor, extractImport } = setup({ parse: { ok: true, parsed: { format: "table", tables: [], text: "Unit 1: RTU" } } });
 
     await extractImport(JOB);
-    expect(extractor.extract).toHaveBeenCalledWith({ kind: "text", text: "Unit 1: RTU" });
+    expect(extractor.extract).toHaveBeenCalledWith({ kind: "text", text: "Unit 1: RTU" }, null);
     expect(recorded(store).slice(0, 3)).toEqual([JOB, null, 1]);
   });
 
@@ -120,7 +125,7 @@ describe("extractImport", () => {
     const { store, extractor, extractImport } = setup({ parse: { ok: true, parsed: { format: "pdf", bytes: BYTES } } });
 
     await extractImport(JOB);
-    expect(extractor.extract).toHaveBeenCalledWith({ kind: "pdf", bytes: BYTES });
+    expect(extractor.extract).toHaveBeenCalledWith({ kind: "pdf", bytes: BYTES }, null);
     expect(recorded(store).slice(0, 3)).toEqual([JOB, null, 1]);
   });
 
@@ -176,7 +181,7 @@ describe("extractImport", () => {
 
   test("C518: the types come from the catalog, read once per call, and no other source", async () => {
     const { store, catalog, extractImport } = setup({
-      types: [{ id: "t-mua", code: "MUA", name: "Fresh Air" }],
+      types: [{ id: "t-mua", code: "MUA", name: "Fresh Air", synonyms: ["mau"] }],
       answer: async () => ({ ok: true, rows: [row({ assetTypeRaw: "MAU" }), row({ assetTypeRaw: "Rooftop unit" })] }),
     });
 
@@ -187,7 +192,7 @@ describe("extractImport", () => {
 
   test("C519: the raw wording is kept, trimmed, whatever type was matched", async () => {
     const { store, extractImport } = setup({
-      types: [{ id: "t-rtu", code: "RTU", name: "Packaged Equipment" }],
+      types: [{ id: "t-rtu", code: "RTU", name: "Packaged Equipment", synonyms: ["rooftop unit"] }],
       answer: async () => ({ ok: true, rows: [row({ assetTypeRaw: "Rooftop unit " })] }),
     });
 
@@ -267,5 +272,67 @@ describe("extractImport", () => {
 
     expect(await extractImport(JOB)).toEqual({ ok: false, code: "too_large" });
     expect(store.recordExtraction).not.toHaveBeenCalled();
+  });
+});
+
+describe("extractImport, synonyms and the trade context (synonyms-as-data)", () => {
+  const wordings = (...raws: string[]): ParseResult => ({
+    ok: true,
+    parsed: {
+      format: "table",
+      text: "notes",
+      tables: [{ source: "Units", header: ["Type"], rows: raws.map((raw, i) => ({ ref: `Units!${i + 2}`, cells: [raw] })) }],
+    },
+  });
+
+  test("C2105: rows are typed through the spellings the catalog returns, and a wording nothing holds stays untyped", async () => {
+    const { store, extractImport } = setup({
+      parse: wordings("Rooftop unit", "Air handler", "Widget"),
+      answer: async () => ({
+        ok: true,
+        rows: [
+          row({ assetTypeRaw: "Rooftop unit", sourceRef: "Units!2" }),
+          row({ assetTypeRaw: "Air handler", sourceRef: "Units!3" }),
+          row({ assetTypeRaw: "Widget", sourceRef: "Units!4" }),
+        ],
+      }),
+      types: [
+        { id: "t-rtu", code: "RTU", name: "Packaged", synonyms: ["rooftop unit"] },
+        { id: "t-ahu", code: "AHU", name: "Air handling", synonyms: ["air handler"] },
+      ],
+    });
+
+    await extractImport(JOB);
+    const stored = recorded(store)[3] as { assetTypeRaw: string; assetTypeId: string | null }[];
+    expect(stored.map((r) => [r.assetTypeRaw, r.assetTypeId])).toEqual([
+      ["Rooftop unit", "t-rtu"],
+      ["Air handler", "t-ahu"],
+      ["Widget", null],
+    ]);
+  });
+
+  test.each<[string, Setup]>([
+    ["the types and spellings", { types: () => { throw new Error("types down"); } }],
+    ["the trade context", { tradeContext: () => { throw new Error("context down"); } }],
+  ])("C2106: when reading %s fails the answer is unavailable, nothing is recorded and the failure is logged", async (_name, options) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { store, extractor, extractImport } = setup(options);
+
+    expect(await extractImport(JOB)).toEqual({ ok: false, code: "unavailable" });
+    expect(extractor.extract).not.toHaveBeenCalled();
+    expect(store.recordExtraction).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(String(log.mock.calls[0][0])).toMatch(/^Extracting import/);
+  });
+
+  test.each<[string, string | null]>([
+    ["a trade context string", "HVAC and mechanical"],
+    ["no trade context", null],
+  ])("C2122: the extractor is called with the chunk and %s exactly as the catalog returned it", async (_name, context) => {
+    const { extractor, extractImport } = setup({ tradeContext: context, parse: { ok: true, parsed: { format: "pdf", bytes: BYTES } } });
+
+    await extractImport(JOB);
+    expect(extractor.extract).toHaveBeenCalledTimes(1);
+    expect(extractor.extract).toHaveBeenCalledWith({ kind: "pdf", bytes: BYTES }, context);
   });
 });

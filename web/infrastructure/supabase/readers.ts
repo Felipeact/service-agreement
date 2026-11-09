@@ -430,9 +430,15 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
 export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
   return {
     async list() {
-      const { data, error } = await client.from("asset_types").select("id, code, name").order("name").limit(ROW_CAP);
+      const { data, error } = await client.from("asset_types").select("id, code, name, synonyms").order("name").limit(ROW_CAP);
       if (error) throw unexpected(error);
-      return data.map(({ id, code, name }) => ({ id, code, name }));
+      return data.map(({ id, code, name, synonyms }) => ({ id, code, name, synonyms }));
+    },
+    async tradeContext() {
+      // RLS leaves the member's own org; the app has no org switcher (decision 9), so there is one row.
+      const { data, error } = await client.from("org_settings").select("trade_context").limit(1).maybeSingle();
+      if (error) throw unexpected(error);
+      return data?.trade_context ?? null;
     },
   };
 }

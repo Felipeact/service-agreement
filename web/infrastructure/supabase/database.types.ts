@@ -183,6 +183,7 @@ export type Database = {
           name: string
           org_id: string
           pack: string | null
+          synonyms: string[]
         }
         Insert: {
           code: string
@@ -192,6 +193,7 @@ export type Database = {
           name: string
           org_id: string
           pack?: string | null
+          synonyms?: string[]
         }
         Update: {
           code?: string
@@ -201,6 +203,7 @@ export type Database = {
           name?: string
           org_id?: string
           pack?: string | null
+          synonyms?: string[]
         }
         Relationships: [
           {
@@ -956,6 +959,7 @@ export type Database = {
           renewal_notice_days: number
           repair_discount_pct: number
           tax_note: string | null
+          trade_context: string | null
           updated_at: string
         }
         Insert: {
@@ -979,6 +983,7 @@ export type Database = {
           renewal_notice_days?: number
           repair_discount_pct?: number
           tax_note?: string | null
+          trade_context?: string | null
           updated_at?: string
         }
         Update: {
@@ -1002,6 +1007,7 @@ export type Database = {
           renewal_notice_days?: number
           repair_discount_pct?: number
           tax_note?: string | null
+          trade_context?: string | null
           updated_at?: string
         }
         Relationships: [

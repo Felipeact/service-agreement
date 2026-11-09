@@ -51,11 +51,13 @@ export function makeExtractImport(store: ImportJobStore, parser: ImportParser, e
 
     let chunks: ExtractChunk[];
     let types: Awaited<ReturnType<AssetTypeCatalog["list"]>>;
+    let tradeContext: string | null;
     try {
       const parsed = await parser.parse(source.contentType, source.bytes);
       if (!parsed.ok) throw new Error(`the file no longer reads (${parsed.reason})`);
       chunks = chunksOf(parsed.parsed);
       types = await catalog.list();
+      tradeContext = await catalog.tradeContext();
     } catch (cause) {
       console.error(`Extracting import ${jobId} failed: ${cause instanceof Error ? cause.message : String(cause)}`);
       return UNAVAILABLE;
@@ -69,7 +71,7 @@ export function makeExtractImport(store: ImportJobStore, parser: ImportParser, e
       return UNAVAILABLE;
     }
 
-    const answered = await extractor.extract(chunk);
+    const answered = await extractor.extract(chunk, tradeContext);
     if (!answered.ok) return answered;
 
     const refs = new Set(chunk.kind === "rows" ? chunk.rows.map((row) => row.ref) : []);

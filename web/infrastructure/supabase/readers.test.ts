@@ -419,14 +419,31 @@ describe("record reads for the edit forms", () => {
     await expect(supabaseSiteRegister(stubClient({ assets: fail("XX000") }).typed).asset(ID)).rejects.toThrow("XX000");
   });
 
-  test("C323: asset types are read ordered by name and mapped to id, code and name", async () => {
-    const { typed, calls } = stubClient({ asset_types: ok([{ id: "t1", code: "BOILER", name: "Boiler" }, { id: "t2", code: "RTU", name: "Rooftop unit" }]) });
+  test("C323: asset types are read ordered by name and mapped to id, code, name and spellings", async () => {
+    const { typed, calls } = stubClient({
+      asset_types: ok([
+        { id: "t1", code: "BOILER", name: "Boiler", synonyms: [] },
+        { id: "t2", code: "RTU", name: "Rooftop unit", synonyms: ["rooftop", "roof top unit"] },
+      ]),
+    });
     expect(await supabaseAssetTypeCatalog(typed).list()).toEqual([
-      { id: "t1", code: "BOILER", name: "Boiler" },
-      { id: "t2", code: "RTU", name: "Rooftop unit" },
+      { id: "t1", code: "BOILER", name: "Boiler", synonyms: [] },
+      { id: "t2", code: "RTU", name: "Rooftop unit", synonyms: ["rooftop", "roof top unit"] },
     ]);
-    expect(calls).toContainEqual({ table: "asset_types", method: "select", args: ["id, code, name"] });
+    expect(calls).toContainEqual({ table: "asset_types", method: "select", args: ["id, code, name, synonyms"] });
     expect(calls).toContainEqual({ table: "asset_types", method: "order", args: ["name"] });
+  });
+
+  test("C2107: the catalog reads the org's trade context, only that column, or null, and throws on a database error", async () => {
+    const present = stubClient({ org_settings: ok({ trade_context: "HVAC and mechanical" }) });
+    expect(await supabaseAssetTypeCatalog(present.typed).tradeContext()).toBe("HVAC and mechanical");
+    expect(present.calls).toContainEqual({ table: "org_settings", method: "select", args: ["trade_context"] });
+
+    expect(await supabaseAssetTypeCatalog(stubClient({ org_settings: ok({ trade_context: null }) }).typed).tradeContext()).toBeNull();
+    expect(await supabaseAssetTypeCatalog(stubClient({ org_settings: ok(null) }).typed).tradeContext()).toBeNull();
+
+    await expect(supabaseAssetTypeCatalog(stubClient({ org_settings: fail("XX001") }).typed).tradeContext()).rejects.toThrow("XX001");
+    await expect(supabaseAssetTypeCatalog(stubClient({ asset_types: fail("XX002") }).typed).list()).rejects.toThrow("XX002");
   });
 });
 

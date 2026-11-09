@@ -245,7 +245,7 @@ describe("composition root", () => {
   test("C551: the ports declare AssetExtractor, ExtractChunk, ExtractedRow and the store's sourceOf and recordExtraction", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
-    expect(body("AssetExtractor")).toContain("extract(chunk: ExtractChunk)");
+    expect(body("AssetExtractor")).toContain("extract(chunk: ExtractChunk, tradeContext?: string | null)");
     const chunk = ports.match(/export type ExtractChunk =([\s\S]*?);\r?\n/)?.[1] ?? "";
     for (const kind of ['kind: "rows"', 'kind: "text"', 'kind: "pdf"']) expect(chunk).toContain(kind);
     const extractedRow = ports.match(/export type ExtractedRow = \{([\s\S]*?)\r?\n\};/)?.[1] ?? "";
