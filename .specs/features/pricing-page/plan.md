@@ -16,7 +16,7 @@ Reuses the sign-in form's pattern (a Server Action with a typed form state read 
 2. `app/pricing/page.tsx` (new, no door - placement per conventions) - renders the plans and trades from `domain/billing` (door 2); the form is a client component like `app/login/login-form.tsx` (exists)
 3. visitor submits -> `app/pricing/actions.ts` (new, no door - placement) - reads `plan` and every `trade` from the `FormData`, calls the use case, turns its answer into the form state or a `redirect`
 4. `makeStartTrial` in `application/use-cases` (new, no door - placement) - `parseCheckoutSelection` in `domain/billing` (door 2) validates and orders; then `CheckoutStarter.start(selection)` (door 3), whose only implementation until billing-checkout is `not_configured`; an `ok` answer with a non-https url counts as `unavailable`
-5. `getBillingContainer()` in `composition/index.ts` (exists, new function - placement) - builds the use case; it reads no cookie, no database and no secret
+5. `getBillingContainer()` in `composition/index.ts` (exists, new function - placement) - builds the use case; it reads no cookie and no database (billing-checkout later made it read `STRIPE_SECRET_KEY` and `APP_BASE_URL`, and only those)
 6. out: a redirect to the Checkout url, or the page again with an inline refusal and the visitor's ticked trades kept
 
 ## Impact
