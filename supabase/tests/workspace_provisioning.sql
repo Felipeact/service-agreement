@@ -443,5 +443,49 @@ begin
     'the provisioner is not security definer with an empty search_path');
 end $$;
 
+-- C2730: the owner's email comes from customer_details, else from customer_email; the first wins when both are there.
+do $$
+declare
+  v_org uuid;
+begin
+  perform tests.ok('C2730 fallback answer', tests.wp_post(tests.wp_body('evt_wp_fb1', tests.wp_session('sub_wp_fb1', 'x@shop.test', '{}',
+    '{"customer_details": null, "customer_email": " FB@Shop.test "}'))) = '{"outcome": "recorded", "provisioned": {"email": "fb@shop.test"}}'::jsonb,
+    'customer_email was not used');
+  perform tests.ok('C2730 fallback invitation', exists (select 1 from public.invitations i where i.org_id = tests.wp_org('fb1') and i.email = 'fb@shop.test'), 'no invitation for customer_email');
+  perform tests.ok('C2730 details win', tests.wp_post(tests.wp_body('evt_wp_fb2', tests.wp_session('sub_wp_fb2', 'details@shop.test', '{}',
+    '{"customer_email": "other@shop.test"}'))) = '{"outcome": "recorded", "provisioned": {"email": "details@shop.test"}}'::jsonb, 'customer_details did not win');
+  perform tests.ok('C2730 no stray invitation', not exists (select 1 from public.invitations where email = 'other@shop.test'), 'the lesser email was invited');
+end $$;
+
+-- C2731: four more invalid metadata cases the migration decides.
+do $$
+declare
+  c record;
+  i integer := 0;
+begin
+  for c in
+    select * from (values
+      ('email malformed', '{}'::jsonb, 'not-an-email'),
+      ('email over 254', '{}'::jsonb, repeat('a', 250) || '@x.test'),
+      ('five trades', '{"trades": "hvac,hvac,hvac,hvac,hvac"}'::jsonb, 'q@shop.test'),
+      ('seats of four digits', '{"seats": "1000"}'::jsonb, 'q@shop.test'),
+      ('company only spaces', '{"company": "   "}'::jsonb, 'q@shop.test')
+    ) as t(name, meta, email)
+  loop
+    i := i + 1;
+    perform tests.wp_refused('C2731 ' || c.name, 'evt_wp_q' || i, tests.wp_body('evt_wp_q' || i, tests.wp_session('sub_wp_q' || i, c.email, c.meta)),
+      'invalid_metadata', coalesce(c.meta ->> 'company', 'Shop sub_wp_q' || i), c.email);
+  end loop;
+  perform tests.ok('C2731 size', i = 5, 'the set is not 5');
+end $$;
+
+-- C2732: the same subscription is refused as already_provisioned even when its email is also in use.
+do $$
+begin
+  perform tests.ok('C2732 email is in use', exists (select 1 from public.memberships m join auth.users u on u.id = m.user_id where lower(u.email) = 'owner.one@shop.test'), 'the fixture lost its member');
+  perform tests.wp_refused('C2732 order', 'evt_wp_ord', tests.wp_body('evt_wp_ord', tests.wp_session('sub_wp_1', 'owner.one@shop.test', '{"company": "Order Co"}')),
+    'already_provisioned', 'Order Co', 'owner.one@shop.test');
+end $$;
+
 rollback;
 select 'workspace_provisioning: pass' as result;

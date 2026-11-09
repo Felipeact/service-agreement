@@ -184,6 +184,19 @@ Cost: 3 proofs at their own layer across 4 vitest files plus 1 SQL file. Without
 - The migration is written and tested inside the rolled-back recipe but applied to the hosted project only with the owner's go-ahead (rule 8)
 - Mechanism: one builder
 
+## Added after Verifier round 1
+
+Additive rows for members the Verifier found unproven (no approved check is changed):
+
+**C2730** - The owner email is read from `customer_details.email`, else `customer_email` (trimmed, lower-cased); when both exist the first wins (plan Assumptions)
+Proof: `npm run test:db workspace_provisioning` (assertions labelled `C2730`)
+
+**C2731** - Five more invalid-metadata cases create no org and stamp `invalid_metadata`: malformed email, email over 254 characters, five trades, seats of four digits, a company of spaces only (AC 13)
+Proof: `npm run test:db workspace_provisioning` (assertions labelled `C2731`, 5 cases)
+
+**C2732** - A second event for an already-provisioned subscription is `already_provisioned` even when its email is also in use (refusal order, AD-174)
+Proof: `npm run test:db workspace_provisioning` (assertions labelled `C2732`)
+
 - **Boundary:** C2700-C2729 closed at `f03c7c9` (migration and SQL tests at `ff56d41`)
 - **Settled mid-build:** the user's "implement" accepted the plan as written. Plan edits made before any check existed: AC 17 lost its log clause (the database cannot log; the code on the event is the record), and door 3 reuses the existing `InvitationLinkSender`
 - **Abandoned:** stamping `processed_at` inside `stripe_receive_event`: it broke billing-checkout C2528 (the function's one write is the insert), so the stamping moved to `private.process_checkout_event`. `runner.test.ts` counts (28 to 29 recipes, 30 to 31 files) were updated for the new recipe. The `customer_portal` recipe fails on the hosted database before and after this feature (checked at `925cb5e`)
