@@ -236,6 +236,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: checks.md C1701 (specs)
 - last seen: 2026-11-06T18:47:36Z
 
+### L-038 - When a function is security invoker over closed tables, a call as anon or authenticated fails with 42501 whether or not execute was revoked, so prove the grant itself with has_function_privilege and has_column_privilege.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase/tests sql grants` · harmful: 0
+- features: starter-packs
+- evidence: F7 supabase/tests/starter_packs.sql:304 C2213 (supabase/tests sql grants)
+- last seen: 2026-11-09T16:52:35Z
+
+### L-039 - Before claiming existing pinned counts stay valid, grep the tests for reads of the whole private template: adding a pack changed the totals that catalog_seed, cadence and demo_seed asserted at 40 types and 174 tasks.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `supabase/tests private template` · harmful: 0
+- features: starter-packs
+- evidence: plan.md Impact tests row (supabase/tests private template)
+- last seen: 2026-11-09T16:52:36Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
