@@ -44,8 +44,8 @@ Decided in starter-packs: decision proofs at the boundary and at their own layer
 
 - validation: C2301 (release time is not null and not in the future)
 - failure modes: C2302 (an unreleased pack still raises `55000` and changes nothing)
-- idempotency: the migration updates `where released_at is null`, so applying it twice keeps the first release time; no check is claimed because the migration is applied once
-- authorization: existing - the gate and the seed are closed to `anon` and `authenticated` (starter-packs C2213, strengthened in round 2)
+- idempotency: n/a - the migration is applied once by the owner; it also updates only rows whose release time is null, so a repeat keeps the first release time
+- authorization: existing - the gate and the seed are closed to `anon` and `authenticated`, proven by the grant and outcome assertions of the starter-packs recipe (strengthened in its round 2)
 - concurrency: n/a - one `UPDATE` per pack, applied once by the owner
 - data lifecycle: C2301 (the only data change); no org row changes
 - dependency failure: n/a - database only
