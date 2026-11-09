@@ -434,6 +434,13 @@ describe("record reads for the edit forms", () => {
     expect(calls).toContainEqual({ table: "asset_types", method: "order", args: ["name"] });
   });
 
+  test("C2107: list reads every spelling of every type, not only the first", async () => {
+    const rows = [{ id: "t2", code: "RTU", name: "Rooftop unit", synonyms: ["rooftop", "roof top unit", "packaged rooftop unit"] }];
+    const { typed, calls } = stubClient({ asset_types: ok(rows) });
+    expect(await supabaseAssetTypeCatalog(typed).list()).toEqual(rows);
+    expect(calls).toContainEqual({ table: "asset_types", method: "select", args: ["id, code, name, synonyms"] });
+  });
+
   test("C2107: the catalog reads the org's trade context, only that column, or null, and throws on a database error", async () => {
     const present = stubClient({ org_settings: ok({ trade_context: "HVAC and mechanical" }) });
     expect(await supabaseAssetTypeCatalog(present.typed).tradeContext()).toBe("HVAC and mechanical");

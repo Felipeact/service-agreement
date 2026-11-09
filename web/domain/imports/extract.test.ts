@@ -109,8 +109,16 @@ describe("spellings stored on the org's types (synonyms-as-data)", () => {
     ["case and a double space", "ROOF-TOP  UNIT", [type("RTU", "Packaged", ["roof top unit"]), HWT], "id-RTU"],
     ["a trailing full stop", "Rooftop Unit.", [type("RTU", "Packaged", ["rooftop unit"])], "id-RTU"],
     ["a hyphen against a space", "Make-up air", [type("MUA", "Fresh Air", ["make up air"]), RTU], "id-MUA"],
+    ["the last of several spellings", "Packaged Rooftop Unit", [type("RTU", "Packaged", ["rooftop unit", "rooftop", "roof top unit", "packaged rooftop unit"]), HWT], "id-RTU"],
+    ["a middle spelling of the second of two types", "gas unit heater", [type("RTU", "Packaged", ["rooftop unit"]), type("UHG", "Heater", ["unit heater", "gas unit heater", "gas fired unit heater"])], "id-UHG"],
+    ["a spelling written with punctuation", "O'Brien Unit", [type("OB", "Obrien", ["o'brien unit"]), HWT], "id-OB"],
+    ["a spelling written with capitals and a hyphen", "walk in cooler", [type("WIC", "Cooler", ["Walk-In Cooler"]), HWT], "id-WIC"],
   ])("C2101: wording %s is typed by the one type that holds the spelling", (_name, raw, types, expected) => {
     expect(matchAssetType(raw, types)).toBe(expected);
+  });
+
+  test("C2102: a spelling that is not a type's first is found for the ambiguity too", () => {
+    expect(matchAssetType("pump", [type("CIRC", "Circulator", ["circulator", "pump"]), type("SUMP", "Sump", ["sump", "pump"])])).toBeNull();
   });
 
   test("C2102: a spelling held by two distinct types gives no type, and one type listing it twice still does", () => {

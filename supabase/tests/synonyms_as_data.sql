@@ -174,7 +174,10 @@ begin
   loop
     foreach bad in array array[
       $v$'{Rooftop}'$v$, $v$'{" rtu"}'$v$, $v$'{"rtu "}'$v$, $v$'{""}'$v$,
-      format('array[%L]', repeat('a', 61)), $v$'{"--"}'$v$, $v$'{NULL}'$v$] loop
+      format('array[%L]', repeat('a', 61)), $v$'{"--"}'$v$, $v$'{NULL}'$v$,
+      -- a bad element after a good one: the rule reads every element, not the first
+      $v$'{fine,Rooftop}'$v$, $v$'{fine,NULL}'$v$, $v$'{fine," rtu"}'$v$, $v$'{fine,"rtu "}'$v$, $v$'{fine,""}'$v$, $v$'{fine,"--"}'$v$,
+      format('array[%L, %L]', 'fine', repeat('a', 61))] loop
       perform tests.sd_try('C2114 ' || t.name || ' ' || bad, t.tbl, t.cond, bad, '23514');
     end loop;
     -- NOT NULL is checked before the check constraint, so the whole-value NULL is a 23502 (see the Handoff).
@@ -384,7 +387,8 @@ begin
   perform tests.act_as('uB');
   perform tests.ok('C2127 other org types', (select count(*) from public.asset_types where org_id = a) = 0, 'org B reads org A types');
   select s.trade_context into ctx from public.org_settings s limit 1;
-  perform tests.ok('C2127 other org context', ctx is distinct from 'HVAC and mechanical', 'org B reads org A''s context');
+  perform tests.ok('C2127 other org context', ctx is not distinct from tests.sd_ctx(tests.id('orgB')) and ctx is distinct from 'HVAC and mechanical',
+    'org B reads ' || coalesce(ctx, 'null') || ', not its own context');
   execute 'reset role';
 end $$;
 

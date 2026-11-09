@@ -184,6 +184,7 @@ describe("the extraction prompt names the org's trades (synonyms-as-data)", () =
     async (context) => {
       const system = await systemFor(context);
       expect(system).toContain(context);
+      expect(system.split("\n")[0]).toBe(`You extract the equipment units listed in a customer's equipment list for a service contractor in these trades: ${context}.`);
       for (const piece of FIXED_PIECES) expect(system, piece).toContain(piece);
     },
   );
@@ -191,6 +192,9 @@ describe("the extraction prompt names the org's trades (synonyms-as-data)", () =
   test("C2121: with no trade context the system prompt names no trade and keeps every fixed piece", async () => {
     const system = await systemFor(null);
     for (const word of ["HVAC", "mechanical", "plumbing", "electrical"]) expect(system).not.toContain(word);
+    // The fixed rules say "Use null" on purpose, so the stray-value check reads the first sentence only.
+    for (const word of ["null", "undefined", "these trades"]) expect(system.split("\n")[0]).not.toContain(word);
+    expect(system.split("\n")[0]).toBe("You extract the equipment units listed in a customer's equipment list for a service contractor.");
     for (const piece of FIXED_PIECES) expect(system, piece).toContain(piece);
   });
 
