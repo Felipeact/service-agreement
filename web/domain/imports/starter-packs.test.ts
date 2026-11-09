@@ -20,7 +20,7 @@ function hvacTypes(): PackType[] {
 }
 
 function newPackTypes(): PackType[] {
-  return [...migration("20261109170000_starter_packs.sql").matchAll(/^\s*\('(plumbing|electrical)', '([A-Z0-9_]+)', '([^']*)', '\{[0-9,]+\}', array\[(.*)\]\)[,;]\r?$/gm)]
+  return [...migration("20261109163948_starter_packs.sql").matchAll(/^\s*\('(plumbing|electrical)', '([A-Z0-9_]+)', '([^']*)', '\{[0-9,]+\}', array\[(.*)\]\)[,;]\r?$/gm)]
     .map((m) => ({ pack: m[1], code: m[2], name: m[3], synonyms: quoted(m[4]) }));
 }
 
