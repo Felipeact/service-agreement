@@ -58,6 +58,10 @@ The user confirmed three reasons, all of equal weight:
 - The roadmap mentions a "proposal template" as the source of the equipment catalog and task library, but no such file is in the repo yet.
 - There are no customers, testimonials, case studies, metrics or pricing yet. Future work must not invent any of these.
 
+## Public Site
+
+The marketing front door is `/` (Persuade mode): home, product, demo, trades, pricing, about, FAQ, contact and register, in the product's own design system (the navy shell, Action Blue and tokens in DESIGN.md). It shows the product with clearly labelled sample data and claims no customers, testimonials or results until they exist. The visitor picks their trade at `/register`, not on the price page.
+
 ## Product Principles
 
 1. **Status is never in doubt.** Every agreement and contract has one clear current state, how long it has been there, and what happens next.

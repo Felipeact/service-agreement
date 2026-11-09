@@ -107,6 +107,7 @@ Dispatch and GPS, payroll, project or construction contracts, a Word-style docum
 | M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in DESIGN.md and `.impeccable/design.json`, tokens and components | 0.5 |
 | M18 | Trades, packs & vocabulary | Starter packs per trade (types, checklists, default months, synonyms, extraction context), a per-org label for the serviced item ("Equipment", "Areas", "Stations"), per-org synonyms, catalog drafted by Claude for other trades | 4.5, 5 |
 | M19 | Document templates | Tenant-owned agreement and contract templates built from text blocks with merge variables and fixed system blocks, versioned and frozen into each agreement and contract | 5.5 |
+| M21 | Public site | Marketing front door at `/`: home, product, demo, trades, pricing, about, FAQ, contact and register. Sample-data visuals, no invented proof. Sign-in is a link | 5 |
 | M20 | Reporting | Tenant reports from `events` and agreements: recurring revenue, funnel, win rate, aging, loss reasons, renewals, revenue breakdown, CSV export | 5.6 |
 
 ## Status model
@@ -194,9 +195,9 @@ The product's shape is **a serviced item, a checklist for it, and a cadence**. "
 
 ## Onboarding
 
-Pricing page, then Stripe, then a ready workspace on first login:
+Public site, then register (trades and plan), then Stripe, then a ready workspace on first login:
 
-1. `/pricing` is public. The visitor picks a plan and their trade (one or more, or "Other") before Checkout, which starts a 14-day trial with the card collected up front. The trade rides on the Checkout session as metadata, and the Checkout email is the owner's identity.
+1. The public site (`/`) leads to `/pricing`, which shows plans only. A plan button opens `/register?plan=<key>`, where the visitor picks their trade (one or more, or "Other") and confirms the plan before Checkout, which starts a 14-day trial with the card collected up front. The trade rides on the Checkout session as metadata, and the Checkout email is the owner's identity.
 2. The Stripe webhook (`checkout.session.completed`, idempotent on the event id) provisions the workspace in one transaction: the org and its `org_settings`, the seeded catalog for the chosen trades, the vocabulary, the Stripe customer and subscription ids, and an owner invitation for the Checkout email. For "Other" it creates an empty catalog with a flag.
 3. Sign-in reuses the invitation flow (`/auth/confirm`, `accept_invitations`, the Before User Created hook). Provisioning runs as the service role, so it may create an org with an owner invitation, which the members page does not do.
 4. The first login opens a short setup screen: legal name, province, accent colour, logo, a review of the starter catalog ("We set up 38 plumbing items"), a preview of the starter templates, and for "Other" the Claude draft with a review step.
@@ -300,7 +301,10 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Trade-neutral product copy (`app/layout.tsx`, PRODUCT.md). The root layout description, the sign-in page and the Pipeline subtitle name no trade, and PRODUCT.md, DESIGN.md and CONTEXT.md lose the HVAC-only wording (`.specs/features/trade-neutral-copy/`, no migration). The sign-in `RooftopScene` drawing is unchanged. Verifier round 1 PASS (16 of 16, 5 faults killed), 2026-11-09
 
 ### Phase 5: SaaS billing & onboarding (M14)
-- [x] Public `/pricing` page with plan and trade selection. Built 2026-11-09 (`.specs/features/pricing-page/`, AD-166, no migration): three draft plans in CAD, four trades, one start-trial button per plan; the choice goes through `makeStartTrial` to the `CheckoutStarter` port, whose only starter answers `not_configured` until the Stripe item. Verifier round 1 failed on a surviving mutant on the port, a Test policy gap and an overstated `303` row; round 2 PASS (36 of 36, 5 faults injected and killed). The page is linked from nowhere and must stay so until the price points (decision 10) are confirmed
+- [x] Public `/pricing` page with plan and trade selection. Built 2026-11-09 (`.specs/features/pricing-page/`, AD-166, no migration): three draft plans in CAD, four trades, one start-trial button per plan; the choice goes through `makeStartTrial` to the `CheckoutStarter` port, whose only starter answers `not_configured` until the Stripe item. Verifier round 1 failed on a surviving mutant on the port, a Test policy gap and an overstated `303` row; round 2 PASS (36 of 36, 5 faults injected and killed). Linked from the public site since 2026-11-09 (trades moved to `/register`); the price points (decision 10) are still drafts
+- [x] Public site as the front door (M21): `/` home, `/product`, `/demo`, `/trades`, `/about`, `/faq`, `/contact`, with Sign in as a link. Built 2026-11-09 (AD-167, no migration), with three home-page concepts under `/concepts/a|b|c` to choose from (the owner deletes two). Sample-data visuals only; `SITE.contactEmail` and `DEMO_VIDEO_URL` in `web/components/site/content.ts` are yours to confirm and fill
+- [x] Trades chosen at `/register`, not on `/pricing`: `/pricing` is plans only and each plan links to `/register?plan=<key>`; `/register` takes the trades and the plan, then the same `makeStartTrial` hand-off. Built 2026-11-09 (AD-167)
+- [ ] Record the demo video and set `DEMO_VIDEO_URL` (the `/demo` page shows a "coming soon" panel until then)
 - [ ] Stripe plans, Checkout with a 14-day trial (card collected up front, subscription cancelled if payment fails), Customer Portal, idempotent webhooks
 - [ ] Workspace provisioning from the webhook: org, settings, seeded packs, the chosen trades stored on the org (moved here from Phase 4.5, since nothing reads them before this), vocabulary, Stripe ids, owner invitation
 - [ ] First-login setup screen (company profile, catalog review, template preview)

@@ -2,9 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  async redirects() {
-    return [{ source: "/", destination: "/pipeline", permanent: false }];
-  },
   // A review link is a secret address: nothing may cache it, send it on as a referrer, or index it (customer-portal door 4).
   async headers() {
     return [

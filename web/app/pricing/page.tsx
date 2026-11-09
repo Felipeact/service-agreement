@@ -1,50 +1,68 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ProductMark } from "@/components/ui/product-mark";
-import { PricingForm } from "./pricing-form";
+import { FAQS } from "@/components/site/content";
+import { FaqList, PageHero, Wrap } from "@/components/site/sections";
+import { SiteShell } from "@/components/site/site-shell";
+import { LinkButton } from "@/components/ui/link-button";
+import { PLANS, formatPlanPrice } from "@/domain/billing";
 
 export const metadata: Metadata = {
   title: "Pricing",
 };
 
-const PRODUCT_NAME = "Service Agreement";
-
 /** Shown above the plans; the roadmap's trial terms (decision 8). */
 const TRIAL_LINE = "14-day free trial. A card is required to start, and billing is monthly after the trial.";
 
+const BILLING_QUESTIONS = ["What is a live agreement?", "Do you charge per seat?", "Can I use more than one trade?"];
+
 /**
- * The public price page (pricing-page): a Night band with the product, the plain trial terms and a way back in for
- * existing members, then the trades and the three plans on Cool Ground. Static, so it prerenders.
+ * The public price page: the trial terms, then the three plans, each a link to /register with that plan chosen.
+ * Trades are picked at registration, not here. Static, so it prerenders.
  */
 export default function PricingPage() {
   return (
-    <main className="min-h-dvh">
-      <header className="bg-night px-4 pt-5 pb-10 text-surface md:px-6 lg:px-8 lg:pb-14">
-        <div className="mx-auto flex max-w-[1080px] flex-col gap-8 lg:gap-12">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <ProductMark className="size-8" />
-              <p className="font-display text-[16px] font-semibold tracking-tight">{PRODUCT_NAME}</p>
-            </div>
-            <Link
-              href="/login"
-              className="inline-flex min-h-11 items-center rounded-control px-3 text-[13px] font-semibold text-night-ink transition-colors duration-150 hover:bg-surface/10 hover:text-surface lg:min-h-[34px]"
-            >
-              Sign in
+    <SiteShell>
+      <PageHero title="Plans and pricing" text={TRIAL_LINE} />
+      <section className="bg-ground">
+        <Wrap className="flex flex-col gap-4 pb-12 lg:pb-16">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {PLANS.map((plan) => (
+              <article key={plan.key} data-plan={plan.key} className="flex flex-col gap-5 rounded-panel border border-hairline bg-surface p-6 shadow-card">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-display text-[20px] font-semibold tracking-tight">{plan.name}</h2>
+                  <p className="flex items-baseline gap-1.5">
+                    <span className="text-[40px] leading-none font-semibold tracking-tight">{formatPlanPrice(plan.monthlyCents)}</span>
+                    <span className="text-ink-2">a month</span>
+                  </p>
+                </div>
+                <ul className="flex flex-col gap-2 border-t border-hairline pt-4 text-[13px]">
+                  <li>{plan.liveAgreements} live agreements</li>
+                  <li>{plan.aiImports} AI imports a month</li>
+                  <li>Unlimited seats</li>
+                </ul>
+                <LinkButton href={`/register?plan=${plan.key}`} variant="primary" aria-label={`Start 14-day trial, ${plan.name} plan`} className="mt-auto w-full">
+                  Start 14-day trial
+                </LinkButton>
+              </article>
+            ))}
+          </div>
+          <p className="max-w-[70ch] text-[12px] text-ink-2">
+            Prices are in Canadian dollars. A live agreement is one in progress, or sent and waiting for the customer. An AI import reads a customer&apos;s list with AI. You choose your trades when you register.
+          </p>
+        </Wrap>
+      </section>
+      <section className="bg-surface">
+        <Wrap className="grid gap-8 py-12 lg:grid-cols-[1fr_1.4fr] lg:py-16">
+          <div className="flex flex-col gap-3">
+            <h2 className="font-display text-[28px] leading-[1.1] font-semibold tracking-tight">Every plan has everything.</h2>
+            <p className="max-w-[44ch] text-ink-2">Templates, reports and signatures are the same on every plan. Plans differ only in volume, and seats are never charged.</p>
+            <Link href="/faq" className="inline-flex min-h-11 w-fit items-center font-semibold text-action hover:underline">
+              All questions
             </Link>
           </div>
-          <div className="flex flex-col gap-3">
-            <h1 className="max-w-[18ch] font-display text-[36px] leading-[1.05] font-semibold tracking-tight text-balance lg:text-[52px]">Plans and pricing</h1>
-            <p className="max-w-[60ch] text-[14px] text-night-ink">{TRIAL_LINE}</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="px-4 py-8 md:px-6 lg:px-8 lg:py-12">
-        <div className="mx-auto max-w-[1080px]">
-          <PricingForm />
-        </div>
-      </div>
-    </main>
+          <FaqList items={FAQS.filter((f) => BILLING_QUESTIONS.includes(f.q))} />
+        </Wrap>
+      </section>
+    </SiteShell>
   );
 }

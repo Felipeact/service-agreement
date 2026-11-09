@@ -2,15 +2,19 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
-/** Reachable without a session, exactly (door 1). `/pricing` is the public price page (pricing-page door 1); an exact path, so no `/pricing/...` route is public by accident. */
-const PUBLIC_PATHS = ["/login", "/auth/confirm", "/pricing"];
+/**
+ * Reachable without a session, exactly (door 1). `/pricing` is the public price page (pricing-page door 1); the rest of
+ * the marketing site (public-site) is the front door: home, product, demo, trades, about, FAQ, contact and register.
+ * Exact paths, so no `/pricing/...` route is public by accident.
+ */
+const PUBLIC_PATHS = ["/", "/login", "/auth/confirm", "/pricing", "/product", "/demo", "/trades", "/about", "/faq", "/contact", "/register"];
 /**
  * Whole subtrees reachable without a session: the customer's address is `/review/<token>` and `/review/<token>/pdf`,
  * the customer signs at `/sign/<token>` (signature-provider door 7), and n8n's signed callbacks post to
  * `/api/automation/notify` (outbox-dispatch door 6), and DocuSeal's signed webhook posts to `/api/webhooks/docuseal`
  * (signature-webhook door 4).
  */
-const PUBLIC_PREFIXES = ["/review/", "/sign/", "/api/automation/", "/api/webhooks/"];
+const PUBLIC_PREFIXES = ["/review/", "/sign/", "/api/automation/", "/api/webhooks/", "/concepts/"];
 const SIGN_IN_PATH = "/login";
 const HOME_PATH = "/pipeline";
 

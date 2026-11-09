@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 describe("updateSession", () => {
-  test.each(["/pipeline", "/", "/customers/abc"])("C12: signed out, %s redirects to /login", async (path) => {
+  test.each(["/pipeline", "/settings", "/customers/abc"])("C12: signed out, %s redirects to /login", async (path) => {
     scenario = { claims: null };
     const response = await updateSession(request(path));
 
@@ -43,7 +43,7 @@ describe("updateSession", () => {
     expect(locationPath(response)).toBe("/login");
   });
 
-  test.each(["/login", "/auth/confirm"])("C12: signed out, %s passes through", async (path) => {
+  test.each(["/", "/login", "/auth/confirm", "/product"])("C12: signed out, %s passes through", async (path) => {
     scenario = { claims: null };
     const response = await updateSession(request(path));
 
