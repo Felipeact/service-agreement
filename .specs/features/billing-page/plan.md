@@ -26,10 +26,10 @@ Reuses `org_billing` and its owner/admin select policy (workspace-provisioning d
 | domain | new term: billing overview - what the page shows about one subscription (status, trial end or period end, whether it ends, the card, the invoices), read live from Stripe and never stored |
 | domain | existing term: `OrgBilling` meant "customer id and plan"; it now also returns the subscription id. Who branches on it today: `makeOpenBillingPortal`, `makeBillingSection` and the container, all removed or rewritten here |
 | domain | existing term: Billing section on `/settings` (a card with "Manage billing") is replaced by a menu link; `/settings` shows no billing card |
-| dependency | two client packages, `@stripe/stripe-js` and `@stripe/react-stripe-js`, supersede the "no stripe dependency" rule of AD-168 for the browser only; the server still calls Stripe over `fetch`. Approved tests C2510, C2511 and C2529 in `billing-boundaries.test.ts` pin the old rule and are amended under the new decision (door 1) |
-| env | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (a `pk_test_` or `pk_live_` key, safe in the browser). Unset, the card form says it is not set up and the rest of the page works |
+| dependency | `jsdom` (dev only, added after verifier round 1 so the client islands can be proved in a DOM) and two client packages, `@stripe/stripe-js` and `@stripe/react-stripe-js`, supersede the "no stripe dependency" rule of AD-168 for the browser only; the server still calls Stripe over `fetch`. Approved tests C2510, C2511 and C2529 in `billing-boundaries.test.ts` pin the old rule and are amended under the new decision (door 1) |
+| env | `STRIPE_PUBLISHABLE_KEY` (a `pk_test_` or `pk_live_` key, safe in the browser; the name was settled while building, see the Landing amendment). Unset, the card form says it is not set up and the rest of the page works |
 | stored data | nothing to migrate: no table, column, policy or function |
-| existing tests | the billing-portal tests that pin the portal adapter, the action and the card (C2900 to C2914 in part) go with the code they test; the menu and C2916 tests are rewritten. The owner chose this replacement |
+| existing tests | `web/app/billing-docs.test.ts` C2536 pinned the Stripe Customer Portal roadmap line unticked; the item finished with this feature, so it now pins `[x]` (amended 2026-11-10). The billing-portal tests that pin the portal adapter, the action and the card (C2900 to C2914 in part) go with the code they test; the menu and C2916 tests are rewritten. The owner chose this replacement |
 | not changed | Checkout, the webhook and its ledger, provisioning, `/setup`, RLS, the sign-in flow |
 
 ## Relations

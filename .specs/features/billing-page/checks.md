@@ -10,6 +10,7 @@ Plan: `.specs/features/billing-page/plan.md`
 - **vitest** runs from `web/` in **PowerShell with the uppercase drive path** (`Set-Location 'C:\Users\dispa\Music\repos\ServiceAgreement\web'`); Git Bash's lowercase `c:` breaks vitest. Every new test name starts with its check id and a colon (`C3100:`). This feature numbers from C3100 (no id above C3004 exists). `npx vitest run <file> -t "C3100:"` selects one. No SQL recipe: no migration.
 - **Stripe** is never called by a vitest proof: the adapter tests stub `fetch` as `checkout.test.ts` does.
 - **Live** (C3138) is an author-run Playwright pass per AGENTS.md at 375, 768 and 1440 px against the Stripe sandbox with the owner's test keys; nothing is committed.
+- C2536 (`web/app/billing-docs.test.ts`) was amended on 2026-11-10: it pinned the portal roadmap line unticked and now pins it `[x]`, because this feature finished that item. `jsdom` 31.0.0 is a new dev dependency for C3139 to C3141.
 - Amended approved tests, by the plan's door 1 and Impact: C2510, C2511 and C2529 (`billing-boundaries.test.ts`), C2904 (`org-billing.test.ts`), the billing-portal menu tests C3003 and C3004 (`settings-menu.test.ts`) and C2916 (`billing-in-settings.test.ts`, `page.test.ts`). The billing-portal tests that pin code this feature deletes (C2900 to C2914) are deleted with that code.
 - Concurrency is not driven by any proof; see Swept.
 
@@ -92,6 +93,7 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -
 
 **C3122** - Cancel asks first: the prompt names the end date and says access continues until then, "Cancel subscription" alone calls nothing, only the confirming button calls cancel once, and dismissing calls nothing; Resume shows only when the subscription is set to end and Cancel only when it is not (AC 19, AC 20, AC 21)
 Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C3122:"`
+Proof: `cd web && npx vitest run components/billing/subscription-controls.test.ts -t "C3140:"`
 
 **C3123** - For an estimator or viewer all four use-case actions answer `forbidden` and no gateway write is called, each action reads the ids from `org_billing` and takes none from its caller, and a database error is `unavailable` with no gateway call (AC 18, AC 24)
 Proof: `cd web && npx vitest run application/use-cases/billing-page.test.ts -t "C3123:"`
@@ -101,6 +103,7 @@ Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/actions.test.ts" 
 
 **C3125** - Each action's result maps to its page state: `forbidden` shows "You don't have permission to change this", `unavailable` shows "We couldn't update your subscription. Try again." (card actions: "We couldn't update your card"), and a success changes the page by a refresh (AC 23, AC 24)
 Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3125:"`
+Proof: `cd web && npx vitest run components/billing/card-update.test.ts -t "C3139:"`
 
 ### S4 - The menu leads to the page and the old card is gone · 7 files · ~45 KB · ~12k
 

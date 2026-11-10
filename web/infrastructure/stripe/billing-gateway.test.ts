@@ -288,6 +288,17 @@ describe("finishing a card update", () => {
     expect(firstWrites).toHaveLength(2);
   });
 
+  test("C3114: the customer write succeeding and the subscription write failing is unavailable, never saved", async () => {
+    handler = stripe({
+      write: () => reply(200, { id: "obj_1" }),
+    });
+    const inner = handler;
+    handler = (call) => (call.method === "POST" && call.url.pathname.startsWith("/v1/subscriptions/") ? reply(500, { error: { code: "api_error" } }) : inner(call));
+    expect(await gateway().finishCardUpdate(IDS, "seti_1")).toEqual({ ok: false, code: "unavailable" });
+    expect(posts().map((call) => call.url.pathname)).toEqual([`/v1/customers/${IDS.customerId}`, `/v1/subscriptions/${IDS.subscriptionId}`]);
+    expect(errorLog).toHaveBeenCalledTimes(1);
+  });
+
   test("C3114: a failing write is unavailable and logged once without ids, key or body", async () => {
     handler = stripe({ write: () => reply(500, { error: { code: "api_error", message: "leaky body text" } }) });
     expect(await gateway().finishCardUpdate(IDS, "seti_1")).toEqual({ ok: false, code: "unavailable" });
