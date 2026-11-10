@@ -81,7 +81,7 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
         <h1 className="font-display text-[26px] font-semibold tracking-tight">Set up your workspace</h1>
         <p className="text-[14px] text-ink-2">
           Confirm how customers see your company. You can change any of this later in{" "}
-          <Link href="/settings" className="font-semibold text-action hover:underline">
+          <Link href="/settings" className="inline-block py-3.5 -my-3.5 font-semibold text-action hover:underline lg:py-0 lg:my-0">
             Settings
           </Link>
           .
@@ -99,7 +99,7 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
             <div className="sm:col-span-2">
               <TextInput id="address" name="address" label="Address" defaultValue={values.address} error={errors.address} />
             </div>
-            <Select id="governingProvince" name="governingProvince" label="Province or territory" defaultValue={values.governingProvince} error={errors.governingProvince}>
+            <Select key={values.governingProvince} id="governingProvince" name="governingProvince" label="Province or territory" defaultValue={values.governingProvince} error={errors.governingProvince}>
               <option value="">Choose one</option>
               {PROVINCES.map((code) => (
                 <option key={code} value={code}>
