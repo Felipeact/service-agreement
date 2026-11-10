@@ -58,11 +58,18 @@ describe("changing the plan", () => {
     expect(record).not.toHaveBeenCalled();
   });
 
-  test("C3209: the plan the org is already on is same_plan with no Stripe call and nothing recorded", async () => {
-    const { billing, changePlan, record } = setup({ stored: { plan: "team", seats: 5 } });
+  test("C3209: Stripe already on the plan and our record agreeing is same_plan: one read at Stripe, no write, nothing recorded", async () => {
+    const { billing, changePlan, record } = setup({ stored: { plan: "team", seats: 5 }, gateway: async () => ({ ok: true as const, changed: false }) });
     expect(await billing.changePlan(member("owner"), "team")).toEqual({ ok: false, code: "same_plan" });
-    expect(changePlan).not.toHaveBeenCalled();
+    expect(changePlan).toHaveBeenCalledTimes(1);
     expect(record).not.toHaveBeenCalled();
+  });
+
+  test("C3209: our record already saying the plan while Stripe is on another still changes Stripe and records", async () => {
+    const { billing, changePlan, record } = setup({ stored: { plan: "team", seats: 5 } });
+    expect(await billing.changePlan(member("owner"), "team")).toEqual({ ok: true });
+    expect(changePlan).toHaveBeenCalledTimes(1);
+    expect(record).toHaveBeenCalledWith("team", 5);
   });
 
   test("C3209: no org_billing row is no_subscription and Stripe is not called", async () => {
@@ -85,13 +92,10 @@ describe("changing the plan", () => {
     expect(record).not.toHaveBeenCalled();
   });
 
-  test.each(["forbidden", "not_found", "unavailable"] as const)("C3209: a recording failure (%s) after Stripe changed still answers ok and logs one line with the code only", async (code) => {
+  test.each(["forbidden", "not_found", "unavailable"] as const)("C3209: a recording failure (%s) after Stripe changed still answers ok and the use case logs nothing itself", async (code) => {
     const { billing } = setup({ recorder: async () => ({ ok: false as const, code }) });
     expect(await billing.changePlan(member("owner"), "team")).toEqual({ ok: true });
-    expect(errorLog).toHaveBeenCalledTimes(1);
-    const line = String(errorLog.mock.calls[0].join(" "));
-    expect(line).toContain(code);
-    for (const secret of [IDS.customerId, IDS.subscriptionId]) expect(line).not.toContain(secret);
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   test("C3209: Stripe already on the plan while org_billing differs is recorded and answers ok", async () => {

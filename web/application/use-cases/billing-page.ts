@@ -65,8 +65,9 @@ export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans:
 
     /**
      * Moves the org to another plan (plan-change Flow hops 3 to 5). The role comes first, the key must be one of the three plans,
-     * the org's own plan is refused, the seat count follows the sign-up rule, and only after Stripe changed is the plan recorded. A
-     * recording failure is logged by its code and does not fail the change: the page reads the plan from Stripe, and a repeat heals it.
+     * the seat count follows the sign-up rule, Stripe is asked to change (it reads first and writes nothing when it already holds the
+     * plan), and only then is the plan recorded. "Already on this plan" is Stripe and our record agreeing. A recording failure does
+     * not fail the change: the page reads the plan from Stripe, and a repeat heals the record.
      */
     async changePlan(member: Member, planKey: string): Promise<ChangePlanResult> {
       if (!canManageBilling(member.role)) return { ok: false, code: "forbidden" };
@@ -74,13 +75,13 @@ export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans:
       if (!key) return { ok: false, code: "invalid" };
       const found = await idsOf(member);
       if (!found.ok) return { ok: false, code: found.code };
-      if (found.value.plan === key) return { ok: false, code: "same_plan" };
-
       const summary = planChangeSummary(found.value.plan, key, found.value.seats);
       const changed = await gateway.changePlan(stripeIds(found.value), { plan: key, extraSeats: summary.extraSeats });
       if (!changed.ok) return { ok: false, code: changed.code };
-      const recorded = await plans.record(key, summary.seats);
-      if (!recorded.ok) console.error(`Recording the plan failed: ${recorded.code}`);
+      // Stripe was already on this plan and so is our record: nothing to do (AC 12). Only the record lagging is healed below.
+      if (!changed.changed && found.value.plan === key) return { ok: false, code: "same_plan" };
+      // A failed recording is logged once by the adapter (C3212); here it only never fails the change.
+      await plans.record(key, summary.seats);
       return { ok: true };
     },
   };
