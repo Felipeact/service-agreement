@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import type { OrgSettingsErrors, OrgSettingsInput } from "@/domain/org-settings";
 import { PROVINCES } from "@/domain/org-settings";
 import { formatTermDate } from "@/domain/agreement/term";
@@ -20,6 +20,8 @@ type SettingsFieldsProps = {
   readOnly: boolean;
   /** The form action; absent in tests that only render markup. */
   action?: (formData: FormData) => void;
+  /** The page shows a Billing section, so the menu lists it under Members. */
+  billingNav?: boolean;
 };
 
 const MESSAGES = {
@@ -32,6 +34,11 @@ const SECTIONS = [
   { id: "terms", label: "Default terms" },
   { id: "renewal", label: "Renewal" },
 ] as const;
+
+/** One menu item: the section in view is tinted; the others are plain. */
+function menuClass(active: boolean): string {
+  return `flex h-9 items-center rounded-control px-3 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-action-tint text-action" : "text-ink-nav hover:bg-board hover:text-ink"}`;
+}
 
 /** A section of the form: a white card with a heading, a line saying what the section is for, and its fields. */
 function Card({ id, title, text, children }: { id: string; title: string; text: string; children: ReactNode }) {
@@ -71,8 +78,37 @@ function BrandPreview({ name, accent, address, phone }: { name: string; accent: 
 }
 
 /** The company profile and default-terms form. Presentational: the caller owns the state. */
-export function SettingsFields({ values, state, pending, readOnly, action }: SettingsFieldsProps) {
+export function SettingsFields({ values, state, pending, readOnly, action, billingNav = false }: SettingsFieldsProps) {
   const errors: OrgSettingsErrors = state.status === "invalid" ? state.errors : {};
+  const [active, setActive] = useState<string>("company");
+  const clickedAt = useRef(0);
+  const choose = (id: string, event: MouseEvent) => {
+    clickedAt.current = event.timeStamp;
+    setActive(id);
+  };
+  const sectionIds = billingNav ? [...SECTIONS.map((section) => section.id), "billing"] : SECTIONS.map((section) => section.id);
+
+  // The menu marks the section in view; a click marks it at once. Members is another page, so it is never marked here.
+  useEffect(() => {
+    const seen = new Map<string, boolean>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) seen.set(entry.target.id, entry.isIntersecting);
+        // A click wins while the page scrolls to it: a short last section never reaches the band.
+        if (performance.now() - clickedAt.current < 1500) return;
+        const current = sectionIds.find((id) => seen.get(id));
+        if (current) setActive(current);
+      },
+      { rootMargin: "-15% 0px -65% 0px" },
+    );
+    for (const id of sectionIds) {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billingNav]);
+
   const [brand, setBrand] = useState({ name: values.legalName, accent: values.accentColor, address: values.address, phone: values.phone });
 
   function onInput(event: FormEvent<HTMLFormElement>) {
@@ -89,14 +125,19 @@ export function SettingsFields({ values, state, pending, readOnly, action }: Set
     <form action={action} onInput={onInput} noValidate className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
       <nav aria-label="Settings sections" className="sticky top-24 hidden self-start lg:flex lg:flex-col lg:gap-0.5">
         {SECTIONS.map((section) => (
-          <a key={section.id} href={`#${section.id}`} className="flex h-9 items-center rounded-control px-3 text-[13px] font-medium text-ink-nav transition-colors duration-150 hover:bg-board hover:text-ink">
+          <a key={section.id} href={`#${section.id}`} onClick={(event) => choose(section.id, event)} className={menuClass(active === section.id)} aria-current={active === section.id ? "location" : undefined}>
             {section.label}
           </a>
         ))}
-        <Link href="/members" className="mt-2 flex h-9 items-center justify-between rounded-control px-3 text-[13px] font-medium text-action transition-colors duration-150 hover:bg-action-tint">
+        <Link href="/members" className={`mt-2 justify-between ${menuClass(false)}`}>
           Members
           <Icon name="chevron" className="size-3.5" />
         </Link>
+        {billingNav && (
+          <a href="#billing" onClick={(event) => choose("billing", event)} className={menuClass(active === "billing")} aria-current={active === "billing" ? "location" : undefined}>
+            Billing
+          </a>
+        )}
       </nav>
 
       <div className="flex max-w-3xl flex-col gap-5">

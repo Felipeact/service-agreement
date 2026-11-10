@@ -319,6 +319,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ## Build log
 
+- **2026-11-10:** Settings menu. Billing is now an item under Members in the in-page menu (it scrolls to the Billing card, which lines up with the form column); the menu marks the section in view or clicked, and Members, a different page, is no longer permanently blue. Pinned by `components/settings/settings-menu.test.ts` (C3003, C3004).
 - **2026-11-10:** removed the Task library screen (owner's decision). Page, editor, type controls and links deleted; the catalog data and its readers stay. Setup and the add-asset page no longer point to it.
 - **2026-11-10:** billing-portal (Phase 5, Customer Portal item, portal half). A Billing section on `/settings` for an owner or admin of an org with a subscription opens Stripe's hosted portal; the customer id is read from `org_billing` under RLS, never sent by the browser (AD-177, no migration). The cancel-on-failed-payment rule and the portal configuration are yours in the Stripe dashboard, so the roadmap line stays open. Plan and checks in `.specs/features/billing-portal/`.
 - **2026-11-10:** first-login-setup (Phase 5, setup screen item, profile and catalog review). `/setup` once for a paid owner, from Pipeline; skippable; migration `20261110110000` applied 2026-11-10 (AD-176). Run live at 375, 768 and 1440 px on 2026-11-10 (two defects found and fixed).

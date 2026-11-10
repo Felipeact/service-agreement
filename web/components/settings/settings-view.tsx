@@ -21,23 +21,31 @@ type SettingsViewProps = {
 
 const IDLE: SettingsFormState = { status: "idle" };
 
-function SettingsForm({ settings, role, action }: SettingsViewProps & { settings: OrgSettings }) {
+function SettingsForm({ settings, role, action, billingNav }: SettingsViewProps & { settings: OrgSettings; billingNav: boolean }) {
   const [state, formAction, pending] = useActionState(action, IDLE);
   const values = state.status === "idle" ? toInput(settings) : state.values;
-  return <SettingsFields values={values} state={state} pending={pending} readOnly={!canEditSettings(role)} action={formAction} />;
+  return <SettingsFields values={values} state={state} pending={pending} readOnly={!canEditSettings(role)} action={formAction} billingNav={billingNav} />;
 }
 
 /** The Settings page body. */
 export function SettingsView(props: SettingsViewProps) {
+  const billingShown = props.billing !== undefined && props.billing.kind !== "hidden" && props.billingAction !== undefined && props.settings !== null;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
       {props.settings ? (
-        <SettingsForm {...props} settings={props.settings} />
+        <SettingsForm {...props} settings={props.settings} billingNav={billingShown} />
       ) : (
         <EmptyPanel title="Company settings have not been set up for this workspace." />
       )}
-      {props.billing && props.billingAction && <BillingSection view={props.billing} action={props.billingAction} />}
+      {billingShown && props.billing && props.billingAction && (
+        // Lines up with the form column: the menu is 180 px wide with a 32 px gap.
+        <div className="lg:pl-[212px]">
+          <div className="max-w-3xl">
+            <BillingSection view={props.billing} action={props.billingAction} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -23,7 +23,7 @@ type BillingPanelProps = {
 export function BillingPanel({ view, state, pending, action }: BillingPanelProps) {
   if (view.kind === "hidden") return null;
   return (
-    <section aria-labelledby="billing-title" className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
+    <section id="billing" aria-labelledby="billing-title" className="scroll-mt-24 flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
       <div className="flex flex-col gap-1">
         <h2 id="billing-title" className="font-display text-[18px] font-semibold tracking-tight">
           Billing
