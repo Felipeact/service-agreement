@@ -6,7 +6,6 @@ alter table public.org_settings add column setup_completed_at timestamptz defaul
 
 -- Redefined from 20261110100000_workspace_provisioning.sql with one change: the org_settings insert names setup_completed_at
 -- and gives it null.
--- for a refusal; anything else the database raises is a failure the caller turns into `failed` or `no_pack` (55000).
 create or replace function private.provision_workspace(p_event_id text)
 returns text
 language plpgsql security definer
