@@ -958,6 +958,7 @@ export type Database = {
           renewal_cpi_pct: number | null
           renewal_notice_days: number
           repair_discount_pct: number
+          setup_completed_at: string | null
           tax_note: string | null
           trade_context: string | null
           updated_at: string
@@ -982,6 +983,7 @@ export type Database = {
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
           repair_discount_pct?: number
+          setup_completed_at?: string | null
           tax_note?: string | null
           trade_context?: string | null
           updated_at?: string
@@ -1006,6 +1008,7 @@ export type Database = {
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
           repair_discount_pct?: number
+          setup_completed_at?: string | null
           tax_note?: string | null
           trade_context?: string | null
           updated_at?: string

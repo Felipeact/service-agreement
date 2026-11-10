@@ -23,6 +23,8 @@ export interface SuiteIO {
 }
 
 const SEED_BODY = "SEED_BODY";
+// Until the owner applies it to the hosted project (rule 8), the migration runs inside the rolled-back transaction.
+const FIRST_LOGIN_MIGRATION = "../migrations/20261110110000_first_login_setup.sql";
 
 const plain = (name: string): Recipe => ({ name, parts: ["fixture.sql", `${name}.sql`] });
 
@@ -56,6 +58,7 @@ export const RECIPES: Recipe[] = [
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
   plain("stripe_events"),
   plain("workspace_provisioning"),
+  { name: "first_login_setup", parts: ["fixture.sql", FIRST_LOGIN_MIGRATION, "first_login_setup.sql"] },
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
