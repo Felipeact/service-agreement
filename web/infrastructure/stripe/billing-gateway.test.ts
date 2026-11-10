@@ -79,7 +79,7 @@ describe("the overview reads", () => {
       `GET /v1/subscriptions/${IDS.subscriptionId}`,
     ]);
     const sub = calls.find((call) => call.url.pathname.includes("/subscriptions/"))!;
-    expect(sub.url.searchParams.getAll("expand[]")).toEqual(["default_payment_method"]);
+    expect(sub.url.searchParams.getAll("expand[]")).toEqual(["default_payment_method", "items.data.price.product"]);
     const cust = calls.find((call) => call.url.pathname.includes("/customers/"))!;
     expect(cust.url.searchParams.getAll("expand[]")).toEqual(["invoice_settings.default_payment_method"]);
     const inv = calls.find((call) => call.url.pathname === "/v1/invoices")!;
@@ -103,6 +103,8 @@ describe("the overview reads", () => {
         trialEnd: TRIAL_END,
         periodEnd: PERIOD_END,
         endsAt: null,
+        plan: null,
+        extraSeats: 0,
         card: { brand: "visa", last4: "4242", expMonth: 4, expYear: 2030 },
         invoices: [{ id: "in_1", number: "INV-0001", created: 1790000000, total: 9900, currency: "cad", status: "paid", hostedUrl: "https://invoice.stripe.com/i/x" }],
       },

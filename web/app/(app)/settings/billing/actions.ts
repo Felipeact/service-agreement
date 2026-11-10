@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import type { FinishResult, StartResult, SubscriptionResult } from "@/components/billing/state";
+import type { FinishResult, PlanChangeResult, StartResult, SubscriptionResult } from "@/components/billing/state";
+import { PLAN_KEYS } from "@/domain/billing";
 import { getContainer } from "@/composition";
 
 /** The member the action acts for, from the session only; a signed-out or no-membership user goes to sign in. */
@@ -50,4 +51,18 @@ export async function cancelSubscriptionAction(): Promise<SubscriptionResult> {
 /** Clears an end set by cancelling. */
 export async function resumeSubscriptionAction(): Promise<SubscriptionResult> {
   return subscriptionAction("resumeSubscription");
+}
+
+/**
+ * Moves the org to another plan. Only the plan key comes from the browser and it must be one of the three; the org, the role and
+ * the Stripe ids come from the session and `org_billing` (plan-change AC 15).
+ */
+export async function changePlanAction(planKey: string): Promise<PlanChangeResult> {
+  const member = await memberOrLogin();
+  if (typeof planKey !== "string" || !PLAN_KEYS.some((key) => key === planKey)) return { status: "failed" };
+  const { changePlan } = await getContainer();
+  const changed = await changePlan(member, planKey);
+  if (changed.ok) return { status: "done" };
+  if (changed.code === "forbidden") return { status: "forbidden" };
+  return { status: changed.code === "same_plan" ? "same_plan" : "failed" };
 }

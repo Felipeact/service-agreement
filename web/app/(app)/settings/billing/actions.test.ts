@@ -9,9 +9,10 @@ const startCardUpdate = vi.fn();
 const finishCardUpdate = vi.fn();
 const cancelSubscription = vi.fn();
 const resumeSubscription = vi.fn();
+const changePlan = vi.fn();
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, startCardUpdate, finishCardUpdate, cancelSubscription, resumeSubscription }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, startCardUpdate, finishCardUpdate, cancelSubscription, resumeSubscription, changePlan }) }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     redirect(to);
@@ -129,5 +130,45 @@ describe("what each action answers", () => {
     expect(BILLING_MESSAGES.forbidden).toBe("You don't have permission to change this");
     expect(BILLING_MESSAGES.unavailable).toBe("We couldn't update your subscription. Try again.");
     expect(BILLING_MESSAGES.card).toBe("We couldn't update your card");
+  });
+});
+
+describe("the change-plan Server Action", () => {
+  beforeEach(() => changePlan.mockResolvedValue({ ok: true }));
+
+  test.each(["signed_out", "no_membership"] as const)("C3210: a %s user goes to /login and the use case is not called", async (status) => {
+    currentMember.mockResolvedValue(status === "signed_out" ? { status } : { status, email: "x@example.com" });
+    await expect(actions.changePlanAction("team")).rejects.toThrow("NEXT_REDIRECT /login");
+    expect(changePlan).not.toHaveBeenCalled();
+  });
+
+  test.each(["starter", "team", "business"])("C3210: the plan %s goes to the use case with the session's org and role", async (key) => {
+    expect(await actions.changePlanAction(key)).toEqual({ status: "done" });
+    expect(changePlan).toHaveBeenCalledWith({ orgId: "org-1", role: "owner" }, key);
+  });
+
+  test.each(["platinum", "", "TEAM", " team", "constructor", "__proto__", "team\n"])("C3210: the key %j answers the plan notice and the use case is not called", async (key) => {
+    expect(await actions.changePlanAction(key)).toEqual({ status: "failed" });
+    expect(changePlan).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    [{ ok: false, code: "forbidden" }, "forbidden"],
+    [{ ok: false, code: "same_plan" }, "same_plan"],
+    [{ ok: false, code: "invalid" }, "failed"],
+    [{ ok: false, code: "unavailable" }, "failed"],
+    [{ ok: false, code: "not_configured" }, "failed"],
+    [{ ok: false, code: "no_subscription" }, "failed"],
+    [{ ok: false, code: "unsupported" }, "failed"],
+  ])("C3210: the use case answering %j gives the page state %s", async (answer, status) => {
+    changePlan.mockResolvedValue(answer);
+    expect(await actions.changePlanAction("team")).toEqual({ status });
+  });
+
+  test("C3210: the action takes exactly one argument, reads no form data, and the notices are the ones named", () => {
+    expect(actions.changePlanAction.length).toBe(1);
+    expect(BILLING_MESSAGES.forbidden).toBe("You don't have permission to change this");
+    expect(BILLING_MESSAGES.samePlan).toBe("You're already on this plan");
+    expect(BILLING_MESSAGES.plan).toBe("We couldn't change your plan. Try again.");
   });
 });

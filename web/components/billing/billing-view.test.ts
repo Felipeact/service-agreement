@@ -15,6 +15,8 @@ const overview = (over: Partial<BillingOverview> = {}): BillingOverview => ({
   trialEnd: noon(2026, 11, 24),
   periodEnd: noon(2026, 11, 24),
   endsAt: null,
+  plan: "team",
+  extraSeats: 0,
   card: { brand: "visa", last4: "4242", expMonth: 4, expYear: 2030 },
   invoices: [{ id: "in_1", number: "INV-0007", created: noon(2026, 11, 10), total: 9900, currency: "cad", status: "paid", hostedUrl: "https://invoice.stripe.com/i/x" }],
   ...over,
@@ -150,5 +152,46 @@ describe("cancel and resume", () => {
     expect(out).toContain("Ends Dec 10, 2026");
     expect(out).toContain("Resume");
     expect(out).not.toContain("Cancel subscription");
+  });
+});
+
+describe("the plan list on the page", () => {
+  test("C3202: it lists the three plans in price order, marks the current one with no switch control, and offers the other two", () => {
+    const out = view(ready({ plan: "team" }));
+    expect(out.indexOf("$49/month")).toBeLessThan(out.indexOf("$99/month"));
+    expect(out.indexOf("$99/month")).toBeLessThan(out.indexOf("$199/month"));
+    expect(out).toContain("2 seats included");
+    expect(out).toContain("5 seats included");
+    expect(out).toContain("10 seats included");
+    expect(out.match(/Current plan/g)).toHaveLength(1);
+    expect(out).toContain("Switch to Starter");
+    expect(out).toContain("Switch to Business");
+    expect(out).not.toContain("Switch to Team");
+  });
+
+  test("C3203: a subscription set to end lists the plans with no switch control and says to resume first", () => {
+    const out = view(ready({ status: "active", endsAt: noon(2026, 12, 10), trialEnd: null, periodEnd: noon(2026, 12, 10) }));
+    expect(out).toContain("Resume your subscription to change plan");
+    expect(out).toContain("$99/month");
+    expect(out).not.toContain("Switch to");
+  });
+
+  test("C3203: a canceled subscription has no plan list", () => {
+    const out = view(ready({ status: "canceled" }));
+    expect(out).not.toContain("$49/month");
+    expect(out).not.toContain("Current plan");
+    expect(out).not.toContain("Switch to");
+  });
+
+  test("C3203: an unknown plan lists the plans with no switch control and says it can't be changed here", () => {
+    const out = view(ready({ plan: null }));
+    expect(out).toContain("This plan can&#x27;t be changed here".replace("&#x27;", "'"));
+    expect(out).toContain("$99/month");
+    expect(out).not.toContain("Current plan");
+    expect(out).not.toContain("Switch to");
+  });
+
+  test.each([{ kind: "no_subscription" } as const, { kind: "not_configured" } as const, { kind: "error" } as const])("C3202: the %j state shows no plan list", (state) => {
+    expect(view(state)).not.toContain("$49/month");
   });
 });

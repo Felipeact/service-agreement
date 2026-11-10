@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import type { BillingLoad } from "@/application/use-cases";
 import { canChangeBilling, cardLine, dateLine, formatDay, invoiceRows, statusLabel, type BillingOverview } from "@/domain/billing/overview";
+import { PLANS } from "@/domain/billing";
 import { CardUpdate } from "./card-update";
+import { PlanSwitcher } from "./plan-switcher";
 import { SubscriptionControls } from "./subscription-controls";
 import type { BillingActions } from "./state";
 
@@ -72,6 +74,15 @@ function Ready({ plan, overview, publishableKey, actions }: { plan: string; over
           {line && <p className="text-[13px] text-ink-2">{line}</p>}
         </div>
         {mayChange && <SubscriptionControls ending={ending} endDate={endDate} actions={actions} />}
+        {mayChange && (
+          <PlanSwitcher
+            current={overview.plan}
+            seats={(PLANS.find((candidate) => candidate.key === overview.plan)?.includedSeats ?? 0) + overview.extraSeats}
+            trialEndsOn={overview.status === "trialing" && overview.trialEnd !== null ? formatDay(overview.trialEnd) : null}
+            readOnlyReason={ending ? "Resume your subscription to change plan" : overview.plan === null ? "This plan can't be changed here" : null}
+            actions={actions}
+          />
+        )}
       </Section>
       <Section title="Payment method">
         <p className="text-[13px] text-ink">{cardLine(overview.card)}</p>

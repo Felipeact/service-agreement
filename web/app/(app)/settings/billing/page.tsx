@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { BillingView } from "@/components/billing/billing-view";
 import { getContainer } from "@/composition";
-import { cancelSubscriptionAction, finishCardUpdateAction, resumeSubscriptionAction, startCardUpdateAction } from "./actions";
+import { cancelSubscriptionAction, changePlanAction, finishCardUpdateAction, resumeSubscriptionAction, startCardUpdateAction } from "./actions";
 
 export const metadata: Metadata = { title: "Billing" };
 
@@ -11,6 +11,7 @@ const actions = {
   finishCardUpdate: finishCardUpdateAction,
   cancel: cancelSubscriptionAction,
   resume: resumeSubscriptionAction,
+  changePlan: changePlanAction,
 };
 
 /** The in-app billing page: plan, card and invoices for an owner or admin, read live from Stripe on every request. */

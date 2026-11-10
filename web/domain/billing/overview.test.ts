@@ -4,7 +4,7 @@ import { cardLine, canChangeBilling, dateLine, invoiceRows, statusLabel, type Bi
 /** Noon in Vancouver on the given day, as unix seconds (UTC-8 in winter, so 20:00 UTC). */
 const noon = (year: number, month: number, day: number) => Date.UTC(year, month - 1, day, 20) / 1000;
 
-const base: BillingOverview = { status: "active", trialEnd: null, periodEnd: noon(2026, 12, 10), endsAt: null, card: null, invoices: [] };
+const base: BillingOverview = { status: "active", trialEnd: null, periodEnd: noon(2026, 12, 10), endsAt: null, plan: "team", extraSeats: 0, card: null, invoices: [] };
 
 describe("the status label", () => {
   test.each([

@@ -1169,7 +1169,7 @@ export interface CheckoutStarter {
 }
 
 /** What an org bought, as its managers read it (billing-portal door 1, extended by billing-page with the subscription id). */
-export type OrgBillingValue = { customerId: string; subscriptionId: string; plan: PlanKey };
+export type OrgBillingValue = { customerId: string; subscriptionId: string; plan: PlanKey; seats: number };
 
 export interface OrgBilling {
   /** The org's subscription, read as the signed-in member under RLS; `null` when it has none. Throws on a database error. */
@@ -1192,4 +1192,14 @@ export interface BillingGateway {
   cancel(ids: StripeIds): Promise<{ ok: true } | { ok: false; code: GatewayFailure }>;
   /** Clears an end set by `cancel`; repeating it changes nothing. */
   resume(ids: StripeIds): Promise<{ ok: true } | { ok: false; code: GatewayFailure }>;
+  /**
+   * Moves the subscription's plan item to `plan` and its seat item to `extraSeats`, prorated (plan-change door 1). `changed` is false when
+   * Stripe already holds exactly that. `unsupported`: no item is tagged as the plan item, so none is guessed.
+   */
+  changePlan(ids: StripeIds, change: { plan: PlanKey; extraSeats: number }): Promise<{ ok: true; changed: boolean } | { ok: false; code: GatewayFailure | "unsupported" }>;
+}
+
+/** Records the plan and seat count on `org_billing` as the signed-in member, through `set_org_plan` (plan-change door 2). */
+export interface OrgPlanRecorder {
+  record(plan: PlanKey, seats: number): Promise<{ ok: true } | { ok: false; code: "forbidden" | "not_found" | "unavailable" }>;
 }

@@ -31,14 +31,14 @@ export function stripeCheckoutStarter(options: { secretKey: string; appBaseUrl: 
               currency: "cad",
               unit_amount: chosen.monthlyCents,
               recurring: { interval: "month" },
-              product_data: { name: `${chosen.name} plan` },
+              product_data: { name: `${chosen.name} plan`, metadata: { sa_kind: "plan", sa_plan: chosen.key } },
             },
           },
           ...(extraSeats > 0
             ? [
                 {
                   quantity: extraSeats,
-                  price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product_data: { name: "Extra seat" } },
+                  price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product_data: { name: "Extra seat", metadata: { sa_kind: "seat" } } },
                 },
               ]
             : []),

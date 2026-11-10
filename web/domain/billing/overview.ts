@@ -1,4 +1,5 @@
 import { formatTermDate } from "@/domain/agreement/term";
+import type { PlanKey } from "./index";
 
 /** The roles that may see and change billing: the ones `org_billing_select` admits (billing-page Assumptions). */
 export function canManageBilling(role: string): boolean {
@@ -27,6 +28,10 @@ export type BillingOverview = {
   periodEnd: number | null;
   /** When service ends, if the subscription is set to end. */
   endsAt: number | null;
+  /** The plan on the subscription's plan item (its product's `sa_plan`), or `null` when no item is tagged as the plan item (plan-change AC 2, 5). */
+  plan: PlanKey | null;
+  /** The quantity of the seat item, 0 when there is none. */
+  extraSeats: number;
   card: CardSummary | null;
   invoices: InvoiceSummary[] | "unavailable";
 };

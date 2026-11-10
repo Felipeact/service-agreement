@@ -57,6 +57,7 @@ export const RECIPES: Recipe[] = [
   plain("stripe_events"),
   plain("workspace_provisioning"),
   plain("first_login_setup"),
+  plain("set_org_plan"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;

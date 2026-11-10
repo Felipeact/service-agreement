@@ -33,6 +33,7 @@ import { systemClock } from "@/infrastructure/clock";
 import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
 import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
+import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
@@ -146,8 +147,9 @@ export async function getContainer() {
           finishCardUpdate: async () => notConfigured,
           cancel: async () => notConfigured,
           resume: async () => notConfigured,
+          changePlan: async () => notConfigured,
         };
-  const billing = makeBilling(orgBilling, billingGateway);
+  const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase));
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -186,6 +188,7 @@ export async function getContainer() {
     finishCardUpdate: billing.finishCardUpdate,
     cancelSubscription: billing.cancel,
     resumeSubscription: billing.resume,
+    changePlan: billing.changePlan,
     stripePublishableKey,
     setupPending: setup.isPending,
     setupCatalog: setup.catalog,

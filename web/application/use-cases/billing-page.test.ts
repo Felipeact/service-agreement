@@ -1,13 +1,13 @@
 import { describe, expect, test, vi } from "vitest";
-import type { BillingGateway, OrgBilling } from "@/application/ports";
+import type { BillingGateway, OrgBilling, OrgPlanRecorder } from "@/application/ports";
 import type { BillingOverview } from "@/domain/billing/overview";
 import { makeBilling, makeBillingEntry } from "./billing-page";
 
-const OVERVIEW: BillingOverview = { status: "active", trialEnd: null, periodEnd: 1795547955, endsAt: null, card: null, invoices: [] };
+const OVERVIEW: BillingOverview = { status: "active", trialEnd: null, periodEnd: 1795547955, endsAt: null, plan: "team", extraSeats: 0, card: null, invoices: [] };
 const IDS = { customerId: "cus_stored", subscriptionId: "sub_stored" };
 
 function setup(over: { billing?: OrgBilling["get"]; gateway?: Partial<BillingGateway> } = {}) {
-  const get = vi.fn(over.billing ?? (async () => ({ ...IDS, plan: "team" as const })));
+  const get = vi.fn(over.billing ?? (async () => ({ ...IDS, plan: "team" as const, seats: 5 })));
   const gateway = {
     overview: vi.fn(async () => ({ ok: true as const, overview: OVERVIEW })),
     startCardUpdate: vi.fn(async () => ({ ok: true as const, clientSecret: "seti_secret" })),
@@ -16,7 +16,7 @@ function setup(over: { billing?: OrgBilling["get"]; gateway?: Partial<BillingGat
     resume: vi.fn(async () => ({ ok: true as const })),
     ...over.gateway,
   } as unknown as { [K in keyof BillingGateway]: ReturnType<typeof vi.fn> } & BillingGateway;
-  return { get, gateway, billing: makeBilling({ get } as OrgBilling, gateway) };
+  return { get, gateway, billing: makeBilling({ get } as OrgBilling, gateway, { record: vi.fn(async () => ({ ok: true as const })) } as unknown as OrgPlanRecorder) };
 }
 
 const member = (role: string) => ({ orgId: "org-1", role });
@@ -132,7 +132,7 @@ describe("the Billing menu link", () => {
     ["estimator", false],
     ["viewer", false],
   ])("C3126: a %s with a billing record sees the link: %s", async (role, shown) => {
-    expect(await makeBillingEntry({ get: async () => ({ ...IDS, plan: "team" as const }) } as OrgBilling)("org-1", role)).toBe(shown);
+    expect(await makeBillingEntry({ get: async () => ({ ...IDS, plan: "team" as const, seats: 5 }) } as OrgBilling)("org-1", role)).toBe(shown);
   });
 
   test("C3126: no record, or a read that fails, shows no link", async () => {

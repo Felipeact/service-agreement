@@ -1574,6 +1574,7 @@ export type Database = {
         Returns: string[]
       }
       set_member_role: { Args: { p_role: string; p_user_id: string }; Returns: undefined }
+      set_org_plan: { Args: { p_plan: string; p_seats: number }; Returns: undefined }
       set_site_active: {
         Args: { p_active: boolean; p_site_id: string }
         Returns: string[]
