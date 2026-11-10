@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/billing-portal/plan.md`
 
-16 checks in 3 slices · 2 one-way doors (approved by "approved") · 3 open, of which 2 block go-live and 0 block the build
+17 checks in 3 slices · 2 one-way doors (approved by "approved") · 3 open, of which 2 block go-live and 0 block the build
 
 ## How proofs run
 
@@ -72,6 +72,10 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-boundaries.test.t
 
 **C2915** - `/settings` as an owner with a subscription at 375, 768 and 1440 px shows no horizontal scroll, the "Manage billing" button is at least 44 by 44 px on mobile and tablet, a touch tap on it responds (to Stripe, or to the notice when Stripe refuses), and the console has no error (AC 12)
 Proof: `cd web && npx vitest run components/settings/billing-section.test.ts -t "C2913:"` for the markup, then the live Playwright MCP run per AGENTS.md (author-run, nothing committed); the report lists pages, sizes, touch actions and fixes. The Stripe leg runs only with the owner's test keys
+
+**C2916** - The Settings page asks the container for the Billing section of the signed-in member's org and role and hands it, with the portal action, to `SettingsView`; `SettingsView` mounts the section for `ready` and `unavailable` and leaves the page without a Billing heading for `hidden` or no section; a signed-out visitor goes to `/login` with no billing read. Added after verifier round 1 found no proof that the page mounts the section (AC 1, AC 5, AC 6, Surface `GET /settings` 200)
+Proof: `cd web && npx vitest run components/settings/billing-in-settings.test.ts -t "C2916:"`
+Proof: `cd web && npx vitest run app/\(app\)/settings/page.test.ts -t "C2916:"`
 
 ## Coverage
 
