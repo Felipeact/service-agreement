@@ -56,6 +56,8 @@ export const RECIPES: Recipe[] = [
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
   plain("stripe_events"),
   plain("workspace_provisioning"),
+  plain("first_login_setup"),
+  plain("set_org_plan"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;

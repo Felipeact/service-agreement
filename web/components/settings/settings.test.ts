@@ -208,12 +208,6 @@ describe("proposal validity", () => {
   });
 });
 
-describe("settings link to the task library", () => {
-  test.each(["owner", "estimator"] as const)("C1933: %s sees a link to /task-library", (role) => {
-    expect(view(role)).toMatch(/<a[^>]*href="\/task-library"[^>]*>[^<]*Task library/);
-  });
-});
-
 describe("settings form, item words", () => {
   test("C2008: two fields hold the words, and a field error shows beside the field that failed", () => {
     const out = view("owner", { ...settings, itemSingular: "station", itemPlural: "stations" });

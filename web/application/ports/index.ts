@@ -11,6 +11,7 @@ import type {
 } from "@/domain/agreement";
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
+import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
@@ -18,7 +19,8 @@ import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
 import type { DomainEvent } from "@/domain/transition";
 import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
-import type { CheckoutSelection } from "@/domain/billing";
+import type { CheckoutSelection, PlanKey } from "@/domain/billing";
+import type { BillingOverview } from "@/domain/billing/overview";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -302,6 +304,18 @@ export interface OrgSettingsStore {
   get(orgId: string): Promise<OrgSettings | null>;
   /** Overwrites the org's row. Nothing updated means RLS refused: `forbidden`. */
   save(orgId: string, value: OrgSettingsValue, at: Date): Promise<SaveSettingsResult>;
+}
+
+/** First-login setup (first-login-setup door 1): whether an org still has it to do, what its catalog holds, and the two ways to finish. */
+export interface OrgSetup {
+  /** `true` while `org_settings.setup_completed_at` is null; an org with no settings row has nothing to set up. Throws on a database error. */
+  isPending(orgId: string): Promise<boolean>;
+  /** The org's own types with the pack each came from, ordered by name (read under RLS). Throws on a database error. */
+  catalog(): Promise<SetupCatalogType[]>;
+  /** Updates the profile columns, then stamps `setup_completed_at` if it is still null. Nothing updated means RLS refused: `forbidden`. */
+  saveProfile(orgId: string, value: SetupProfileValue, at: Date): Promise<SaveSettingsResult>;
+  /** Stamps `setup_completed_at` if it is still null and changes nothing else. */
+  skip(orgId: string, at: Date): Promise<SaveSettingsResult>;
 }
 
 /**
@@ -1152,4 +1166,40 @@ export type CheckoutResult = { ok: true; url: string } | { ok: false; code: "not
 /** Begins a trial for a validated selection. The Stripe adapter (billing-checkout) is its first real implementation. */
 export interface CheckoutStarter {
   start(selection: CheckoutSelection): Promise<CheckoutResult>;
+}
+
+/** What an org bought, as its managers read it (billing-portal door 1, extended by billing-page with the subscription id). */
+export type OrgBillingValue = { customerId: string; subscriptionId: string; plan: PlanKey; seats: number };
+
+export interface OrgBilling {
+  /** The org's subscription, read as the signed-in member under RLS; `null` when it has none. Throws on a database error. */
+  get(orgId: string): Promise<OrgBillingValue | null>;
+}
+
+/** The two Stripe ids every billing call needs; they come from `org_billing`, never from the browser. */
+export type StripeIds = { customerId: string; subscriptionId: string };
+
+export type GatewayFailure = "not_configured" | "unavailable";
+
+/** Everything the in-app billing page reads from or writes to Stripe, behind one port (billing-page door 2). */
+export interface BillingGateway {
+  overview(ids: StripeIds): Promise<{ ok: true; overview: BillingOverview } | { ok: false; code: GatewayFailure }>;
+  /** A SetupIntent for the customer; the client secret lets Stripe's embedded field collect the card. */
+  startCardUpdate(ids: StripeIds): Promise<{ ok: true; clientSecret: string } | { ok: false; code: GatewayFailure }>;
+  /** Reads the SetupIntent itself, requires it succeeded for this customer, then makes its card the default (door 3). */
+  finishCardUpdate(ids: StripeIds, setupIntentId: string): Promise<{ ok: true } | { ok: false; code: GatewayFailure | "mismatch" }>;
+  /** Ends the subscription at the end of the current period; repeating it changes nothing. */
+  cancel(ids: StripeIds): Promise<{ ok: true } | { ok: false; code: GatewayFailure }>;
+  /** Clears an end set by `cancel`; repeating it changes nothing. */
+  resume(ids: StripeIds): Promise<{ ok: true } | { ok: false; code: GatewayFailure }>;
+  /**
+   * Moves the subscription's plan item to `plan` and its seat item to `extraSeats`, prorated (plan-change door 1). `changed` is false when
+   * Stripe already holds exactly that. `unsupported`: no item is tagged as the plan item, so none is guessed.
+   */
+  changePlan(ids: StripeIds, change: { plan: PlanKey; extraSeats: number }): Promise<{ ok: true; changed: boolean } | { ok: false; code: GatewayFailure | "unsupported" }>;
+}
+
+/** Records the plan and seat count on `org_billing` as the signed-in member, through `set_org_plan` (plan-change door 2). */
+export interface OrgPlanRecorder {
+  record(plan: PlanKey, seats: number): Promise<{ ok: true } | { ok: false; code: "forbidden" | "not_found" | "unavailable" }>;
 }

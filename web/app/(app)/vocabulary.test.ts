@@ -44,7 +44,7 @@ describe("the add-asset page, item words", () => {
     currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "u@example.com", orgId: "org-1", orgName: "Org", role: "owner" });
     const out = renderToStaticMarkup(await newAsset.default({ params: Promise.resolve({ siteId: "s1" }) } as never));
     expect(out).toContain("Your station catalog is empty.");
-    expect(out).toContain("Station types come from your task library.");
+    expect(out).toContain("Station types come from your starter catalog.");
     expect(getItemWords).toHaveBeenCalledWith("org-1");
   });
 });

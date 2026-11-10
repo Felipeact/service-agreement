@@ -23,7 +23,7 @@ export default async function NewAssetPage({ params }: PageProps<"/sites/[siteId
   return (
     <RecordPage title="New asset" canWrite={canWriteRecords(member.role)}>
       {types.length === 0 ? (
-        <EmptyPanel title={itemText("Your equipment catalog is empty.", words)} text={itemText("Equipment types come from your task library.", words)}>
+        <EmptyPanel title={itemText("Your equipment catalog is empty.", words)} text={itemText("Equipment types come from your starter catalog.", words)}>
           <LinkButton href={cancelHref}>Back to site</LinkButton>
         </EmptyPanel>
       ) : (

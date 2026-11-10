@@ -7,9 +7,10 @@ import { saveSettingsAction } from "./actions";
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const { currentMember, getOrgSettings } = await getContainer();
+  const { currentMember, getOrgSettings, billingLink } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
 
-  return <SettingsView settings={await getOrgSettings(member.orgId)} role={member.role} action={saveSettingsAction} />;
+  const [settings, showBilling] = await Promise.all([getOrgSettings(member.orgId), billingLink(member.orgId, member.role)]);
+  return <SettingsView settings={settings} role={member.role} action={saveSettingsAction} billingLink={showBilling} />;
 }

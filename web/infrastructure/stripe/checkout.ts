@@ -1,30 +1,13 @@
 import type { CheckoutStarter } from "@/application/ports";
 import { EXTRA_SEAT_CENTS, PLANS, knownTrades } from "@/domain/billing";
+import { STRIPE_TIMEOUT_MS, STRIPE_VERSION, encodeForm, errorCode } from "./http";
 
 const SESSIONS_URL = "https://api.stripe.com/v1/checkout/sessions";
 
-/** The API version this code was written against (billing-checkout door 1); a response shape is never read from the account default. */
-export const STRIPE_VERSION = "2026-10-28.endive";
+export { STRIPE_VERSION };
 
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = STRIPE_TIMEOUT_MS;
 const TRIAL_DAYS = 14;
-
-type FormValue = string | number | FormValue[] | { [key: string]: FormValue };
-
-/** Stripe's form encoding: nested keys as `a[b][c]`, arrays as `a[0]`. */
-function encodeForm(value: FormValue, prefix = ""): string[] {
-  if (typeof value === "object") {
-    const entries = Array.isArray(value) ? value.map((item, index): [string, FormValue] => [String(index), item]) : Object.entries(value);
-    return entries.flatMap(([key, item]) => encodeForm(item, prefix ? `${prefix}[${key}]` : key));
-  }
-  return [`${encodeURIComponent(prefix)}=${encodeURIComponent(String(value))}`];
-}
-
-/** Stripe's `error.code`, only when it looks like a code, so a message or a value Stripe echoes never reaches the log. */
-function errorCode(body: unknown): string | undefined {
-  const code = (body as { error?: { code?: unknown } } | null)?.error?.code;
-  return typeof code === "string" && /^[a-z_]{1,64}$/.test(code) ? code : undefined;
-}
 
 /**
  * Opens a Stripe Checkout session for a 14-day, card-required trial with `fetch`, no SDK (billing-checkout door 1). The plan's
@@ -48,14 +31,14 @@ export function stripeCheckoutStarter(options: { secretKey: string; appBaseUrl: 
               currency: "cad",
               unit_amount: chosen.monthlyCents,
               recurring: { interval: "month" },
-              product_data: { name: `${chosen.name} plan` },
+              product_data: { name: `${chosen.name} plan`, metadata: { sa_kind: "plan", sa_plan: chosen.key } },
             },
           },
           ...(extraSeats > 0
             ? [
                 {
                   quantity: extraSeats,
-                  price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product_data: { name: "Extra seat" } },
+                  price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product_data: { name: "Extra seat", metadata: { sa_kind: "seat" } } },
                 },
               ]
             : []),

@@ -23,7 +23,7 @@ type MonthGridProps = {
   errorId?: string;
 };
 
-/** Twelve month toggles with optional presets, shared by the service line form and the task library. */
+/** Twelve month toggles with optional presets, used by the service line form. */
 export function MonthGrid({ name, legend: label, checked, onToggle, onPreset, presets = true, error, errorId }: MonthGridProps) {
   return (
     <fieldset className="flex flex-col gap-1.5" aria-describedby={error ? errorId : undefined}>

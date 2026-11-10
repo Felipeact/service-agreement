@@ -937,6 +937,47 @@ export type Database = {
           },
         ]
       }
+      org_billing: {
+        Row: {
+          created_at: string
+          org_id: string
+          other_trade: boolean
+          plan: string
+          seats: number
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          trades: string[]
+        }
+        Insert: {
+          created_at?: string
+          org_id: string
+          other_trade: boolean
+          plan: string
+          seats: number
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          trades: string[]
+        }
+        Update: {
+          created_at?: string
+          org_id?: string
+          other_trade?: boolean
+          plan?: string
+          seats?: number
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          trades?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_billing_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_settings: {
         Row: {
           accent_color: string | null
@@ -958,6 +999,7 @@ export type Database = {
           renewal_cpi_pct: number | null
           renewal_notice_days: number
           repair_discount_pct: number
+          setup_completed_at: string | null
           tax_note: string | null
           trade_context: string | null
           updated_at: string
@@ -982,6 +1024,7 @@ export type Database = {
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
           repair_discount_pct?: number
+          setup_completed_at?: string | null
           tax_note?: string | null
           trade_context?: string | null
           updated_at?: string
@@ -1006,6 +1049,7 @@ export type Database = {
           renewal_cpi_pct?: number | null
           renewal_notice_days?: number
           repair_discount_pct?: number
+          setup_completed_at?: string | null
           tax_note?: string | null
           trade_context?: string | null
           updated_at?: string
@@ -1530,6 +1574,7 @@ export type Database = {
         Returns: string[]
       }
       set_member_role: { Args: { p_role: string; p_user_id: string }; Returns: undefined }
+      set_org_plan: { Args: { p_plan: string; p_seats: number }; Returns: undefined }
       set_site_active: {
         Args: { p_active: boolean; p_site_id: string }
         Returns: string[]

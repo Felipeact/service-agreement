@@ -3,8 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { CheckoutStarter } from "@/application/ports";
+import type { BillingGateway, CheckoutStarter } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
   makeDecidePortal,
   makeInviteMember,
@@ -20,6 +21,8 @@ import {
   makeSendAgreement,
   makeSendForSignature,
   makeStartTrial,
+  makeBilling,
+  makeBillingEntry,
   makeTransitionAgreement,
   makeTransitionContract,
   makeViewPortal,
@@ -28,6 +31,9 @@ import {
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
+import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
+import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
+import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
@@ -75,6 +81,7 @@ import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supaba
 import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
 import { itemWordsReader } from "@/application/use-cases/item-words";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
+import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}`);
@@ -122,6 +129,27 @@ export async function getContainer() {
   const siteDirectory = supabaseSiteDirectory(supabase);
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
+  const setup = supabaseOrgSetup(supabase);
+  // The billing page needs both values (billing-page AC 8); `STRIPE_SECRET_KEY` is read only in this file. Without them the page
+  // says billing is not available and every action answers `not_configured` with no request. The publishable key is safe for the
+  // browser: it is read here at request time and handed to the card field as a prop, so no rebuild is needed per environment.
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const stripeBase = process.env.APP_BASE_URL;
+  const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || null;
+  const orgBilling = supabaseOrgBilling(supabase);
+  const notConfigured = { ok: false, code: "not_configured" } as const;
+  const billingGateway: BillingGateway =
+    stripeKey && stripeBase
+      ? stripeBillingGateway({ secretKey: stripeKey })
+      : {
+          overview: async () => notConfigured,
+          startCardUpdate: async () => notConfigured,
+          finishCardUpdate: async () => notConfigured,
+          cancel: async () => notConfigured,
+          resume: async () => notConfigured,
+          changePlan: async () => notConfigured,
+        };
+  const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase));
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -154,6 +182,18 @@ export async function getContainer() {
     siteRegister: sites.get,
     getOrgSettings: settings.get,
     getItemWords: itemWordsReader(settings.get),
+    billingLink: makeBillingEntry(orgBilling),
+    loadBilling: billing.load,
+    startCardUpdate: billing.startCardUpdate,
+    finishCardUpdate: billing.finishCardUpdate,
+    cancelSubscription: billing.cancel,
+    resumeSubscription: billing.resume,
+    changePlan: billing.changePlan,
+    stripePublishableKey,
+    setupPending: setup.isPending,
+    setupCatalog: setup.catalog,
+    saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),
+    skipSetup: (orgId: string) => setup.skip(orgId, systemClock.now()),
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
     contactForEdit: customers.contact,
     assetForEdit: sites.asset,

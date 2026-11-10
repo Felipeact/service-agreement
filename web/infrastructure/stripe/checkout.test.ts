@@ -191,6 +191,15 @@ describe("the Stripe checkout starter", () => {
     },
   );
 
+  test.each(INCLUDED)("C3211: the $plan line's product is tagged plan with its key, and the extra-seat product is tagged seat", async ({ plan, included }) => {
+    await start({ plan, trades: ["hvac"], seats: included + 2 });
+    const body = form();
+    expect(body.get("line_items[0][price_data][product_data][metadata][sa_kind]")).toBe("plan");
+    expect(body.get("line_items[0][price_data][product_data][metadata][sa_plan]")).toBe(plan);
+    expect(body.get("line_items[1][price_data][product_data][metadata][sa_kind]")).toBe("seat");
+    expect([...body.keys()].filter((key) => key.startsWith("line_items[1]") && key.includes("[metadata]"))).toEqual(["line_items[1][price_data][product_data][metadata][sa_kind]"]);
+  });
+
   test("C2615: the buyer's email prefills Checkout and the seats, company and phone ride on the session and the subscription", async () => {
     await start({ plan: "team", trades: ["hvac"], seats: 8, email: "owner@shop.ca", company: "Shop Ltd", phone: "+1 604 555 0199" });
     const body = form();
