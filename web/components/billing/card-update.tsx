@@ -36,7 +36,7 @@ function CardForm({ onDone, onCancel, finish }: { onDone: () => void; onCancel: 
     });
     setPending(false);
     if (result.status === "saved") return onDone();
-    setError(result.status === "stripe_error" ? result.message : BILLING_MESSAGES.card);
+    setError(result.status === "stripe_error" ? result.message : result.status === "forbidden" ? BILLING_MESSAGES.forbidden : BILLING_MESSAGES.card);
   }
 
   return (
@@ -62,7 +62,7 @@ export function CardUpdate({ publishableKey, actions }: Props) {
     const begun = await beginCardUpdate(actions.startCardUpdate);
     setOpening(false);
     if (begun.status === "ready") setSecret(begun.clientSecret);
-    else setNotice(BILLING_MESSAGES.card);
+    else setNotice(begun.status === "forbidden" ? BILLING_MESSAGES.forbidden : BILLING_MESSAGES.card);
   }
 
   if (secret && actions) {

@@ -142,6 +142,14 @@ describe("the overview reads", () => {
     expect(result.ok && result.overview.card).toBeNull();
   });
 
+  test("C3142: a failed customer read is unavailable when the subscription has no card of its own, and tolerated when it has one", async () => {
+    handler = stripe({ cust: () => reply(500, { error: { code: "api_error" } }), sub: () => reply(200, subscription({ default_payment_method: null })) });
+    expect(await gateway().overview(IDS)).toEqual({ ok: false, code: "unavailable" });
+    handler = stripe({ cust: () => reply(500, { error: { code: "api_error" } }) });
+    const result = await gateway().overview(IDS);
+    expect(result.ok && result.overview.card?.last4).toBe("4242");
+  });
+
   test("C3108: an invoice read that fails leaves the rest of the overview and marks the invoices unavailable", async () => {
     handler = stripe({ inv: () => reply(500, { error: { code: "api_error" } }) });
     const result = await gateway().overview(IDS);

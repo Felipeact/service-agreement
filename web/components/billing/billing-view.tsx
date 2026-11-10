@@ -87,7 +87,7 @@ function Ready({ plan, overview, publishableKey, actions }: { plan: string; over
 /** The in-app billing page body (billing-page S1 to S3): plan, card and invoices for an owner or admin. */
 export function BillingView({ state, publishableKey, actions }: Props) {
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <PageHeader title="Billing" subtitle="Your plan, your card and your invoices." />
       <Link href="/settings" className="inline-flex h-11 w-fit items-center text-[13px] font-semibold text-action hover:underline lg:h-auto">
         ← Settings

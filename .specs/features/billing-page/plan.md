@@ -29,7 +29,7 @@ Reuses `org_billing` and its owner/admin select policy (workspace-provisioning d
 | dependency | two client packages, `@stripe/stripe-js` and `@stripe/react-stripe-js`, supersede the "no stripe dependency" rule of AD-168 for the browser only; the server still calls Stripe over `fetch`. Approved tests C2510, C2511 and C2529 in `billing-boundaries.test.ts` pin the old rule and are amended under the new decision (door 1) |
 | env | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (a `pk_test_` or `pk_live_` key, safe in the browser). Unset, the card form says it is not set up and the rest of the page works |
 | stored data | nothing to migrate: no table, column, policy or function |
-| existing tests | the billing-portal tests that pin the portal adapter, the action and the card (C2901 to C2914 in part) go with the code they test; the menu and C2916 tests are rewritten. The owner chose this replacement |
+| existing tests | the billing-portal tests that pin the portal adapter, the action and the card (C2900 to C2914 in part) go with the code they test; the menu and C2916 tests are rewritten. The owner chose this replacement |
 | not changed | Checkout, the webhook and its ledger, provisioning, `/setup`, RLS, the sign-in flow |
 
 ## Relations
@@ -49,7 +49,7 @@ One-way constraints: none new; `org_billing.stripe_customer_id` and `stripe_subs
 | `startCardUpdate` (Server Action) | session cookie only | `{ clientSecret }` or a notice | `200` with the value or a notice, `303` to `/login` |
 | `finishCardUpdate` (Server Action) | `setupIntentId` | the page re-read, or a notice | `200`, `303` to `/login` |
 | `cancelSubscription`, `resumeSubscription` (Server Actions) | session cookie only | the page re-read, or a notice | `200`, `303` to `/login` |
-| Stripe `GET /v1/subscriptions/{id}`, `GET /v1/invoices`, `GET /v1/payment_methods/{id}`, `GET /v1/setup_intents/{id}` (outbound) | ids from `org_billing` and the SetupIntent id | status, dates, card, invoices | `200`; anything else is `unavailable` |
+| Stripe `GET /v1/subscriptions/{id}`, `GET /v1/customers/{id}`, `GET /v1/invoices`, `GET /v1/setup_intents/{id}` (outbound; corrected after verifier round 1: the card comes from the expanded subscription and customer reads, not a payment-method read) | ids from `org_billing` and the SetupIntent id | status, dates, card, invoices | `200`; anything else is `unavailable` |
 | Stripe `POST /v1/setup_intents`, `POST /v1/customers/{id}`, `POST /v1/subscriptions/{id}` (outbound) | customer id, payment method id, cancel flag | the changed object | `200`; anything else is `unavailable` |
 
 ## Landing
@@ -94,7 +94,7 @@ The outcome: one in-app page that answers what the org pays and what comes next.
 13. IF the SetupIntent is not `succeeded`, or belongs to another customer, THEN the system SHALL change no default, show "We couldn't update your card", and SHALL NOT call any write endpoint
 14. IF Stripe declines or fails the card in the embedded field THEN the system SHALL show Stripe's message beside the field and leave the saved card unchanged
 15. WHEN `finishCardUpdate` runs twice for the same SetupIntent THEN the system SHALL leave the same default card and show no error
-16. IF `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is unset THEN the system SHALL show "Card updates aren't set up yet" in place of the card field and SHALL NOT start a SetupIntent
+16. IF the publishable key (`STRIPE_PUBLISHABLE_KEY`, see the Landing amendment) is unset THEN the system SHALL show "Card updates aren't set up yet" in place of the card field and SHALL NOT start a SetupIntent
 17. WHILE the card is being confirmed or saved the system SHALL disable the submit control so one press makes one confirmation
 18. The system SHALL take the customer id and org from the session and `org_billing`, never from the browser, and SHALL NOT send a card number, expiry or CVC to any route of the app
 
@@ -141,7 +141,7 @@ The outcome: one in-app page that answers what the org pays and what comes next.
 | Acting on `invoice.payment_failed` or `customer.subscription.deleted` (a banner, suspending the org) | Nothing applies those events yet; the page only shows the status label |
 | Editing the billing name or email, tax ids or the billing address | Not asked for; the owner chose status, invoices, card and cancel |
 | Downloading invoice PDFs inside the app | The hosted invoice link carries the PDF |
-| Payment methods other than a card | Checkout collects cards; the Payment Element is limited to them |
+| Payment methods other than a card | Checkout collects cards; the page shows cards only. Which methods the card field offers is a Stripe Dashboard setting (see the Assumptions row), so the owner turns the others off |
 | Proration previews, upcoming invoice amount and next charge amount | Needs the upcoming invoice read; the date is enough for now |
 | Keeping the Stripe portal as a fallback | The owner rejected the redirect |
 | A new "Other" or "past due" banner elsewhere in the app | Out of the chosen scope |
@@ -165,7 +165,7 @@ The outcome: one in-app page that answers what the org pays and what comes next.
 
 | # | Kind | Question | Until answered |
 | --- | --- | --- | --- |
-| 1 | blocks go-live | The publishable key (`pk_test_...`, later `pk_live_...`) must be set as `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in each environment | The page works but the card form says it is not set up |
+| 1 | blocks go-live | The publishable key (`pk_test_...`, later `pk_live_...`) must be set as `STRIPE_PUBLISHABLE_KEY` in each environment | The page works but the card form says it is not set up |
 | 2 | open | May an admin cancel the subscription, or only the owner? | Admin can, matching the read policy; narrowing it is a one-line role check |
 | 4 | blocks go-live | In the Stripe Dashboard (Settings, Payment methods) turn off every method except Cards, in test and in live mode. Until then the card field also offers Link, Klarna and others, and a non-card method shows as "No payment method" on the page | Card entry works but offers methods the page cannot display |
 | 3 | open | Should a sandbox customer with a real trialing subscription be created for the live run? | The live run needs one; the build can create it with the test key and the owner's go-ahead |

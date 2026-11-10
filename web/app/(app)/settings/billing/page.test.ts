@@ -65,7 +65,13 @@ describe("the billing page", () => {
     expect(element.props.state).toEqual(state);
   });
 
-  test("C3135: the page has a loading screen", () => {
+  test("C3135: the page has a loading screen that names the page and says it is loading", async () => {
     expect(existsSync(path.join(__dirname, "loading.tsx"))).toBe(true);
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { createElement } = await import("react");
+    const { default: Loading } = await import("./loading");
+    const out = renderToStaticMarkup(createElement(Loading));
+    expect(out).toContain("Billing");
+    expect(out).toContain("Loading");
   });
 });

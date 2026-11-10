@@ -92,8 +92,11 @@ export function stripeBillingGateway(options: { secretKey: string }): BillingGat
       const cancelAt = num(sub.cancel_at);
       const endsAt = cancelAt ?? (sub.cancel_at_period_end === true ? periodEnd : null);
 
+      const subscriptionCard = cardOf(sub.default_payment_method);
+      // Without the customer record the card may be misreported, so a failed customer read is only tolerated when the subscription has its own card.
+      if (!customer.ok && !subscriptionCard) return unavailable;
       const customerDefault = customer.ok && isObject(customer.body.invoice_settings) ? customer.body.invoice_settings.default_payment_method : null;
-      const card = cardOf(sub.default_payment_method) ?? cardOf(customerDefault);
+      const card = subscriptionCard ?? cardOf(customerDefault);
 
       const list = invoices.ok && Array.isArray(invoices.body.data) ? invoices.body.data : null;
       const overview: BillingOverview = {

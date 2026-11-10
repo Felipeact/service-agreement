@@ -8,8 +8,9 @@ describe("the card update flow", () => {
     expect(start).toHaveBeenCalledTimes(1);
   });
 
-  test.each([["forbidden"], ["unavailable"]] as const)("C3117: begin answering %s is the failure state", async (status) => {
-    expect(await beginCardUpdate(async () => ({ status }))).toEqual({ status: "failed" });
+  test("C3139: begin answering forbidden is the permission state and unavailable is the failure state", async () => {
+    expect(await beginCardUpdate(async () => ({ status: "forbidden" }))).toEqual({ status: "forbidden" });
+    expect(await beginCardUpdate(async () => ({ status: "unavailable" }))).toEqual({ status: "failed" });
   });
 
   test("C3117: begin that throws is the failure state", async () => {
@@ -35,9 +36,14 @@ describe("the card update flow", () => {
     expect(finish).not.toHaveBeenCalled();
   });
 
-  test.each([["failed"], ["forbidden"]] as const)("C3117: finish answering %s is the card failure", async (status) => {
+  test("C3117: finish answering failed is the card failure", async () => {
     const confirm = async () => ({ ok: true as const, setupIntentId: "seti_1AbC" });
-    expect(await completeCardUpdate({ confirm, finish: async () => ({ status }) })).toEqual({ status: "failed" });
+    expect(await completeCardUpdate({ confirm, finish: async () => ({ status: "failed" }) })).toEqual({ status: "failed" });
+  });
+
+  test("C3139: finish answering forbidden is the permission state", async () => {
+    const confirm = async () => ({ ok: true as const, setupIntentId: "seti_1AbC" });
+    expect(await completeCardUpdate({ confirm, finish: async () => ({ status: "forbidden" }) })).toEqual({ status: "forbidden" });
   });
 
   test("C3117: finish that throws is the card failure", async () => {

@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/billing-page/plan.md`
 
-39 checks in 5 slices · 3 one-way doors (approved by "APPROVED") · 3 open, of which 1 blocks go-live and 0 block the build
+43 checks in 5 slices · 3 one-way doors (approved by "APPROVED") · 4 open, of which 2 block go-live and 0 block the build
 
 ## How proofs run
 
@@ -135,7 +135,7 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-boundaries.test.t
 **C3134** - No route, action or component of the app accepts or posts a card number, expiry or CVC: no input named or labelled `cardNumber`, `cvc`, `exp` or `card_number` exists under `web/app` or `web/components`, and the only card field is Stripe's Payment Element (AC 18)
 Proof: `cd web && npx vitest run infrastructure/stripe/billing-boundaries.test.ts -t "C3134:"`
 
-**C3135** - The billing page has a `loading.tsx` showing a loading state (AC 29)
+**C3135** - The billing page has a `loading.tsx` that renders a loading state naming the page, "Billing" and "Loading" (AC 29)
 Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/page.test.ts" -t "C3135:"`
 
 **C3136** - A `finishCardUpdate` failure leaves the saved card unchanged: the page shows the same card after a `mismatch` and after an `unavailable` (the use case writes nothing before the checks pass) (AC 13)
@@ -147,6 +147,19 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-boundaries.test.t
 **C3138** - Against the Stripe sandbox, `/settings/billing` at 375, 768 and 1440 px shows plan, status, date line, card and invoices with no horizontal scroll, controls of at least 44 by 44 px on mobile and tablet, a touch tap on Update card, Cancel and Resume responding, a test card 4242 4242 4242 4242 saved, the declined card 4000 0000 0000 0002 refused with Stripe's message, Cancel then Resume round-tripping, and no console error (AC 28, S1 to S3 independent tests)
 Proof: live Playwright MCP run per AGENTS.md (author-run, nothing committed); the report lists pages, sizes, touch actions and fixes
 Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C3119:"`
+
+**C3139** - A non-owner, non-admin pressing a card action sees "You don't have permission to change this": a `forbidden` from starting a card update shows it and opens no card form, and a `forbidden` from finishing shows it and does not refresh; `unavailable`, `failed` and `mismatch` keep "We couldn't update your card" (AC 24). Added after verifier round 1 found the card island showing the wrong notice
+Proof: `cd web && npx vitest run components/billing/card-flow.test.ts -t "C3139:"`
+Proof: `cd web && npx vitest run components/billing/card-update.test.ts -t "C3139:"`
+
+**C3140** - In the browser DOM, pressing Cancel subscription only opens the prompt naming the end date and calls nothing; Keep subscription closes it and calls nothing; only Yes, cancel calls cancel, once, then refreshes once; a second submit while pending makes no second call; Resume calls resume once and never cancel; a `forbidden` or `unavailable` answer, or a throw, shows its notice and does not refresh (AC 19, AC 20, AC 21, AC 23, AC 24). Added after verifier round 1 (mutant: Cancel skipping the confirm survived)
+Proof: `cd web && npx vitest run components/billing/subscription-controls.test.ts -t "C3140:"`
+
+**C3141** - In the browser DOM, the card island with no publishable key says card updates are not set up and loads no Stripe code; Update card asks the server once and shows the card field and Save card; Cancel closes it; Save card confirms with `redirect: "if_required"`, sends only the SetupIntent id to finish, then refreshes once; a Stripe error shows Stripe's message and leaves the form open with finish not called; a second submit while saving confirms once (AC 11, AC 12, AC 14, AC 16, AC 17, Landing door 1)
+Proof: `cd web && npx vitest run components/billing/card-update.test.ts -t "C3141:"`
+
+**C3142** - A customer read that fails makes the overview `unavailable` when the subscription has no card of its own, and is tolerated when it has one, so a card is never silently reported missing (AC 3, AC 9)
+Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3142:"`
 
 ## Coverage
 
@@ -161,7 +174,7 @@ Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C31
 | Server Action statuses: `finishCardUpdate` (2) | 200 C3117 C3125 · 303 /login C3124 | - |
 | Server Action statuses: `cancelSubscription` (2) | 200 C3125 C3120 · 303 /login C3124 | - |
 | Server Action statuses: `resumeSubscription` (2) | 200 C3125 C3120 · 303 /login C3124 | - |
-| Stripe reads: three outbound GETs (3) | subscription C3105 · customer C3105 · invoices C3105 | - |
+| Stripe reads: three outbound GETs (3) | subscription C3105 · customer C3105 C3142 · invoices C3105 | - |
 | Stripe writes (4) | setup_intents C3113 · customer default C3114 · subscription default C3114 · subscription end flag C3120 | - |
 | Stripe subscription answers that are `unavailable` (8) | no status C3109 · not JSON C3109 · 400 C3109 · 401 C3109 · 429 C3109 · 500 C3109 · refused connection C3109 · 10 s timeout C3109 | - |
 | SetupIntent refusals (6) | requires_payment_method C3115 · requires_action C3115 · processing C3115 · canceled C3115 · other customer C3115 · no payment method C3115 | - |
@@ -171,8 +184,8 @@ Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C31
 | roles at the page (4) | owner C3107 · admin C3107 · estimator C3111 · viewer C3111 | - |
 | roles at the actions (4) | owner C3123 · admin C3123 · estimator C3123 · viewer C3123 | - |
 | no-session cases (2) | signed out C3111 C3124 · no membership C3111 C3124 | - |
-| card flow outcomes (4) | saved C3117 · Stripe confirm error C3117 · mismatch C3117 · unavailable C3117 | - |
-| action notices (3) | forbidden C3125 · unavailable C3125 · card C3125 | - |
+| card flow outcomes (5) | saved C3117 · Stripe confirm error C3117 · mismatch C3117 · unavailable C3117 · forbidden C3139 | - |
+| action notices (3) | forbidden C3125 C3140 C3139 · unavailable C3125 C3140 · card C3125 C3139 | - |
 | empty and partial states (4) | no card C3108 · no invoices C3108 · invoices failed C3108 · canceled hides actions C3107 | - |
 | menu variants (2) | link shown C3126 · no item C3126 | - |
 | `org_billing` columns read (3) | stripe_customer_id C3129 · stripe_subscription_id C3129 · plan C3129 | - |
@@ -201,6 +214,7 @@ Evidence:
 - `application/use-cases/billing-page.ts` (new): role gate, ids from `org_billing`, five outcomes per action -> decides
 - `infrastructure/stripe/billing-gateway.ts` (new): five operations, each with conditionals on status and shape (about 30 branch points) -> adapter
 - `components/billing/card-flow.ts` (new): start, confirm, finish with three failure paths -> decides
+- `components/billing/subscription-controls.tsx` and `card-update.tsx` (new): client islands with click, pending and notice states -> presentational with behaviour, proved in a browser DOM (jsdom, a new dev dependency) by C3140 and C3141
 - closest analogues: `infrastructure/stripe/checkout.ts` with `checkout.test.ts`, and `application/use-cases/billing-portal.ts` with its tests, same shapes, already proven at this level
 
 Cost: 9 test files at their own layer, plus the amended boundary tests; no SQL recipe.
