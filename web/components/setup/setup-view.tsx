@@ -38,7 +38,7 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
         </h2>
         <p className="text-[13px] font-medium text-ink">No types yet</p>
         <p className="text-[13px] text-ink-2">
-          You can add the {words.plural} you service, with their checklists, in the task library once you are in.
+          Your {words.plural} will appear here once your catalog is set up.
         </p>
       </section>
     );
@@ -49,7 +49,7 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
         <h2 id="catalog-title" className="font-display text-[18px] font-semibold tracking-tight">
           What we set up
         </h2>
-        <p className="text-[13px] text-ink-2">Your starter catalog, with a checklist for each type. Change any of it later in the task library.</p>
+        <p className="text-[13px] text-ink-2">Your starter catalog, with a checklist for each type.</p>
       </div>
       {groups.map((group) => (
         <div key={group.pack ?? "added"} className="flex flex-col gap-2">

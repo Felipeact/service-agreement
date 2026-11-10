@@ -51,7 +51,6 @@ describe("the domain layer stays pure", () => {
 const ITEM_COPY_ALLOWED = [
   // message tables, spoken in the org's words by itemText where they are displayed
   "components/imports/state.ts",
-  "components/task-library/state.ts",
   "components/agreements/new-agreement-state.ts",
   // outside the feature: the product's own login copy (roadmap Phase 4.5 item 6) and the settings help that names the example word
   "app/login/page.tsx",

@@ -89,16 +89,17 @@ describe("setup screen after an attempt", () => {
 });
 
 describe("catalog review", () => {
-  test("C2817: with no types it says No types yet and that they are added in the task library, with no draft control", () => {
+  test("C2817: with no types it says No types yet and that they will appear once the catalog is set up, with no draft control", () => {
     const markup = html(createElement(CatalogReview, { groups: [], words }));
     expect(markup).toContain("No types yet");
-    expect(markup).toContain("task library");
+    expect(markup).toContain("once your catalog is set up");
+    expect(markup).not.toContain("task library");
     expect(markup).not.toMatch(/<button|<a |<input|draft|generate/i);
   });
 
   test("C2817: the empty text speaks the org's plural", () => {
     const markup = html(createElement(CatalogReview, { groups: [], words: itemWords("fixture", "fixtures") }));
-    expect(markup).toContain("add the fixtures you service");
+    expect(markup).toContain("Your fixtures will appear here");
   });
 
   test("C2818: a catalog with types shows names and counts and holds no form control", () => {

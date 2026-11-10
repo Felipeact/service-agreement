@@ -105,6 +105,8 @@ Other sources:
 - **Not yet:** updating an existing asset from a row flagged "Already on this site"; undoing a commit as a whole; adding rows the file did not have.
 
 ### Maintenance task library (M6)
+
+**Removed 2026-11-10 (owner's decision):** the `/task-library` screen, its editor and type controls, and every link to it are gone (`web/app/(app)/task-library/` and `web/components/task-library/` deleted; Settings, setup and the add-asset page no longer mention it). The catalog data, default months, checklists, packs, the `TaskLibraryReader` / `TaskLibraryStore` ports and the container methods stay, so imports, "Service included", the agreement builder and `seed_org_catalog` keep working; nothing in the app edits a type now. Pinned by `app/(app)/task-library-removed.test.ts`. The entries below describe what was built and are history.
 **What it is:** a preventive-maintenance checklist for each equipment type. Each tenant can edit it, and it is snapshotted into each agreement version so later edits don't change sent agreements.
 **What we built:** table `asset_type_tasks`, a checklist per asset type and per org, ordered by `position`. Agreements show it as "Service included", and a version freezes it into `agreement_versions.snapshot` when the agreement leaves draft (see Service agreement below).
 - **Catalog template:** the product's standard catalog is `private.catalog_asset_types` (40 types) and `private.catalog_asset_type_tasks` (174 tasks), filled from the "Service included" section of the maintenance proposal template, without the source company. It is in [supabase/migrations/20261019191509_catalog_template.sql](supabase/migrations/20261019191509_catalog_template.sql) (AD-007). The "AHU (Metro Tower)" variant is excluded, and two typos are corrected ("preventer", "hot spots").
@@ -317,6 +319,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ## Build log
 
+- **2026-11-10:** removed the Task library screen (owner's decision). Page, editor, type controls and links deleted; the catalog data and its readers stay. Setup and the add-asset page no longer point to it.
 - **2026-11-10:** billing-portal (Phase 5, Customer Portal item, portal half). A Billing section on `/settings` for an owner or admin of an org with a subscription opens Stripe's hosted portal; the customer id is read from `org_billing` under RLS, never sent by the browser (AD-177, no migration). The cancel-on-failed-payment rule and the portal configuration are yours in the Stripe dashboard, so the roadmap line stays open. Plan and checks in `.specs/features/billing-portal/`.
 - **2026-11-10:** first-login-setup (Phase 5, setup screen item, profile and catalog review). `/setup` once for a paid owner, from Pipeline; skippable; migration `20261110110000` applied 2026-11-10 (AD-176). Run live at 375, 768 and 1440 px on 2026-11-10 (two defects found and fixed).
 - **2026-11-10:** workspace-provisioning (Phase 5 item 3). A completed Stripe Checkout now creates the org, settings, `org_billing`, seeded packs and an owner invitation in the webhook's transaction, and the owner is emailed a sign-in link (AD-173 to AD-175). Plan, checks and verification in `.specs/features/workspace-provisioning/`. Migration `20261110100000` applied by the owner.

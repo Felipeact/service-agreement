@@ -1,12 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import type { MemberRole, OrgSettings } from "@/application/ports";
-import { useItemWords } from "@/components/shell/item-words";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { itemText } from "@/domain/org-settings";
 import type { BillingSectionView } from "@/domain/billing/portal";
 import { BillingSection, type BillingFormState } from "./billing-section";
 import { SettingsFields } from "./settings-fields";
@@ -32,13 +29,9 @@ function SettingsForm({ settings, role, action }: SettingsViewProps & { settings
 
 /** The Settings page body. */
 export function SettingsView(props: SettingsViewProps) {
-  const words = useItemWords();
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
-      <Link href="/task-library" className="text-[13px] font-semibold text-action hover:underline">
-        {itemText("Task library: equipment types and checklists", words)}
-      </Link>
       {props.settings ? (
         <SettingsForm {...props} settings={props.settings} />
       ) : (

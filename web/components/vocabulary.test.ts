@@ -2,7 +2,6 @@ import { createElement, type FunctionComponent, type ReactElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AssetView, CustomerSummary, ImportHistoryRow, ImportJobView, ImportReview, SearchResults, SiteListRow, SiteView } from "@/application/ports";
-import type { LibraryType } from "@/domain/task-library";
 import { itemWords } from "@/domain/org-settings";
 import { ItemWordsProvider } from "@/components/shell/item-words";
 
@@ -11,8 +10,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 const { SitesListView } = await import("./sites/sites-list");
 const { SiteRegisterView } = await import("./sites/site-register-view");
 const { SearchView } = await import("./search/search-view");
-const { TaskLibraryView } = await import("./task-library/task-library-view");
-const { AddTypeForm } = await import("./task-library/type-controls");
 const { PipelineView } = await import("./kanban/pipeline-view");
 const { ImportBanner } = await import("./imports/import-banner");
 const { ImportUploadFields } = await import("./imports/import-upload");
@@ -126,19 +123,6 @@ describe("staff screens, item words", () => {
     expect(typed).toContain("match “equipment”.");
   });
 
-  test("C2018: the task library names the item in its empty state, nav label and new-type field", () => {
-    const type: LibraryType = { id: "t-b", code: "BOILER", name: "Boiler", pack: "hvac", defaultVisitMonths: [10], tasks: [] };
-    const action = async () => ({ status: "idle" as const });
-    const empty = asStations(createElement(TaskLibraryView, { types: [], selected: null, role: "owner", action, words: stations }));
-    expect(empty).toContain("No station types yet");
-    expect(empty).toContain("The station types and checklists of your company appear here.");
-    const listed = asStations(createElement(TaskLibraryView, { types: [type], selected: type, role: "viewer", action, words: stations }));
-    expect(listed).toContain('aria-label="Station types"');
-    const add = asStations(createElement(AddTypeForm, { action: async () => ({ status: "idle" as const }) }));
-    expect(add).toContain("New station type");
-    for (const out of [empty, listed, add]) noEquipment(out);
-  });
-
   test("C2019: the Pipeline subtitle and its recent imports block name the item", () => {
     const imports: ImportHistoryRow[] = [{ ...job(), site: { id: "s1", name: "Harbourview Towers" }, customer: { id: "c1", name: "Harbourview Strata" } }];
     const out = asStations(createElement(PipelineView, { cards: [], imports }));
@@ -191,11 +175,5 @@ describe("staff screens, item words, the last forms", () => {
     expect(out).toContain("Station type");
     expect(out).toContain("Choose a station type");
     noEquipment(out);
-  });
-
-  test("C2018: the Settings link to the task library names the item", async () => {
-    const { SettingsView } = await import("./settings/settings-view");
-    const out = asStations(createElement(SettingsView, { settings: null, role: "owner", action: async () => ({ status: "idle" as const }) } as unknown as Parameters<typeof SettingsView>[0]));
-    expect(out).toContain("Task library: station types and checklists");
   });
 });
