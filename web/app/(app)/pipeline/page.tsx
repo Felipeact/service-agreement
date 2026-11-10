@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ExpiringView } from "@/components/kanban/expiring-view";
 import { PipelineView } from "@/components/kanban/pipeline-view";
 import { canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";
+import { setupGate } from "@/domain/org-settings/setup";
 import type { MemberRole } from "@/application/ports";
 import { today as businessDay } from "@/lib/business-day";
 import { greetingLine } from "@/lib/greeting";
@@ -37,6 +39,13 @@ export async function PipelineForRequest({ view, role, email = "", followUps = f
 
 export default async function PipelinePage({ searchParams }: PageProps<"/pipeline">) {
   const { view, followups } = await searchParams;
-  const member = await (await getContainer()).currentMember();
+  const container = await getContainer();
+  const member = await container.currentMember();
+  // First-login setup (first-login-setup door 1): an owner or admin of a freshly provisioned org lands on /setup once.
+  // A read that fails must not take Pipeline down, so it counts as not pending.
+  if (member.status === "member") {
+    const pending = await container.setupPending(member.orgId).catch(() => false);
+    if (setupGate(member.role, pending) === "setup") redirect("/setup");
+  }
   return <PipelineForRequest view={view} role={member.status === "member" ? member.role : undefined} email={member.status === "member" ? member.email : ""} followUps={followups === "1"} />;
 }

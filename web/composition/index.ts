@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { CheckoutStarter } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
   makeDecidePortal,
   makeInviteMember,
@@ -75,6 +76,7 @@ import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supaba
 import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
 import { itemWordsReader } from "@/application/use-cases/item-words";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
+import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}`);
@@ -122,6 +124,7 @@ export async function getContainer() {
   const siteDirectory = supabaseSiteDirectory(supabase);
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
+  const setup = supabaseOrgSetup(supabase);
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -154,6 +157,10 @@ export async function getContainer() {
     siteRegister: sites.get,
     getOrgSettings: settings.get,
     getItemWords: itemWordsReader(settings.get),
+    setupPending: setup.isPending,
+    setupCatalog: setup.catalog,
+    saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),
+    skipSetup: (orgId: string) => setup.skip(orgId, systemClock.now()),
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
     contactForEdit: customers.contact,
     assetForEdit: sites.asset,

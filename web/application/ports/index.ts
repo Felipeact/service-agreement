@@ -11,6 +11,7 @@ import type {
 } from "@/domain/agreement";
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
+import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
@@ -302,6 +303,18 @@ export interface OrgSettingsStore {
   get(orgId: string): Promise<OrgSettings | null>;
   /** Overwrites the org's row. Nothing updated means RLS refused: `forbidden`. */
   save(orgId: string, value: OrgSettingsValue, at: Date): Promise<SaveSettingsResult>;
+}
+
+/** First-login setup (first-login-setup door 1): whether an org still has it to do, what its catalog holds, and the two ways to finish. */
+export interface OrgSetup {
+  /** `true` while `org_settings.setup_completed_at` is null; an org with no settings row has nothing to set up. Throws on a database error. */
+  isPending(orgId: string): Promise<boolean>;
+  /** The org's own types with the pack each came from, ordered by name (read under RLS). Throws on a database error. */
+  catalog(): Promise<SetupCatalogType[]>;
+  /** Updates the profile columns, then stamps `setup_completed_at` if it is still null. Nothing updated means RLS refused: `forbidden`. */
+  saveProfile(orgId: string, value: SetupProfileValue, at: Date): Promise<SaveSettingsResult>;
+  /** Stamps `setup_completed_at` if it is still null and changes nothing else. */
+  skip(orgId: string, at: Date): Promise<SaveSettingsResult>;
 }
 
 /**
