@@ -2,86 +2,91 @@
 
 **Verdict**: FAIL
 **Profile**: standard
-**Diff range**: a79cb83..HEAD (verified at cc8e11d)
-**Round**: 1 - full
+**Diff range**: a79cb83..HEAD (verified at 8a3d157)
+**Round**: 3 - scoped
 **Verifier**: independent sub-agent (author != verifier)
+
+The only remaining reason for FAIL is C2820 (live Playwright), which is NOT PROVEN, not failed. Every automated check is green and every injected fault is killed under the real vitest config.
+
+Scope of this round: the fix diff `f740a64..8a3d157` (two pure renames, 0 content lines: `page.test.tsx` -> `page.test.ts`, `setup-gate.test.tsx` -> `setup-gate.test.ts`) and every round 2 non-PASS item (C2800/C2801/C2806/C2807 page branches, M1, M2, Test policy "Entry point that decides nothing", the two Coverage members, C2820). The `cc8e11d..f740a64` fix was reviewed in round 2 and is `carried from f740a64`. Everything else is `carried from cc8e11d`.
 
 ## Binding sources
 
-None - the plan marks no binding source (profile `standard`; step 1 is a `ui` step). AGENTS..md "Web validation" is the basis of C2820 only.
+None - the plan marks no binding source. `carried from cc8e11d`.
 
 ## Checks
 
-Vitest proofs ran in one invocation over 8 files (67 passed, 0 failed, every named test listed individually in the output). SQL: `cd web && npm run test:db first_login_setup` -> `PASS first_login_setup`, 1 passed, 0 failed.
+verified at 8a3d157 (proofs re-run in full, one batched invocation):
+
+- `cd web && npx vitest run <the 9 files holding a C28xx test> --reporter=verbose` -> **9 files passed, 59 tests passed, 0 failed**. The two renamed files are discovered by name (`app/(app)/pipeline/setup-gate.test.ts` 7 tests, `app/setup/page.test.ts` 7 tests); no "No test files found". Each named test is listed individually in the verbose output (C2800 x7, C2801 x3, C2802 x4, C2805, C2806 x2, C2807 x8, C2808 x6, C2809 x2, C2810 x5, C2811 x7, C2812 x3, C2813, C2815 x3, C2816, C2817 x2, C2818, C2819 x2, C2821 x2).
+- Full suite `npx vitest run` in the scratch worktree at HEAD (baseline for the mutants): 217 files, 3944 tests, all passed.
+- `cd web && npm run test:db first_login_setup` -> `PASS first_login_setup`, 1 passed, 0 failed.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C2800 | owner/admin of pending org -> "setup" | vitest `-t C2800:` ran 3 tests (domain 1, adapter 2) | `domain/org-settings/setup.test.ts:7-8` - `expect(setupGate("owner", true)).toBe("setup")`, admin same | PASS (domain decision only; see Coverage for the Pipeline page) |
-| C2801 | estimator/viewer pending -> proceed | ran | `setup.test.ts:12-13` - `expect(setupGate("estimator", true)).toBe("proceed")`, viewer same | PASS |
-| C2802 | four roles not pending -> proceed | ran | `setup.test.ts:17` - `for (role of 4 roles) expect(setupGate(role, false)).toBe("proceed")` | PASS |
-| C2803 | provisioned org has null `setup_completed_at` | `test:db first_login_setup` exit 0 | `supabase/tests/first_login_setup.sql:41` - `(select setup_completed_at ... where org_id = v_org) is null` after a real `stripe_receive_event` | PASS |
-| C2804 | existing rows non-null; row without value gets near now() | same | `first_login_setup.sql:48` (`count(*) ... is not null) = 2`), `:52` (`between now() - interval '1 minute' and now() + interval '1 minute'`) | PASS |
-| C2805 | only Pipeline page redirects to /setup | ran | `app/setup/setup-wiring.test.ts:27` - `expect(hits).toEqual(["app/(app)/pipeline/page.tsx"])` | PASS (textual search; it proves the redirect exists in the file, not that it fires for the right case - see F3 survivor) |
-| C2806 | /setup, owner/admin, not pending -> /pipeline | ran | `setup.test.ts:23-24` - `toEqual({ to: "/pipeline" })` | PASS (decision function only; the page does not call it for this branch with real data) |
-| C2807 | estimator/viewer/no membership -> /pipeline; signed out -> /login; proxy sends signed-out to /login | ran (domain 1, action 1, proxy 2) | `setup.test.ts:28-31`; `proxy.setup.test.ts:30` - `expect(locationPath(response)).toBe("/login")` | PASS for the claim as written; note the page's own signed-out / no-membership branch is inline (`app/setup/page.tsx:14`) and is not what `setupEntry` tests exercise |
-| C2808 | form opens prefilled | ran | `components/setup/setup.test.ts:42-43,46-47` - `tag(markup,"legalName")` contains `value="Flow Plumbing Ltd."`, itemSingular `value="equipment"`; `:52` selected `BC` option | PASS |
-| C2809 | save updates exactly 7 columns + updated_at, stamps, redirects | ran (adapter + action) | `infrastructure/supabase/setup.test.ts:28-30` - exact sorted key list; `:32` - `updates[1].args[0]` equals `{ setup_completed_at: ... }`; `app/setup/actions.test.ts:47` - `rejects.toThrow("NEXT_REDIRECT /pipeline")` | PASS |
-| C2810 | invalid input -> all field errors, nothing stored/stamped | ran (domain 2, action 1) | `setup.test.ts:79,83` - `Object.keys(result.errors)` equals `[field]` for 6 cases, 3 together; `actions.test.ts:65,68-69` - three keys, `saveSetupProfile`/`skipSetup` `not.toHaveBeenCalled()` | PASS (the rendered field errors in `SetupView` are not asserted anywhere; that is outside the claim as written) |
-| C2811 | RLS refusal -> `forbidden`, no stamp, notice "You don't have permission to change this"; DB estimator update changes 0 rows | ran (adapter 2, action 4, SQL) | `setup.test.ts(infra):37-38` - `toEqual({ok:false,code:"forbidden"})`, 1 update; `actions.test.ts:76` - `status: "forbidden"`; `first_login_setup.sql:75` - `n = 0` | PASS on the status; **precision gap**: the notice text itself is asserted by no test (`components/setup/setup-view.tsx:23`; search `rg "permission to change this"` hits only that source line) |
-| C2812 | skip stamps only, then redirects | ran (adapter + action) | `infra setup.test.ts:54` - `toEqual({ setup_completed_at: ... })` with 1 update; `actions.test.ts:88-89` - `skipSetup` called with `"org-1"`, `saveSetupProfile` not called | PASS |
-| C2813 | stamp filters `is null`; DB keeps first value | ran (adapter + SQL) | `infra setup.test.ts:61` - `toContainEqual({... method:"is", args:["setup_completed_at", null]})`; `first_login_setup.sql:105` - `n = 0 and ... = v_first` | PASS |
-| C2814 | column type/nullable/default; owner stamps, viewer cannot | SQL | `first_login_setup.sql:59,61,63` (`'timestamp with time zone'`, `'YES'`, `'now()'`), `:79` (`viewer ... n = 0`), `:86` (`owner stamps, n = 1`) | PASS |
-| C2815 | groups ordered hvac, plumbing, electrical, added by you; counts in org's words | ran (3 tests) | `setup.test.ts:99-104` - `toEqual([["hvac","Heating and cooling","1 equipment type",["Boiler"]], ...[null,"Added by you",...]])`; `:109` - `"2 fixture types"` | PASS |
-| C2816 | catalog selects `pack, name`, ordered by name, no org filter | ran | `infra setup.test.ts:79-81` - `select args ["pack, name"]`, `order args ["name"]`, `filter(eq or in)).toHaveLength(0)` | PASS |
-| C2817 | empty -> "No types yet", task library, no draft control | ran (2 tests) | `components/setup/setup.test.ts:69-71` - contains `"No types yet"`, `"task library"`, `not.toMatch(/<button\|<a \|<input\|draft\|generate/i)` | PASS |
-| C2818 | review has no form control | ran | `components/setup/setup.test.ts:85` - `not.toMatch(/<(input\|select\|textarea\|button\|form)\b/)` | PASS |
-| C2819 | loading.tsx, error.tsx "Try again" wired to reset, page writes nothing | ran (2 tests) | `app/setup/setup-wiring.test.ts:35-36` - `toContain("Try again")`, `toMatch(/onClick=\{\(\) => reset\(\)\}/)`; `:41` - `not.toMatch(/saveSetupProfile\|skipSetup/)` | PASS (the "error state with a retry when a read fails" is by Next error boundary convention, asserted structurally only) |
-| C2820 | live Playwright at 375/768/1440, no horizontal scroll, controls >= 44x44, touch on select/Continue/Skip, console clean | not run by the author; not run here (the screen cannot be reached on the hosted project until the migration is applied, which needs the owner's go-ahead; running the dev server against the hosted database was forbidden) | none | **NOT PROVEN** - no located run exists |
-| C2821 | container exposes the setup store built on the request's client; both pages read it | ran (2 tests) | `composition/setup-wiring.test.ts:26,28` (`setupPending`, `setupCatalog` through the container); `:44` - Pipeline source `toMatch(/container\.setupPending\(/)`; `composition/index.ts` diff shows `supabaseOrgSetup(supabase)` on the same `supabase` client as `settings` | PASS |
-
-AC 20 loading/error and AC 19 (S4 sizes) beyond C2819 rest on C2820, which has no proof.
+| C2800 | owner/admin of pending org -> setup; Pipeline redirects them | domain, adapter and Pipeline page tests all ran | `domain/org-settings/setup.test.ts:7-8`; `app/(app)/pipeline/setup-gate.test.ts:29` (`C2800: a owner/admin of a pending org is redirected to /setup`), `:48` (failed read does not redirect) | PASS (M1 now killed) |
+| C2801 | estimator/viewer pending -> proceed | ran (domain + page) | `setup.test.ts:12-13`; `setup-gate.test.ts:35` | PASS |
+| C2802 | four roles not pending -> proceed | ran (domain + page) | `setup.test.ts:17`; `setup-gate.test.ts:41,55` | PASS |
+| C2803 | provisioned org has null `setup_completed_at` | `test:db first_login_setup` exit 0 | `supabase/tests/first_login_setup.sql:41` | PASS |
+| C2804 | backfill and default | same | `first_login_setup.sql:48,52` | PASS |
+| C2805 | only Pipeline redirects to /setup | ran | `app/setup/setup-wiring.test.ts:27`; the inverted-condition blind spot is covered by `setup-gate.test.ts` (M1 killed) | PASS |
+| C2806 | /setup owner/admin not pending -> /pipeline | ran (domain + page) | `setup.test.ts:23-24`; `app/setup/page.test.ts:53` | PASS |
+| C2807 | estimator/viewer/no membership -> /pipeline; signed out -> /login; proxy | ran (domain, page, action, proxy) | `setup.test.ts:28-31`; `page.test.ts:36,41,47`; `actions.test.ts` (`no_membership` -> /login); `proxy.setup.test.ts:30` | PASS (M2 now killed) |
+| C2808 | form opens prefilled; pending owner sees the screen | ran | `components/setup/setup.test.ts:42-52`; `page.test.ts:60,70` | PASS |
+| C2809 | save writes exact columns, stamps, redirects | ran | `infrastructure/supabase/setup.test.ts:28-32`; `actions.test.ts:47` | PASS |
+| C2810 | invalid input -> every field error together, nothing stored; errors render | ran | `setup.test.ts:79,83`; `actions.test.ts:65,68-69`; `components/setup/setup.test.ts` "field errors render under their fields" | PASS |
+| C2811 | RLS refusal -> forbidden, no stamp, notice; DB 0 rows | ran + SQL | `infra setup.test.ts:37-38`; `components/setup/setup.test.ts` permission notice; `first_login_setup.sql:75` | PASS |
+| C2812 | skip stamps only | ran | `infra setup.test.ts:54`; `actions.test.ts:88-89` | PASS |
+| C2813 | stamp filters is null; DB keeps first | ran + SQL | `infra setup.test.ts:61`; `first_login_setup.sql:105` | PASS |
+| C2814 | column shape and privileges | SQL | `first_login_setup.sql:59,61,63,79,86` | PASS |
+| C2815 | catalog groups and counts | ran | `setup.test.ts:99-104,109` | PASS |
+| C2816 | catalog read shape | ran | `infra setup.test.ts:79-81` | PASS |
+| C2817 | empty catalog text | ran | `components/setup/setup.test.ts:69-71` | PASS |
+| C2818 | no form control in review | ran | `components/setup/setup.test.ts:85` | PASS |
+| C2819 | loading and error states, page writes nothing | ran | `setup-wiring.test.ts:35-36,41` | PASS |
+| C2820 | live Playwright at 375/768/1440 | NOT RUN. The migration is not applied and applying it needs the owner's go-ahead; by instruction no migration applied and no dev server started against the hosted DB. No run is invented. | none | **NOT PROVEN** |
+| C2821 | container wiring | ran | `composition/setup-wiring.test.ts:26,28,44` | PASS |
 
 ## Coverage
 
+verified at 8a3d157 for the first two rows; the rest `carried from f740a64` / `cc8e11d`.
+
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| gate decision role x pending (8) | plan AC 1-3, `setupGate` (4 roles x 2) | owner/admin pending C2800 (`setup.test.ts:7-8`); estimator/viewer pending C2801 (`:12-13`); all four not pending C2802 (`:17`) | - |
-| `/setup` entry decision (5) | plan AC 7, 8 and the Flow, `setupEntry` + `app/setup/page.tsx:14-18` | render C2808 (`setup.test.ts:35-36`); not pending C2806 (`:23-24`); estimator/viewer/no membership C2807 (`:28-30`); signed out C2807 (`:31`) - all at the `setupEntry` function. The page never feeds `signed_out` or `no_membership` into `setupEntry` (it branches inline at `page.tsx:14` and passes only `member`), so the page's own five outcomes have no boundary test at all | page entry decision: no test drives `SetupForRequest` (redirects to /login, /pipeline, render, `!settings` -> /pipeline) |
-| `GET /setup` statuses (3) | plan Surface | 200 C2808 (markup only); 303 /login C2807 (proxy for the signed-out cookie-less case); 303 /pipeline C2806/C2807 (function only) | the page's status behaviour, same as above |
-| `POST /setup` statuses (3) | plan Surface | 303 save C2809 `actions.test.ts:47`; 303 skip C2812 `:88`; errors/notice C2810 `:63`, C2811 `:76` | - (the permission notice text is not asserted, see C2811) |
-| `GET /pipeline` new 303 to /setup (1) | plan Surface | C2800 proves `setupGate` only; the Pipeline page's own branch (`app/(app)/pipeline/page.tsx` `if (setupGate(member.role, pending) === "setup") redirect("/setup")`) is asserted only by text search (C2805, C2821) | **yes** - injected fault F3 (condition inverted to `!== "setup"`) left C2805, C2819, C2821 and the action tests green; no test would catch Pipeline redirecting the wrong people, or the `.catch(() => false)` on a failed read |
-| `POST /setup` intents (2) | plan Surface | save C2809; skip C2812 | - |
-| invalid input cases (6) | checks C2810, plan AC 12 | all six in `setup.test.ts:68-73` with `expect(...).toEqual([field])` | - |
-| profile columns written (7) | plan AC 10/11 | exact key set `infra setup.test.ts:28-30` | - |
-| `setup_completed_at` stampers (3) | plan door 1 | provision null C2803; backfill/default C2804; keep-first C2813 | - |
-| catalog groups (4) | plan AC 16 | `setup.test.ts:99-104` all four in order | - |
-| `org_settings` relation (1) | plan Relations | column and policy C2814 | - |
-| `asset_types` relation (1) | plan Relations | read C2816 | - |
-| startup config: container assembly (1 place) | read `web/composition/index.ts` directly: `const setup = supabaseOrgSetup(supabase)` beside `const settings = supabaseOrgSettingsStore(supabase)`, exposed as `setupPending`, `setupCatalog`, `saveSetupProfile`, `skipSetup` | C2821 imports the real `getContainer` (`composition/setup-wiring.test.ts:23`), store module mocked | - |
-| roles for `POST /setup` (4: owner, admin, estimator, viewer) (not in the author's table; from plan AC 8, 13 and `actions.ts`) | `actions.ts:28` (`setupGate(member.role, true)`) | estimator and viewer `actions.test.ts:106-111`; owner `:47`; admin has no proof of its own (same branch as owner) | none material; `no_membership` -> `/login` in `actions.ts:27` has no test (only `signed_out` at `actions.test.ts:100`) |
-| acceptance criteria with no check at all | plan AC 1-20 against `checks.md` | AC 19 -> C2820 (unproven above); AC 20 error with retry -> C2819 (structural only) | AC 19, via C2820 |
+| `/setup` entry decision (5) | plan AC 7, 8; `app/setup/page.tsx:14-18` | signed out, no membership, estimator/viewer, not pending, render, no settings row -> `app/setup/page.test.ts:36-70`, discovered and passing; M2 dies | - |
+| `GET /pipeline` new 303 to /setup (1) | plan Surface; `app/(app)/pipeline/page.tsx:48` | owner, admin, estimator, viewer, done, failed read, signed out -> `setup-gate.test.ts:29-55`, discovered and passing; M1 dies | - |
+| gate decision role x pending (8) | `setupGate` | `setup.test.ts:7-17` | - |
+| `POST /setup` statuses and roles (3 + 4) | `actions.ts` | save, skip, errors, notices, `no_membership` | - |
+| `GET /setup` statuses (3) | plan Surface | 200 via page test + C2808; /login via proxy and page test; /pipeline via page test | page rendering at real widths is C2820 |
+| remaining sets (invalid cases 6, columns 7, stampers 3, catalog groups 4, relations 2, container 1, intents 2) | `carried from cc8e11d` | unchanged by both fixes; the same tests re-ran green at 8a3d157 | - |
+| acceptance criteria with no check | plan AC 1-20 | AC 19 -> C2820 (not proven) | AC 19 |
 
 ## Test policy rows
 
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides, not reached across a boundary (domain) | `domain/org-settings/setup.ts` | one at its own layer; one asserted case per decision-table row | yes (8 gate rows, 5 entry rows, 6 invalid cases, catalog groups all asserted) |
-| Entry point that decides nothing (Server Action, page) | `app/setup/actions.ts`, `app/setup/page.tsx`, `app/(app)/pipeline/page.tsx` | one at the boundary: accepted input, each rejected input, each error path | **no** - `actions.ts` is covered except its `no_membership` -> `/login` path; `app/setup/page.tsx` and the Pipeline page have no boundary test, only regex over their source text, and the page's redirect outcomes (signed out, no membership, not pending, missing settings row, read failure) are unasserted |
-| Adapter | `infrastructure/supabase/setup.ts` | one against the client double; payload keys, filters, each error reply | yes (keys C2809, filters C2813/C2816, forbidden/unavailable C2811, read error C2800) |
-| Instrumentation, pass-throughs | `composition/index.ts` additions, `components/setup/state.ts`, `error.tsx`, `loading.tsx` | none of its own | yes (C2821, C2819) |
+| Decides, not reached across a boundary (domain) | `domain/org-settings/setup.ts` | one at its layer, one case per row | yes - re-run green at 8a3d157 |
+| Entry point that decides nothing (Server Action, page) | `app/setup/actions.ts`, `app/setup/page.tsx`, `app/(app)/pipeline/page.tsx` | accepted input, each rejected input, each error path at the boundary | **yes** - `page.test.ts` and `setup-gate.test.ts` are now discovered under `include: ["**/*.test.ts"]`, run in `npm test`, and kill the mutants on both pages; `actions.ts` covered as in round 2 |
+| Adapter | `infrastructure/supabase/setup.ts` | one against the client double | yes - re-run green, and M5 killed |
+| Instrumentation, pass-throughs | composition additions, `state.ts`, `error.tsx`, `loading.tsx` | none of its own | yes - `carried from cc8e11d` |
 
 ## Faults injected
 
-Scratch worktree of cc8e11d (node_modules junctioned, .env.local copied), removed afterwards. Real tree `git status --porcelain` was empty before and after.
+verified at 8a3d157. Scratch `git worktree` at HEAD (`../sa-scratch-r3`), `node_modules` junctioned, `web/.env.local` copied, no config change; the repo's real `vitest.config.mts` was in force. Real tree `git status --porcelain` before: ` M .specs/features/first-login-setup/verification.md`; after: identical. Worktree removed and pruned; the real `node_modules` is intact (junction removed with rmdir). Baseline in the worktree: 217 files, 3944 tests, all passed.
 
-| Mutation | Location | Killed |
+| Mutation | Location | Result under the real config |
 | --- | --- | --- |
-| `setupGate` drops the pending condition (`return MANAGERS.includes(role)`) | `web/domain/org-settings/setup.ts` (setupGate) | yes - C2802 fails |
-| stamp loses `.is("setup_completed_at", null)` | `web/infrastructure/supabase/setup.ts` (stamp) | yes - C2813 fails |
-| `validateSetupProfile` province-required rule disabled (`if (false)`) | `web/domain/org-settings/setup.ts` | yes - C2810 fails in the domain and the action test |
-| `provision_workspace` inserts `now()` instead of explicit `null` | `supabase/migrations/20261110110000_first_login_setup.sql:83` | yes - SQL recipe `FAIL ... C2803 pending` |
-| Pipeline page redirect condition inverted (`=== "setup"` -> `!== "setup"`, sending everyone except pending managers to /setup) | `web/app/(app)/pipeline/page.tsx` | **no** - C2805, C2819, C2821 and the action tests all stayed green (5 passed, 0 failed) |
+| M1: Pipeline redirect inverted (`=== "setup"` -> `!== "setup"`) | `web/app/(app)/pipeline/page.tsx:48` | **killed** - 6 failed in `setup-gate.test.ts` (C2800 owner and admin, C2800 failed read, C2801 estimator and viewer, C2802 done) |
+| M2: `SetupForRequest` targets swapped (`"signed_out" ? "/login" : "/pipeline"` -> `? "/pipeline" : "/login"`) | `web/app/setup/page.tsx:15` | **killed** - 2 failed in `page.test.ts` (C2807 signed out, C2807 no membership) |
+| M5 (my choice): stamp filter flipped (`.is("setup_completed_at", null)` -> `.not("setup_completed_at", "is", null)`) | `web/infrastructure/supabase/setup.ts:16` | **killed** - 3 failed (C2809, C2812, C2813) |
+
+Round 2 mutants M3 (notice text) and M4 (field errors detached) and the round 1 mutants are `carried from f740a64` / `cc8e11d` (killed; their tests re-ran green at 8a3d157, and the fix diff touches no source).
 
 ## Gate
 
-`cd web && npx vitest run <8 files>` - 67 passed, 0 failed; `npm run test:db first_login_setup` - 1 passed, 0 failed. `rls_isolation` and `customer_portal` not run (pre-existing failures, not this feature's checks).
+verified at 8a3d157: 9 files / 59 tests / 0 failed under the real config; full suite 217 files / 3944 tests green; `npm run test:db first_login_setup` PASS 1/0. M1, M2 and M5 die. C2820 is NOT PROVEN (live run needs the migration applied with the owner's go-ahead). Per the verification rule an unproven check keeps the verdict at FAIL.
+
+## Ranked gaps
+
+1. C2820 / AC 19 NOT PROVEN. Needs the owner's go-ahead to apply the `org_settings.setup_completed_at` migration, then the Playwright pass on `/setup` at 375, 768 and 1440 px (touch on the two smaller, province select, Continue, Skip, console clean) in one signed-in context. Once recorded by the author, the feature is otherwise complete.
+2. C2805 remains a textual search; no longer a gap, since `setup-gate.test.ts` proves the condition's direction.
