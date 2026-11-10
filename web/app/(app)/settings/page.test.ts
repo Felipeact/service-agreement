@@ -3,10 +3,10 @@ import type { CurrentMember } from "@/application/ports";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const getOrgSettings = vi.fn(async () => ({ legalName: "Org" }));
-const billingSection = vi.fn();
+const billingLink = vi.fn();
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, getOrgSettings, billingSection }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, getOrgSettings, billingLink }) }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     redirect(to);
@@ -15,29 +15,33 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { default: SettingsPage } = await import("./page");
-const { openBillingPortalAction } = await import("./billing-actions");
 const { SettingsView } = await import("@/components/settings/settings-view");
 
 beforeEach(() => {
   vi.clearAllMocks();
   currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "o@example.com", orgId: "org-1", orgName: "Org", role: "admin" });
-  billingSection.mockResolvedValue({ kind: "ready", planName: "Team" });
+  billingLink.mockResolvedValue(true);
 });
 
 describe("the Settings page", () => {
-  test("C2916: it asks the container for the section of this member's org and role and hands it, with the portal action, to SettingsView", async () => {
+  test("C3128: it asks the container whether to show the Billing link for this member's org and role, once, and hands the answer to SettingsView", async () => {
     const element = (await SettingsPage()) as { type: unknown; props: Record<string, unknown> };
-    expect(billingSection).toHaveBeenCalledTimes(1);
-    expect(billingSection).toHaveBeenCalledWith("org-1", "admin");
+    expect(billingLink).toHaveBeenCalledTimes(1);
+    expect(billingLink).toHaveBeenCalledWith("org-1", "admin");
     expect(element.type).toBe(SettingsView);
-    expect(element.props.billing).toEqual({ kind: "ready", planName: "Team" });
-    expect(element.props.billingAction).toBe(openBillingPortalAction);
+    expect(element.props.billingLink).toBe(true);
     expect(element.props.role).toBe("admin");
   });
 
-  test("C2916: a signed-out visitor goes to /login and no billing read happens", async () => {
+  test("C3128: an answer of false is handed on as false", async () => {
+    billingLink.mockResolvedValue(false);
+    const element = (await SettingsPage()) as { props: Record<string, unknown> };
+    expect(element.props.billingLink).toBe(false);
+  });
+
+  test("C3128: a signed-out visitor goes to /login and no billing read happens", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(SettingsPage()).rejects.toThrow("NEXT_REDIRECT /login");
-    expect(billingSection).not.toHaveBeenCalled();
+    expect(billingLink).not.toHaveBeenCalled();
   });
 });

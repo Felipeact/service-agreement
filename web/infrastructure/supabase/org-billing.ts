@@ -9,12 +9,12 @@ type Client = SupabaseClient<Database>;
 export function supabaseOrgBilling(client: Client): OrgBilling {
   return {
     async get(orgId) {
-      const { data, error } = await client.from("org_billing").select("stripe_customer_id, plan").eq("org_id", orgId).maybeSingle();
+      const { data, error } = await client.from("org_billing").select("stripe_customer_id, stripe_subscription_id, plan").eq("org_id", orgId).maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
       if (!data) return null;
       const plan = PLAN_KEYS.find((key): key is PlanKey => key === data.plan);
       if (!plan) throw new Error("Supabase error: org_billing holds an unknown plan");
-      return { customerId: data.stripe_customer_id, plan };
+      return { customerId: data.stripe_customer_id, subscriptionId: data.stripe_subscription_id, plan };
     },
   };
 }

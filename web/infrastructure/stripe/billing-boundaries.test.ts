@@ -29,10 +29,10 @@ describe("where the Stripe secrets live", () => {
     expect(adapter.filter((file) => read(file).includes("process.env")).map(rel)).toEqual([]);
   });
 
-  test("C2511: there is no stripe dependency and no import of it", () => {
+  test("C2511: there is no stripe server package and no import of it (amended 2026-11-10: the two browser packages are allowed, see C3132)", () => {
     const manifest = JSON.parse(read(path.join(WEB, "package.json"))) as { dependencies?: object; devDependencies?: object };
-    expect(Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).filter((name) => /^(stripe|@stripe\/)/.test(name))).toEqual([]);
-    const importing = sources().filter((file) => /from\s+["'](stripe|@stripe\/[^"']*)["']|require\(["']stripe["']\)/.test(read(file)));
+    expect(Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).filter((name) => name === "stripe")).toEqual([]);
+    const importing = sources().filter((file) => /from\s+["']stripe["']|require\(["']stripe["']\)/.test(read(file)));
     expect(importing.map(rel)).toEqual([]);
   });
 
@@ -45,5 +45,47 @@ describe("where the Stripe secrets live", () => {
     expect(example).toContain("stripe_webhook_secret");
     expect(example).not.toContain("STRIPE_WEBHOOK_SECRET");
     expect(sources().filter((file) => read(file).includes("STRIPE_WEBHOOK_SECRET")).map(rel)).toEqual([]);
+  });
+});
+
+describe("the in-app billing page's dependency and keys (billing-page door 1)", () => {
+  test("C3131: the publishable key is read only in composition, and the secret key still only there", () => {
+    const files = sources().filter((file) => !isTest(file));
+    expect(files.filter((file) => !rel(file).startsWith("composition/") && read(file).includes("STRIPE_PUBLISHABLE_KEY")).map(rel)).toEqual([]);
+    expect(files.filter((file) => !rel(file).startsWith("composition/") && read(file).includes("STRIPE_SECRET_KEY")).map(rel)).toEqual([]);
+    expect(files.filter((file) => read(file).includes("NEXT_PUBLIC_STRIPE")).map(rel)).toEqual([]);
+    expect(files.some((file) => rel(file).startsWith("composition/") && read(file).includes("STRIPE_PUBLISHABLE_KEY"))).toBe(true);
+  });
+
+  test("C3132: the Stripe packages are exactly the two browser ones, imported only under components/billing", () => {
+    const manifest = JSON.parse(read(path.join(WEB, "package.json"))) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    const stripe = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).filter((name) => /^(stripe|@stripe\/)/.test(name));
+    expect(stripe.sort()).toEqual(["@stripe/react-stripe-js", "@stripe/stripe-js"]);
+    const importing = sources().filter((file) => /from\s+["']@stripe\//.test(read(file)));
+    expect(importing.length).toBeGreaterThan(0);
+    expect(importing.filter((file) => !rel(file).startsWith("components/billing/")).map(rel)).toEqual([]);
+  });
+
+  test("C3133: .env.example documents the publishable key beside the secret key", () => {
+    const example = read(path.join(WEB, ".env.example"));
+    expect(example).toMatch(/^STRIPE_PUBLISHABLE_KEY=/m);
+    expect(example).toContain("pk_");
+    expect(example).toMatch(/publishable[\s\S]*browser|browser[\s\S]*publishable/i);
+    expect(example).toMatch(/^STRIPE_SECRET_KEY=/m);
+    expect(example).toContain("APP_BASE_URL");
+    expect(example).toContain("stripe_webhook_secret");
+  });
+
+  test("C3134: no input of ours collects a card number, expiry or CVC, and the card field is Stripe's Payment Element", () => {
+    const screens = sources().filter((file) => /^(app|components)\//.test(rel(file)) && !isTest(file));
+    const own = /(name|id|htmlFor|autoComplete)=["'](cardNumber|card_number|cc-number|cc-csc|cc-exp|cvc|cvv|cardExpiry|expiry)["']/i;
+    expect(screens.filter((file) => own.test(read(file))).map(rel)).toEqual([]);
+    expect(screens.some((file) => rel(file).startsWith("components/billing/") && read(file).includes("PaymentElement"))).toBe(true);
+  });
+
+  test("C3137: the billing components read no environment and hold no secret", () => {
+    const files = sources().filter((file) => rel(file).startsWith("components/billing/") && !isTest(file));
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.filter((file) => /process\.env|STRIPE_SECRET_KEY|sk_(test|live)_/.test(read(file))).map(rel)).toEqual([]);
   });
 });

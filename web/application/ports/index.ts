@@ -20,6 +20,7 @@ import type { DomainEvent } from "@/domain/transition";
 import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
 import type { CheckoutSelection, PlanKey } from "@/domain/billing";
+import type { BillingOverview } from "@/domain/billing/overview";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -1167,17 +1168,28 @@ export interface CheckoutStarter {
   start(selection: CheckoutSelection): Promise<CheckoutResult>;
 }
 
-/** What an org bought, as its managers read it (billing-portal door 1). */
-export type OrgBillingValue = { customerId: string; plan: PlanKey };
+/** What an org bought, as its managers read it (billing-portal door 1, extended by billing-page with the subscription id). */
+export type OrgBillingValue = { customerId: string; subscriptionId: string; plan: PlanKey };
 
 export interface OrgBilling {
   /** The org's subscription, read as the signed-in member under RLS; `null` when it has none. Throws on a database error. */
   get(orgId: string): Promise<OrgBillingValue | null>;
 }
 
-export type BillingPortalResult = { ok: true; url: string } | { ok: false; code: "not_configured" | "unavailable" };
+/** The two Stripe ids every billing call needs; they come from `org_billing`, never from the browser. */
+export type StripeIds = { customerId: string; subscriptionId: string };
 
-/** Makes a one-time link to Stripe's hosted page where a customer manages their own subscription (billing-portal door 2). */
-export interface BillingPortal {
-  open(input: { customerId: string }): Promise<BillingPortalResult>;
+export type GatewayFailure = "not_configured" | "unavailable";
+
+/** Everything the in-app billing page reads from or writes to Stripe, behind one port (billing-page door 2). */
+export interface BillingGateway {
+  overview(ids: StripeIds): Promise<{ ok: true; overview: BillingOverview } | { ok: false; code: GatewayFailure }>;
+  /** A SetupIntent for the customer; the client secret lets Stripe's embedded field collect the card. */
+  startCardUpdate(ids: StripeIds): Promise<{ ok: true; clientSecret: string } | { ok: false; code: GatewayFailure }>;
+  /** Reads the SetupIntent itself, requires it succeeded for this customer, then makes its card the default (door 3). */
+  finishCardUpdate(ids: StripeIds, setupIntentId: string): Promise<{ ok: true } | { ok: false; code: GatewayFailure | "mismatch" }>;
+  /** Ends the subscription at the end of the current period; repeating it changes nothing. */
+  cancel(ids: StripeIds): Promise<{ ok: true } | { ok: false; code: GatewayFailure }>;
+  /** Clears an end set by `cancel`; repeating it changes nothing. */
+  resume(ids: StripeIds): Promise<{ ok: true } | { ok: false; code: GatewayFailure }>;
 }

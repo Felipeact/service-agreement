@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { BillingPortal, CheckoutStarter } from "@/application/ports";
+import type { BillingGateway, CheckoutStarter } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
@@ -21,8 +21,8 @@ import {
   makeSendAgreement,
   makeSendForSignature,
   makeStartTrial,
-  makeBillingSection,
-  makeOpenBillingPortal,
+  makeBilling,
+  makeBillingEntry,
   makeTransitionAgreement,
   makeTransitionContract,
   makeViewPortal,
@@ -31,7 +31,7 @@ import {
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
-import { stripeBillingPortal } from "@/infrastructure/stripe/billing-portal";
+import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
@@ -129,14 +129,25 @@ export async function getContainer() {
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
   const setup = supabaseOrgSetup(supabase);
-  // The portal needs both values (billing-portal AC 9); `STRIPE_SECRET_KEY` is read only in this file. Without them the
-  // section says billing is not available and opening answers `not_configured` with no request.
+  // The billing page needs both values (billing-page AC 8); `STRIPE_SECRET_KEY` is read only in this file. Without them the page
+  // says billing is not available and every action answers `not_configured` with no request. The publishable key is safe for the
+  // browser: it is read here at request time and handed to the card field as a prop, so no rebuild is needed per environment.
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const stripeBase = process.env.APP_BASE_URL;
-  const billingConfigured = Boolean(stripeKey && stripeBase);
+  const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || null;
   const orgBilling = supabaseOrgBilling(supabase);
-  const billingPortal: BillingPortal =
-    stripeKey && stripeBase ? stripeBillingPortal({ secretKey: stripeKey, appBaseUrl: stripeBase }) : { open: async () => ({ ok: false, code: "not_configured" }) };
+  const notConfigured = { ok: false, code: "not_configured" } as const;
+  const billingGateway: BillingGateway =
+    stripeKey && stripeBase
+      ? stripeBillingGateway({ secretKey: stripeKey })
+      : {
+          overview: async () => notConfigured,
+          startCardUpdate: async () => notConfigured,
+          finishCardUpdate: async () => notConfigured,
+          cancel: async () => notConfigured,
+          resume: async () => notConfigured,
+        };
+  const billing = makeBilling(orgBilling, billingGateway);
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -169,8 +180,13 @@ export async function getContainer() {
     siteRegister: sites.get,
     getOrgSettings: settings.get,
     getItemWords: itemWordsReader(settings.get),
-    billingSection: makeBillingSection(orgBilling, billingConfigured),
-    openBillingPortal: makeOpenBillingPortal(orgBilling, billingPortal),
+    billingLink: makeBillingEntry(orgBilling),
+    loadBilling: billing.load,
+    startCardUpdate: billing.startCardUpdate,
+    finishCardUpdate: billing.finishCardUpdate,
+    cancelSubscription: billing.cancel,
+    resumeSubscription: billing.resume,
+    stripePublishableKey,
     setupPending: setup.isPending,
     setupCatalog: setup.catalog,
     saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),

@@ -20,7 +20,7 @@ type SettingsFieldsProps = {
   readOnly: boolean;
   /** The form action; absent in tests that only render markup. */
   action?: (formData: FormData) => void;
-  /** The page shows a Billing section, so the menu lists it under Members. */
+  /** The org has a subscription the member may manage, so the menu lists Billing under Members. */
   billingNav?: boolean;
 };
 
@@ -86,7 +86,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
     clickedAt.current = event.timeStamp;
     setActive(id);
   };
-  const sectionIds = billingNav ? [...SECTIONS.map((section) => section.id), "billing"] : SECTIONS.map((section) => section.id);
+  const sectionIds: string[] = SECTIONS.map((section) => section.id);
 
   // The menu marks the section in view; a click marks it at once. Members is another page, so it is never marked here.
   useEffect(() => {
@@ -107,7 +107,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
     }
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billingNav]);
+  }, []);
 
   const [brand, setBrand] = useState({ name: values.legalName, accent: values.accentColor, address: values.address, phone: values.phone });
 
@@ -134,9 +134,10 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
           <Icon name="chevron" className="size-3.5" />
         </Link>
         {billingNav && (
-          <a href="#billing" onClick={(event) => choose("billing", event)} className={menuClass(active === "billing")} aria-current={active === "billing" ? "location" : undefined}>
+          <Link href="/settings/billing" className={`justify-between ${menuClass(false)}`}>
             Billing
-          </a>
+            <Icon name="chevron" className="size-3.5" />
+          </Link>
         )}
       </nav>
 

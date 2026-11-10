@@ -4,8 +4,6 @@ import { useActionState } from "react";
 import type { MemberRole, OrgSettings } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import type { BillingSectionView } from "@/domain/billing/portal";
-import { BillingSection, type BillingFormState } from "./billing-section";
 import { SettingsFields } from "./settings-fields";
 import { canEditSettings, toInput, type SettingsFormState } from "./state";
 
@@ -14,9 +12,8 @@ type SettingsViewProps = {
   settings: OrgSettings | null;
   role: MemberRole;
   action: (state: SettingsFormState, formData: FormData) => Promise<SettingsFormState>;
-  /** The Billing section; left out, none is shown (billing-portal). */
-  billing?: BillingSectionView;
-  billingAction?: (state: BillingFormState) => Promise<BillingFormState>;
+  /** The org has a subscription this member may manage: the menu lists Billing under Members (billing-page AC 25). */
+  billingLink?: boolean;
 };
 
 const IDLE: SettingsFormState = { status: "idle" };
@@ -29,22 +26,13 @@ function SettingsForm({ settings, role, action, billingNav }: SettingsViewProps 
 
 /** The Settings page body. */
 export function SettingsView(props: SettingsViewProps) {
-  const billingShown = props.billing !== undefined && props.billing.kind !== "hidden" && props.billingAction !== undefined && props.settings !== null;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
       {props.settings ? (
-        <SettingsForm {...props} settings={props.settings} billingNav={billingShown} />
+        <SettingsForm {...props} settings={props.settings} billingNav={props.billingLink === true} />
       ) : (
         <EmptyPanel title="Company settings have not been set up for this workspace." />
-      )}
-      {billingShown && props.billing && props.billingAction && (
-        // Lines up with the form column: the menu is 180 px wide with a 32 px gap.
-        <div className="lg:pl-[212px]">
-          <div className="max-w-3xl">
-            <BillingSection view={props.billing} action={props.billingAction} />
-          </div>
-        </div>
       )}
     </div>
   );
