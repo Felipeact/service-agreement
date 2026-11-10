@@ -27,6 +27,7 @@ beforeEach(() => {
 describe("the Settings page", () => {
   test("C2916: it asks the container for the section of this member's org and role and hands it, with the portal action, to SettingsView", async () => {
     const element = (await SettingsPage()) as { type: unknown; props: Record<string, unknown> };
+    expect(billingSection).toHaveBeenCalledTimes(1);
     expect(billingSection).toHaveBeenCalledWith("org-1", "admin");
     expect(element.type).toBe(SettingsView);
     expect(element.props.billing).toEqual({ kind: "ready", planName: "Team" });
