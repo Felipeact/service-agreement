@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { CheckoutStarter } from "@/application/ports";
+import type { BillingPortal, CheckoutStarter } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
@@ -21,6 +21,8 @@ import {
   makeSendAgreement,
   makeSendForSignature,
   makeStartTrial,
+  makeBillingSection,
+  makeOpenBillingPortal,
   makeTransitionAgreement,
   makeTransitionContract,
   makeViewPortal,
@@ -29,6 +31,8 @@ import {
 } from "@/application/use-cases";
 import { systemClock } from "@/infrastructure/clock";
 import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
+import { stripeBillingPortal } from "@/infrastructure/stripe/billing-portal";
+import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
@@ -125,6 +129,14 @@ export async function getContainer() {
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
   const setup = supabaseOrgSetup(supabase);
+  // The portal needs both values (billing-portal AC 9); `STRIPE_SECRET_KEY` is read only in this file. Without them the
+  // section says billing is not available and opening answers `not_configured` with no request.
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const stripeBase = process.env.APP_BASE_URL;
+  const billingConfigured = Boolean(stripeKey && stripeBase);
+  const orgBilling = supabaseOrgBilling(supabase);
+  const billingPortal: BillingPortal =
+    stripeKey && stripeBase ? stripeBillingPortal({ secretKey: stripeKey, appBaseUrl: stripeBase }) : { open: async () => ({ ok: false, code: "not_configured" }) };
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -157,6 +169,8 @@ export async function getContainer() {
     siteRegister: sites.get,
     getOrgSettings: settings.get,
     getItemWords: itemWordsReader(settings.get),
+    billingSection: makeBillingSection(orgBilling, billingConfigured),
+    openBillingPortal: makeOpenBillingPortal(orgBilling, billingPortal),
     setupPending: setup.isPending,
     setupCatalog: setup.catalog,
     saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),

@@ -70,6 +70,7 @@ export {
 } from "./portal";
 export { makeNotify, type NotifyResult } from "./notify";
 export { makeStartTrial, type StartTrialInput, type StartTrialOutcome } from "./start-trial";
+export { makeBillingSection, makeOpenBillingPortal, type OpenBillingPortalResult } from "./billing-portal";
 export { makeInviteMember, type InviteOutcome, type InviteState } from "./invite-member";
 export { makeReceiveSignatureEvent } from "./signature-webhook";
 export { makeReceiveStripeEvent } from "./stripe-webhook";

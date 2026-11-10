@@ -19,7 +19,7 @@ import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
 import type { DomainEvent } from "@/domain/transition";
 import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
-import type { CheckoutSelection } from "@/domain/billing";
+import type { CheckoutSelection, PlanKey } from "@/domain/billing";
 
 /** Why a commit wrote nothing. Anything else is unexpected and thrown by the adapter. */
 export type CommitFailure = "not_found" | "conflict" | "forbidden";
@@ -1165,4 +1165,19 @@ export type CheckoutResult = { ok: true; url: string } | { ok: false; code: "not
 /** Begins a trial for a validated selection. The Stripe adapter (billing-checkout) is its first real implementation. */
 export interface CheckoutStarter {
   start(selection: CheckoutSelection): Promise<CheckoutResult>;
+}
+
+/** What an org bought, as its managers read it (billing-portal door 1). */
+export type OrgBillingValue = { customerId: string; plan: PlanKey };
+
+export interface OrgBilling {
+  /** The org's subscription, read as the signed-in member under RLS; `null` when it has none. Throws on a database error. */
+  get(orgId: string): Promise<OrgBillingValue | null>;
+}
+
+export type BillingPortalResult = { ok: true; url: string } | { ok: false; code: "not_configured" | "unavailable" };
+
+/** Makes a one-time link to Stripe's hosted page where a customer manages their own subscription (billing-portal door 2). */
+export interface BillingPortal {
+  open(input: { customerId: string }): Promise<BillingPortalResult>;
 }

@@ -7,6 +7,8 @@ import { useItemWords } from "@/components/shell/item-words";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { itemText } from "@/domain/org-settings";
+import type { BillingSectionView } from "@/domain/billing/portal";
+import { BillingSection, type BillingFormState } from "./billing-section";
 import { SettingsFields } from "./settings-fields";
 import { canEditSettings, toInput, type SettingsFormState } from "./state";
 
@@ -15,6 +17,9 @@ type SettingsViewProps = {
   settings: OrgSettings | null;
   role: MemberRole;
   action: (state: SettingsFormState, formData: FormData) => Promise<SettingsFormState>;
+  /** The Billing section; left out, none is shown (billing-portal). */
+  billing?: BillingSectionView;
+  billingAction?: (state: BillingFormState) => Promise<BillingFormState>;
 };
 
 const IDLE: SettingsFormState = { status: "idle" };
@@ -39,6 +44,7 @@ export function SettingsView(props: SettingsViewProps) {
       ) : (
         <EmptyPanel title="Company settings have not been set up for this workspace." />
       )}
+      {props.billing && props.billingAction && <BillingSection view={props.billing} action={props.billingAction} />}
     </div>
   );
 }
