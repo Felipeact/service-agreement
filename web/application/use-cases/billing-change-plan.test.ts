@@ -93,8 +93,9 @@ describe("changing the plan", () => {
   });
 
   test.each(["forbidden", "not_found", "unavailable"] as const)("C3209: a recording failure (%s) after Stripe changed still answers ok and the use case logs nothing itself", async (code) => {
-    const { billing } = setup({ recorder: async () => ({ ok: false as const, code }) });
+    const { billing, record } = setup({ recorder: async () => ({ ok: false as const, code }) });
     expect(await billing.changePlan(member("owner"), "team")).toEqual({ ok: true });
+    expect(record).toHaveBeenCalledTimes(1);
     expect(errorLog).not.toHaveBeenCalled();
   });
 

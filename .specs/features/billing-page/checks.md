@@ -50,11 +50,11 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -
 Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3109:"`
 
 **C3110** - The page for an owner or admin with a usable overview renders; with no `org_billing` row it says "This workspace has no subscription" and no actions; with Stripe not configured it says "Billing isn't available yet" and no Stripe call was made; with an error it says "We couldn't load billing. Try again." with a retry control (AC 7, AC 8, AC 9)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/page.test.ts" -t "C3110:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/billing/page.test.ts" -t "C3110:"`
 Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C3110:"`
 
 **C3111** - Opening the page as an estimator or viewer answers `303` to `/settings`, as a signed-out visitor or a user with no membership `303` to `/login`, and none of them reads billing (AC 6)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/page.test.ts" -t "C3111:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/billing/page.test.ts" -t "C3111:"`
 
 **C3112** - The load use case reads the customer and subscription ids from `org_billing` for the member's org and passes only those to the gateway; an estimator or viewer is `forbidden` with no read; no row is `no_subscription` with no gateway call; a database error is `error` with no gateway call (AC 1, AC 6, AC 7, AC 18)
 Proof: `cd web && npx vitest run application/use-cases/billing-page.test.ts -t "C3112:"`
@@ -99,10 +99,10 @@ Proof: `cd web && npx vitest run components/billing/subscription-controls.test.t
 Proof: `cd web && npx vitest run application/use-cases/billing-page.test.ts -t "C3123:"`
 
 **C3124** - Each Server Action redirects a signed-out visitor and a no-membership user to `/login` without calling the use case; `startCardUpdate`, `cancelSubscription` and `resumeSubscription` take no argument, `finishCardUpdate` takes one string matching `^seti_[A-Za-z0-9]+$` and answers the card notice without calling the use case for any other value, and no action reads form data (AC 18, AC 24)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3124:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/billing/actions.test.ts" -t "C3124:"`
 
 **C3125** - Each action's result maps to its page state: `forbidden` shows "You don't have permission to change this", `unavailable` shows "We couldn't update your subscription. Try again." (card actions: "We couldn't update your card"), and a success changes the page by a refresh (AC 23, AC 24)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3125:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/billing/actions.test.ts" -t "C3125:"`
 Proof: `cd web && npx vitest run components/billing/card-update.test.ts -t "C3139:"`
 
 ### S4 - The menu leads to the page and the old card is gone · 7 files · ~45 KB · ~12k
@@ -114,7 +114,7 @@ Proof: `cd web && npx vitest run components/settings/settings-menu.test.ts -t "C
 Proof: `cd web && npx vitest run components/settings/settings-menu.test.ts -t "C3127:"`
 
 **C3128** - The Settings page asks the container whether to show the Billing link for this member's org and role, and the billing page offers a link back to `/settings` (AC 25, AC 27)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/page.test.ts" -t "C3128:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/page.test.ts" -t "C3128:"`
 Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C3128:"`
 
 **C3129** - The billing read gives the customer id, the subscription id and the plan, selecting only those three columns of `org_billing` for the org on the member's own client (Landing door 1 of the portal item extended, `ORG_BILLING` relation)
@@ -139,7 +139,7 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-boundaries.test.t
 Proof: `cd web && npx vitest run infrastructure/stripe/billing-boundaries.test.ts -t "C3134:"`
 
 **C3135** - The billing page has a `loading.tsx` that renders a loading state naming the page, "Billing" and "Loading" (AC 29)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/page.test.ts" -t "C3135:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/billing/page.test.ts" -t "C3135:"`
 
 **C3136** - A `finishCardUpdate` failure leaves the saved card unchanged: the page shows the same card after a `mismatch` and after an `unavailable` (the use case writes nothing before the checks pass) (AC 13)
 Proof: `cd web && npx vitest run application/use-cases/billing-page.test.ts -t "C3136:"`

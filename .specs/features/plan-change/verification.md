@@ -2,145 +2,175 @@
 
 **Verdict**: FAIL
 **Profile**: standard
-**Diff range**: 200d08b..97ee854
-**Round**: 1 - full
+**Diff range**: 200d08b..3afa9db (round 2 scope: 97ee854..3afa9db, commits 2339294 and 3afa9db)
+**Round**: 2 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-FAIL on four things, ranked at the end. One is the live check C3217, which has not been run. One is the SQL recipe, which passed once at HEAD and then went red during this session. The other two are surviving or unasserted behaviour in the gateway and stale proof commands. All 147 vitest proofs pass at HEAD.
+Round 1 (FAIL at 97ee854) ranked seven gaps. Round 2 closes five of them: the SQL recipe is green at HEAD against the hosted function, the `items[0]` plan-item mutant is now killed, the six repointed proof commands now select their tests, `same_plan` is decided after a Stripe read, and a failed recording logs one line in total. The amended approved tests are also now declared. Two gaps remain, and they keep the verdict at FAIL:
+
+1. The C3210 proof command, as written in checks.md, selects **no test file** and exits 1 in both PowerShell and Git Bash. It was not changed in this fix and round 1 did not catch it.
+2. C3217 (live) rests only on the author's report, which this Verifier did not observe. That report does not record the 44 x 44 px control size or the horizontal scroll at 768 px, both of which the check requires on tablet.
+
+All 149 vitest proofs pass at HEAD, the SQL recipe passes, and the Gate is 4236 passed with 0 failed.
 
 ## Binding sources
 
-Step 1 is `ui`-only. This feature is `standard` and has no design mock. The plan's `Landing` (doors 1 to 3), `Surface` and `Relations` are binding, and they are compared under Coverage below.
+carried from 97ee854. Step 1 is `ui`-only, and the fix touched no interface (no `components/` or `app/` file changed in 2339294 or 3afa9db). The plan's AC 12 was amended in 3afa9db with the owner's approval, recorded at `.specs/features/plan-change/plan.md:95`. C3209 follows that amendment word for word (checks.md:53).
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| plan `Landing` doors 1-3, `Surface`, `Relations` | yes - `.specs/features/plan-change/plan.md` | none | - |
+| plan `Landing` doors 1-3, `Surface`, `Relations`; amended AC 12 and AC 13 | yes - `.specs/features/plan-change/plan.md` (re-read at 3afa9db, lines 92-96) | none | - |
 
 ## Checks
 
-**Run 1 (vitest):** one invocation from `web/` in PowerShell, with no failures:
+verified at 3afa9db (all proofs re-run in full at HEAD; citations refreshed for the files the fix touched, the rest carried from 97ee854 with line numbers unchanged).
+
+**vitest, one invocation** from `web/` in PowerShell (`Set-Location 'C:\Users\dispa\Music\repos\ServiceAgreement\web'`):
 
 ```
-npx vitest run domain/billing/plan-change.test.ts infrastructure/stripe/billing-gateway-plan.test.ts infrastructure/stripe/billing-gateway.test.ts components/billing/billing-view.test.ts components/billing/plan-switcher.test.ts application/use-cases/billing-change-plan.test.ts "app/(app)/settings/billing/actions.test.ts" infrastructure/stripe/checkout.test.ts infrastructure/supabase/org-plan.test.ts infrastructure/supabase/org-billing.test.ts composition/billing-change-plan-wiring.test.ts scripts/test-db/runner.test.ts -t "C32[01][0-9]:|C3105:|C3106:|C830:|C1045:|C20[0-9]:|C21[0-9]:" --reporter=verbose
+npx vitest run domain/billing/plan-change.test.ts infrastructure/stripe/billing-gateway-plan.test.ts infrastructure/stripe/billing-gateway.test.ts components/billing/billing-view.test.ts components/billing/plan-switcher.test.ts application/use-cases/billing-change-plan.test.ts "app/(app)/settings/billing/actions.test.ts" infrastructure/stripe/checkout.test.ts infrastructure/supabase/org-plan.test.ts infrastructure/supabase/org-billing.test.ts composition/billing-change-plan-wiring.test.ts scripts/test-db/runner.test.ts -t "C32[01][0-9]:|C3105:|C3106:|C830:|C1045:|C20[0-9]:|C21[0-9]:" --reporter=default --reporter=json
 ```
 
-The run exited 0 with 12 files and `147 passed | 137 skipped`. Each test named below shows a ✓ in the verbose output. An extra run of the unchanged `app/(app)/settings/billing/page.test.ts` also passed (10 tests, C3110, C3111, C3135), which covers the unchanged `303` statuses.
+The run exited 0 with `Test Files 12 passed (12)` and `Tests 149 passed | 137 skipped (286)`. Round 1 had 147. The two added tests are the new C3206 tag test and the new C3209 "record already says the plan" test; the C3209 same_plan test was rewritten, not added.
 
-**The literal proof commands in checks.md match zero tests for C3201, C3206, C3207, C3208, C3209 and C3214.** The check names `infrastructure/stripe/billing-gateway.test.ts`, `application/use-cases/billing-page.test.ts` and `composition/billing-page-wiring.test.ts`, but the tests live in `billing-gateway-plan.test.ts`, `billing-change-plan.test.ts` and `billing-change-plan-wiring.test.ts`. Running those three named files with `-t "C3201:|C3206:|C3207:|C3208:|C3209:|C3214:"` gives `Test Files 3 skipped`, `Tests 81 skipped`, exit 0. That is a green proof with no test behind it. The claims are still proven by the real files cited below, so these rows read PASS on evidence. The stale commands are ranked gap 3.
+From the JSON report, here are the passed tests for each literal proof (file, check id). **No literal proof selects zero**: C3200 12 · C3201 6 · C3202 4 · C3203 3 · C3204 4 · C3205 8 · C3206 10 · C3207 2 · C3208 8 · C3209 22 · C3210 20 · C3211 3 · C3212 6 · C3213 3 · C3214 4. The amended approved tests also pass: C3105 1, C3106 6, and the runner pins C830, C1045, C201-C213.
 
-**SQL recipe:** `npm run test:db set_org_plan`, run from `web/`.
+**Literal-command spot runs.** `npx vitest run application/use-cases/billing-change-plan.test.ts -t "C3209:"` passed 22 of 22 with exit 0, which confirms the repointed path. The C3210 command as written, `npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3210:"`, prints `No test files found, exiting with code 1` with `filter: app/(app/)/settings/billing/actions.test.ts` and exits 1. It fails the same way in Git Bash. vitest treats the argument as a path substring, not a regex, so the backslashes break it. This is a finding: the command fails loudly rather than giving a false green, and the C3210 claim stands on the 20 tests the unescaped path runs.
 
-- **Run 1** (real tree, before any fault work) printed `PASS set_org_plan` and `1 passed, 0 failed`, exit 0.
-- **Run 2** (the fault worktree with the mutated body) printed `FAIL set_org_plan: function "set_org_plan" already exists with same argument types`.
-- **Run 3** (real tree, unmodified HEAD) printed the same `FAIL ... already exists with same argument types` and `0 passed, 1 failed`, exit 1.
-
-Between run 1 and run 2, `public.set_org_plan(text, integer)` appeared on the hosted project as a committed object. The runner keeps everything in one transaction (`fixture.sql:3` `begin;`, `set_org_plan.sql:125` `rollback;`), so neither run could have created it. The migration was most likely applied by the owner or author. As a result, the recipe's replay block (`set_org_plan.sql:9-33`, which the file says is "to be removed once the migration is applied") now collides with the applied function, and the proof for C3215 and C3216 is red at HEAD. No other database inspection was done, as instructed.
+**SQL recipe.** `npm run test:db set_org_plan`, run from `web/` in PowerShell, printed `PASS set_org_plan` and `1 passed, 0 failed`, exit 0. The recipe no longer creates the function: a search for `create (or replace )?function|drop function|commit` over `fixture.sql` and `set_org_plan.sql` finds only the `tests.*` helpers, and `set_org_plan.sql:99` is `rollback;`. So it exercised the hosted `public.set_org_plan`. The mutated copy (fault 5) shows the hosted function's own message `got 42501 (not allowed to change the plan)`.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C3200 | seat and total summary over the plans, sign-up seat rule | run 1, 12 tests ✓ | `web/domain/billing/plan-change.test.ts:17` `expect(summary.seats).toBe(newSeats)`, `:18` `expect(summary.extraSeats).toBe(extra)`, `:19` `expect(money(summary.totalCents)).toBe(total)` over rows `:11-14` (2→5 $99.00; 5→2 $49.00; 7→7/5 $124.00; 4→10 $199.00); all six pairs `:27` `expect(summary.seats).toBe(included(to))` | PASS |
-| C3201 | overview carries `plan` from the tagged item and `extraSeats`; unknown or untagged is null | run 1, 6 tests ✓ (literal proof file matches 0) | `web/infrastructure/stripe/billing-gateway-plan.test.ts:89` `expect(result.ok && result.overview.plan).toBe(plan)`, `:90` `...extraSeats).toBe(extra)` (the business item listed after the seat item, `:85`); `:100` `...plan).toBeNull()` for untagged, `platinum` and unexpanded items; the expand is in `web/infrastructure/stripe/billing-gateway.test.ts:82` `toEqual(["default_payment_method", "items.data.price.product"])` (amended C3105) | PASS |
-| C3202 | three plans in price order, prices, seats, Current plan, Switch on the other two | run 1, 3 + 2 tests ✓ | `web/components/billing/billing-view.test.ts:161` `expect(out.indexOf("$49/month")).toBeLessThan(out.indexOf("$99/month"))`, `:162`, `:163-165` seats, `:166` `expect(out.match(/Current plan/g)).toHaveLength(1)`, `:167-169` Switch to Starter and Business, not Team | PASS |
-| C3203 | ending: no switch and the resume line; canceled: no list; unknown plan: the "can't be changed" line | run 1, 3 tests ✓ | `web/components/billing/billing-view.test.ts:174` `toContain("Resume your subscription to change plan")`, `:176` `not.toContain("Switch to")`; `:181` `not.toContain("$49/month")`; `:188` "This plan can't be changed here", `:191` `not.toContain("Switch to")` | PASS |
-| C3204 | prompt: plan, price, seat line, total, trial line or prorated line | run 1, 4 tests ✓ | `web/components/billing/plan-switcher.test.ts:68` `toContain("Included seats: 5. Extra seats: 0.")`, `:69` `"New monthly total: $99.00."`, `:70` `"Nothing is charged until your trial ends on Nov 24, 2026."`, `:77` `"The change takes effect now and the difference is prorated."` | PASS |
-| C3205 | open, keep, confirm once and refresh, pending, notices, throw | run 1, 8 tests ✓ in jsdom | `web/components/billing/plan-switcher.test.ts:93` `expect(changePlan).not.toHaveBeenCalled()`, `:104`, `:112` `toHaveBeenCalledTimes(1)`, `:113` `toEqual(["business"])`, `:114` refresh once, `:127` still once after `requestSubmit`, `:140` `[role="alert"]` text equals the notice, `:141` no refresh | PASS |
-| C3206 | read with expand, product ensured (200 creates nothing, 404 creates), update keys with proration, the three seat cases | run 1, 7 tests ✓ (literal proof file matches 0) | `web/infrastructure/stripe/billing-gateway-plan.test.ts:112` expand, `:113` `expect(productPosts()).toEqual([])`, `:114-121` exact key set incl. `proration_behavior`, `:123` `items[0][id]` `si_plan`, `:127` product `sa_plan_team`, `:128` `create_prorations`; `:142-148` one create with id, name and both tags; `:157` quantity 3; `:166` `items[1][deleted]` `true`; `:175-179` added on `sa_extra_seat` at 1500 | PASS |
-| C3207 | no-op: only the read, `changed` false | run 1, 2 tests ✓ (literal proof file matches 0) | `web/infrastructure/stripe/billing-gateway-plan.test.ts:209` `toEqual({ ok: true, changed: false })`, `:210` `expect(calls).toHaveLength(1)`, `:212` `expect(posts()).toEqual([])` | PASS |
-| C3208 | each failure is unavailable or unsupported, logged once with no id, key or body, and writes nothing more | run 1, 8 tests ✓ (literal proof file matches 0) | `web/infrastructure/stripe/billing-gateway-plan.test.ts:229` `toEqual({ ok: false, code: "unavailable" })`, `:231` update count, `:232` `toHaveBeenCalledTimes(1)`, `:235` `not.toContain(secret)`; `:242` `unsupported`; `:275` no log at 9 999 ms, `:277` unavailable at 10 s | PASS |
-| C3209 | use case: role first, invalid key, same_plan, seat rule, gateway then record, recording failure still ok | run 1, 21 tests ✓ (literal proof file matches 0) | `web/application/use-cases/billing-change-plan.test.ts:34` `toHaveBeenCalledWith(IDS, { plan: "team", extraSeats: 0 })`, `:36` `record` `("team", 5)`; `:42` extraSeats 5, `:43` `("starter", 7)`; `:48-49` forbidden and `get` not called; `:56` invalid; `:63-64` same_plan with no gateway call; `:70` no_subscription; `:76-77` unavailable with no gateway call; `:85` nothing recorded on a gateway failure; `:90-93` ok and one log line holding the code; `:100` heals the record | PASS |
-| C3210 | action: login redirects, only the three keys, maps the answers, the notices | run 1, 20 tests ✓ | `web/app/(app)/settings/billing/actions.test.ts:141` `rejects.toThrow("NEXT_REDIRECT /login")`, `:142`; `:147` `toHaveBeenCalledWith({ orgId: "org-1", role: "owner" }, key)`; `:151-152` failed and not called; `:165` `toEqual({ status })`; `:169-172` arity 1 and the three notices | PASS |
-| C3211 | Checkout tags plan (kind and key) and seat (kind only) | run 1, 3 tests ✓ | `web/infrastructure/stripe/checkout.test.ts:197` `...[metadata][sa_kind]")).toBe("plan")`, `:198` `sa_plan` `toBe(plan)`, `:199` seat `toBe("seat")`, `:200` seat carries only `sa_kind` | PASS |
-| C3212 | one rpc; 42501, P0002 and other codes mapped; logged once with the code | run 1, 6 tests ✓ | `web/infrastructure/supabase/org-plan.test.ts:12` `toHaveBeenCalledWith("set_org_plan", { p_plan: "team", p_seats: 5 })`, `:24` `toEqual({ ok: false, code: outcome })`, `:25` once, `:27-29` code present, body and id absent | PASS |
-| C3213 | read selects exactly four columns for the org (amends C3129) | run 1, 3 tests ✓ | `web/infrastructure/supabase/org-billing.test.ts:10` `toEqual({ ..., plan: "team", seats: 5 })`, `:13` sorted columns `["plan", "seats", "stripe_customer_id", "stripe_subscription_id"]` | PASS |
-| C3214 | container: not_configured with no fetch; with both keys uses Stripe and the recorder | run 1, 4 tests ✓ (literal proof file `billing-page-wiring.test.ts` matches 0) | `web/composition/billing-change-plan-wiring.test.ts:42` `toEqual({ ok: false, code: "not_configured" })`, `:43` `fetchMock).not.toHaveBeenCalled()`; `:55` one POST to `/v1/subscriptions/sub_1`, `:57` `record` `("team", 5)` | PASS |
-| C3215 | owner or admin updates only plan and seats of their own org | recipe run 1 PASS; runs 2 and 3 at HEAD FAIL `function "set_org_plan" already exists` | `supabase/tests/set_org_plan.sql:53-54` owner plan and seats, `:55` other columns unchanged, `:59` org B untouched, `:71-72` admin | FAIL - proof red at HEAD since the hosted project gained the function; the replay block must go |
-| C3216 | 42501 (estimator, viewer, non-member), P0002, 22023 (plan, 0, 51, nulls), anon has no execute, authenticated does, no update grant | recipe run 1 PASS; runs 2 and 3 at HEAD FAIL (as above) | `supabase/tests/set_org_plan.sql:82,84,86` `expect_error(..., '42501')`, `:98` `'P0002'`, `:100-104` `'22023'`, `:114` `not has_function_privilege('anon', ...)`, `:115` authenticated, `:116` `not has_table_privilege('authenticated', 'public.org_billing', 'update')`, `:119` anon call 42501, `:121` direct update 42501 | FAIL - as C3215 |
-| C3217 | live Playwright at 375, 768 and 1440 px, touch, no scroll, at least 44 px controls, switch and back changes Stripe and `org_billing.plan` | NOT RUN - author-run and outstanding | no evidence: no live report exists. Still owed: the run against the Stripe sandbox, the pages, sizes and touch actions, the subscription on the new price, `org_billing.plan` equal to `team`, and no console error | NOT RUN |
+| C3200 | seat and total summary over the plans | batch, 12 ✓ (carried citation) | `web/domain/billing/plan-change.test.ts:17` `expect(summary.seats).toBe(newSeats)`, `:19` `expect(money(summary.totalCents)).toBe(total)` over rows `:11-14`; all six pairs `:27` | PASS |
+| C3201 | overview `plan` from the tagged item, `extraSeats`; untagged or unknown is null | batch, 6 ✓ | `web/infrastructure/stripe/billing-gateway-plan.test.ts:89` `expect(result.ok && result.overview.plan).toBe(plan)`, `:90` extraSeats, `:100` `toBeNull()`; expand at `web/infrastructure/stripe/billing-gateway.test.ts:82` | PASS |
+| C3202 | three plans in order, prices, seats, Current plan, Switch on the other two | batch, 4 ✓ in billing-view (carried citation) | `web/components/billing/billing-view.test.ts:161` price order, `:166` `expect(out.match(/Current plan/g)).toHaveLength(1)`, `:167-169` | PASS |
+| C3203 | ending, canceled, unknown plan | batch, 3 ✓ (carried citation) | `web/components/billing/billing-view.test.ts:174` `toContain("Resume your subscription to change plan")`, `:181`, `:188` | PASS |
+| C3204 | prompt lines | batch, 4 ✓ (carried citation) | `web/components/billing/plan-switcher.test.ts:68` `toContain("Included seats: 5. Extra seats: 0.")`, `:70` trial line, `:77` prorated line | PASS |
+| C3205 | open, keep, confirm once, pending, notices | batch, 8 ✓ jsdom (carried citation) | `web/components/billing/plan-switcher.test.ts:112` `toHaveBeenCalledTimes(1)`, `:113` `toEqual(["business"])`, `:127` still once while pending, `:140` notice | PASS |
+| C3206 | read with expand, product ensured, update keys, seat cases, **plan item by tag** | batch, 10 ✓ (round 1: 9) | `web/infrastructure/stripe/billing-gateway-plan.test.ts:123` `expect(body.get("items[0][id]")).toBe("si_plan")`; new test `:196` sets `subWith([seatItem(2), planItem("starter")])` (seat listed first) and asserts `:200` `expect(body.get("items[0][id]")).toBe("si_plan")`, `:201` `items[0][price_data][product]` `sa_plan_team`, `:202` `items[1][id]` `si_seat`, `:203` quantity `"3"`, `:204` no `price_data` key on `items[1]`; product create `:142-148`; seat delete `:166`, add `:175-179` | PASS |
+| C3207 | no-op: only the read, `changed` false | batch, 2 ✓ | `web/infrastructure/stripe/billing-gateway-plan.test.ts:209` `toEqual({ ok: true, changed: false })`, `:210` `expect(calls).toHaveLength(1)` | PASS |
+| C3208 | each failure unavailable or unsupported, one log line without secrets, no write | batch, 8 ✓ | `web/infrastructure/stripe/billing-gateway-plan.test.ts:229` `toEqual({ ok: false, code: "unavailable" })`, `:232` once, `:235` `not.toContain(secret)`, `:242` unsupported, `:277` 10 s | PASS |
+| C3209 | use case (amended AC 12 and 13): role first, invalid, gateway then `same_plan` only when Stripe unchanged **and** record agrees, record after Stripe, recording failure ok with **no use-case log**, heal a lagging record | batch, 22 ✓; literal command 22/22 | `web/application/use-cases/billing-change-plan.test.ts:63` `toEqual({ ok: false, code: "same_plan" })` with `:64` `expect(changePlan).toHaveBeenCalledTimes(1)` and `:65` `expect(record).not.toHaveBeenCalled()`; record says the plan but Stripe differs, which is the switch back after a failed save: `:70` `toEqual({ ok: true })`, `:72` `expect(record).toHaveBeenCalledWith("team", 5)`; recording failure `:97` `toEqual({ ok: true })`, `:98` `expect(errorLog).not.toHaveBeenCalled()`; Stripe unchanged with a lagging record `:103-104` ok and `record("team", 5)`; role `:48-49`; invalid `:56`; gateway then record `:34-36`; gateway failure records nothing `:92` | PASS |
+| C3210 | action: login redirects, three keys only, answers and notices | batch, 20 ✓; **literal command selects no file, exit 1** | `web/app/(app)/settings/billing/actions.test.ts:141` `rejects.toThrow("NEXT_REDIRECT /login")`, `:147`, `:151-152`, `:165` `toEqual({ status })`, `:169-172` | PASS (claim proven; the command is ranked gap 1) |
+| C3211 | Checkout tags | batch, 3 ✓ (carried citation) | `web/infrastructure/stripe/checkout.test.ts:197` `toBe("plan")`, `:198` `toBe(plan)`, `:199` `toBe("seat")` | PASS |
+| C3212 | one rpc; 42501, P0002 and other codes mapped; **one** log line with the code | batch, 6 ✓ | `web/infrastructure/supabase/org-plan.test.ts:12` `toHaveBeenCalledWith("set_org_plan", { p_plan: "team", p_seats: 5 })`, `:24` mapping, `:25` `expect(log).toHaveBeenCalledTimes(1)`, `:27-29` code present, body and id absent; thrown `:37` once | PASS |
+| C3213 | four-column read | batch, 3 ✓ (carried citation) | `web/infrastructure/supabase/org-billing.test.ts:13` sorted columns `["plan", "seats", "stripe_customer_id", "stripe_subscription_id"]` | PASS |
+| C3214 | container: not_configured with no fetch; with both keys uses Stripe and the recorder | batch, 4 ✓ (repointed command) | `web/composition/billing-change-plan-wiring.test.ts:42` `toEqual({ ok: false, code: "not_configured" })`, `:43` `fetchMock).not.toHaveBeenCalled()`, `:55` one POST, `:57` `record` `("team", 5)` | PASS |
+| C3215 | owner or admin updates only plan and seats of their own org | `npm run test:db set_org_plan` → `PASS set_org_plan`, `1 passed, 0 failed`, exit 0, against the hosted function | `supabase/tests/set_org_plan.sql:27` `tests.ok('C3215 owner plan', a_after.plan = 'team', ...)`, `:28` seats `= 5`, `:29-31` every other column equal, `:33-34` org B still `business`/10, `:45-46` admin `business`/12 | PASS |
+| C3216 | 42501 (estimator, viewer, non-member), P0002, 22023 (plan, 0, 51, nulls), privileges | same run, green | `supabase/tests/set_org_plan.sql:56,58,60` `expect_error(..., '42501')`, `:62-63` unchanged, `:72` `'P0002'`, `:74-78` `'22023'`, `:88` `not has_function_privilege('anon', ...)`, `:89` authenticated, `:90-91` no update grant, `:93` anon call 42501, `:95` direct update 42501 | PASS |
+| C3217 | live at 375, 768, 1440 px: three plans, current marked, Starter to Team and back, prompt, no charge in trial, Stripe and `org_billing.plan` change, no horizontal scroll, controls at least 44 x 44 on mobile **and tablet**, touch taps, no console error | AUTHOR-RUN on 2026-11-10; this Verifier did not observe it and cannot re-run it (the sandbox objects were deleted); no report is in the repo (a search for `Nov 24, 2026`, `209 px` and `sandbox` over `*.md` finds none) | no file:line - author's report quoted below | AUTHOR-RUN - not independently observed; tablet 44 x 44 and 768 px horizontal scroll not reported |
+
+**C3217, the author's report as given to the Verifier (quoted, not observed).** This was run on 2026-11-10 with the migration applied and the demo org pointed at a real sandbox subscription made the way Checkout makes it: tagged plan and seat products, and a trialing subscription with 2 extra seats.
+
+- **1440 px.** `/settings/billing` listed Starter (current, read from the tag), Team and Business. Switch to Team showed "Switch to Team? $99/month. Included seats: 5. Extra seats: 0. New monthly total: $99.00. Nothing is charged until your trial ends on Nov 24, 2026." Keep my plan closed the prompt and changed nothing. Confirm switch then:
+  - moved Stripe's plan item to a $99 price on a newly created `sa_plan_team` product tagged `sa_kind` plan and `sa_plan` team
+  - deleted the seat item
+  - left the trial unchanged
+  - set `org_billing` to plan `team`, seats 5
+- **375 px (CDP touch events).** No control was under 44x44 px and there was no horizontal scroll. Switching to Business by tap worked (prompt, Keep my plan, Confirm).
+- **768 px.** A touch switch back to Starter worked, with the prompt "Included seats: 2. Extra seats: 0. New monthly total: $49.00." Cancel subscription then showed "Ends Nov 24, 2026", "Resume" and "Resume your subscription to change plan", with no switch controls. A Resume tap restored "Trial ends Nov 24, 2026" with the switch controls back.
+- **1440 px, layout.** The content had equal 209 px gaps and no horizontal scroll.
+- **Console.** No console errors from our code.
+- **End state.** The final database row was starter with 2 seats, and Stripe's plan item was $49 on `sa_plan_starter`. The `sa_plan_starter`, `sa_plan_team` and `sa_plan_business` products exist, tagged.
+- **Not exercised live:** the seat-item-added path, the 404-then-create path for the extra-seat product, and a recording failure.
+
+**What is outstanding on C3217.**
+
+1. The 44 x 44 px control size is reported only at 375 px. The check asks for "mobile and tablet", and nothing is reported for 768 px.
+2. No horizontal scroll is reported at 375 and 1440 px, but not at 768 px.
+3. "Charges nothing during the trial" rests on the prompt text and "left the trial unchanged". No invoice or upcoming-invoice amount is reported.
+4. "No console error" is qualified as "from our code", so any other errors are not itemised.
+5. The three paths the author did not exercise live are each proven at their own layer: the seat-item add (C3206 `:175-179`), the 404 product create (C3206 `:142-148`, and the seat product `:183-193`), and a recording failure (C3209 `:95-98` with C3212 `:25`).
+
+The rest of the claim is covered by the quoted observations. That includes Starter to Team and back across the sizes, the touch taps on Switch, Keep my plan and Confirm switch, and the changes at both Stripe and `org_billing`. Because the Verifier did not observe the run, the row is not recorded as PASS.
 
 ## Coverage
 
-These sets are recomputed from the plan's Surface, Landing and Relations, and from the code and the provider. They are not copied from the author's table.
+Rows whose authority the fix touched were recomputed and are marked `verified at 3afa9db`. The other rows are `carried from 97ee854` and read as they did in round 1, all with nothing unproven.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| `GET /settings/billing` statuses (3) | plan Surface; `page.tsx` diff only adds `changePlan` to `actions` | 200 with the plan list C3202 C3203 · 303 /login C3111 (`page.test.ts`, run, green) · 303 /settings C3111 | - |
-| `changePlanAction` statuses (2) | Surface; `actions.ts:60-67` | 200 page state C3210 · 303 /login C3210 `actions.test.ts:141` | - |
-| `changePlanAction` answers (4 statuses, 7 use-case codes) | `actions.ts:65-67`, `ChangePlanResult` | done, forbidden, same_plan, and invalid, unavailable, not_configured, no_subscription, unsupported → failed: C3210 `:163-165` | - |
-| use-case codes (`ChangePlanResult`, 8) | `billing-page.ts:18-20` | ok, forbidden, invalid, same_plan, no_subscription, unavailable (db), and not_configured, unsupported, unavailable (gateway): C3209; recording failure → ok C3209 | - |
-| Stripe product read statuses (3) | Surface; `ensureProduct` | 200 creates nothing C3206 `:113` · 404 creates C3206 `:142` · other (500, 403, refused) unavailable C3208 | - |
-| Stripe product create (2) | Surface | 200 C3206 · failure C3208 "product create failing" | - |
-| Stripe subscription update (3) | Surface | 200 C3206 · non-200 C3208 · 10 s timeout C3208 `:274-277` | - |
-| Stripe subscription read in a change (2) | `changePlan` | 200 with expand C3206 `:112` · failure C3208 | - |
-| door 1 update keys (6) | Landing door 1 | `items[0][id]`, `price_data[currency]`, `unit_amount`, `recurring[interval]`, `product`, `proration_behavior`: C3206 `:114-128` (exact key set) | - |
-| door 1 product ids (4) | Landing door 1 | `sa_plan_starter`, `sa_plan_team`, `sa_plan_business` C3206 `:139-148` · `sa_extra_seat` C3206 `:183-193` | - |
-| door 1 metadata keys (`sa_kind`, plus `sa_plan` beyond the literal door, recorded in "How proofs run") | Landing door 1 and checks.md | sa_kind C3206 C3211 · sa_plan C3206 C3211 | - |
-| door 1 item identification in a **change** (plan item and seat item by tag, not position) | `changePlan` `taggedItems` + `find` | seat by tag C3206 · plan by tag: no proof orders the seat item first for a change (fault 2 survived) | plan item chosen by position in `changePlan` |
-| door 1 item identification in the **overview** (by tag) | `overview` | C3201 `:85` (business after the seat item) | - |
-| seat item cases (4) | `changePlan` | update C3206 `:157` · delete C3206 `:166` · add C3206 `:175` · untouched when only the plan changes C3206 (default rows) · seat-only change leaves the plan item out C3206 `:196-201` | - |
-| plans (3) and switch pairs (6) | `PLANS`, `PLAN_KEYS` | C3202, and C3200 `:23-30` over all six pairs | - |
-| seat outcomes (3) | `seatsAfterPlanChange` | moves C3200 `:27` · stays C3200 `:33` · raised C3200 `:34` | - |
-| plan list states (5) | AC 1-5; `billing-view.tsx:77-85` | switchable C3202 · ending C3203 · canceled C3203 · unknown C3203 · non-ready states C3202 `:194` | - |
-| `set_org_plan` statuses (4) | Surface | 200 C3215 · 42501 C3216 · P0002 C3216 · 22023 C3216, all in a recipe that is red at HEAD | 200, 42501, P0002, 22023 (proof red since the hosted function appeared) |
-| `set_org_plan` callers (5) | AC 22; fixture roles | owner, admin C3215 · estimator, viewer, non-member C3216 (recipe red) | as above |
-| `set_org_plan` privileges (3) | door 2 | anon, authenticated, no update grant: C3216 (recipe red) | as above |
-| `ORG_BILLING` relation and column checks (2) | Relations; `20261110100000_workspace_provisioning.sql:12-13` | `plan in (...)` and `seats between 1 and 50`, re-validated in the function at `20261110190000_set_org_plan.sql:19` and asserted at C3216 `:100-104` (recipe red) | as above |
-| roles in the app (4) | `canManageBilling` | owner, admin C3209 `:29` · estimator, viewer C3209 `:46` | - |
-| AC 24 sizes (3) and touch | AC 24 | 375, 768, 1440: C3217 NOT RUN | 375, 768, 1440 px, touch |
-| startup config (1) | `composition/index.ts:150-152` (`makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase))`), with not_configured `:150` | C3214 | - |
+| use-case decision after the gateway answers, amended AC 12 (4 cells) - verified at 3afa9db | `web/application/use-cases/billing-page.ts:79-85` (`changed.changed` × `found.value.plan === key`) | unchanged + record agrees → `same_plan`, no record C3209 `:63-65` · unchanged + record lags → record, ok C3209 `:103-104` · changed + record agrees (switch back after a failed save) → record, ok C3209 `:70-72` · changed + record differs → record, ok C3209 `:31-36` | - |
+| use-case codes (`ChangePlanResult`) - verified at 3afa9db | `billing-page.ts:72-85` | ok `:31` · forbidden `:48` · invalid `:56` · same_plan `:63` · no_subscription `:77` · unavailable (db) `:83` · unavailable, not_configured, unsupported (gateway) `:91` · recording failure → ok `:97` | - |
+| log lines on a recording failure, AC 13 "one line" (adapter + use case) - verified at 3afa9db | `org-plan.ts:17` and `:22` (adapter); `billing-page.ts:84` (use case, no log) | adapter exactly one C3212 `:25`, `:37` · use case zero C3209 `:98` · use case calls `record` once C3209 `:35` (success path) | - |
+| door 1 item identification in a **change** (plan item by tag, seat item by tag) - verified at 3afa9db | `billing-gateway.ts:168-170` | plan by tag C3206 `:196-204` (seat listed first; fault 1 killed) · seat by tag C3206 `:202` | - |
+| `set_org_plan` statuses (4) - verified at 3afa9db | Surface | 200 C3215 `:27-28` · 42501 C3216 `:56-60` · P0002 C3216 `:72` · 22023 C3216 `:74-78`, recipe green against the hosted function | - |
+| `set_org_plan` callers (6) - verified at 3afa9db | AC 22; fixture roles | owner `:27`, admin `:45` C3215 · estimator `:56`, viewer `:58`, non-member `:60`, anon `:93` C3216 | - |
+| `set_org_plan` privileges (3) - verified at 3afa9db | door 2 | anon no execute `:88` · authenticated execute `:89` · no update grant `:90-91`, `:95` | - |
+| `ORG_BILLING` column checks re-validated in the function (2) - verified at 3afa9db | `20261110100000_workspace_provisioning.sql:12-13` | plan in three `:74-75` · seats 1-50 `:76-78` | - |
+| AC 24 sizes (3) and touch - verified at 3afa9db | AC 24 | 375 (44 px, no scroll, touch) · 768 (touch) · 1440 (no scroll): C3217 AUTHOR-RUN, not observed | 768 px 44 x 44 controls and horizontal scroll not reported; whole set not independently observed |
+| `GET /settings/billing` statuses (3) - carried from 97ee854 | Surface | 200 C3202 C3203 · 303 /login, 303 /settings C3111 | - |
+| `changePlanAction` statuses (2) and answers - carried from 97ee854 | `actions.ts:60-67` | C3210 `:141`, `:163-165` | - |
+| Stripe product read (3), product create (2), subscription update (3), subscription read (2) - carried from 97ee854 | Surface; `ensureProduct`, `changePlan` | C3206, C3208 | - |
+| door 1 update keys (6), product ids (4), metadata keys (2) - carried from 97ee854 | Landing door 1 | C3206 `:114-128`, `:139-148`, `:183-193`; C3211 | - |
+| door 1 item identification in the overview - carried from 97ee854 | `overview` | C3201 `:85` | - |
+| seat item cases (4) - carried from 97ee854 | `changePlan` | C3206 `:157`, `:166`, `:175`, `:196-201` | - |
+| plans (3), switch pairs (6), seat outcomes (3), plan list states (5) - carried from 97ee854 | `PLANS`, `seatsAfterPlanChange`, `billing-view.tsx` | C3200, C3202, C3203 | - |
+| roles in the app (4) - carried from 97ee854 | `canManageBilling` | C3209 `:29`, `:46` | - |
+| startup config (1) - carried from 97ee854 | `composition/index.ts:150-152` | C3214 | - |
 
-**Swept rows checked against the code:**
-
-- **RLS `org_billing_select`** is at `supabase/migrations/20261110100000_workspace_provisioning.sql:22-23`, `for select to authenticated using ((select private.has_org_role(org_id, array['owner', 'admin'])))`. Present.
-- **No update grant** is at `:20` (`revoke all on public.org_billing from public, anon, authenticated;`) and `:21` (`grant select ... to authenticated`). Nothing else grants update. Present, and asserted at `set_org_plan.sql:116` and `:121`.
+**Swept rows** (carried from 97ee854): RLS `org_billing_select` at `supabase/migrations/20261110100000_workspace_provisioning.sql:22-23` and no update grant at `:20-21`. Both are present and now asserted green at `set_org_plan.sql:90-91` and `:95`.
 
 ## Test policy rows
 
+verified at 3afa9db for the touched or previously unmet rows; the rest are carried from 97ee854.
+
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides, not reached across a boundary | `domain/billing/plan-change.ts`, `application/use-cases/billing-page.ts` (changePlan) | C3200 at own layer · C3209 at own layer | yes - every row of both decision tables is asserted (fault 1 killed) |
-| Entry point that decides nothing | `app/(app)/settings/billing/actions.ts` (`changePlanAction`), `page.tsx` | C3210 at the boundary | yes - accepted keys, 7 rejected keys, every answer, login redirects |
-| Adapter | `infrastructure/stripe/billing-gateway.ts`, `infrastructure/stripe/checkout.ts`, `infrastructure/supabase/org-plan.ts`, `infrastructure/supabase/org-billing.ts` | C3201, C3206-C3208, C3211, C3212, C3213 against the fetch or client double | no - gap in `billing-gateway.ts`: the plan-item filter in `changePlan` is unasserted (fault 2 survived). The other three adapters are met |
-| Client island with behaviour | `components/billing/plan-switcher.tsx` | C3204, C3205 in jsdom | yes (fault 4 killed) |
-| Presentational component | `components/billing/billing-view.tsx` | C3202, C3203 markup | yes |
-| Database function | `supabase/migrations/20261110190000_set_org_plan.sql` | one rolled-back SQL recipe | no - the recipe covers each role, refusal and privilege and passed once, but fails at HEAD against the hosted project since the function was applied; the replay block must be removed |
+| Decides, not reached across a boundary (verified at 3afa9db) | `domain/billing/plan-change.ts`, `application/use-cases/billing-page.ts` (changePlan, touched) | C3200 · C3209 at own layer | yes - all four cells of the amended decision and every outcome are asserted; faults 2, 3 and 4 killed |
+| Entry point that decides nothing (carried from 97ee854) | `actions.ts`, `page.tsx` | C3210 at the boundary | yes - accepted keys, rejected keys, every answer, login redirects (the claim holds; the broken literal command is ranked gap 1) |
+| Adapter (verified at 3afa9db) | `billing-gateway.ts`, `checkout.ts`, `org-plan.ts`, `org-billing.ts` | C3201, C3206-C3208, C3211, C3212, C3213 against the fetch or client double | yes - the plan item by tag is now asserted (C3206 `:196-204`) and the `items[0]` mutant is killed (fault 1); request keys and each error reply as in round 1 |
+| Client island with behaviour (carried from 97ee854) | `plan-switcher.tsx` | C3204, C3205 in jsdom | yes |
+| Presentational component (carried from 97ee854) | `billing-view.tsx` | C3202, C3203 markup | yes |
+| Database function (verified at 3afa9db) | `supabase/migrations/20261110190000_set_org_plan.sql` | one rolled-back SQL recipe | yes - recipe green against the hosted function, covering owner, admin, estimator, viewer, non-member and anon, each refusal (P0002, 22023 on plan, null plan, 0, 51, null seats) and the three privileges; fault 5 shows the recipe reports a wrong expectation as a failure |
+
+On the Database function row: the hosted function itself could not be mutated (forbidden by the brief). The widened `where` fault from round 1 is therefore still not demonstrated against the function body. Two things make up for it:
+
+- The recipe mutation shows the assertions run against the real function: the hosted function's own message `got 42501 (not allowed to change the plan)` was printed, and the runner reports a mismatch as `FAIL` with exit 1.
+- The assertion that would kill a widened update, `set_org_plan.sql:33-34` (org B still `business`/10 after the owner of org A calls the function), is a concrete literal comparison.
+
+This is enough to judge the row met. It is not a demonstration that the `C3215 other org untouched` assertion kills that particular mutant.
 
 ## Faults injected
 
-Every fault ran in a scratch `git worktree add --detach <scratch>/wt HEAD`, with `web/node_modules` junctioned in and `web/.env.local` copied. The real tree's porcelain read `?? .specs/features/billing-portal/verification.md` before and after, and the worktree and junction were removed afterwards (`cmd /c rmdir` on the junction first, then `git worktree remove --force`). The real `web/node_modules` was intact afterwards.
+verified at 3afa9db. Every fault ran in a scratch `git worktree add --detach <scratchpad>\wt HEAD` at 3afa9db, with `web/node_modules` junctioned in and `web/.env.local` copied. The real tree's `git status --porcelain` was empty before and empty after. Each mutated file was restored with `git checkout --` after its run. The junction was removed with `cmd /c rmdir`, then `git worktree remove --force`. The real `web/node_modules\vitest\package.json` was present afterwards.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| record the plan before checking the Stripe result (records even when Stripe failed) | `web/application/use-cases/billing-page.ts:81-82` | yes - C3209 "a gateway answer of unavailable / not_configured / unsupported ... nothing is recorded" (3 failed) |
-| `changePlan` picks the plan item by position (`items[0]`) instead of `kind === "plan"` | `web/infrastructure/stripe/billing-gateway.ts:169` | no - survived: C3206, C3207 and C3208 were all green (19 passed). Every change test lists the plan item first, so with a seat item first a change would rewrite the seat item's price |
-| create the product even when the read answered 200 | `web/infrastructure/stripe/billing-gateway.ts:100-101` (`ensureProduct`) | yes - C3206 `:113` and the seat-product test (2 failed) |
-| drop the `pending` guard from the switcher's submit | `web/components/billing/plan-switcher.tsx:38` | yes - C3205 "a second submit while the change is pending makes no second call" |
-| replayed `set_org_plan` updates every org's row (`where org_id is not null`), only the function body edited in the worktree copy of `supabase/tests/set_org_plan.sql:26` | SQL recipe | inconclusive - the recipe fails at setup with `function "set_org_plan" already exists` before any assertion, and so does the unmodified recipe at HEAD. `C3215 other org untouched` (`:59`) targets this mutant but could not be shown to fail |
+| plan item chosen by position: `const planItem = items[0];` (round-1 survivor) | `web/infrastructure/stripe/billing-gateway.ts:169` | yes - C3206 "the plan item is chosen by its tag, not its position" failed (1 failed, 19 passed of C3206-C3208) |
+| `same_plan` answered from the stored plan alone, before any Stripe call (`if (found.value.plan === key) return same_plan`) | `web/application/use-cases/billing-page.ts:78` | yes - 2 failed: C3209 `:61` (gateway called once) and `:68` (record says the plan, Stripe differs) |
+| the use case logs the failed recording again (`if (!recorded.ok) console.error(...)`) | `web/application/use-cases/billing-page.ts:84` | yes - 3 failed: C3209 `:95` for forbidden, not_found and unavailable |
+| record before Stripe answers (`await plans.record(...)` moved above `gateway.changePlan`) | `web/application/use-cases/billing-page.ts:79` | yes - 6 failed: C3209 `:29` (owner, admin), `:61`, `:89` (three gateway failures) |
+| recipe copy expects `22023` for the estimator instead of `42501` (the hosted function is not mutable) | worktree `supabase/tests/set_org_plan.sql:56` | yes - `FAIL set_org_plan: C3216 estimator: expected SQLSTATE 22023, got 42501 (not allowed to change the plan)`, `0 passed, 1 failed`, exit 1 |
 
 ## Gate
 
-- **vitest:** the batch above gave 147 passed and 0 failed, plus `page.test.ts` with 10 passed.
-- **SQL recipe:** `npm run test:db set_org_plan` passed once, then failed on two later runs at HEAD (`function "set_org_plan" already exists with same argument types`).
-- **Live C3217:** not run.
+- **vitest, full suite.** `npx vitest run` in a clean worktree of 3afa9db, from PowerShell with the uppercase path, gave `Test Files 233 passed (233)` and `Tests 4236 passed (4236)`, with 0 failed and exit 0.
+- **Proof batch.** 149 passed, 0 failed.
+- **SQL recipe.** `npm run test:db set_org_plan` printed `PASS set_org_plan` and `1 passed, 0 failed`, exit 0.
+- **Live C3217.** This is author-run evidence only and was not observed by the Verifier (see the Checks section).
 
 ## History weighed
 
-- **C3105, C3106 and C3129 → C3213.** These are amended as the plan's Impact says. The C3105 expand list gains `items.data.price.product` (`billing-gateway.test.ts:82`). The C3106 overview shape gains `plan: null, extraSeats: 0` (`:106-107`). C3129 is renamed C3213 with `seats` added. checks.md "How proofs run" names C3105 and C3129 but not C3106. The C3106 change follows directly from the plan's Impact row (`BillingOverview` gains the items), so it is acceptable but undeclared. checks.md also says "Checkout tests that pin line-item keys are amended", but none were: `checkout.test.ts` only gained C3211 and the existing tests stay green.
-- **`runner.test.ts` pinned counts.** These went from 30 to 31 recipes and from 32 to 33 SQL files in C830, C1045, C203, C204, C205, C210 and C212. The change is mechanical: C210 requires every SQL file to sit in a recipe, so adding `set_org_plan.sql` forces the new counts. checks.md does not list these amendments, though "registered in `RECIPES`" implies them. Acceptable, but undeclared.
-- **`metadata[sa_plan]`.** This goes beyond door 1's literal shape and is recorded in checks.md "How proofs run". It is needed because a Checkout-made product has a random id, and it is asserted at C3206 `:148` and C3211 `:198`. Acceptable.
-- **`jsdom`.** It is already a dev dependency. The `plan-switcher.test.ts:1` header is `// @vitest-environment jsdom`.
+- **Round 1 gaps.** Five are now closed:
+  - Gap 2 (SQL red): the replay block is removed and the recipe is green.
+  - Gap 3 (`items[0]` survivor): now killed.
+  - Gap 4 (six stale paths): repointed, and each selects its tests.
+  - Gap 5 (`same_plan` from the lagging record): decided after a Stripe read, per amended AC 12.
+  - Gap 6 (two log lines): the use case no longer logs, so one line results.
+
+  Gap 7 (undeclared amendments) is closed too: checks.md:14 now lists C3106, C3213 and the runner pins, and says no Checkout test was amended. Gap 1 (live) is now author-run evidence (see C3217).
+- **AC 12 amendment.** It is recorded as owner-approved at plan.md:95 and checks.md:53. The Verifier accepts the record as written and did not see the approval itself.
+- **The lagging-record scenario end to end.** After Starter to Team with `set_org_plan` failing, Stripe holds Team and `org_billing` holds Starter, and the page offers Switch to Starter (the current plan is read from Stripe). The action calls the use case with `starter`. The stored plan equals the key, the gateway changes Stripe (`changed: true`), and the use case records and answers ok. This is the shape C3209 `:68-73` asserts, and fault 2 shows the old refusal would be caught. A repeat of Team in the same state answers ok and heals the record (C3209 `:101-104`), which is AC 13's repeat.
 
 ## Other findings (not counted against a row)
 
-- **`same_plan` is decided from `org_billing.plan`, not from Stripe** (`billing-page.ts:77`). AC 2 and the Assumptions say the current plan is the Stripe plan item, and that the column "may lag after a failed write". After a recording failure, for example Starter → Team with `set_org_plan` failing, the page shows Team as current and offers "Switch to Starter". Pressing it answers "You're already on this plan" and Stripe is never called, so the member cannot go back until something else heals the row. AC 13's "repeat of the same change" works, but no check covers a switch back to the stale recorded plan. This is a precision gap in C3209 and AC 12.
-- **A recording failure logs two lines, not one.** The recorder logs `Recording the plan failed: <code>` (`org-plan.ts:17`), and the use case logs the same text again (`billing-page.ts:83`). AC 13 asks for one line. Each proof mocks the other side, so neither sees the pair.
-- **AC 19's "Billing isn't available yet" is not reachable through the action.** `not_configured` maps to the plan notice (`actions.test.ts:160`). The page's `not_configured` state shows no plan list (C3202 `:194`), so in practice the switch control never shows. This is consistent with C3210's wording.
+- **"One line in total" is proven by composition, not by one test.** No test runs the real use case with the real recorder: C3214 mocks `org-plan`. The total is one line only because the adapter logs once (C3212 `:25`), the use case logs nothing (C3209 `:98`), and the use case calls `record` once. That last fact is asserted only on the success path (C3209 `:35`). In the recording-failure test (`:95-98`), the number of `record` calls is not asserted. A use case that retried a failed recording would emit two adapter lines and still pass every proof. This is a small precision gap in C3209.
+- **The summary uses the stored seats when the record lags.** `planChangeSummary(found.value.plan, key, found.value.seats)` (`billing-page.ts:78`) reads `org_billing.seats`. After a failed recording those are the pre-change seats. For the plan-to-plan moves C3200 covers, the result is the same, because a move goes to the new included count. Nothing in the plan pins the lagging case.
+- **checks.md Swept "observability"** still names C3209 among the "one log line" proofs. After 3afa9db, C3209 proves the use case logs nothing on a recording failure. This is wording only.
 
 ## Ranked gaps
 
-1. **The live run has not been done** (C3217, `no evidence`). AC 24 at 375, 768 and 1440 px with touch, and the S1 to S3 independent tests against the Stripe sandbox, are still owed. The hosted project now appears to have `set_org_plan` (see 2), so the run's precondition may now be met.
-2. **The SQL proof is red at HEAD** (C3215, C3216). `supabase/tests/set_org_plan.sql:9-33` replays a migration that the hosted project now holds, and the recipe fails with `function "set_org_plan" already exists`. Remove the replay block, as the file's own header says, and re-run so the recipe asserts the applied function. The SQL fault (`where org_id = v_org` widened) could not be evaluated.
-3. **A mutant survives on plan-item identification in `changePlan`** (C3206 to C3208, `web/infrastructure/stripe/billing-gateway.ts:169`). Choosing `items[0]` passes every change test. Add a change test where the seat item precedes the plan item and assert `items[0][id]` is the plan item's id and the seat entry targets the seat item.
-4. **checks.md proof commands for C3201, C3206, C3207, C3208, C3209 and C3214 select zero tests and exit 0.** They name `billing-gateway.test.ts`, `billing-page.test.ts` and `billing-page-wiring.test.ts` instead of `billing-gateway-plan.test.ts`, `billing-change-plan.test.ts` and `billing-change-plan-wiring.test.ts`. Correct the paths.
-5. **Precision gap: `same_plan` is checked against the lagging `org_billing.plan`** (`web/application/use-cases/billing-page.ts:77`). It is not decided against Stripe's plan item, so switching back after a failed recording is refused.
-6. **AC 13 asks for one log line, but a recording failure emits two** (`web/infrastructure/supabase/org-plan.ts:17` and `web/application/use-cases/billing-page.ts:83`).
-7. **Undeclared amendments of approved tests.** These are C3106 (`billing-gateway.test.ts:106-107`) and the runner pins (C830, C1045, C203, C204, C205, C210, C212). Both are justified, but neither is listed in checks.md "How proofs run".
+1. **The C3210 proof command in checks.md runs no test** (C3210, checks.md:57). `npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3210:"` gives `No test files found, exiting with code 1` in PowerShell and in Git Bash, because the backslash-escaped parentheses become `app/(app/)/...`. Write the path unescaped, as `"app/(app)/settings/billing/actions.test.ts"`, which the batch above ran: 20 tests passed.
+2. **The live check is author-run evidence that this Verifier did not observe, and two tablet obligations are unreported** (C3217, no file:line). The quoted report covers the three sizes, touch, the switch there and back, and the Stripe and `org_billing` changes. It does not report the 44 x 44 px control size or horizontal scroll at 768 px. "Charges nothing" rests on the prompt and an unchanged trial, with no invoice amount. The run cannot be repeated, because the sandbox objects were deleted. Closing this needs a re-run at 768 px that records the control sizes and `scrollWidth`, or the owner's explicit acceptance of the author's report as the C3217 evidence.
+3. **Precision gap: C3209's recording-failure test does not pin a single `record` call** (`web/application/use-cases/billing-change-plan.test.ts:95-98`). As a result, the AC 13 "exactly one line" holds by composition only on the success path assertion `:35`.

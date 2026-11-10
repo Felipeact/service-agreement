@@ -54,7 +54,7 @@ Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway-plan.test
 Proof: `cd web && npx vitest run application/use-cases/billing-change-plan.test.ts -t "C3209:"`
 
 **C3210** - The change-plan Server Action redirects a signed-out visitor and a no-membership user to `/login` without calling the use case, takes one argument that must be `starter`, `team` or `business` (any other value answers the plan notice and the use case is not called), reads no form data, and maps `done`, `forbidden`, `same_plan` and every other failure to its page state with the notices "You don't have permission to change this", "You're already on this plan" and "We couldn't change your plan. Try again." (AC 15, AC 17, AC 18, AC 19)
-Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3210:"`
+Proof: `cd web && npx vitest run "app/(app)/settings/billing/actions.test.ts" -t "C3210:"`
 
 **C3211** - Checkout tags its products: the plan line's product has `metadata[sa_kind]` `plan` and `metadata[sa_plan]` the chosen plan key, and the extra-seat line's product has `metadata[sa_kind]` `seat` (AC 16)
 Proof: `cd web && npx vitest run infrastructure/stripe/checkout.test.ts -t "C3211:"`
