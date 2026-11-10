@@ -159,6 +159,7 @@ The outcome: one in-app page that answers what the org pays and what comes next.
 | The old portal code | Removed: the adapter, port, action, card and their tests | Dead once the link is replaced; the Stripe portal stays configured in the dashboard, unused | n |
 | Hosted invoice links | Opened in a new tab | They are Stripe pages; the app stays open behind | n |
 | Card form styling | Stripe's default theme with the app's accent colour | A custom skin is not worth it for one form | n |
+| Which payment methods the card field offers | Whatever the Stripe Dashboard has enabled; the owner turns off everything but Cards. The SetupIntent is created with `customer` and `usage` only | The live sandbox refused `payment_method_types` at the pinned API version; the owner chose this over hiding redirect methods in code | y |
 
 **Open questions:** none block the build.
 
@@ -166,6 +167,7 @@ The outcome: one in-app page that answers what the org pays and what comes next.
 | --- | --- | --- | --- |
 | 1 | blocks go-live | The publishable key (`pk_test_...`, later `pk_live_...`) must be set as `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in each environment | The page works but the card form says it is not set up |
 | 2 | open | May an admin cancel the subscription, or only the owner? | Admin can, matching the read policy; narrowing it is a one-line role check |
+| 4 | blocks go-live | In the Stripe Dashboard (Settings, Payment methods) turn off every method except Cards, in test and in live mode. Until then the card field also offers Link, Klarna and others, and a non-card method shows as "No payment method" on the page | Card entry works but offers methods the page cannot display |
 | 3 | open | Should a sandbox customer with a real trialing subscription be created for the live run? | The live run needs one; the build can create it with the test key and the owner's go-ahead |
 
 ## Observable

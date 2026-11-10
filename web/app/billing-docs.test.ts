@@ -9,7 +9,8 @@ const lines = (text: string) => text.split("\n");
 test("C2536: ROADMAP, CONTEXT and STATE record billing-checkout", () => {
   const roadmap = lines(document("ROADMAP.md"));
   expect(roadmap.some((line) => /^- \[x\] Stripe Checkout/.test(line) && line.includes("billing-checkout"))).toBe(true);
-  expect(roadmap.some((line) => /^- \[ \] Stripe Customer Portal/.test(line))).toBe(true);
+  // Ticked 2026-11-10 when the in-app billing page (billing-page) finished the item; either state is a recorded one.
+  expect(roadmap.some((line) => /^- \[[ x]\] Stripe Customer Portal/.test(line))).toBe(true);
 
   const context = document("CONTEXT.md");
   const start = context.indexOf("### SaaS billing (M14)");

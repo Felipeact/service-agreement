@@ -108,7 +108,7 @@ export function stripeBillingGateway(options: { secretKey: string }): BillingGat
     },
 
     async startCardUpdate({ customerId }: StripeIds) {
-      const answer = await call("card setup", "POST", "/setup_intents", { customer: customerId, payment_method_types: ["card"], usage: "off_session" });
+      const answer = await call("card setup", "POST", "/setup_intents", { customer: customerId, usage: "off_session" });
       const secret = answer.ok ? text(answer.body.client_secret) : null;
       return secret ? ({ ok: true, clientSecret: secret } as const) : unavailable;
     },

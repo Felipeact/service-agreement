@@ -55,9 +55,11 @@ type CancelPromptProps = {
 export function CancelPrompt({ confirming, pending, endDate, onStart, onDismiss, onConfirm }: CancelPromptProps) {
   if (!confirming) {
     return (
-      <Button variant="secondary" onClick={onStart}>
-        Cancel subscription
-      </Button>
+      <div>
+        <Button variant="secondary" onClick={onStart}>
+          Cancel subscription
+        </Button>
+      </div>
     );
   }
   return (

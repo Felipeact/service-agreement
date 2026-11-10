@@ -214,15 +214,14 @@ describe("a failing subscription read", () => {
 });
 
 describe("starting a card update", () => {
-  test("C3113: one POST to setup_intents with exactly customer, card and off_session, answering the client secret", async () => {
+  test("C3113: one POST to setup_intents with exactly customer and off_session, answering the client secret", async () => {
     expect(await gateway().startCardUpdate(IDS)).toEqual({ ok: true, clientSecret: "seti_1_secret_abc" });
     expect(posts()).toHaveLength(1);
     expect(posts()[0].url.pathname).toBe("/v1/setup_intents");
     expect(posts()[0].headers.Authorization).toBe(`Bearer ${KEY}`);
     const body = form(posts()[0]);
-    expect([...body.keys()].sort()).toEqual(["customer", "payment_method_types[0]", "usage"]);
+    expect([...body.keys()].sort()).toEqual(["customer", "usage"]);
     expect(body.get("customer")).toBe(IDS.customerId);
-    expect(body.get("payment_method_types[0]")).toBe("card");
     expect(body.get("usage")).toBe("off_session");
   });
 

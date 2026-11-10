@@ -60,7 +60,7 @@ Proof: `cd web && npx vitest run application/use-cases/billing-page.test.ts -t "
 
 ### S2 - An owner or admin updates the card inside the app · 6 files · ~50 KB · ~14k
 
-**C3113** - Starting a card update makes one `POST /v1/setup_intents` with exactly `customer`, `payment_method_types[0]=card` and `usage=off_session`, returns the `client_secret`, and a non-200 answer or a missing secret is `unavailable` (AC 11, AC 18)
+**C3113** - Starting a card update makes one `POST /v1/setup_intents` with exactly `customer` and `usage=off_session`, returns the `client_secret`, and a non-200 answer or a missing secret is `unavailable` (AC 11, AC 18). Amended 2026-11-10 with the owner's approval: the live sandbox refused `payment_method_types` at the pinned API version (HTTP 400, "managed from your Dashboard"), so which methods the field offers is a Stripe Dashboard setting
 Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3113:"`
 
 **C3114** - Finishing a card update retrieves the SetupIntent itself, requires `status` `succeeded` and `customer` equal to the org's customer, then sets that payment method as `invoice_settings[default_payment_method]` on the customer and as `default_payment_method` on the subscription, with exactly those two writes (AC 12, Landing door 3)

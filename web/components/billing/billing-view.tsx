@@ -46,7 +46,7 @@ function Invoices({ invoices }: { invoices: BillingOverview["invoices"] }) {
           <span className="text-[13px] text-ink">{row.amount}</span>
           <span className="text-[12px] text-ink-2 capitalize">{row.status}</span>
           {row.url && (
-            <a href={row.url} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center text-[13px] font-semibold text-action hover:underline lg:h-auto">
+            <a href={row.url} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 min-w-11 items-center justify-center text-[13px] font-semibold text-action hover:underline lg:h-auto lg:min-w-0">
               View
             </a>
           )}
