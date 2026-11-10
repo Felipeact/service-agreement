@@ -9,7 +9,7 @@ import { setupAction } from "./actions";
 export const metadata: Metadata = { title: "Set up your workspace" };
 
 /** Read at request time: who is asking, whether their org's setup is pending, and what the screen shows. */
-async function SetupForRequest() {
+export async function SetupForRequest() {
   const { currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect(member.status === "signed_out" ? "/login" : "/pipeline");

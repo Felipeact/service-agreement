@@ -63,6 +63,31 @@ describe("setup screen", () => {
   });
 });
 
+describe("setup screen after an attempt", () => {
+  const values = { legalName: "", address: "", phone: "", accentColor: "blue", governingProvince: "", itemSingular: "fixture", itemPlural: "fixtures" };
+  const after = (initialState: Parameters<typeof SetupView>[0]["initialState"]) =>
+    html(createElement(SetupView, { settings, groups: [], words, action: noop, initialState }));
+
+  test("C2811: a refused save shows the permission notice and keeps what was typed", () => {
+    const markup = after({ status: "forbidden", values });
+    expect(markup).toContain("You don't have permission to change this.");
+    expect(markup).toContain('role="alert"');
+    expect(tag(markup, "itemSingular")).toContain('value="fixture"');
+  });
+
+  test("C2811: an unavailable store shows its own notice", () => {
+    expect(after({ status: "unavailable", values })).toContain("We couldn't save your details. Try again.");
+  });
+
+  test("C2810: field errors render under their fields", () => {
+    const markup = after({ status: "invalid", values, errors: { legalName: "Legal name must be 1 to 120 characters", accentColor: "Accent colour must look like #1f6f8b", governingProvince: "Choose your province or territory" } });
+    expect(markup).toContain("Legal name must be 1 to 120 characters");
+    expect(markup).toContain("Accent colour must look like #1f6f8b");
+    expect(markup).toContain("Choose your province or territory");
+    expect(tag(markup, "legalName")).toContain('aria-invalid="true"');
+  });
+});
+
 describe("catalog review", () => {
   test("C2817: with no types it says No types yet and that they are added in the task library, with no draft control", () => {
     const markup = html(createElement(CatalogReview, { groups: [], words }));

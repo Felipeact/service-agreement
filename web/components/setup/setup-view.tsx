@@ -15,6 +15,8 @@ type SetupViewProps = {
   groups: SetupCatalogGroup[];
   words: ItemWords;
   action: (state: SetupFormState, formData: FormData) => Promise<SetupFormState>;
+  /** Where the form starts; only a test passes it. */
+  initialState?: SetupFormState;
 };
 
 const IDLE: SetupFormState = { status: "idle" };
@@ -68,8 +70,8 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
 }
 
 /** The first-login setup page body: confirm the company profile, see the catalog, continue or skip. */
-export function SetupView({ settings, groups, words, action }: SetupViewProps) {
-  const [state, formAction, pending] = useActionState(action, IDLE);
+export function SetupView({ settings, groups, words, action, initialState = IDLE }: SetupViewProps) {
+  const [state, formAction, pending] = useActionState(action, initialState);
   const values = state.status === "idle" ? toSetupInput(settings) : state.values;
   const errors = state.status === "invalid" ? state.errors : {};
 

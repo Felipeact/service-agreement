@@ -103,6 +103,13 @@ describe("setupAction", () => {
     expect(saveSetupProfile).not.toHaveBeenCalled();
   });
 
+  test("C2807: a signed-in user with no membership is sent to /login and nothing is stored", async () => {
+    currentMember.mockResolvedValue({ status: "no_membership", email: "x@example.com" });
+    await expect(setupAction(idle, form("save"))).rejects.toThrow("NEXT_REDIRECT /login");
+    expect(saveSetupProfile).not.toHaveBeenCalled();
+    expect(skipSetup).not.toHaveBeenCalled();
+  });
+
   test.each(["estimator", "viewer"] as const)("C2811: a %s is sent to /pipeline and nothing is stored", async (role) => {
     currentMember.mockResolvedValue({ status: "member", userId: "u2", email: "x@example.com", orgId: "org-1", orgName: "Org", role });
     await expect(setupAction(idle, form("save"))).rejects.toThrow("NEXT_REDIRECT /pipeline");
