@@ -1,36 +1,10 @@
 -- plan-change, database side: C3215, C3216 (.specs/features/plan-change/checks.md).
 -- Run after fixture.sql (npm run test:db set_org_plan). Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB; uX has
--- no membership. The migration 20261110190000_set_org_plan.sql is NOT applied to the hosted project without the owner's
--- go-ahead, so this file replays it inside the rolled-back transaction (the block below is the migration's body, to be removed
--- once the migration is applied, as first_login_setup did). Expected values come from the plan, never read back from the migration.
+-- no membership. The migration 20261110190000_set_org_plan.sql is applied to the hosted project only with the owner's
+-- go-ahead; it was applied on 2026-11-10 by the owner, so this file no longer replays it and tests the hosted function (as
+-- first_login_setup does). Expected values come from the plan, never read back from the migration.
 
 reset role;
-
--- Replay of 20261110190000_set_org_plan.sql.
-create function public.set_org_plan(p_plan text, p_seats integer)
-returns void
-language plpgsql security definer
-set search_path = ''
-as $$
-declare
-  v_org uuid;
-begin
-  -- One org per person until there is an org switcher (decision 9).
-  select m.org_id into v_org from public.memberships m where m.user_id = (select auth.uid()) limit 1;
-  if v_org is null or not (select private.has_org_role(v_org, array['owner', 'admin'])) then
-    raise exception 'not allowed to change the plan' using errcode = '42501';
-  end if;
-  if p_plan is null or p_plan not in ('starter', 'team', 'business') or p_seats is null or p_seats not between 1 and 50 then
-    raise exception 'invalid plan or seats' using errcode = '22023';
-  end if;
-  update public.org_billing set plan = p_plan, seats = p_seats where org_id = v_org;
-  if not found then
-    raise exception 'no billing record for this org' using errcode = 'P0002';
-  end if;
-end $$;
-
-revoke all on function public.set_org_plan(text, integer) from public, anon;
-grant execute on function public.set_org_plan(text, integer) to authenticated;
 
 grant execute on all functions in schema tests to anon, authenticated;
 

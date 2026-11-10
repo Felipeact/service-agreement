@@ -313,7 +313,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [ ] "Other" trade: Claude drafts a catalog from a description or an uploaded proposal, with a tenant review step
 - [ ] "Setting up your workspace" state while a paid org is pending
 - [ ] Checkout refuses an email that already belongs to an org, with a clear message
-- [ ] Change plan from the billing page: list Starter, Team and Business, switch with a confirming step, prorated, seats follow the sign-up rule, the app's record of the plan follows (`.specs/features/plan-change/`, planned 2026-11-10, built 2026-11-10, AD-179; the `set_org_plan` migration (`20261110190000`) is written and proven on a rolled-back recipe but not yet applied to the hosted project, and the live Stripe run waits for that; tick when the Verifier passes and the owner has applied the migration)
+- [ ] Change plan from the billing page: list Starter, Team and Business, switch with a confirming step, prorated, seats follow the sign-up rule, the app's record of the plan follows (`.specs/features/plan-change/`, planned 2026-11-10, built 2026-11-10, AD-179; the `set_org_plan` migration (`20261110190000`) was applied by the owner and the live Stripe sandbox run passed (author-run); tick when the Verifier passes)
 - [ ] Plan limits by live agreements and an AI-import allowance; seats beyond the included ones are billed through the Stripe quantity set at sign-up (register-seats), and enforcing the paid seat count at invite time is a later item
 - [ ] Supabase Auth SMTP sender on the verified Resend domain (blocks launch)
 

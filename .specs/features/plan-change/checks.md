@@ -8,10 +8,10 @@ Plan: `.specs/features/plan-change/plan.md`
 ## How proofs run
 
 - **vitest** runs from `web/` in **PowerShell with the uppercase drive path** (`Set-Location 'C:\Users\dispa\Music\repos\ServiceAgreement\web'`); Git Bash's lowercase `c:` breaks vitest. Every new test name starts with its check id and a colon (`C3200:`). This feature numbers from C3200 (no id above C3142 exists). `npx vitest run <file> -t "C3200:"` selects one.
-- **SQL** recipe `set_org_plan` runs with `npm run test:db set_org_plan` from `web/` (new `supabase/tests/set_org_plan.sql`, registered in `RECIPES`, run after `fixture.sql`, rolled back). The migration is **not applied to the hosted project** without the owner's go-ahead (rule 8), so the recipe puts the migration file between the fixture and the test, inside the rolled-back transaction. Assertions are labelled with the check id and take their expected values from the plan.
+- **SQL** recipe `set_org_plan` runs with `npm run test:db set_org_plan` from `web/` (new `supabase/tests/set_org_plan.sql`, registered in `RECIPES`, run after `fixture.sql`, rolled back). The migration was applied to the hosted project by the owner on 2026-11-10, so the recipe tests the hosted function; before that it replayed the migration inside the rolled-back transaction. Assertions are labelled with the check id and take their expected values from the plan.
 - **Stripe** is never called by a vitest proof: the gateway tests stub `fetch`.
 - **Live** (C3217) is an author-run Playwright pass per AGENTS.md at 375, 768 and 1440 px against the Stripe sandbox with the owner's test keys; nothing is committed. It needs the migration applied (open question 1).
-- Amended approved tests, named by the plan's Impact: C3105 (the subscription read's `expand[]` list gains `items.data.price.product`), C3129 (the `org_billing` read gains the `seats` column), and the Checkout tests that pin its line-item keys.
+- Amended approved tests, named by the plan's Impact: C3105 (the subscription read's `expand[]` list gains `items.data.price.product`), C3106 (the overview gains `plan` and `extraSeats`), C3129 (the `org_billing` read gains the `seats` column, now C3213) and the SQL runner's count pins in `web/scripts/test-db/runner.test.ts` (30 recipes and 32 files became 31 and 33, because this feature adds a recipe and its file). No Checkout test needed amending: only C3211 was added.
 - Settled mid-build and recorded here, not a plan rewrite: each product also carries `metadata[sa_plan]` (the plan key), because a Checkout-made product has a random id and the page must know *which* plan an item is, not only that it is a plan.
 - Concurrency is not driven by any proof; see Swept.
 
@@ -23,7 +23,7 @@ Plan: `.specs/features/plan-change/plan.md`
 Proof: `cd web && npx vitest run domain/billing/plan-change.test.ts -t "C3200:"`
 
 **C3201** - The overview is read with the subscription's items and their products expanded, and carries `plan` (the plan item's product `sa_plan`: `starter`, `team` or `business`) and `extraSeats` (the seat item's quantity, 0 with none); a subscription with no item whose product is tagged `sa_kind` `plan`, or a `sa_plan` outside the three, has `plan` null (AC 2, AC 5)
-Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3201:"`
+Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway-plan.test.ts -t "C3201:"`
 
 **C3202** - The plan list shows Starter, Team and Business in price order with "$49/month", "$99/month" and "$199/month" and included seats 2, 5 and 10, marks the current plan "Current plan" with no switch control, and offers "Switch to <plan>" on the other two (AC 1, AC 2)
 Proof: `cd web && npx vitest run components/billing/billing-view.test.ts -t "C3202:"`
@@ -42,16 +42,16 @@ Proof: `cd web && npx vitest run components/billing/plan-switcher.test.ts -t "C3
 ### S3 - Confirming changes the plan in Stripe and in the app · 8 files · ~70 KB · ~18k
 
 **C3206** - A plan change reads the subscription with its items expanded, makes sure the product `sa_plan_team` exists (a `200` read creates nothing, a `404` read makes one `POST /v1/products` with `id` `sa_plan_team`, `name` "Team plan", `metadata[sa_kind]` `plan` and `metadata[sa_plan]` `team`), then makes one `POST /v1/subscriptions/{id}` whose plan item is `items[0][id]` with `price_data` of `currency` `cad`, the plan's `unit_amount`, `recurring[interval]` `month` and `product` `sa_plan_team`, with `proration_behavior` `create_prorations`; the seat item is set to the new quantity when one exists and extra seats remain, deleted (`deleted=true`) when none are needed, and added on `sa_extra_seat` at `EXTRA_SEAT_CENTS` when none exists and some are needed (AC 9, AC 10, Landing door 1)
-Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3206:"`
+Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway-plan.test.ts -t "C3206:"`
 
 **C3207** - A plan change whose plan item is already on the requested plan and whose seat quantity already matches makes only the subscription read, answers ok with `changed` false, and makes no product or subscription write (AC 13, AC 14)
-Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3207:"`
+Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway-plan.test.ts -t "C3207:"`
 
 **C3208** - A plan change that cannot proceed is `unavailable` (or `unsupported` when no item is a tagged plan item), logged once with the HTTP status and Stripe's error code only and never an id, the key or a body, and makes no subscription write: the subscription read failing, the product read answering anything but `200` or `404`, the product create failing, the subscription update failing, a refused connection, a request open after 10 s (AC 5, AC 18)
-Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway.test.ts -t "C3208:"`
+Proof: `cd web && npx vitest run infrastructure/stripe/billing-gateway-plan.test.ts -t "C3208:"`
 
 **C3209** - The change-plan use case checks the role first (an estimator or viewer is `forbidden` with nothing read), reads the ids, plan and seats from `org_billing`, refuses a key outside `starter`, `team`, `business` as `invalid` and the org's current plan as `same_plan` with no Stripe call, computes the seat count with `seatsAfterPlanChange`, calls the gateway with that plan and the extra seats the new plan needs, then records the plan and seats; a recording failure after Stripe changed still answers ok and logs one line with the error code only; an unchanged Stripe with a differing `org_billing.plan` records it and answers ok; no row is `no_subscription`; a database error is `unavailable` with no Stripe call (AC 9, AC 11, AC 12, AC 13, AC 14, AC 15, AC 17)
-Proof: `cd web && npx vitest run application/use-cases/billing-page.test.ts -t "C3209:"`
+Proof: `cd web && npx vitest run application/use-cases/billing-change-plan.test.ts -t "C3209:"`
 
 **C3210** - The change-plan Server Action redirects a signed-out visitor and a no-membership user to `/login` without calling the use case, takes one argument that must be `starter`, `team` or `business` (any other value answers the plan notice and the use case is not called), reads no form data, and maps `done`, `forbidden`, `same_plan` and every other failure to its page state with the notices "You don't have permission to change this", "You're already on this plan" and "We couldn't change your plan. Try again." (AC 15, AC 17, AC 18, AC 19)
 Proof: `cd web && npx vitest run "app/\(app\)/settings/billing/actions.test.ts" -t "C3210:"`
@@ -68,7 +68,7 @@ Proof: `cd web && npx vitest run infrastructure/supabase/org-billing.test.ts -t 
 ### S4 - Refusals and failures are visible · 2 files · ~15 KB · ~4k
 
 **C3214** - The container exposes the change-plan use case built on the request's one Supabase client; without `STRIPE_SECRET_KEY` or `APP_BASE_URL` it answers `not_configured` and makes no `fetch`; with both it uses the Stripe adapter (AC 19, Flow hops 3 to 5)
-Proof: `cd web && npx vitest run composition/billing-page-wiring.test.ts -t "C3214:"`
+Proof: `cd web && npx vitest run composition/billing-change-plan-wiring.test.ts -t "C3214:"`
 
 ### S5 - The database function is safe · 3 files · ~25 KB · ~6k
 

@@ -193,6 +193,17 @@ describe("changing the plan", () => {
     expect(form(productPosts()[0]).get("metadata[sa_kind]")).toBe("seat");
   });
 
+  test("C3206: the plan item is chosen by its tag, not its position: with the seat item listed first the plan item still gets the new price", async () => {
+    handler = routes({ sub: subWith([seatItem(2), planItem("starter")]) });
+    expect(await gateway().changePlan(IDS, { plan: "team", extraSeats: 3 })).toEqual({ ok: true, changed: true });
+    const body = form(updates()[0]);
+    expect(body.get("items[0][id]")).toBe("si_plan");
+    expect(body.get("items[0][price_data][product]")).toBe("sa_plan_team");
+    expect(body.get("items[1][id]")).toBe("si_seat");
+    expect(body.get("items[1][quantity]")).toBe("3");
+    expect(keys(updates()[0]).filter((key) => key.startsWith("items[1]") && key.includes("price_data"))).toEqual([]);
+  });
+
   test("C3206: when only the seats change the plan item is left out of the update", async () => {
     handler = routes({ sub: subWith([planItem("team"), seatItem(1)]) });
     expect(await gateway().changePlan(IDS, { plan: "team", extraSeats: 4 })).toEqual({ ok: true, changed: true });
