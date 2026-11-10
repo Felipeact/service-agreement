@@ -1,7 +1,9 @@
 -- first-login-setup, database side: C2803, C2804, C2811, C2813, C2814 (.specs/features/first-login-setup/checks.md).
--- Run after fixture.sql and the migration in the same execute_sql call (npm run test:db first_login_setup): the recipe puts
--- 20261110110000_first_login_setup.sql between them, inside the rolled-back transaction, so the hosted project needs no change.
--- Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB. The fixture's org_settings rows exist before the migration.
+-- Run after fixture.sql (npm run test:db first_login_setup) against the hosted project, where migration
+-- 20261110110000_first_login_setup.sql is applied (2026-11-10, owner's go-ahead), so the recipe no longer replays it.
+-- Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB. Their org_settings rows are inserted with no value for
+-- setup_completed_at, so C2804 proves the column default; the backfill of orgs that existed before the migration was read back
+-- on the hosted project when it was applied (1 org, 0 pending) and cannot be replayed once the column exists.
 -- The Vault secret is made inside the rolled-back transaction; no real Stripe secret is used.
 
 reset role;
