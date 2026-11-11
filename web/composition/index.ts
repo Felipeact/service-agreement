@@ -81,6 +81,7 @@ import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supaba
 import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
 import { itemWordsReader } from "@/application/use-cases/item-words";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
+import { makeTenantLogo } from "@/application/use-cases/tenant-logo";
 import { supabaseOrgLogo } from "@/infrastructure/supabase/org-logo";
 import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
 
@@ -133,15 +134,7 @@ export async function getContainer() {
   const setup = supabaseOrgSetup(supabase);
   // The org's logo: the stored path, a signed upload, and the bytes a document draws (tenant-logo). The bucket is public, so reading needs no session.
   const logo = supabaseOrgLogo(supabase, { baseUrl: url });
-  // Never throws: a document without its logo beats no document (tenant-logo AC 19).
-  const tenantLogo = async (orgId: string) => {
-    try {
-      return await logo.load(await logo.current(orgId));
-    } catch (cause) {
-      console.error(`Reading the logo of org ${orgId} failed, so the document has none: ${cause instanceof Error ? cause.message : String(cause)}`);
-      return null;
-    }
-  };
+  const tenantLogo = makeTenantLogo(logo);
   // The billing page needs both values (billing-page AC 8); `STRIPE_SECRET_KEY` is read only in this file. Without them the page
   // says billing is not available and every action answers `not_configured` with no request. The publishable key is safe for the
   // browser: it is read here at request time and handed to the card field as a prop, so no rebuild is needed per environment.

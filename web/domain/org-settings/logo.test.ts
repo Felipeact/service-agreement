@@ -32,6 +32,8 @@ describe("logo rules", () => {
       `/${ORG}/${ID}.png`,
       `${ORG}/nested/${ID}.png`,
       `${ORG}/${ID}.png `,
+      `${ORG}/${ID}Xpng`,
+      `${ORG}/${ID}-jpg`,
     ];
     for (const path of refused) expect(isOwnLogoPath(ORG, path), path).toBe(false);
     expect(logoKey(ORG, ID, "jpg")).toBe(`${ORG}/${ID}.jpg`);

@@ -42,4 +42,20 @@ describe("the signing page route", () => {
     const element = (await SigningForRequest({ token: TOKEN })) as ReactElement<{ result: ViewSigningResult }>;
     expect(element.props.result).toEqual({ state: "unavailable" });
   });
+
+  test("C3335: the page hands the view the public address of the tenant's logoPath, and null when there is none or the link is unavailable", async () => {
+    const shown = (logoPath: string | null): ViewSigningResult => ({
+      state: "open",
+      tenant: { name: "Kettle Ridge", address: null, phone: null, accent: null, logoPath },
+      agreementNumber: "AG-1052",
+      signerName: "Pat Lee",
+      embedSrc: null,
+    });
+    viewSigning.mockResolvedValue(shown("org/logo.png"));
+    expect(((await SigningForRequest({ token: TOKEN })) as ReactElement<{ logoUrl: string | null }>).props.logoUrl).toBe("org/logo.png");
+    viewSigning.mockResolvedValue(shown(null));
+    expect(((await SigningForRequest({ token: TOKEN })) as ReactElement<{ logoUrl: string | null }>).props.logoUrl).toBeNull();
+    viewSigning.mockResolvedValue({ state: "unavailable" });
+    expect(((await SigningForRequest({ token: TOKEN })) as ReactElement<{ logoUrl: string | null }>).props.logoUrl).toBeNull();
+  });
 });

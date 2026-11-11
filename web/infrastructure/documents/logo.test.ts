@@ -1,3 +1,4 @@
+import { inflateSync } from "node:zlib";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { DEFAULT_ITEM_WORDS } from "@/domain/org-settings";
 import type { AgreementDocument } from "@/domain/agreement";
@@ -90,5 +91,28 @@ describe("renderWithoutLogoOnFailure", () => {
     expect(render.mock.calls[1][0]).toEqual({ tenant: {} });
     expect(error).toHaveBeenCalledTimes(1);
     await expect(renderWithoutLogoOnFailure({ tenant: {} }, undefined, async () => { throw new Error("boom"); })).rejects.toThrow("boom");
+  });
+});
+
+/** The drawing operators of every content stream of a PDF, inflated. */
+function operators(pdf: Uint8Array): string {
+  const raw = Buffer.from(pdf).toString("latin1");
+  const out: string[] = [];
+  for (const match of raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)) {
+    try {
+      out.push(inflateSync(Buffer.from(match[1], "latin1")).toString("latin1"));
+    } catch {
+      // not a compressed stream
+    }
+  }
+  return out.join("\n");
+}
+
+describe("the logo as drawn", () => {
+  test("C3326: a 320 by 96 logo is drawn 160 by 48 pt, and a 100 by 400 one 12 by 48 pt (the box, not the natural size)", async () => {
+    const wide = await reactPdfDocumentRenderer.renderAgreement({ ...agreement, tenant: { ...agreement.tenant, logo: { bytes: pngBytes(320, 96), format: "png" } } });
+    expect(operators(wide)).toMatch(/\b160 0 0 -48 0 48 cm\n\/I1 Do/);
+    const tall = await reactPdfDocumentRenderer.renderAgreement({ ...agreement, tenant: { ...agreement.tenant, logo: { bytes: pngBytes(100, 400), format: "png" } } });
+    expect(operators(tall)).toMatch(/\b12 0 0 -48 \S+ \S+ cm\n\/I1 Do/);
   });
 });

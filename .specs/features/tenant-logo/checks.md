@@ -100,12 +100,14 @@ Proof: `cd web && npx vitest run infrastructure/documents/logo.test.ts -t "C3325
 
 **C3326** - The agreement PDF rendered with a logo contains an image object, and rendered with no logo contains none and extracts the same text as before this feature (AC 16, AC 18)
 Proof: `cd web && npx vitest run infrastructure/documents/agreement-pdf.test.ts -t "C3326:"`
+Proof: `cd web && npx vitest run infrastructure/documents/logo.test.ts -t "C3326:"`
 
 **C3327** - The contract PDF rendered with a logo contains an image object, and rendered with no logo contains none and extracts the same text as before this feature (AC 16, AC 18)
 Proof: `cd web && npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C3327:"`
 
 **C3328** - The logo loader returns null and logs exactly one line when the fetch takes longer than 3 s, answers `404`, answers `500`, returns bytes that start with neither the PNG nor the JPEG signature, or returns more than 1048576 bytes; for a PNG and a JPEG body it returns the bytes with format `png` and `jpg` (AC 19)
 Proof: `cd web && npx vitest run infrastructure/supabase/org-logo.test.ts -t "C3328:"`
+Proof: `cd web && npx vitest run composition/logo-wiring.test.ts -t "C3328:"`
 
 **C3329** - IF the PDF renderer cannot decode a logo with a valid signature THEN it renders the PDF without it and logs one line, for the agreement and the contract (AC 19)
 Proof: `cd web && npx vitest run infrastructure/documents/logo.test.ts -t "C3329:"`
@@ -120,13 +122,16 @@ Proof: `cd web && npx vitest run app/\(app\)/contracts/\[contractId\]/pdf/route.
 Proof: `cd web && npx vitest run app/review/\[token\]/pdf/route.test.ts -t "C3332:"`
 
 **C3333** - The use case that renders the contract PDF for signature loads the org's current logo into the document, and still sends when the loader returns null (AC 16, AC 19)
-Proof: `cd web && npx vitest run application/use-cases/signing.test.ts -t "C3333:"`
+Proof: `cd web && npx vitest run application/use-cases/signing-documents.test.ts -t "C3333:"`
+Proof: `cd web && npx vitest run application/use-cases/tenant-logo.test.ts -t "C3330:"`
 
 **C3334** - The review page header renders an `<img>` with `src` the logo's public URL and `alt` the company name when the tenant has a `logoPath`, and renders no `<img>` otherwise, with the rest of the header unchanged (AC 17, AC 18)
-Proof: `cd web && npx vitest run components/review/review-view.test.tsx -t "C3334:"`
+Proof: `cd web && npx vitest run components/review/logo.test.ts -t "C3334:"`
+Proof: `cd web && npx vitest run app/review/\[token\]/page.test.ts -t "C3334:"`
 
 **C3335** - The signing page header renders an `<img>` with `src` the logo's public URL and `alt` the company name when the tenant has a `logoPath`, and renders no `<img>` otherwise, with the rest of the header unchanged (AC 17, AC 18)
-Proof: `cd web && npx vitest run components/signing/signing-view.test.tsx -t "C3335:"`
+Proof: `cd web && npx vitest run components/signing/signing.test.ts -t "C3335:"`
+Proof: `cd web && npx vitest run app/sign/\[token\]/page.test.ts -t "C3335:"`
 
 **C3336** - The portal reader and the signing reader map `tenant.logoPath` into the view's tenant, and a reply with no `logoPath` key maps to null (AC 17, AC 18)
 Proof: `cd web && npx vitest run infrastructure/supabase/portal.test.ts -t "C3336:"` and `cd web && npx vitest run infrastructure/supabase/signing.test.ts -t "C3336:"`

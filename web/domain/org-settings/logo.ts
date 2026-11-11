@@ -29,7 +29,7 @@ export function logoKey(orgId: string, id: string, ext: "png" | "jpg"): string {
 
 /** A submitted `logoPath` is empty (no logo) or a key of the caller's own org; `org_settings_logo_path_shape` says the same. */
 export function isOwnLogoPath(orgId: string, path: string): boolean {
-  return path === "" || new RegExp(`^${orgId}/${UUID}\.(png|jpg)$`).test(path);
+  return path === "" || new RegExp(`^${orgId}/${UUID}\\.(png|jpg)$`).test(path);
 }
 
 /** Where anyone can read a stored logo; `null` for none. The bucket is public (door 1). */
