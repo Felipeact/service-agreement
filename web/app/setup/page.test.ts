@@ -7,9 +7,10 @@ const setupPending = vi.fn();
 const getOrgSettings = vi.fn();
 const setupCatalog = vi.fn();
 const getItemWords = vi.fn();
+const logoCurrent = vi.fn();
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords, logo: { current: logoCurrent } }) }));
 // Next's redirect() throws to stop the render; the double does the same.
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -30,6 +31,7 @@ beforeEach(() => {
   getOrgSettings.mockResolvedValue({ legalName: "Flow" });
   setupCatalog.mockResolvedValue([]);
   getItemWords.mockResolvedValue(itemWords("equipment", "equipment"));
+  logoCurrent.mockResolvedValue(null);
 });
 
 describe("the setup page's entry decision", () => {

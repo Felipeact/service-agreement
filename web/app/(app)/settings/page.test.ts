@@ -4,9 +4,10 @@ import type { CurrentMember } from "@/application/ports";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const getOrgSettings = vi.fn(async () => ({ legalName: "Org" }));
 const billingLink = vi.fn();
+const logoCurrent = vi.fn(async () => null);
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, getOrgSettings, billingLink }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, getOrgSettings, billingLink, logo: { current: logoCurrent } }) }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     redirect(to);

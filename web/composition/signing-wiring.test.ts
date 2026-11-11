@@ -42,6 +42,10 @@ vi.mock("@/infrastructure/supabase/settings", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/infrastructure/supabase/settings")>()),
   supabaseOrgSettingsStore: () => ({ get: async () => ({ accentColor: null }), save: async () => ({ ok: true }) }),
 }));
+vi.mock("@/infrastructure/supabase/org-logo", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/infrastructure/supabase/org-logo")>()),
+  supabaseOrgLogo: () => ({ current: async () => null, load: async () => null, prepareUpload: async () => ({ ok: false }), remove: async () => {}, url: () => null }),
+}));
 vi.mock("@/infrastructure/documents", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/infrastructure/documents")>()),
   reactPdfContractRenderer: { renderContract: async () => new Uint8Array([1, 2, 3]) },

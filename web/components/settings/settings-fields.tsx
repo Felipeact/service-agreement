@@ -11,6 +11,8 @@ import { Icon } from "@/components/ui/icons";
 import { initialsOf } from "@/components/ui/list-panel";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
+import { LogoField } from "./logo-field";
+import type { LogoUploadAnswer } from "@/app/logo-upload";
 import type { SettingsFormState } from "./state";
 
 type SettingsFieldsProps = {
@@ -22,6 +24,10 @@ type SettingsFieldsProps = {
   action?: (formData: FormData) => void;
   /** The org has a subscription the member may manage, so the menu lists Billing under Members. */
   billingNav?: boolean;
+  /** `prepareLogoUpload`: the server half of a logo upload (tenant-logo). */
+  prepareLogo?: (file: { type: string; size: number }) => Promise<LogoUploadAnswer>;
+  /** Where the form starts: only a test passes it. */
+  initialUploading?: boolean;
 };
 
 const MESSAGES = {
@@ -78,7 +84,8 @@ function BrandPreview({ name, accent, address, phone }: { name: string; accent: 
 }
 
 /** The company profile and default-terms form. Presentational: the caller owns the state. */
-export function SettingsFields({ values, state, pending, readOnly, action, billingNav = false }: SettingsFieldsProps) {
+export function SettingsFields({ values, state, pending, readOnly, action, billingNav = false, prepareLogo, initialUploading = false }: SettingsFieldsProps) {
+  const [uploading, setUploading] = useState(initialUploading);
   const errors: OrgSettingsErrors = state.status === "invalid" ? state.errors : {};
   const [active, setActive] = useState<string>("company");
   const clickedAt = useRef(0);
@@ -143,6 +150,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
 
       <div className="flex max-w-3xl flex-col gap-5">
         <Card id="company" title="Company" text="Your legal details and the colour customers see on their agreements.">
+          <LogoField key={values.logoPath ?? ""} storedPath={values.logoPath ?? ""} readOnly={readOnly} prepare={prepareLogo} onUploadingChange={setUploading} serverError={errors.logoPath} />
           <BrandPreview {...brand} />
           <div className="grid gap-4 sm:grid-cols-2">
             {text("legalName", "Legal name")}
@@ -229,8 +237,8 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
           <p className="rounded-control bg-board px-4 py-3 text-[13px] text-ink-2">Only owners and admins can edit company settings.</p>
         ) : (
           <div className="sticky bottom-4 z-[5] flex w-fit max-w-full flex-wrap items-center gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-lift">
-            <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? "Saving…" : "Save changes"}
+            <Button type="submit" variant="primary" disabled={pending || uploading}>
+              {pending ? "Saving…" : uploading ? "Uploading logo" : "Save changes"}
             </Button>
             {state.status === "saved" && (
               <p role="status" className="text-[13px] font-medium text-ink">
