@@ -24,7 +24,7 @@ vi.mock("@/composition", async () => {
   };
   const { testTokens: tokens } = (await vi.importActual("@/application/portal-view.testing")) as { testTokens: typeof testTokens };
   const reader = supabasePortalReader({ rpc });
-  return { getContainer: async () => ({ currentMember, viewPortal: makeViewPortal(reader, tokens) }) };
+  return { getContainer: async () => ({ currentMember, viewPortal: makeViewPortal(reader, tokens), logo: { url: (path: string | null) => path } }) };
 });
 
 const { ReviewForRequest } = await import("./page");

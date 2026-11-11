@@ -40,6 +40,8 @@ export type OrgSettingsInput = {
   proposalValidityDays: string;
   itemSingular: string;
   itemPlural: string;
+  /** The logo's key in the `logos` bucket, `""` for none (tenant-logo). Absent means the form did not carry it. */
+  logoPath?: string;
 };
 
 export type OrgSettingsField = keyof OrgSettingsInput;
@@ -67,6 +69,8 @@ export type OrgSettingsValue = {
   /** The org's words for the serviced item, lowercase (item-vocabulary door 1). */
   itemSingular: string;
   itemPlural: string;
+  /** The logo's key, `null` for none; left out, the stored logo is not touched (tenant-logo). */
+  logoPath?: string | null;
 };
 
 export type OrgSettingsErrors = Partial<Record<OrgSettingsField, string>>;

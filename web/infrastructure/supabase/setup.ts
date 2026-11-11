@@ -50,6 +50,7 @@ export function supabaseOrgSetup(client: Client): OrgSetup {
             governing_province: value.governingProvince,
             item_singular: value.itemSingular,
             item_plural: value.itemPlural,
+            ...(value.logoPath !== undefined && { logo_path: value.logoPath }),
             updated_at: at.toISOString(),
           })
           .eq("org_id", orgId)

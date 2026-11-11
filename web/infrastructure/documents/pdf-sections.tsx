@@ -1,8 +1,10 @@
-import { Font, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Font, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { MONTH_NAMES, taskLabel, type DocumentScope } from "@/domain/agreement";
 import type { ScheduleRow } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
+import type { TenantLogo } from "@/domain/org-settings/logo";
 import { formatCadExact } from "@/lib/money";
+import { logoBox, logoSize } from "./logo";
 
 /** Ordinary words stay whole; a word longer than a column can hold is cut every 12 characters, so it wraps instead of running off the page. */
 Font.registerHyphenationCallback((word) => (word.length <= 20 ? [word] : (word.match(/.{1,12}/gu) ?? [word])));
@@ -40,10 +42,16 @@ export const right = { textAlign: "right" as const };
 
 const units = (count: number) => `${count} ${count === 1 ? "unit" : "units"}`;
 
-/** The tenant's name, address and phone over a rule in its accent colour. */
-export function LetterHead({ name, address, phone, accent }: { name: string; address: string | null; phone: string | null; accent: string }) {
+/** The tenant's logo (when it has one), name, address and phone over a rule in its accent colour. */
+export function LetterHead({ name, address, phone, accent, logo }: { name: string; address: string | null; phone: string | null; accent: string; logo?: TenantLogo }) {
+  const size = logo ? logoSize(logo) : null;
   return (
     <View style={{ borderBottomWidth: 2, borderBottomColor: accent, paddingBottom: 8 }}>
+      {logo && size && size.width > 0 && size.height > 0 && (
+        // A react-pdf Image draws into the PDF; it is not an HTML img and has no alt prop.
+        // eslint-disable-next-line jsx-a11y/alt-text
+        <Image src={{ data: Buffer.from(logo.bytes), format: logo.format }} style={{ ...logoBox(size.width, size.height), marginBottom: 6 }} />
+      )}
       <Text style={[styles.tenant, { color: accent }]}>{name}</Text>
       {address && <Text style={styles.muted}>{address}</Text>}
       {phone && <Text style={styles.muted}>{phone}</Text>}

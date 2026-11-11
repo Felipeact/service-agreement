@@ -6,7 +6,7 @@ import { decideAction, recordViewAction } from "./actions";
 
 /** Reads the link at request time. A page render writes nothing (customer-portal AC 25): the view is recorded from the browser. */
 export async function ReviewForRequest({ token }: { token: string }) {
-  const { viewPortal } = await getContainer();
+  const { viewPortal, logo } = await getContainer();
   const view = await viewPortal(token);
   if (!view) notFound();
   const state = portalViewState(view);
@@ -16,6 +16,7 @@ export async function ReviewForRequest({ token }: { token: string }) {
       token={token}
       view={view}
       state={state}
+      logoUrl={logo.url(view.tenant?.logoPath ?? null)}
       actions={{ decide: decideAction.bind(null, token), record: recordViewAction.bind(null, token) }}
     />
   );

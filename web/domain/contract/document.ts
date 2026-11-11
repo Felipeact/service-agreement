@@ -1,5 +1,6 @@
 import { documentBody, NEUTRAL_ACCENT, termMonthsLabel, type AgreementDocument, type AgreementTerms, type DocumentSource } from "../agreement";
 import { DEFAULT_ITEM_WORDS, formatSettingNumber, PROVINCE_NAMES, type ItemWords } from "../org-settings";
+import type { TenantLogo } from "../org-settings/logo";
 import type { ContractParties } from "./parties";
 
 /**
@@ -7,7 +8,7 @@ import type { ContractParties } from "./parties";
  * scope and term come from the accepted version; who is bound comes from the contract's own parties.
  */
 export type ContractDocument = Pick<AgreementDocument, "number" | "versionNo" | "lines" | "totalCents" | "schedule" | "scope" | "term"> & {
-  contractor: { name: string; address: string | null; phone: string | null; accent: string };
+  contractor: { name: string; address: string | null; phone: string | null; accent: string; logo?: TenantLogo };
   /** The org's item words, for the covered-items section (item-vocabulary AC 9). */
   words?: ItemWords;
   customerName: string;

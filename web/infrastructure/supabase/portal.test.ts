@@ -208,3 +208,16 @@ describe("portal reader, item words", () => {
     expect((await supabasePortalReader(typed).view(HASH))?.tenant?.words).toEqual({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
   });
 });
+
+describe("portal reader, logo", () => {
+  test("C3336: tenant.logoPath becomes the view's tenant.logoPath, and a reply with no logoPath key gives null", async () => {
+    const { client, typed } = stubClient({});
+    const tenant = (DOCUMENT as { tenant: object }).tenant;
+    const path = "11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.jpg";
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, tenant: { ...tenant, logoPath: path } }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.tenant?.logoPath).toBe(path);
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, tenant }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.tenant?.logoPath).toBeNull();
+  });
+});
+

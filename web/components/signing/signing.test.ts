@@ -142,3 +142,22 @@ describe("the address that reaches the form", () => {
     expect(elementsOf(SigningView({ result: shown({ embedSrc: null }) }), SigningForm)).toHaveLength(0);
   });
 });
+
+describe("the signing page, logo", () => {
+  const URL = "https://x.supabase.co/storage/v1/object/public/logos/o/l.png";
+
+  test("C3335: with a logo URL the header holds an <img> of it with the company name as alt, and with none there is no <img>", () => {
+    const withLogo = renderToStaticMarkup(createElement(SigningView, { result: shown(), logoUrl: URL }));
+    expect(withLogo).toMatch(/<img[^>]*src="https:\/\/x\.supabase\.co\/storage\/v1\/object\/public\/logos\/o\/l\.png"/);
+    expect(withLogo).toContain('alt="Kettle Ridge Mechanical Ltd."');
+    expect(withLogo.indexOf("<img")).toBeLessThan(withLogo.indexOf("Kettle Ridge Mechanical Ltd.</p>"));
+    expect(html(shown())).not.toContain("<img");
+    expect(renderToStaticMarkup(createElement(SigningView, { result: shown(), logoUrl: null }))).not.toContain("<img");
+  });
+
+  test("C3335: the rest of the header is the same with and without the logo", () => {
+    const strip = (markup: string) => markup.replace(/<img[^>]*>/, "").replace(/<link rel="preload"[^>]*>/, "");
+    expect(strip(renderToStaticMarkup(createElement(SigningView, { result: shown(), logoUrl: URL })))).toBe(html(shown()));
+  });
+});
+

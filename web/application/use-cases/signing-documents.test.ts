@@ -112,3 +112,21 @@ describe("the document the contract is sent as, item words", () => {
     expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, null, { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" });
   });
 });
+
+describe("the document the contract is sent as, logo", () => {
+  const logo = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), format: "png" as const };
+
+  test("C3333: the org's current logo is loaded for the member's org and put on the contractor's letterhead", async () => {
+    const loadLogo = vi.fn(async () => logo);
+    const loaded = await makeContractDocuments({ get }, { get: agreementGet } as never, settings, loadLogo).load("c1", "org-1");
+    expect(loadLogo).toHaveBeenCalledWith("org-1");
+    expect((loaded?.document as unknown as { contractor: { logo: unknown } }).contractor.logo).toEqual(logo);
+  });
+
+  test("C3333: when the loader has no logo the document is the one built, untouched, and loads as before", async () => {
+    const loaded = await makeContractDocuments({ get }, { get: agreementGet } as never, settings, async () => null).load("c1", "org-1");
+    expect(loaded).toEqual({ number: "AG-1052", document: built });
+    expect(loaded?.document).toBe(built);
+  });
+});
+

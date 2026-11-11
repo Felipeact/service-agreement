@@ -1,4 +1,5 @@
 import type { ItemWords, OrgSettingsValue } from "../org-settings";
+import type { TenantLogo } from "../org-settings/logo";
 import { formatSettingNumber, itemWords } from "../org-settings";
 import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
@@ -22,7 +23,7 @@ export type DocumentScope = { kind: "listed"; recordedOn: Date | null; types: Sc
  * Money stays in cents and dates stay dates: the renderer formats them.
  */
 export type AgreementDocument = {
-  tenant: { name: string; address: string | null; phone: string | null; accent: string };
+  tenant: { name: string; address: string | null; phone: string | null; accent: string; logo?: TenantLogo };
   /** The org's words for the serviced item, as the sections name it (item-vocabulary door 3). */
   words: ItemWords;
   number: string;

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, CurrentMember, DocumentRenderer, MemberRole } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { TenantLogo } from "@/domain/org-settings/logo";
 
 const AGR = "11111111-1111-4111-8111-111111111111";
 const ORG = "22222222-2222-4222-8222-222222222222";
@@ -60,7 +61,8 @@ const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const get = vi.fn<(id: string, versionNo?: number) => Promise<AgreementDetail | null>>();
 const getOrgSettings = vi.fn<(orgId: string) => Promise<OrgSettingsValue | null>>();
 const renderAgreement = vi.fn<DocumentRenderer["renderAgreement"]>();
-const container = { currentMember, agreementReader: { get }, getOrgSettings, documentRenderer: { renderAgreement } };
+const tenantLogo = vi.fn<(orgId: string) => Promise<TenantLogo | null>>();
+const container = { currentMember, agreementReader: { get }, getOrgSettings, documentRenderer: { renderAgreement }, tenantLogo };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 
@@ -77,6 +79,7 @@ beforeEach(() => {
   get.mockReset().mockResolvedValue(detail());
   getOrgSettings.mockReset().mockResolvedValue(SETTINGS);
   renderAgreement.mockReset().mockResolvedValue(bytes);
+  tenantLogo.mockReset().mockResolvedValue(null);
 });
 
 describe("GET /agreements/[agreementId]/pdf", () => {
@@ -196,3 +199,26 @@ describe("GET /agreements/[agreementId]/pdf", () => {
     expect(maxDuration).toBeGreaterThanOrEqual(44);
   });
 });
+
+describe("the logo on the agreement PDF", () => {
+  const first: TenantLogo = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), format: "png" as const };
+  const second: TenantLogo = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 2]), format: "jpg" };
+
+  test("C3330: the document carries the logo of the org's current logo_path, and a replaced one gives the new one", async () => {
+    tenantLogo.mockResolvedValue(first);
+    expect((await call()).status).toBe(200);
+    expect(tenantLogo).toHaveBeenCalledWith(ORG);
+    expect(renderAgreement.mock.calls[0][0].tenant.logo).toEqual(first);
+
+    tenantLogo.mockResolvedValue(second);
+    await call();
+    expect(renderAgreement.mock.calls[1][0].tenant.logo).toEqual(second);
+  });
+
+  test("C3330: when the loader has no logo the route still answers 200 and the document has no logo key", async () => {
+    const response = await call();
+    expect(response.status).toBe(200);
+    expect("logo" in renderAgreement.mock.calls[0][0].tenant).toBe(false);
+  });
+});
+

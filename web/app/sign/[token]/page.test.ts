@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ViewSigningResult } from "@/application/use-cases";
 
 const viewSigning = vi.fn<(token: string) => Promise<ViewSigningResult>>();
-const container = { viewSigning };
+const container = { viewSigning, logo: { url: (path: string | null) => path } };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 vi.mock("next/navigation", () => ({

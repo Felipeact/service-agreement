@@ -4,6 +4,7 @@ import type { AgreementTerms } from "@/domain/agreement";
 import { itemWords } from "@/domain/org-settings";
 import { reactPdfContractRenderer } from "./index";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
+import { pngBytes } from "./logo.testing";
 
 const TERMS: AgreementTerms = {
   repairDiscountPct: 10,
@@ -229,5 +230,19 @@ describe("the contract PDF, item words", () => {
     expect(set).toContain("Stations");
     expect(set).not.toMatch(/Equipment/i);
     expect(text(await pages({ scope }))).toContain("Equipment");
+  });
+});
+
+describe("the contract PDF, with a logo", () => {
+  const withLogo: ContractDocument = { ...base, contractor: { ...base.contractor, logo: { bytes: pngBytes(320, 96), format: "png" } } };
+
+  test("C3327: with a logo the PDF holds an image object; with none it holds none and says what it said before", async () => {
+    const drawn = await reactPdfContractRenderer.renderContract(withLogo);
+    const plain = await reactPdfContractRenderer.renderContract(base);
+    expect(Buffer.from(drawn).toString("latin1")).toContain("/Subtype /Image");
+    expect(Buffer.from(plain).toString("latin1")).not.toContain("/Subtype /Image");
+    // The logo makes room above the name, so a line may move to the next page: the same words appear, in a different place.
+    const words = (bytes: Uint8Array) => pdfPages(bytes).join(" ").replace(/Page \d+ of \d+/g, "").split(/\s+/).filter(Boolean).sort();
+    expect(words(drawn)).toEqual(words(plain));
   });
 });

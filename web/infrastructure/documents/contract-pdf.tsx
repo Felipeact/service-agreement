@@ -1,5 +1,6 @@
 import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer";
 import type { ContractDocument } from "@/domain/contract";
+import { renderWithoutLogoOnFailure } from "./logo-fallback";
 import { LetterHead, PageFooter, PriceSection, ScheduleSection, ScopeSections, styles } from "./pdf-sections";
 
 /**
@@ -41,7 +42,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
   return (
     <Document title={`${document.number} contract`} author={contractor.name}>
       <Page size="LETTER" style={styles.page}>
-        <LetterHead name={contractor.name} address={contractor.address} phone={contractor.phone} accent={contractor.accent} />
+        <LetterHead name={contractor.name} address={contractor.address} phone={contractor.phone} accent={contractor.accent} logo={contractor.logo} />
 
         <Text style={styles.title}>Service Contract</Text>
         <View style={styles.meta}>
@@ -84,5 +85,5 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
 }
 
 export async function renderContractPdf(document: ContractDocument): Promise<Uint8Array> {
-  return new Uint8Array(await renderToBuffer(<ContractPdf document={document} />));
+  return renderWithoutLogoOnFailure(document, document.contractor.logo, (without) => renderToBuffer(<ContractPdf document={without} />));
 }

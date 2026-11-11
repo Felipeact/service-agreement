@@ -1,5 +1,6 @@
 import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer";
 import type { AgreementDocument } from "@/domain/agreement";
+import { renderWithoutLogoOnFailure } from "./logo-fallback";
 import { LetterHead, PageFooter, PriceSection, ScheduleSection, ScopeSections, styles } from "./pdf-sections";
 
 /** The agreement as a Letter-size document. Built-in Helvetica only, so no font file travels with it. */
@@ -16,7 +17,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
           </Text>
         )}
 
-        <LetterHead name={tenant.name} address={tenant.address} phone={tenant.phone} accent={tenant.accent} />
+        <LetterHead name={tenant.name} address={tenant.address} phone={tenant.phone} accent={tenant.accent} logo={tenant.logo} />
 
         <Text style={styles.title}>Preventive maintenance service agreement</Text>
         <View style={styles.meta}>
@@ -53,5 +54,5 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
 }
 
 export async function renderAgreementPdf(document: AgreementDocument): Promise<Uint8Array> {
-  return new Uint8Array(await renderToBuffer(<AgreementPdf document={document} />));
+  return renderWithoutLogoOnFailure(document, document.tenant.logo, (without) => renderToBuffer(<AgreementPdf document={without} />));
 }

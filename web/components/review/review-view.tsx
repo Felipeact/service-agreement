@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { TenantLogoImage } from "@/components/ui/tenant-logo";
 import type { PortalView } from "@/application/ports";
 import { portalScope, type PortalDecision } from "@/application/use-cases";
 import { ServiceScopeSections } from "@/components/agreements/service-scope";
@@ -23,6 +24,8 @@ type ReviewViewProps = {
   /** Anything but `unknown`: an unknown link is the not-found page, not this view. */
   state: Exclude<PortalState, "unknown">;
   actions: ReviewActions;
+  /** The public address of the contractor's logo, `null` when it has none. */
+  logoUrl?: string | null;
 };
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
@@ -117,7 +120,7 @@ function Content({ view }: { view: PortalView }) {
  * The customer's page for one link, branded as the contractor and naming no one else (customer-portal AC 8 to 17).
  * A state with no content shows only its message.
  */
-export function ReviewView({ token, view, state, actions }: ReviewViewProps) {
+export function ReviewView({ token, view, state, actions, logoUrl = null }: ReviewViewProps) {
   const tenantName = view.tenant?.name ?? "the company";
   const accent = view.tenant?.accent && isAccent(view.tenant.accent) ? view.tenant.accent : NEUTRAL_ACCENT;
   const primary = { backgroundColor: accent, color: contrastText(accent) };
@@ -155,6 +158,7 @@ export function ReviewView({ token, view, state, actions }: ReviewViewProps) {
     <div className="min-h-dvh bg-ground">
       <header className="border-b border-hairline bg-surface">
         <div className="mx-auto flex max-w-[760px] flex-col gap-0.5 px-4 py-4">
+          {logoUrl && <TenantLogoImage src={logoUrl} name={tenantName} />}
           <p className="text-[18px] font-bold break-words">{tenantName}</p>
           {view.tenant?.address && <p className="text-[13px] text-ink-2">{view.tenant.address}</p>}
           {view.tenant?.phone && <p className="text-[13px] text-ink-2">{view.tenant.phone}</p>}

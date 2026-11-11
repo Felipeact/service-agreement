@@ -103,7 +103,7 @@ function toView(json: unknown): PortalView | null {
     },
     agreement: { number: agreement.number as string, status: agreement.status as AgreementStatus },
     tenant: tenant
-      ? { name: tenant.name as string, address: (tenant.address as string | null) ?? null, phone: (tenant.phone as string | null) ?? null, accent: (tenant.accent as string | null) ?? null,
+      ? { name: tenant.name as string, address: (tenant.address as string | null) ?? null, phone: (tenant.phone as string | null) ?? null, accent: (tenant.accent as string | null) ?? null, logoPath: (tenant.logoPath as string | null | undefined) ?? null,
           words: itemWords((tenant.itemSingular as string | undefined) ?? DEFAULT_ITEM_WORD, (tenant.itemPlural as string | undefined) ?? DEFAULT_ITEM_WORD) }
       : null,
     customer: { name: customer.name as string },

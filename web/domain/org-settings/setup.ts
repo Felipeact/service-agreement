@@ -28,7 +28,7 @@ export function setupEntry(viewer: SetupViewer, pending: boolean): SetupEntry {
 /** The setup form as submitted: the profile fields only. */
 export type SetupProfileInput = Pick<
   OrgSettingsInput,
-  "legalName" | "address" | "phone" | "accentColor" | "governingProvince" | "itemSingular" | "itemPlural"
+  "legalName" | "address" | "phone" | "accentColor" | "governingProvince" | "itemSingular" | "itemPlural" | "logoPath"
 >;
 
 export type SetupProfileField = keyof SetupProfileInput;
@@ -41,6 +41,8 @@ export type SetupProfileValue = {
   governingProvince: string;
   itemSingular: string;
   itemPlural: string;
+  /** The logo's key, `null` for none; left out, the stored logo is not touched (tenant-logo). */
+  logoPath?: string | null;
 };
 
 export type SetupProfileValidation =

@@ -134,7 +134,7 @@ describe("signing reader", () => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue({ data: VIEW, error: null });
     expect(await supabaseSigningReader(typed).view(HASH)).toEqual({
-      tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" },
+      tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b", logoPath: null },
       agreementNumber: "AG-1052",
       signerName: "Pat Lee",
       contractStatus: "pending_signature",
@@ -170,3 +170,15 @@ describe("signing reader", () => {
     await expect(supabaseSigningReader(typed).view(HASH)).rejects.toThrow("XX000");
   });
 });
+
+describe("signing reader, logo", () => {
+  test("C3336: tenant.logoPath becomes the view's tenant.logoPath, and a reply with no logoPath key gives null", async () => {
+    const { client, typed } = stubClient({});
+    const path = "11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.png";
+    client.rpc.mockResolvedValue({ data: { ...VIEW, tenant: { ...VIEW.tenant, logoPath: path } }, error: null });
+    expect((await supabaseSigningReader(typed).view(HASH))?.tenant?.logoPath).toBe(path);
+    client.rpc.mockResolvedValue({ data: VIEW, error: null });
+    expect((await supabaseSigningReader(typed).view(HASH))?.tenant?.logoPath).toBeNull();
+  });
+});
+

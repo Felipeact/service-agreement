@@ -12,6 +12,7 @@ import type {
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
+import type { TenantLogo } from "@/domain/org-settings/logo";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
@@ -304,6 +305,20 @@ export interface OrgSettingsStore {
   get(orgId: string): Promise<OrgSettings | null>;
   /** Overwrites the org's row. Nothing updated means RLS refused: `forbidden`. */
   save(orgId: string, value: OrgSettingsValue, at: Date): Promise<SaveSettingsResult>;
+}
+
+/** The org's logo (tenant-logo doors 1 and 2): which one is stored, a signed upload for a new one, its removal, and its bytes for a document. */
+export interface OrgLogo {
+  /** The org's `logo_path`, `null` for none. Throws on a database error. */
+  current(orgId: string): Promise<string | null>;
+  /** A signed upload URL for a new key `<orgId>/<uuid>.<ext>`; the browser PUTs the bytes there (the imports pattern). */
+  prepareUpload(orgId: string, ext: "png" | "jpg"): Promise<{ ok: true; path: string; signedUrl: string } | { ok: false }>;
+  /** Deletes a stored logo. Never throws: a failure is logged once. */
+  remove(path: string): Promise<void>;
+  /** The bytes of a stored logo for a document, or `null` for no path or any failure (timeout, status, not an image, too big), logged once. */
+  load(path: string | null): Promise<TenantLogo | null>;
+  /** Where anyone can read a stored logo, for the customer pages and the settings preview. */
+  url(path: string | null): string | null;
 }
 
 /** First-login setup (first-login-setup door 1): whether an org still has it to do, what its catalog holds, and the two ways to finish. */
@@ -786,7 +801,7 @@ export interface PortalTokens {
 export type PortalView = {
   link: { versionNo: number; current: boolean; revoked: boolean; revokedAt: Date | null; firstViewedAt: Date | null };
   agreement: { number: string; status: AgreementStatus };
-  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; words: ItemWords } | null;
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; words: ItemWords; logoPath?: string | null } | null;
   customer: { name: string };
   site: { name: string };
   lines: {
@@ -1142,7 +1157,7 @@ export interface SigningSecrets {
 
 /** What `/sign/<token>` reads, as `public.signature_view` returns it. `embedSealed` is `null` unless the form may be shown. */
 export type SigningView = {
-  tenant: { name: string; address: string | null; phone: string | null; accent: string | null } | null;
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; logoPath?: string | null } | null;
   agreementNumber: string;
   signerName: string;
   contractStatus: ContractStatus;
