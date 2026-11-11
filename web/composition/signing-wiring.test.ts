@@ -8,6 +8,7 @@ vi.mock("next/server", () => ({ connection: async () => {} }));
 
 // Only what sits behind the use case is replaced: the database adapters and the layout engine. The provider adapter, the
 // sealing and the use case are the real ones `getContainer()` builds from the environment.
+const renderContract = vi.fn(async (..._args: unknown[]) => new Uint8Array([1, 2, 3]));
 const begin = vi.fn();
 const complete = vi.fn();
 const fail = vi.fn();
@@ -42,13 +43,15 @@ vi.mock("@/infrastructure/supabase/settings", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/infrastructure/supabase/settings")>()),
   supabaseOrgSettingsStore: () => ({ get: async () => ({ accentColor: null }), save: async () => ({ ok: true }) }),
 }));
+const LOGO_PATH = "org-1/33333333-3333-4333-8333-333333333333.png";
+const LOGO = { bytes: new Uint8Array([9, 8, 7]), format: "png" as const };
 vi.mock("@/infrastructure/supabase/org-logo", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/infrastructure/supabase/org-logo")>()),
-  supabaseOrgLogo: () => ({ current: async () => null, load: async () => null, prepareUpload: async () => ({ ok: false }), remove: async () => {}, url: () => null }),
+  supabaseOrgLogo: () => ({ current: async () => LOGO_PATH, load: async (path: string | null) => (path === LOGO_PATH ? LOGO : null), prepareUpload: async () => ({ ok: false }), remove: async () => {}, url: () => null }),
 }));
 vi.mock("@/infrastructure/documents", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/infrastructure/documents")>()),
-  reactPdfContractRenderer: { renderContract: async () => new Uint8Array([1, 2, 3]) },
+  reactPdfContractRenderer: { renderContract: (...args: unknown[]) => renderContract(...args) },
 }));
 vi.mock("@/domain/contract", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/domain/contract")>()),
@@ -78,6 +81,7 @@ beforeEach(() => {
   begin.mockReset().mockResolvedValue({ ok: true, requestId: "req-1" });
   complete.mockReset().mockResolvedValue({ ok: true });
   fail.mockReset().mockResolvedValue(undefined);
+  renderContract.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -146,5 +150,13 @@ describe("getContainer's send for signature, with the real wiring", () => {
     // The portal key opens none of them: one leak does not open the other family of links.
     expect(() => makePortalTokens(key(1)).unseal(linkSealed)).toThrow();
     expect(() => makePortalTokens(key(1)).unseal(signers[0].embedSealed)).toThrow();
+  });
+
+  test("C3333: the contract sent for signature is rendered with the logo of the org's stored path (the container's wiring, not an injected loader)", async () => {
+    fetchMock.mockResolvedValue(Response.json(GOOD));
+    expect((await send()).ok).toBe(true);
+    expect(renderContract).toHaveBeenCalledTimes(1);
+    const document = renderContract.mock.calls[0][0] as { contractor: { logo: unknown } };
+    expect(document.contractor.logo).toEqual(LOGO);
   });
 });

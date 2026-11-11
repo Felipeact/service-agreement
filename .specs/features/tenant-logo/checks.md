@@ -126,6 +126,8 @@ Proof: `cd web && npx vitest run app/review/\[token\]/pdf/route.test.ts -t "C333
 **C3333** - The use case that renders the contract PDF for signature loads the org's current logo into the document, and still sends when the loader returns null (AC 16, AC 19)
 Proof: `cd web && npx vitest run application/use-cases/signing-documents.test.ts -t "C3333:"`
 Proof: `cd web && npx vitest run application/use-cases/tenant-logo.test.ts -t "C3330:"`
+Proof: `cd web && npx vitest run composition/logo-wiring.test.ts -t "C3330:"`
+Proof: `cd web && npx vitest run composition/signing-wiring.test.ts -t "C3333:"`
 
 **C3334** - The review page header renders an `<img>` with `src` the logo's public URL and `alt` the company name when the tenant has a `logoPath`, and renders no `<img>` otherwise, with the rest of the header unchanged (AC 17, AC 18)
 Proof: `cd web && npx vitest run components/review/logo.test.ts -t "C3334:"`
