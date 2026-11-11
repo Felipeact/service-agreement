@@ -6,12 +6,19 @@
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('logos', 'logos', true, 1048576, array['image/png', 'image/jpeg']);
 
--- Only an owner or admin of the org named by the key's first segment writes; `uuid_or_null` makes a malformed segment a
--- policy refusal (42501), not a cast error. No select policy (public read is the bucket flag) and no update policy.
+-- Only an owner or admin of the org named by the key's first segment writes (and so reads through the API: Storage's delete
+-- needs a select policy to see the row, and without one removes nothing, silently; the public read is the bucket flag); `uuid_or_null` makes a malformed segment a
+-- policy refusal (42501), not a cast error. No update policy.
 create policy logos_insert on storage.objects for insert to authenticated
   with check (
     bucket_id = 'logos'
     and array_length(storage.foldername(name), 1) = 1
+    and (select private.has_org_role(private.uuid_or_null((storage.foldername(name))[1]), array['owner', 'admin']))
+  );
+
+create policy logos_select on storage.objects for select to authenticated
+  using (
+    bucket_id = 'logos'
     and (select private.has_org_role(private.uuid_or_null((storage.foldername(name))[1]), array['owner', 'admin']))
   );
 

@@ -31,7 +31,7 @@ Proof: `cd web && npm run test:db tenant_logo` (assertions labelled `C3303`)
 **C3304** - `org_settings.logo_path` accepts null, `<its org id>/<uuid>.png` and `<its org id>/<uuid>.jpg`, and refuses with `23514` another org's id as the prefix, a name with no uuid, a `.svg` ending and a value with no slash (AC 5)
 Proof: `cd web && npm run test:db tenant_logo` (assertions labelled `C3304`)
 
-**C3305** - Bucket `logos` is public (`public = true`) and carries no `select` policy on `storage.objects`, so a read needs no session (AC 6)
+**C3305** - Bucket `logos` is public (`public = true`) and no select policy on `storage.objects` for it applies to `anon`, an estimator, a viewer or another org's owner, so a read needs no session and the API lists nothing to them (AC 6)
 Proof: `cd web && npm run test:db tenant_logo` (assertions labelled `C3305`)
 
 **C3306** - `public.portal_view` returns `tenant.logoPath` equal to the org's `logo_path`, null when it has none, and still returns `name`, `address`, `phone`, `accent`, `itemSingular` and `itemPlural` (AC 17, AC 18)
@@ -56,12 +56,14 @@ Proof: `cd web && npx vitest run app/logo-upload.test.ts -t "C3311:"`
 
 **C3312** - Saving settings with a new valid `logoPath` stores it in `org_settings.logo_path` and deletes the previous object; saving the same path as the stored one deletes nothing (AC 10)
 Proof: `cd web && npx vitest run app/\(app\)/settings/logo-actions.test.ts -t "C3312:"`
+Proof: `cd web && npm run test:db tenant_logo` (assertions labelled `C3312`)
 
 **C3313** - IF deleting the previous object fails THEN the save still reports success and exactly one error line is logged (AC 10)
 Proof: `cd web && npx vitest run app/\(app\)/settings/logo-actions.test.ts -t "C3313:"`
 
 **C3314** - Saving with an empty `logoPath` stores null and deletes the previous object (AC 11)
 Proof: `cd web && npx vitest run app/\(app\)/settings/logo-actions.test.ts -t "C3314:"`
+Proof: `cd web && npm run test:db tenant_logo` (assertions labelled `C3314`)
 
 **C3315** - Saving settings or setup with a `logoPath` that fails the rule returns a field error on `logoPath`, stores nothing and deletes nothing (AC 15)
 Proof: `cd web && npx vitest run app/\(app\)/settings/logo-actions.test.ts -t "C3315:"` and `cd web && npx vitest run app/setup/logo-actions.test.ts -t "C3315:"`

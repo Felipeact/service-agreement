@@ -2,6 +2,7 @@
 -- Run after fixture.sql and the migration (npm run test:db tenant_logo): the recipe puts
 -- migrations/20261111100000_tenant_logo.sql between them, inside the rolled-back transaction, until the owner applies it.
 -- Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB. uAd (admin of A) is made here.
+-- C3312 and C3314 also appear here for the database half: the delete the app asks of Storage must remove a row.
 -- Expected values come from the plan, never read back from the migration. Storage's own size and type refusal is a Storage
 -- service behaviour a SQL recipe cannot drive: C3302 asserts the bucket configuration, C3339 observes the refusal live.
 
@@ -113,8 +114,44 @@ end $$;
 do $$
 begin
   perform tests.ok('C3305 public', (select public from storage.buckets where id = 'logos') is true, 'the bucket is not public');
-  perform tests.ok('C3305 no select policy', not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects'
-    and cmd in ('SELECT', 'ALL') and (qual like '%logos%' or with_check like '%logos%')), 'a select policy names logos');
+  perform tests.ok('C3305 select policies are for authenticated only', not exists (select 1 from pg_policies where schemaname = 'storage'
+    and tablename = 'objects' and cmd in ('SELECT', 'ALL') and (qual like '%logos%' or with_check like '%logos%')
+    and not (roles = array['authenticated']::name[])), 'a select policy on logos reaches another role');
+end $$;
+
+-- C3305, C3301: the API selects nothing for anon, an estimator, a viewer or another org's owner; an owner and an admin see their objects.
+do $$
+declare
+  v_user text;
+begin
+  foreach v_user in array array['uE', 'uV', 'uB'] loop
+    perform tests.act_as(v_user);
+    perform tests.ok('C3305 select ' || v_user, (select count(*) from storage.objects where bucket_id = 'logos' and name like tests.id('orgA')::text || '/%') = 0, 'rows visible');
+    reset role;
+  end loop;
+  perform tests.act_as_anon();
+  perform tests.ok('C3305 select anon', (select count(*) from storage.objects where bucket_id = 'logos') = 0, 'rows visible');
+  reset role;
+  foreach v_user in array array['uA', 'uAd'] loop
+    perform tests.act_as(v_user);
+    perform tests.ok('C3305 select ' || v_user, (select count(*) from storage.objects where bucket_id = 'logos' and name like tests.id('orgA')::text || '/%') >= 4, 'rows hidden');
+    reset role;
+  end loop;
+end $$;
+
+-- C3312, C3314: Storage's remove is a delete that must find the row: an owner and an admin each remove their org's object.
+do $$
+declare
+  v_user text;
+  v_n integer;
+begin
+  foreach v_user in array array['uA', 'uAd'] loop
+    perform tests.act_as(v_user);
+    delete from storage.objects where bucket_id = 'logos' and name = tests.lg_key('orgA', 'ok:' || v_user || 'jpg', 'jpg');
+    get diagnostics v_n = row_count;
+    perform tests.ok('C3312 delete ' || v_user, v_n = 1, 'rows deleted: ' || v_n);
+    reset role;
+  end loop;
 end $$;
 
 -- C3306: the customer's review reads the path.
