@@ -58,6 +58,7 @@ export const RECIPES: Recipe[] = [
   plain("workspace_provisioning"),
   plain("first_login_setup"),
   plain("set_org_plan"),
+  { name: "tenant_logo", parts: ["fixture.sql", "../migrations/20261111100000_tenant_logo.sql", "tenant_logo.sql"] },
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
