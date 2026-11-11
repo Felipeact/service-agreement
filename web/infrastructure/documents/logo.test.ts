@@ -115,4 +115,14 @@ describe("the logo as drawn", () => {
     const tall = await reactPdfDocumentRenderer.renderAgreement({ ...agreement, tenant: { ...agreement.tenant, logo: { bytes: pngBytes(100, 400), format: "png" } } });
     expect(operators(tall)).toMatch(/\b12 0 0 -48 \S+ \S+ cm\n\/I1 Do/);
   });
+
+  test("C3326: a decodable JPEG logo is drawn too, so the format reaches the renderer (a png-only path would drop it)", async () => {
+    const jpeg = new Uint8Array(Buffer.from(TINY_JPEG, "base64"));
+    const pdf = await reactPdfDocumentRenderer.renderAgreement({ ...agreement, tenant: { ...agreement.tenant, logo: { bytes: jpeg, format: "jpg" } } });
+    expect(Buffer.from(pdf).toString("latin1")).toContain("/Subtype /Image");
+    expect(operators(pdf)).toMatch(/\b1 0 0 -1 \S+ \S+ cm\n\/I1 Do/);
+  });
 });
+
+/** A 1 by 1 pixel JPEG. */
+const TINY_JPEG = "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=";

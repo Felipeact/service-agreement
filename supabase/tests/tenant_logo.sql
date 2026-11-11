@@ -149,7 +149,7 @@ begin
     perform tests.act_as(v_user);
     delete from storage.objects where bucket_id = 'logos' and name = tests.lg_key('orgA', 'ok:' || v_user || 'jpg', 'jpg');
     get diagnostics v_n = row_count;
-    perform tests.ok('C3312 delete ' || v_user, v_n = 1, 'rows deleted: ' || v_n);
+    perform tests.ok('C3312 C3314 delete ' || v_user, v_n = 1, 'rows deleted: ' || v_n);
     reset role;
   end loop;
 end $$;
