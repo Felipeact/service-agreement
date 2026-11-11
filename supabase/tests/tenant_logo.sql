@@ -1,6 +1,6 @@
 -- tenant-logo, database side: C3300-C3307 (.specs/features/tenant-logo/checks.md).
--- Run after fixture.sql and the migration (npm run test:db tenant_logo): the recipe puts
--- migrations/20261111100000_tenant_logo.sql between them, inside the rolled-back transaction, until the owner applies it.
+-- Run after fixture.sql (npm run test:db tenant_logo) against the hosted project, where migration
+-- 20261111100000_tenant_logo.sql is applied (owner, 2026-11-11), so the recipe no longer replays it.
 -- Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB. uAd (admin of A) is made here.
 -- C3312 and C3314 also appear here for the database half: the delete the app asks of Storage must remove a row.
 -- Expected values come from the plan, never read back from the migration. Storage's own size and type refusal is a Storage
