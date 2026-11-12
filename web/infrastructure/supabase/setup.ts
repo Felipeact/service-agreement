@@ -25,12 +25,15 @@ export function supabaseOrgSetup(client: Client): OrgSetup {
     }
   }
 
+  /** A plain function, not a method: the container hands members out detached, so none may use `this`. */
+  async function isPending(orgId: string): Promise<boolean> {
+    const { data, error } = await client.from("org_settings").select("setup_completed_at").eq("org_id", orgId).maybeSingle();
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    return data !== null && data.setup_completed_at === null;
+  }
+
   return {
-    async isPending(orgId) {
-      const { data, error } = await client.from("org_settings").select("setup_completed_at").eq("org_id", orgId).maybeSingle();
-      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-      return data !== null && data.setup_completed_at === null;
-    },
+    isPending,
 
     async catalog() {
       const { data, error } = await client.from("asset_types").select("pack, name").order("name");
@@ -69,5 +72,27 @@ export function supabaseOrgSetup(client: Client): OrgSetup {
     },
 
     skip: stamp,
+
+    async draftAllowed(orgId) {
+      if (!(await isPending(orgId))) return false;
+      const { data, error } = await client.from("org_billing").select("other_trade").eq("org_id", orgId).maybeSingle();
+      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+      return data?.other_trade === true;
+    },
+
+    async addTypes(orgId, types) {
+      try {
+        const { data, error } = await client.rpc("add_catalog_types", { p_org_id: orgId, p_types: types });
+        if (!error) return { ok: true, codes: data ?? [] };
+        if (error.code === "42501") return { ok: false, code: "forbidden" };
+        if (error.code === "23505") return { ok: false, code: "duplicate", name: error.hint || null };
+        if (error.code === "23514") return { ok: false, code: "invalid" };
+        console.error(`Adding the drafted types failed: ${error.code}`);
+        return { ok: false, code: "unavailable" };
+      } catch (cause) {
+        console.error(`Adding the drafted types failed: ${cause instanceof Error ? cause.name : "unknown error"}`);
+        return { ok: false, code: "unavailable" };
+      }
+    },
   };
 }

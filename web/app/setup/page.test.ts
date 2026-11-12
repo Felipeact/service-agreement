@@ -8,9 +8,10 @@ const getOrgSettings = vi.fn();
 const setupCatalog = vi.fn();
 const getItemWords = vi.fn();
 const logoCurrent = vi.fn();
+const catalogDraftAllowed = vi.fn(async () => false);
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords, logo: { current: logoCurrent } }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords, catalogDraftAllowed, logo: { current: logoCurrent } }) }));
 // Next's redirect() throws to stop the render; the double does the same.
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {

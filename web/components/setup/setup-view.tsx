@@ -8,8 +8,9 @@ import type { OrgSettings } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
-import { PROVINCES, PROVINCE_NAMES, type ItemWords } from "@/domain/org-settings";
+import { itemText, PROVINCES, PROVINCE_NAMES, type ItemWords } from "@/domain/org-settings";
 import type { SetupCatalogGroup } from "@/domain/org-settings/setup";
+import { DraftPanel, type DraftPanelProps } from "./draft-panel";
 import { toSetupInput, type SetupFormState } from "./state";
 
 type SetupViewProps = {
@@ -25,6 +26,8 @@ type SetupViewProps = {
   prepareLogo?: (file: { type: string; size: number }) => Promise<LogoUploadAnswer>;
   /** Where the form starts with an upload under way; only a test passes it. */
   initialUploading?: boolean;
+  /** Present only where the org may draft a catalog (other-trade-draft): the panel shows above the catalog review. */
+  draft?: Omit<DraftPanelProps, "onAdded">;
 };
 
 const IDLE: SetupFormState = { status: "idle" };
@@ -36,9 +39,20 @@ const MESSAGES = {
 
 const CARD = "flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6";
 
+/** The types added from a draft in this visit; they have no pack, so they show apart from "Added by you". */
+function draftedGroup(names: string[], words: ItemWords): SetupCatalogGroup {
+  return {
+    pack: "draft",
+    label: "Added from your draft",
+    count: names.length,
+    countText: `${names.length} ${itemText(names.length === 1 ? "equipment type" : "equipment types", words)}`,
+    names,
+  };
+}
+
 /** The read-only review of what the starter catalog gave the org: no control here edits a type. */
-export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; words: ItemWords }) {
-  if (groups.length === 0) {
+export function CatalogReview({ groups, words, added = [] }: { groups: SetupCatalogGroup[]; words: ItemWords; added?: string[] }) {
+  if (groups.length === 0 && added.length === 0) {
     return (
       <section aria-labelledby="catalog-title" className={CARD}>
         <h2 id="catalog-title" className="font-display text-[18px] font-semibold tracking-tight">
@@ -59,7 +73,7 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
         </h2>
         <p className="text-[13px] text-ink-2">Your starter catalog, with a checklist for each type.</p>
       </div>
-      {groups.map((group) => (
+      {[...groups, ...(added.length > 0 ? [draftedGroup(added, words)] : [])].map((group) => (
         <div key={group.pack ?? "added"} className="flex flex-col gap-2">
           <p className="text-[13px] font-semibold text-ink">
             {group.label} <span className="font-normal text-ink-2">· {group.countText}</span>
@@ -78,9 +92,10 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
 }
 
 /** The first-login setup page body: confirm the company profile, see the catalog, continue or skip. */
-export function SetupView({ settings, groups, words, action, initialState = IDLE, logoPath = "", prepareLogo, initialUploading = false }: SetupViewProps) {
+export function SetupView({ settings, groups, words, action, initialState = IDLE, logoPath = "", prepareLogo, initialUploading = false, draft }: SetupViewProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const [uploading, setUploading] = useState(initialUploading);
+  const [added, setAdded] = useState<string[]>([]);
   const values = state.status === "idle" ? { ...toSetupInput(settings), logoPath } : state.values;
   const errors = state.status === "invalid" ? state.errors : {};
 
@@ -126,7 +141,9 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
           </div>
         </section>
 
-        <CatalogReview groups={groups} words={words} />
+        {draft && <DraftPanel {...draft} onAdded={(names) => setAdded((before) => [...before, ...names])} />}
+
+        <CatalogReview groups={groups} words={words} added={added} />
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" name="intent" value="save" variant="primary" disabled={pending || uploading}>

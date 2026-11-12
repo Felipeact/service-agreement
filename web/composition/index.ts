@@ -10,6 +10,7 @@ import {
   makeDecidePortal,
   makeInviteMember,
   makeContractDocuments,
+  makeDraftCatalog,
   makeExtractImport,
   makeNotify,
   makeReadImport,
@@ -35,6 +36,7 @@ import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
 import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
+import { claudeCatalogDrafter } from "@/infrastructure/claude/drafter";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
 import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
@@ -198,6 +200,10 @@ export async function getContainer() {
     changePlan: billing.changePlan,
     stripePublishableKey,
     setupPending: setup.isPending,
+    catalogDraftAllowed: setup.draftAllowed,
+    addCatalogTypes: setup.addTypes,
+    // Drafting a catalog reads the proposal in the request and stores nothing (other-trade-draft door 4).
+    draftCatalog: makeDraftCatalog({ parser: importParser, drafter: claudeCatalogDrafter({ apiKey: process.env.ANTHROPIC_API_KEY }) }),
     setupCatalog: setup.catalog,
     saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),
     skipSetup: (orgId: string) => setup.skip(orgId, systemClock.now()),

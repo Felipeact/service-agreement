@@ -17,6 +17,7 @@ import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcom
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
 import type { LibraryType, TaskLibraryValue } from "@/domain/task-library";
+import type { DraftType } from "@/domain/task-library/draft";
 import type { DomainEvent } from "@/domain/transition";
 import type { ContractRefusal, NotEmailedReason, RenewalReason, StaleAgreement, Tenant } from "@/domain/notifications";
 import type { ExpiringAgreement } from "@/domain/pipeline";
@@ -331,7 +332,16 @@ export interface OrgSetup {
   saveProfile(orgId: string, value: SetupProfileValue, at: Date): Promise<SaveSettingsResult>;
   /** Stamps `setup_completed_at` if it is still null and changes nothing else. */
   skip(orgId: string, at: Date): Promise<SaveSettingsResult>;
+  /** `true` only while setup is pending and the org chose "Other" at sign-up (`org_billing.other_trade`). Throws on a database error. */
+  draftAllowed(orgId: string): Promise<boolean>;
+  /** Adds a reviewed draft in one transaction (other-trade-draft door 1). `duplicate` carries the name that already exists, when known. */
+  addTypes(orgId: string, types: DraftType[]): Promise<AddTypesResult>;
 }
+
+export type AddTypesResult =
+  | { ok: true; codes: string[] }
+  | { ok: false; code: "forbidden" | "invalid" | "unavailable" }
+  | { ok: false; code: "duplicate"; name: string | null };
 
 /**
  * Why a record write wrote nothing (door 2). `not_found`: the row or its parent is gone or in another org;
@@ -544,6 +554,21 @@ export type ExtractResult = { ok: true; rows: ExtractedRow[] } | { ok: false; co
  */
 export interface AssetExtractor {
   extract(chunk: ExtractChunk, tradeContext?: string | null): Promise<ExtractResult>;
+}
+
+/** What a catalog draft is built from: the owner's description, a proposal, or both (other-trade-draft door 2). */
+export type DraftInput = {
+  description?: string;
+  document?: { kind: "text"; text: string } | { kind: "pdf"; bytes: Uint8Array };
+};
+
+export type DraftResult =
+  | { ok: true; types: DraftType[]; usage?: { inputTokens: number; outputTokens: number } }
+  | { ok: false; code: "unavailable" | "too_large" | "empty" };
+
+/** Proposes types with checklists, months and spellings for a trade. Proposes only: nothing is stored, and the caller cleans the answer. */
+export interface CatalogDrafter {
+  draft(input: DraftInput): Promise<DraftResult>;
 }
 
 export type ImportFileResult =

@@ -52,7 +52,7 @@ export const ROWS_SCHEMA = {
 } as const;
 
 /** What the extractor needs of the SDK, so a test can stand in for it. */
-export type ClaudeMessage = { stop_reason: string | null; content: { type: string; text?: string }[] };
+export type ClaudeMessage = { stop_reason: string | null; content: { type: string; text?: string }[]; usage?: { input_tokens: number; output_tokens: number } };
 export type ClaudeClient = {
   beta: { messages: { stream(params: Record<string, unknown>): { finalMessage(): Promise<ClaudeMessage> } } };
 };

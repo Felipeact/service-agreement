@@ -59,6 +59,7 @@ export const RECIPES: Recipe[] = [
   plain("first_login_setup"),
   plain("set_org_plan"),
   plain("tenant_logo"),
+  plain("other_trade_draft"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
