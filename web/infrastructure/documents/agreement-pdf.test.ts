@@ -1,6 +1,6 @@
 import { DEFAULT_ITEM_WORDS, itemWords } from "@/domain/org-settings";
 import { describe, expect, test } from "vitest";
-import { buildAgreementDocument, DRAFT_MARK, SYSTEM_AGREEMENT_BODY, type AgreementDocument, type AgreementTemplateBody, type DocumentSource } from "@/domain/agreement";
+import { buildAgreementDocument, buildTemplatePreviewDocument, DRAFT_MARK, SYSTEM_AGREEMENT_BODY, type AgreementDocument, type AgreementTemplateBody, type DocumentSource } from "@/domain/agreement";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import { reactPdfDocumentRenderer } from "./index";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
@@ -373,5 +373,45 @@ describe("the agreement PDF with a template", () => {
     const all = text(without);
     expect(all).toContain("Visit schedule");
     expect(all).toContain("Service included");
+  });
+});
+
+describe("the template preview PDF", () => {
+  const PREVIEW_BODY: AgreementTemplateBody = {
+    ...TEMPLATE,
+    preset: {
+      termMonths: 12,
+      lines: [
+        { description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 },
+        { description: "Filter check", visitMonths: [6], assetTypeCodes: [], costPerVisitCents: null },
+      ],
+    },
+  };
+  const renderPreview = async (body: AgreementTemplateBody) =>
+    text(pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildTemplatePreviewDocument(body, SETTINGS, null, DEFAULT_ITEM_WORDS))));
+
+  test("C5436: the text shows the intro before the price table, a $450.00 row and a $0.00 row, the schedule, the service included, the terms, then the closing text", async () => {
+    const all = await renderPreview(PREVIEW_BODY);
+    const positions = indexOfIn(all, "Welcome Sample Customer Ltd..", "Service and price", "Quarterly visit", "$450.00", "Filter check", "$0.00", "Visit schedule", "Service included", "Terms", "Thank you, Kettle Ridge Mechanical Ltd..");
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(inOrder(positions)).toBe(true);
+  });
+
+  test("C5436: the page carries the sample number, customer and site and the mark TEMPLATE PREVIEW", async () => {
+    const all = await renderPreview(PREVIEW_BODY);
+    for (const expected of ["AG-0000", "Sample Customer Ltd.", "Sample Site", "TEMPLATE PREVIEW"]) expect(all).toContain(expected);
+  });
+
+  test.each<[string, boolean, boolean]>([
+    ["both switches on", true, true],
+    ["the schedule off", false, true],
+    ["the scope off", true, false],
+    ["both off", false, false],
+  ])("C5436: with %s the Visit schedule and Service included sections are drawn only when on, and Terms always", async (_label, schedule, scope) => {
+    const all = await renderPreview({ ...PREVIEW_BODY, sections: { schedule, scope } });
+    expect(all.includes("Visit schedule")).toBe(schedule);
+    expect(all.includes("Service included")).toBe(scope);
+    expect(all).toContain("Terms");
+    expect(all).toContain("Repair discount");
   });
 });
