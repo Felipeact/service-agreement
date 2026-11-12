@@ -339,7 +339,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 - **Accept:** `acceptDraftAction` -> `makeAcceptCatalogDraft` -> `CatalogWriter` ([supabaseCatalogWriter](web/infrastructure/supabase/catalog-writer.ts)) -> `public.add_catalog_draft`, one transaction, refusing a catalog that is no longer empty. The page refreshes with `revalidatePath`; only Pipeline redirects to `/setup`.
 - **Screen:** [draft-panel.tsx](web/components/setup/draft-panel.tsx) sits above the profile form while the catalog is empty. The read-only `CatalogReview` is unchanged.
 - **Rules:** [web/domain/catalog-draft/index.ts](web/domain/catalog-draft/index.ts): trade 1 to 60 characters from the `trade_context` alphabet, 1 to 40 types, names 1 to 60, 1 to 12 months, 0 to 12 tasks of 1 to 200, no two names equal ignoring case.
-- **Not yet:** metering drafts against the AI allowance (plan limits), tokens per call, the live run with a real key, the live browser pass (C4128), applying the migration.
+- **Not yet:** metering drafts against the AI allowance (plan limits), tokens per call, a live run of the attached-file (PDF and document) paths and the live browser pass on the real `/setup` route. A real description-only call ran on 2026-11-12.
 - **Tests:** [supabase/tests/other_trade_draft.sql](supabase/tests/other_trade_draft.sql), `domain/catalog-draft`, `application/use-cases/draft-catalog.test.ts`, `infrastructure/claude/catalog-drafter.test.ts`, `infrastructure/supabase/catalog-writer.test.ts`, `app/setup/draft-actions.test.ts`, `components/setup/setup.test.ts`, `composition/draft-wiring.test.ts`
 
 ---
