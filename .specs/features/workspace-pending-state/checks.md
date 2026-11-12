@@ -148,7 +148,11 @@ Cost: 1 domain proof, 1 component proof file, 1 SQL recipe of 9 cases, 2 adapter
 
 - C2504 (billing-checkout) asserts `success_url` equals `https://app.example.com/register/success`. The approved plan's AC 1 supersedes that exact value, so its one assertion line is amended to the new URL in the commit that changes the starter. Its `cancel_url` line stays untouched.
 
+- The `test:db` runner's own test (`scripts/test-db/runner.test.ts`) hard-codes the recipe and file counts (33 recipes, 35 files); adding a recipe moved them to 34 and 36, as earlier features did. No assertion was weakened.
+- `app/register/success/success.test.ts` (C2532 to C2534) gains one `vi.mock("./actions", ...)` line and a dynamic import of the page, because the page now mounts a client component whose Server Action reaches the composition root. Its assertions are untouched and still pass.
+
 ## Handoff
 
 - S1 = ~15k (checkout.ts, success page, 3 new files, migration), S2 = ~18k (no-workspace, member-gate, composition, 2 adapters); total ~33k, under the 150k budget - one builder, no ask
 - Mechanism: one builder
+- **Boundary:** C4200-C4224 closed at `6b5642d`
