@@ -6,8 +6,9 @@ import type { CurrentMember, MemberRole } from "@/application/ports";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listAgreements = vi.fn();
 const listActiveSites = vi.fn();
+const listAgreementTemplates = vi.fn();
 // 2027-12-02 03:00 UTC is still Dec 1 in Vancouver.
-const container = { currentMember, listAgreements, listActiveSites, clock: { now: () => new Date("2027-12-02T03:00:00Z") } };
+const container = { currentMember, listAgreements, listActiveSites, listAgreementTemplates, clock: { now: () => new Date("2027-12-02T03:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);
@@ -70,5 +71,25 @@ describe("/agreements/new", () => {
     const out = renderToStaticMarkup((await NewAgreementPage()) as ReactElement);
     expect(out).toContain("<form");
     expect(out).toContain("Tower A");
+  });
+
+  test("C5357: ?template=<versionId> of a listed template names it above the site choice and pins the form to that version", async () => {
+    const VERSION = "77777777-7777-4777-8777-777777777777";
+    listActiveSites.mockResolvedValue([{ id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null }]);
+    listAgreementTemplates.mockResolvedValue({ ok: true, templates: [{ id: "t-1", versionId: VERSION, body: { name: "Quarterly HVAC" } }] });
+    const element = (await NewAgreementPage({ searchParams: Promise.resolve({ template: VERSION }) })) as ReactElement;
+    expect(renderToStaticMarkup(element)).toContain("From template: Quarterly HVAC");
+    expect(JSON.stringify(element, (_key, value) => (typeof value === "function" ? "fn" : value))).toContain(`"versionId":"${VERSION}"`);
+  });
+
+  test("C5357: a template version that is not listed, or is not an id, is ignored and the form is the plain one", async () => {
+    listActiveSites.mockResolvedValue([{ id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null }]);
+    listAgreementTemplates.mockResolvedValue({ ok: true, templates: [] });
+    const unknown = renderToStaticMarkup((await NewAgreementPage({ searchParams: Promise.resolve({ template: "77777777-7777-4777-8777-777777777777" }) })) as ReactElement);
+    expect(unknown).not.toContain("From template");
+    expect(unknown).toContain("<form");
+    const malformed = renderToStaticMarkup((await NewAgreementPage({ searchParams: Promise.resolve({ template: "nope" }) })) as ReactElement);
+    expect(malformed).not.toContain("From template");
+    expect(listAgreementTemplates).toHaveBeenCalledTimes(1);
   });
 });

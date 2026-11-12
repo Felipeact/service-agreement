@@ -740,3 +740,28 @@ describe("the agreement builder, item words", () => {
     noEquipment(html);
   });
 });
+
+describe("the skipped equipment codes of a template", () => {
+  const view = (skippedCodes?: string[]) => renderToStaticMarkup(createElement(AgreementView, { agreement: agreement(), role: "estimator", skippedCodes }));
+
+  test("C5358: the agreement page names the codes the preset left off", () => {
+    expect(view(["NOPE", "XYZ"])).toContain("These equipment types are not in your catalog and were left off: NOPE, XYZ");
+    expect(view(["NOPE"])).toMatch(/<p[^>]*role="status"[^>]*>These equipment types are not in your catalog and were left off: NOPE<\/p>/);
+  });
+
+  test("C5358: the note speaks in the org's words", () => {
+    const words = { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" };
+    const html = renderToStaticMarkup(createElement(AgreementView, { agreement: agreement(), role: "estimator", skippedCodes: ["NOPE"], words }));
+    expect(html).toContain("These station types are not in your catalog and were left off: NOPE");
+  });
+
+  test("C5358: with none skipped, or none given, the page says nothing about it", () => {
+    expect(view([])).not.toContain("not in your catalog");
+    expect(view(undefined)).not.toContain("not in your catalog");
+  });
+
+  test("C5358: the note comes before the service lines", () => {
+    const html = view(["NOPE"]);
+    expect(html.indexOf("not in your catalog")).toBeLessThan(html.indexOf('aria-label="Service lines"'));
+  });
+});

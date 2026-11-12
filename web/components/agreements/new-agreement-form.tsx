@@ -10,8 +10,13 @@ import { EmptyPanel } from "@/components/ui/empty-panel";
 import { LinkButton } from "@/components/ui/link-button";
 import { Select } from "@/components/ui/select";
 
+/** The template Use template chose: the new agreement is pinned to this version and starts with its preset lines. */
+export type ChosenTemplate = { versionId: string; name: string };
+
 type FormProps = {
   sites: SiteOption[];
+  /** Named above the site choice when the agreement starts from a template (agreement-templates AC 24). */
+  template?: Pick<ChosenTemplate, "name">;
   state: CreateAgreementState;
   pending: boolean;
   /** The form action; absent in tests that only render markup. */
@@ -24,7 +29,7 @@ export function submitSite(create: (siteId: string) => Promise<CreateAgreementSt
 }
 
 /** The New agreement form: a site picker over the sites that can start one; a site already in progress is named with its link (agreements-page S2). */
-export function NewAgreementFormView({ sites, state, pending, action }: FormProps) {
+export function NewAgreementFormView({ sites, template, state, pending, action }: FormProps) {
   const free = sites.filter((site) => !site.liveAgreement);
   const busy = sites.filter((site) => site.liveAgreement);
   const customers = [...new Set(free.map((site) => site.customer))];
@@ -32,6 +37,14 @@ export function NewAgreementFormView({ sites, state, pending, action }: FormProp
 
   return (
     <div className="flex flex-col gap-4">
+      {template && (
+        <p className="flex flex-wrap items-center gap-x-3 text-[13px] font-medium text-ink">
+          {`From template: ${template.name}`}
+          <Link href="/templates" className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
+            Choose another
+          </Link>
+        </p>
+      )}
       {free.length === 0 ? (
         <EmptyPanel title="No site can start an agreement." text="Every active site already has an agreement in progress, or no site has been added yet.">
           <LinkButton href="/customers">Go to Customers</LinkButton>
@@ -94,9 +107,13 @@ export function NewAgreementFormView({ sites, state, pending, action }: FormProp
   );
 }
 
-export function NewAgreementForm({ sites, create }: { sites: SiteOption[]; create: (siteId: string) => Promise<CreateAgreementState> }) {
-  const [state, formAction, pending] = useActionState<CreateAgreementState, FormData>((_previous, formData) => submitSite(create, formData), {
+type FormCreate = (siteId: string, templateVersionId?: string) => Promise<CreateAgreementState>;
+
+export function NewAgreementForm({ sites, create, template }: { sites: SiteOption[]; create: FormCreate; template?: ChosenTemplate }) {
+  // Without a template the action is called with the site alone, as it always was.
+  const start = template ? (siteId: string) => create(siteId, template.versionId) : create;
+  const [state, formAction, pending] = useActionState<CreateAgreementState, FormData>((_previous, formData) => submitSite(start, formData), {
     status: "idle",
   });
-  return <NewAgreementFormView sites={sites} state={state} pending={pending} action={formAction} />;
+  return <NewAgreementFormView sites={sites} template={template} state={state} pending={pending} action={formAction} />;
 }

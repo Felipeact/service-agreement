@@ -159,3 +159,29 @@ describe("new agreement form", () => {
     }
   });
 });
+
+describe("new agreement form, from a template", () => {
+  const withTemplate = (state: CreateAgreementState = { status: "idle" }) =>
+    renderToStaticMarkup(createElement(NewAgreementFormView, { sites, template: { name: "Quarterly HVAC" }, state, pending: false }));
+
+  test("C5357: the form names the template above the site choice", () => {
+    const html = withTemplate();
+    expect(html).toContain("From template: Quarterly HVAC");
+    expect(html.indexOf("From template: Quarterly HVAC")).toBeLessThan(html.indexOf('for="siteId"'));
+    expect(html).toMatch(/<a[^>]*href="\/templates"[^>]*>Choose another</);
+  });
+
+  test("C5357: without a template the form says nothing about one", () => {
+    expect(form(sites)).not.toContain("From template");
+  });
+
+  test("C5357: a plan-limit refusal shows the New agreement flow's message, with the billing link for an owner", () => {
+    const html = withTemplate({ status: "plan_limit", message: "Your Starter plan allows 15 live agreements and you have 17.", billingHref: "/settings/billing" });
+    expect(html).toContain("allows 15 live agreements and you have 17");
+    expect(html).toContain('href="/settings/billing"');
+  });
+
+  test("C5357: an invalid template is told in words", () => {
+    expect(withTemplate({ status: "invalid_template" })).toContain("That template is no longer available.");
+  });
+});

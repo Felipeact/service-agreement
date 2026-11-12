@@ -5,6 +5,7 @@ import { AgreementView, type AgreementActions } from "@/components/agreements/ag
 import { canWriteRecords } from "@/components/records/state";
 import { PageLoading } from "@/components/shell/page-loading";
 import { getContainer } from "@/composition";
+import { skippedCodes } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
 import {
   addServiceLineAction,
@@ -33,7 +34,7 @@ function versionOf(value: string | undefined): number | undefined {
 /** Reads the agreement and `?version` at request time. */
 export async function AgreementForRequest({ agreementId, searchParams }: AgreementProps) {
   if (!isUuid(agreementId)) notFound();
-  const { currentMember, agreementReader, getItemWords } = await getContainer();
+  const { currentMember, agreementReader, getItemWords, listAssetTypes } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const params = await searchParams;
@@ -58,7 +59,10 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
       }
     : undefined;
 
-  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} />;
+  // Only a preset with lines can name a code the org lacks, so the types are read only then (agreement-templates AC 25).
+  const skipped = agreement.template && agreement.template.preset.lines.length > 0 ? skippedCodes(agreement.template, (await listAssetTypes()).map((type) => type.code)) : [];
+
+  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} skippedCodes={skipped} />;
 }
 
 export default async function AgreementPage({ params, searchParams }: PageProps<"/agreements/[agreementId]">) {

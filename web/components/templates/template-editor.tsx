@@ -7,6 +7,8 @@ import { MonthGrid, monthBox, monthChoice } from "@/components/ui/month-grid";
 import { TextArea } from "@/components/ui/text-area";
 import { TextInput } from "@/components/ui/text-input";
 import { MONTH_PRESETS, type MonthPreset } from "@/domain/agreement";
+import { useItemWords } from "@/components/shell/item-words";
+import { itemText } from "@/domain/org-settings";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
 import { EMPTY_PRESET_LINE, type TemplateFormErrors, type TemplateFormInput } from "@/domain/agreement/template-form";
 import { TEMPLATE_MESSAGES, type SaveTemplateState } from "./state";
@@ -49,6 +51,7 @@ type ViewProps = {
 
 /** The editor's fields in order: Name, Description, Intro, Visit schedule, Scope, Closing text, Term length, Preset lines, then Save and Cancel (agreement-templates AC 18). */
 export function TemplateEditorView({ values, errors, types, pending, message, onChange, onSubmit }: ViewProps) {
+  const words = useItemWords();
   const set = (patch: Partial<TemplateFormInput>) => onChange?.({ ...values, ...patch });
   const setLine = (index: number, patch: Partial<TemplateFormInput["lines"][number]>) =>
     set({ lines: values.lines.map((line, at) => (at === index ? { ...line, ...patch } : line)) });
@@ -87,7 +90,7 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
       <fieldset className="flex flex-col gap-1">
         <legend className="sr-only">Optional sections</legend>
         <Switch id="template-schedule" label="Visit schedule" hint="Show the visit schedule on the agreement." checked={values.schedule} onChange={(schedule) => set({ schedule })} error={errors.sections} />
-        <Switch id="template-scope" label="Scope" hint="Show the service included, by equipment type." checked={values.scope} onChange={(scope) => set({ scope })} />
+        <Switch id="template-scope" label="Scope" hint={itemText("Show the service included, by equipment type.", words)} checked={values.scope} onChange={(scope) => set({ scope })} />
       </fieldset>
 
       <TextArea
@@ -153,9 +156,9 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
                 errorId={`line-${index}-months-error`}
               />
               <fieldset className="flex flex-col gap-1.5" aria-describedby={at("assetTypeCodes") ? `line-${index}-types-error` : undefined}>
-                <legend className="mb-1.5 text-[13px] font-medium text-ink">Equipment types</legend>
+                <legend className="mb-1.5 text-[13px] font-medium text-ink">{itemText("Equipment types", words)}</legend>
                 {codes.length === 0 ? (
-                  <p className="text-[12px] text-ink-2">Your catalog has no equipment types yet.</p>
+                  <p className="text-[12px] text-ink-2">{itemText("Your catalog has no equipment types yet.", words)}</p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {codes.map((code) => (

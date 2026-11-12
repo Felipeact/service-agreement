@@ -380,7 +380,7 @@ describe("composition root", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
     expect(body("AgreementReader")).toContain("get(id: string, versionNo?: number, compareNo?: number): Promise<AgreementDetail | null>");
-    expect(body("AgreementStore")).toContain("create(siteId: string): Promise<CreateAgreementResult>");
+    expect(body("AgreementStore")).toContain("create(siteId: string, templateVersionId?: string): Promise<CreateAgreementResult>");
     for (const method of ["add(agreementId: string, value: ServiceLineValue)", "update(lineId: string, value: ServiceLineValue)", "remove(lineId: string)"]) {
       expect(body("ServiceLineStore")).toContain(method);
     }

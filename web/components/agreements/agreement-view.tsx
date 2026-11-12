@@ -7,7 +7,7 @@ import { labelFor, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
 import { formatTermDate } from "@/domain/agreement/term";
 import { notEmailedWords } from "@/domain/notifications";
-import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
@@ -46,6 +46,8 @@ type AgreementViewProps = {
   actions?: AgreementActions;
   /** The org's item words (item-vocabulary AC 5); the default when absent. */
   words?: ItemWords;
+  /** The pinned template's preset equipment codes that match no type of the org, which the preset left off its lines (agreement-templates AC 25). */
+  skippedCodes?: string[];
 };
 
 /** The empty add form suggests the usual first line; a stored $0 line would look like a real price. */
@@ -64,7 +66,7 @@ function deliveryLine(email: LinkEmailView | null): string {
 }
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
-export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS }: AgreementViewProps) {
+export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [] }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
   const latest = agreement.versions[0]?.versionNo ?? shown.versionNo;
@@ -151,6 +153,12 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
       <TermSection term={agreement.term} action={lineActions?.saveTerm} />
 
       {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
+
+      {skippedCodes.length > 0 && (
+        <p role="status" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
+          {itemText("These equipment types are not in your catalog and were left off: ", words) + skippedCodes.join(", ")}
+        </p>
+      )}
 
       <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
         <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>

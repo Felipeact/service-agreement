@@ -1,5 +1,6 @@
 import type { AgreementTemplateSummary, MemberRole } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { Icon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
@@ -16,10 +17,12 @@ type Props = {
   typeNames: Record<string, string>;
   now: Date;
   actions?: TemplateCardActions;
+  /** The org's item words; the default when absent. */
+  words?: ItemWords;
 };
 
 /** The Templates page body: the cards, then the preview of the selected one (agreement-templates S3). */
-export function TemplatesView({ templates, selectedId, role, typeNames, now, actions }: Props) {
+export function TemplatesView({ templates, selectedId, role, typeNames, now, actions, words = DEFAULT_ITEM_WORDS }: Props) {
   const canWrite = canWriteTemplates(role);
   const canUse = canUseTemplates(role);
   const selected = templates?.find((template) => template.id === selectedId) ?? templates?.[0];
@@ -55,7 +58,7 @@ export function TemplatesView({ templates, selectedId, role, typeNames, now, act
               ))}
             </ul>
           </section>
-          <TemplatePreview template={selected} typeNames={typeNames} canUse={canUse} canWrite={canWrite} actions={actions} />
+          <TemplatePreview template={selected} typeNames={typeNames} canUse={canUse} canWrite={canWrite} actions={actions} words={words} />
         </div>
       )}
     </div>

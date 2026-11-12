@@ -2,6 +2,7 @@ import type { AgreementTemplateSummary } from "@/application/ports";
 import { Icon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { derivedFrequency, previewSummary } from "@/domain/agreement";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { DuplicateControl } from "./duplicate-control";
 import { SYSTEM_DESCRIPTION, type TemplateCardActions } from "./template-card";
 
@@ -14,6 +15,8 @@ type PreviewProps = {
   /** Owner and admin copy a template. */
   canWrite: boolean;
   actions?: Pick<TemplateCardActions, "duplicate">;
+  /** The org's item words; the default when absent. */
+  words?: ItemWords;
 };
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -26,7 +29,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /** The selected template's preview: what it presets, then Use template and Duplicate (agreement-templates AC 16). */
-export function TemplatePreview({ template, typeNames, canUse, canWrite, actions }: PreviewProps) {
+export function TemplatePreview({ template, typeNames, canUse, canWrite, actions, words = DEFAULT_ITEM_WORDS }: PreviewProps) {
   const { body, system, versionId, id } = template;
   const summary = previewSummary(body, typeNames);
   return (
@@ -38,7 +41,7 @@ export function TemplatePreview({ template, typeNames, canUse, canWrite, actions
       </div>
       <dl className="flex flex-col divide-y divide-hairline rounded-control bg-ground px-4 py-1.5">
         <Row label="Default frequency" value={derivedFrequency(body.preset) ?? "Not set"} />
-        <Row label="Equipment types" value={summary.equipmentTypes.length > 0 ? summary.equipmentTypes.join(", ") : "None"} />
+        <Row label={itemText("Equipment types", words)} value={summary.equipmentTypes.length > 0 ? summary.equipmentTypes.join(", ") : "None"} />
         <Row label="Sections" value={`${summary.sections} · ${summary.clauses}`} />
         <Row label="Preset lines" value={summary.preset} />
       </dl>

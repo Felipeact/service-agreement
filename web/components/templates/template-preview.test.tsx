@@ -75,6 +75,14 @@ describe("the template preview", () => {
     expect(viewer).toContain("Default frequency");
   });
 
+  test("C2021: the equipment row is spoken in the org's words", () => {
+    const words = { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" };
+    const html = renderToStaticMarkup(createElement(TemplatePreview, { template: TEMPLATE, typeNames: {}, canUse: true, canWrite: true, actions, words }));
+    expect(html).toContain("<dt");
+    expect(html).toContain(">Station types</dt>");
+    expect(html).not.toContain("Equipment types");
+  });
+
   test("C5343: a template with no preset reads Not set, None and No preset lines", () => {
     const html = renderToStaticMarkup(
       createElement(TemplatePreview, { template: { ...TEMPLATE, system: true, body: SYSTEM_AGREEMENT_BODY }, typeNames: {}, canUse: true, canWrite: true, actions }),

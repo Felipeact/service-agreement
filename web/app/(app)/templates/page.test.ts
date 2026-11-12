@@ -10,7 +10,8 @@ import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listAgreementTemplates = vi.fn();
 const listAssetTypes = vi.fn();
-const container = { currentMember, listAgreementTemplates, listAssetTypes, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
+const getItemWords = vi.fn(async () => ({ singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" }));
+const container = { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);
@@ -71,6 +72,10 @@ describe("/templates", () => {
     expect(html).toMatch(/<a[^>]*href="\/templates"[^>]*>Try again<\/a>/);
   });
 
+  test("C2021: the org's item words reach the view", async () => {
+    expect(((await render({})) as unknown as ReactElement<{ words: { plural: string } }>).props.words.plural).toBe("stations");
+  });
+
   test("C5346: the route has a loading screen that names the page and says it is loading", async () => {
     expect(existsSync(path.join(__dirname, "loading.tsx"))).toBe(true);
     const { default: Loading } = await import("./loading");
@@ -86,11 +91,11 @@ describe("/templates", () => {
   });
 
   test("C5344: the owner's view carries the actions, the estimator's does not, and the type names come from the org's types", async () => {
-    const owner = (await render({})) as ReactElement<{ actions?: unknown; typeNames: Record<string, string> }>;
+    const owner = (await render({})) as unknown as ReactElement<{ actions?: unknown; typeNames: Record<string, string> }>;
     expect(owner.props.actions).toBeDefined();
     expect(owner.props.typeNames).toEqual({ RTU: "Rooftop units" });
     currentMember.mockResolvedValue(member("estimator"));
-    expect(((await render({})) as ReactElement<{ actions?: unknown }>).props.actions).toBeUndefined();
+    expect(((await render({})) as unknown as ReactElement<{ actions?: unknown }>).props.actions).toBeUndefined();
   });
 });
 
