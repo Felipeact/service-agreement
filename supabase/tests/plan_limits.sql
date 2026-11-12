@@ -120,6 +120,7 @@ select tests.pl_site('s5106');
 do $$
 begin
   perform tests.ok('C5106 create refused', split_part(tests.pl_create('s5106'), '/', 2) = 'plan_limit_agreements', 'a create over the limit was allowed');
+  perform tests.ok('C5104 limit and count differ', split_part(tests.pl_create('s5106'), '/', 3) = 'starter|1|2', 'detail is ' || split_part(tests.pl_create('s5106'), '/', 3));
 end $$;
 
 -- C5105: the renewal job still creates its draft for an org over its limit.
@@ -275,6 +276,17 @@ begin
   perform tests.ok('C5140 imports', (u -> 'ai_imports' ->> 'used')::int = 2 and (u -> 'ai_imports' ->> 'limit')::int = 10, 'answered ' || u::text);
   perform tests.ok('C5140 resets on', (u ->> 'resets_on')::date = ((tests.pl_month() at time zone 'America/Vancouver' + interval '1 month')::date), 'resets_on is ' || (u ->> 'resets_on'));
 end $$;
+
+-- C5140: an admin reads usage too (the estimator is promoted inside the transaction).
+reset role;
+update public.memberships set role = 'admin' where user_id = tests.id('uE') and org_id = tests.id('orgA');
+select tests.act_as('uE');
+do $$
+begin
+  perform tests.ok('C5140 admin', (public.org_usage() ->> 'plan') = 'starter', 'an admin could not read usage');
+end $$;
+reset role;
+update public.memberships set role = 'estimator' where user_id = tests.id('uE') and org_id = tests.id('orgA');
 
 -- C5141: only an owner or admin reads usage.
 select tests.act_as('uE');

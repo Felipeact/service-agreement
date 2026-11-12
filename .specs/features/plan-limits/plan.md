@@ -15,14 +15,14 @@ Reuses `PLANS` in `web/domain/billing` as the one place the numbers are written,
 1. Staff press New agreement -> `createAgreement` server action (exists) -> `agreementStore.create` (exists) -> `public.create_agreement` (exists, extended): counts the org's live agreements, compares with the plan's limit, refuses with a named hint, otherwise inserts as today.
 2. A member starts extracting an import -> `makeExtractImport` (exists) -> on the first chunk only, asks `public.import_allowance` (door 2) before `AssetExtractor.extract` (exists) is called; refused means Claude is never called.
 3. First chunk recorded -> `public.record_extraction_chunk` (exists, extended) stamps the job's `extract_started_at` (door 2), which is what the allowance counts.
-4. An owner or admin opens `/settings/billing` -> `makeBilling.load` (exists) -> `public.org_usage` (door 3) -> usage rows next to the plan name.
+4. An owner or admin opens `/settings/billing` -> `makeBilling.load` (exists) reads Stripe as before, and `makeBilling.usage` (exists) reads `public.org_usage` (door 3) apart from it; the page hands the result to the view as its own `usage` prop -> usage rows next to the plan name.
 5. A plan change (`set_org_plan`, exists) changes the limits read by hops 1 and 2 on the next call; nothing is re-evaluated or removed.
 
 ## Impact
 
 | Front | What changes |
 | --- | --- |
-| domain | new term: live agreement - an agreement in `draft`, `sent` or `changes_requested`, the same set the `agreements_one_live_per_site` index already uses; lives in SQL and in `LIVE_STATUSES` (`web/infrastructure/supabase/agreements.ts`) |
+| domain | new term: live agreement - an agreement in `draft`, `sent` or `changes_requested`, the same set the `agreements_one_live_per_site` index already uses; lives in SQL and in `LIVE_STATUSES` (`web/domain/agreement/index.ts`) |
 | domain | new term: AI import - an import job whose first extraction chunk was recorded in the calendar month (America/Vancouver); re-running the same job never counts twice |
 | domain | existing term: `Plan.liveAgreements` and `Plan.aiImports` were display copy; they become enforced numbers, and the SQL table of limits must equal them |
 | existing callers | `create_agreement` gains a new refusal; callers that branch on its errors: `supabaseAgreementStore.create` (maps 23505, P0002, 42501) and the New agreement launcher. The renewal job (`20261102180706_renewal.sql`) inserts agreements itself and is not routed through it |

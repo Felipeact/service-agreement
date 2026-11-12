@@ -27,6 +27,16 @@ describe("planLimitMessage", () => {
     expect(staff.billingHref).toBeNull();
   });
 
+  test("C5111: the limit and the count are told apart when a downgrade leaves the org over its limit", () => {
+    expect(planLimitMessage("agreements", { plan: "starter", limit: 15, used: 17 }, "manager").message).toBe("Your Starter plan allows 15 live agreements and you have 17.");
+  });
+
+  test("C5128: the allowance and the use are told apart", () => {
+    expect(planLimitMessage("imports", { plan: "team", limit: 40, used: 42, resetsOn: "2027-01-01" }, "manager").message).toBe(
+      "Your Team plan allows 40 AI imports a month and you have used 42. The count resets on January 1.",
+    );
+  });
+
   test("C5128: the import message names the allowance, the use and the reset date", () => {
     const notice = planLimitMessage("imports", { plan: "starter", limit: 10, used: 10, resetsOn: "2026-12-01" }, "manager");
     expect(notice.message).toBe("Your Starter plan allows 10 AI imports a month and you have used 10. The count resets on December 1.");

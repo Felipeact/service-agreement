@@ -49,4 +49,13 @@ describe("the container and the plan limits", () => {
     expect(check).toHaveBeenCalledTimes(1);
     expect(extract).toHaveBeenCalledTimes(0);
   });
+
+  test("C5145: the container's loadBillingUsage reads through the usage reader for an owner and not for an estimator", async () => {
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    expect(await container.loadBillingUsage({ orgId: "org-1", role: "owner" })).toMatchObject({ plan: "starter", liveAgreements: { used: 7, limit: 15 } });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(await container.loadBillingUsage({ orgId: "org-1", role: "estimator" })).toBeNull();
+    expect(read).toHaveBeenCalledTimes(1);
+  });
 });

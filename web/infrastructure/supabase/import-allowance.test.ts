@@ -24,6 +24,11 @@ describe("the import allowance adapter", () => {
     expect(await allowance.check(JOB)).toEqual({ ok: true, allowed: false, plan: "starter", limit: 10, used: 10, resetsOn: "2026-12-01" });
   });
 
+  test("C5130: the limit and the use are not swapped when they differ", async () => {
+    const { allowance } = allowanceWith({ data: { plan: "team", used: 42, limit: 40, allowed: false, resets_on: "2027-01-01" }, error: null });
+    expect(await allowance.check(JOB)).toEqual({ ok: true, allowed: false, plan: "team", limit: 40, used: 42, resetsOn: "2027-01-01" });
+  });
+
   test.each([
     ["42501", "forbidden"],
     ["P0002", "not_found"],

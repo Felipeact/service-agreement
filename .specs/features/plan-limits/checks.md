@@ -3,7 +3,7 @@
 Profile: standard
 Plan: `.specs/features/plan-limits/plan.md`
 
-32 checks in 3 slices · 3 one-way doors (approved: "implement", 2026-11-12) · 1 open, 0 block (blocks go-live only)
+31 checks in 3 slices · 3 one-way doors (approved: "implement", 2026-11-12) · 1 open, 0 block (blocks go-live only)
 
 ## How proofs run
 
@@ -53,8 +53,9 @@ Proof: `npx vitest run infrastructure/supabase/agreements.test.ts -t "C5110:"`
 **C5111** - `planLimitMessage("agreements", { plan:"starter", limit:15, used:15 }, "manager")` is exactly "Your Starter plan allows 15 live agreements and you have 15." plus a link target `/settings/billing`; for `"staff"` it says to ask an owner or admin to change the plan and carries no link target (AC 5, AC 6)
 Proof: `npx vitest run domain/billing/plan-limits.test.ts -t "C5111:"`
 
-**C5112** - The New agreement form, the site page's new-agreement control and the start dialog each show that message for a `plan_limit` state, with the `/settings/billing` link for a manager only, and no agreement id in the output (AC 5, AC 6)
+**C5112** - The New agreement form, the site page's new-agreement control and the start dialog each show that message for a `plan_limit` state, with the `/settings/billing` link for a manager only, and no agreement id in the output; and the actions that produce the state give the manager message to an owner and an admin and the staff message to an estimator (AC 5, AC 6)
 Proof: `npx vitest run components/agreements/plan-limit-views.test.tsx -t "C5112:"`
+Proof: `npx vitest run "app/(app)/plan-limit-actions.test.ts" -t "C5112:"`
 
 ### S2 - A plan's AI-import allowance stops a new extraction · ~9 files · ~60 KB · ~16k
 
@@ -70,7 +71,7 @@ Proof: `npm run test:db plan_limits` (label C5122)
 **C5123** - An org with no `org_billing` row gets `allowed = true` with a null limit (AC 14)
 Proof: `npm run test:db plan_limits` (label C5123)
 
-**C5124** - `import_allowance` raises `42501` for a viewer and for a non-member, and `P0002` for a job of another org or a missing id (Surface)
+**C5124** - `import_allowance` raises `42501` for a viewer, and `P0002` for a non-member, a job of another org and a missing id, so a job id never reveals that another org holds it (Surface: 403 and 404)
 Proof: `npm run test:db plan_limits` (label C5124)
 
 **C5125** - `makeExtractImport` on a job with no progress and an allowance of `allowed:false` returns `{ ok:false, code:"plan_limit", ... }` and calls the extractor 0 times and `recordExtraction` 0 times; with `allowed:true` it calls the extractor once (AC 10, AC 11, AC 15 job stays `parsed`)
@@ -109,8 +110,10 @@ Proof: `npx vitest run components/billing/billing-usage.test.tsx -t "C5143:"`
 **C5144** - A row shows the word "Full" at used equal to limit and over it, and not at limit minus 1 (AC 18)
 Proof: `npx vitest run components/billing/billing-usage.test.tsx -t "C5144:"`
 
-**C5145** - When the usage read fails, `makeBilling.load` still returns `kind:"ready"` with the plan and overview and a usage of `null`, and the view then shows "Usage unavailable" beside the rest of the page (AC 19)
+**C5145** - When the usage read fails, `makeBilling.usage(member)` answers `null`, the page passes it to the view as its own `usage` prop beside the unchanged Stripe state, and the view shows "Usage unavailable" beside the rest of the page (AC 19)
 Proof: `npx vitest run application/use-cases/billing-usage.test.ts -t "C5145:"`
+Proof: `npx vitest run "app/(app)/settings/billing/page.test.ts" -t "C5145:"`
+Proof: `npx vitest run composition/plan-limits-wiring.test.ts -t "C5145:"`
 Proof: `npx vitest run components/billing/billing-usage.test.tsx -t "C5145:"`
 
 **C5146** - The usage adapter maps the RPC row to `{ liveAgreements:{used,limit}, aiImports:{used,limit}, resetsOn }` and a `42501` or any other error to `null` (adapter)

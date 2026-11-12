@@ -56,6 +56,13 @@ describe("the billing page", () => {
     expect(element.props.publishableKey).toBe("pk_test_x");
   });
 
+  test("C5145: the usage read for the member's org and role reaches the view as its own prop, beside the unchanged state", async () => {
+    loadBillingUsage.mockResolvedValue({ plan: "team", liveAgreements: { used: 7, limit: 60 }, aiImports: { used: 3, limit: 40 }, resetsOn: "2026-12-01" });
+    const element = (await BillingPage()) as { props: Record<string, unknown> };
+    expect(loadBillingUsage).toHaveBeenCalledWith({ orgId: "org-1", role: "owner" });
+    expect(element.props.usage).toEqual({ plan: "team", liveAgreements: { used: 7, limit: 60 }, aiImports: { used: 3, limit: 40 }, resetsOn: "2026-12-01" });
+  });
+
   test.each([
     [{ kind: "no_subscription" }],
     [{ kind: "not_configured" }],
