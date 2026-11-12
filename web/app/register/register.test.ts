@@ -194,4 +194,21 @@ describe("the contact fields (register-seats)", () => {
     const input = readFileSync(path.join(__dirname, "..", "..", "components", "ui", "text-input.tsx"), "utf8");
     expect(input).toMatch(/\bh-11\b/);
   });
+
+  test("C4308: email_in_use says the email has a workspace, links Sign in, marks the email field and keeps every value", () => {
+    const html = renderFields({ status: "email_in_use", trades: ["hvac", "other"], values: { ...TYPED, plan: "starter", seats: "4" }, fields: { email: true } });
+    expect(textOf(html)).toContain("This email already has a workspace.");
+    expect(html).toMatch(/<a [^>]*href="\/login"[^>]*>Sign in<\/a>/);
+    expect(attrsOf(html, "email")).toContain('aria-invalid="true"');
+    const describedBy = attrsOf(html, "email").match(/aria-describedby="([^"]+)"/)?.[1];
+    expect(describedBy).toBeTruthy();
+    expect(html).toContain(`id="${describedBy}"`);
+    expect(attrsOf(html, "email")).toContain('value="owner@shop.ca"');
+    expect(attrsOf(html, "company")).toContain('value="Shop Ltd"');
+    expect(attrsOf(html, "phone")).toContain('value="604-555-0199"');
+    expect(attrsOf(html, "seats")).toContain('value="4"');
+    expect(inputs(html, "radio").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["starter"]);
+    expect(inputs(html, "checkbox").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["hvac", "other"]);
+    expect(attrsOf(html, "company")).not.toContain("aria-invalid");
+  });
 });

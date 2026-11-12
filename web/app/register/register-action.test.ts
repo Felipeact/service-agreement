@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { CheckoutStarter } from "@/application/ports";
+import type { CheckoutStarter, WorkspaceEmailCheck } from "@/application/ports";
 import { makeStartTrial } from "@/application/use-cases";
 import { INITIAL_PRICING_STATE } from "./state";
 
 const start = vi.fn<CheckoutStarter["start"]>();
-vi.mock("@/composition", () => ({ getBillingContainer: async () => ({ startTrial: makeStartTrial({ start: (selection) => start(selection) }) }) }));
+const inUse = vi.fn<WorkspaceEmailCheck["inUse"]>(async () => false);
+vi.mock("@/composition", () => ({
+  getBillingContainer: async () => ({ startTrial: makeStartTrial({ start: (selection) => start(selection) }, { inUse: (email) => inUse(email) }) }),
+}));
 const redirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT ${url}`);
 });
@@ -90,6 +93,13 @@ describe("the pricing action", () => {
       values: { plan: "starter", email: "nope", company: "Shop Ltd", phone: "12", seats: "3" },
       fields: { email: true, phone: true },
     });
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  test("C4309: a taken email is exactly the email_in_use state with the email field marked and nothing about the account", async () => {
+    inUse.mockResolvedValue(true);
+    const state = await startTrialAction(INITIAL_PRICING_STATE, post([["plan", "team"], ["trade", "hvac"], ...CONTACT]));
+    expect(state).toEqual({ status: "email_in_use", trades: ["hvac"], values: { plan: "team", ...VALUES }, fields: { email: true } });
     expect(start).not.toHaveBeenCalled();
   });
 });

@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { BillingGateway, CheckoutStarter } from "@/application/ports";
+import type { BillingGateway, CheckoutStarter, WorkspaceEmailCheck } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
@@ -88,6 +88,7 @@ import { makeTenantLogo } from "@/application/use-cases/tenant-logo";
 import { supabaseOrgLogo } from "@/infrastructure/supabase/org-logo";
 import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
 import { supabaseMemberWorkspace, supabaseWorkspaceStatus } from "@/infrastructure/supabase/workspace-state";
+import { supabaseWorkspaceEmailCheck } from "@/infrastructure/supabase/workspace-email";
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}`);
@@ -356,7 +357,7 @@ export async function getWorkspaceStatusContainer() {
 export type WorkspaceStatusContainer = Awaited<ReturnType<typeof getWorkspaceStatusContainer>>;
 
 /**
- * Wires the register page's start-trial (pricing-page door 3, billing-checkout door 1). It reads no cookie and no database.
+ * Wires the register page's start-trial (pricing-page door 3, billing-checkout door 1). It reads no cookie; with Stripe configured it asks the database (anon) whether the email is taken.
  * With `STRIPE_SECRET_KEY` and `APP_BASE_URL` both set it starts a Stripe Checkout session; with either missing every
  * selection answers `not_configured` and no request is made. `STRIPE_SECRET_KEY` is read only here.
  */
@@ -365,7 +366,19 @@ export async function getBillingContainer() {
   const appBaseUrl = process.env.APP_BASE_URL;
   const checkout: CheckoutStarter =
     secretKey && appBaseUrl ? stripeCheckoutStarter({ secretKey, appBaseUrl }) : { start: async () => ({ ok: false, code: "not_configured" }) };
-  return { startTrial: makeStartTrial(checkout) };
+  // Only a configured Stripe asks the database; with none, every selection is `not_configured` and no client is made. The anon
+  // client is built on the first question, so missing Supabase variables are an `unavailable` answer, not a failed page.
+  const emailCheck: WorkspaceEmailCheck | undefined =
+    secretKey && appBaseUrl
+      ? {
+          inUse: (email) => {
+            const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+            const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+            return supabaseWorkspaceEmailCheck(createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } })).inUse(email);
+          },
+        }
+      : undefined;
+  return { startTrial: makeStartTrial(checkout, emailCheck) };
 }
 
 export type BillingContainer = Awaited<ReturnType<typeof getBillingContainer>>;

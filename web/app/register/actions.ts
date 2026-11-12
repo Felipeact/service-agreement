@@ -22,5 +22,6 @@ export async function startTrialAction(_previous: PricingState, formData: FormDa
   const outcome = await startTrial({ plan, trades, seats: values.seats, email: values.email, company: values.company, phone: values.phone });
   // `redirect` throws, so it stays outside any try block.
   if (outcome.status === "redirect") redirect(outcome.url);
-  return { status: outcome.status, trades: knownTrades(trades), values, fields: "fields" in outcome ? outcome.fields : {} };
+  const fields = "fields" in outcome ? outcome.fields : outcome.status === "email_in_use" ? { email: true as const } : {};
+  return { status: outcome.status, trades: knownTrades(trades), values, fields };
 }

@@ -1202,6 +1202,14 @@ export interface CheckoutStarter {
 }
 
 /**
+ * Whether an email already belongs to an org: a membership, or a live invitation, anywhere (checkout-email-in-use door 1).
+ * The email is already lower-cased and trimmed. Throws on a database error or an answer it does not know.
+ */
+export interface WorkspaceEmailCheck {
+  inUse(email: string): Promise<boolean>;
+}
+
+/**
  * Whether a paid workspace is built, as the page Stripe returns the visitor to reads it (workspace-pending-state door 2).
  * Anonymous, by Checkout session id; an unknown id is `pending`. Throws on a database error or an answer it does not know.
  */

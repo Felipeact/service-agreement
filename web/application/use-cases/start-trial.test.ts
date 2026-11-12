@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { CheckoutStarter } from "@/application/ports";
+import type { CheckoutStarter, WorkspaceEmailCheck } from "@/application/ports";
 import { makeStartTrial } from "./start-trial";
 
 const start = vi.fn<CheckoutStarter["start"]>();
@@ -128,5 +128,53 @@ describe("startTrial and the contact fields", () => {
     await startTrial({ plan: "team", trades: ["hvac"], seats: "6", email: "bad", company: "Secret Plumbing Ltd", phone: "604-555-0188" });
     const logged = JSON.stringify(errorSpy.mock.calls);
     for (const secret of ["secret.owner", "shop.ca", "Secret Plumbing", "604-555-0188"]) expect(logged).not.toContain(secret);
+  });
+});
+
+describe("startTrial asks whether the email already belongs to an org (checkout-email-in-use)", () => {
+  const inUse = vi.fn<WorkspaceEmailCheck["inUse"]>();
+  const checked = makeStartTrial({ start }, { inUse });
+  const SELECTION = { plan: "team", trades: ["hvac"], ...DETAILS };
+
+  beforeEach(() => {
+    inUse.mockResolvedValue(false);
+  });
+
+  test("C4300: a taken email is email_in_use and the starter is never called", async () => {
+    inUse.mockResolvedValue(true);
+    expect(await checked(SELECTION)).toEqual({ status: "email_in_use" });
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  test("C4301: a free email reaches the starter once and returns its redirect, after one check", async () => {
+    expect(await checked(SELECTION)).toEqual({ status: "redirect", url: URL_OK });
+    expect(inUse).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  test("C4305: the check is asked about the lower-cased, trimmed email", async () => {
+    await checked({ ...SELECTION, email: "  Owner@Shop.CA " });
+    expect(inUse).toHaveBeenCalledWith("owner@shop.ca");
+  });
+
+  test.each([
+    { name: "no_trade", input: { plan: "team", trades: [], ...DETAILS }, expected: { status: "no_trade", fields: {} } },
+    { name: "invalid_choice", input: { plan: "enterprise", trades: ["hvac"], ...DETAILS }, expected: { status: "invalid_choice", fields: {} } },
+    { name: "invalid_details", input: { plan: "team", trades: ["hvac"], ...DETAILS, email: "not-an-email" }, expected: { status: "invalid_details", fields: { email: true } } },
+  ])("C4306: $name answers as before and the email check is never called", async ({ input, expected }) => {
+    expect(await checked(input)).toEqual(expected);
+    expect(inUse).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    { name: "an Error", thrown: new Error("owner@shop.ca is in row 42") },
+    { name: "a non-error", thrown: "owner@shop.ca" },
+  ])("C4307: $name from the check is unavailable, the starter is never called and the log holds no email", async ({ thrown }) => {
+    inUse.mockRejectedValue(thrown);
+    expect(await checked(SELECTION)).toEqual({ status: "unavailable" });
+    expect(start).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toMatch(/owner@shop\.ca|row 42/);
   });
 });
