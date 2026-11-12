@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
 import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "./agreements";
 import { stubClient, type Reply } from "./stub-client";
 
@@ -15,7 +16,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const agreementRow = (versions: { id: string; version_no: number; created_at?: string }[], status = "draft") => ({
+const agreementRow = (versions: ({ id: string; version_no: number; created_at?: string } & Record<string, unknown>)[], status = "draft") => ({
   id: AGR,
   number: "AG-1052",
   status,
@@ -811,5 +812,64 @@ describe("agreement reader: contract and signer", () => {
     const detail = await supabaseAgreementReader(typed).get(AGR);
     expect(client.rpc).not.toHaveBeenCalledWith("contract_signer", expect.anything());
     expect(detail?.signer).toBeNull();
+  });
+});
+
+describe("the agreement reader's template", () => {
+  const TEMPLATE_VERSION = "66666666-6666-4666-8666-666666666666";
+  const BODY = {
+    schema: 1,
+    name: "Quarterly HVAC",
+    description: "",
+    intro: [{ type: "paragraph", text: "Welcome {{customer.name}}." }],
+    footer: [],
+    sections: { schedule: false, scope: true },
+    preset: { termMonths: null, lines: [] },
+  };
+  const read = (version: Record<string, unknown>, status = "sent") => {
+    const { typed } = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1, ...version }], status)), service_lines: ok([]) });
+    return supabaseAgreementReader(typed).get(AGR);
+  };
+
+  test("C5328: the reader asks for the pin and the body of the version it points at", async () => {
+    const { typed, calls } = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    await supabaseAgreementReader(typed).get(AGR);
+    expect(JSON.stringify(calls)).toContain("template_version_id, document_template_versions(body)");
+  });
+
+  test("C5328: a version pinned to a template version returns that version's body", async () => {
+    const detail = await read({ template_version_id: TEMPLATE_VERSION, document_template_versions: { body: BODY } });
+    expect(detail?.template).toEqual(BODY);
+  });
+
+  test("C5328: a sent version whose pin is null returns the system body", async () => {
+    expect((await read({ template_version_id: null, document_template_versions: null }))?.template).toEqual(SYSTEM_AGREEMENT_BODY);
+  });
+
+  test("C5328: a draft with no pin is drawn with the system body too", async () => {
+    expect((await read({ template_version_id: null }, "draft"))?.template).toEqual(SYSTEM_AGREEMENT_BODY);
+  });
+
+  test("C5328: a pin whose version cannot be read throws and answers no other wording", async () => {
+    await expect(read({ template_version_id: TEMPLATE_VERSION, document_template_versions: null })).rejects.toThrow(TEMPLATE_VERSION);
+    await expect(read({ template_version_id: TEMPLATE_VERSION, document_template_versions: { body: { schema: 2 } } })).rejects.toThrow(/schema 2/);
+    await expect(read({ template_version_id: TEMPLATE_VERSION, document_template_versions: { body: "x" } })).rejects.toThrow(TEMPLATE_VERSION);
+  });
+
+  test("C5328: a row that never asked for the pin (an older fixture) has no template", async () => {
+    expect((await read({}))?.template).toBeUndefined();
+  });
+
+  test("C5328: the template is the shown version's, not the latest's", async () => {
+    const rows = agreementRow(
+      [
+        { id: "v1", version_no: 1, template_version_id: TEMPLATE_VERSION, document_template_versions: { body: BODY } },
+        { id: "v2", version_no: 2, template_version_id: null },
+      ],
+      "draft",
+    );
+    const reader = supabaseAgreementReader(stubClient({ agreements: ok(rows), service_lines: ok([]) }).typed);
+    expect((await reader.get(AGR, 1))?.template).toEqual(BODY);
+    expect((await reader.get(AGR, 2))?.template).toEqual(SYSTEM_AGREEMENT_BODY);
   });
 });

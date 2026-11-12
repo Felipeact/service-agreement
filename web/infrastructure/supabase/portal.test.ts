@@ -101,6 +101,17 @@ describe("portal reader", () => {
     expect(await supabasePortalReader(typed).view(HASH)).toMatchObject({ validUntil: null, today: "2026-11-02" });
   });
 
+  test("C5330: the document's template body comes through as it is, null when the database found none, and absent for an older document", async () => {
+    const { client, typed } = stubClient({});
+    const body = { schema: 1, name: "Welcome" };
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, template: body }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.template).toEqual(body);
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, template: null }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.template).toBeNull();
+    client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });
+    expect(await supabasePortalReader(typed).view(HASH)).not.toHaveProperty("template");
+  });
+
   test("C925: view calls only portal_view with the hash", async () => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });

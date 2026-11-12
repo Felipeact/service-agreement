@@ -114,6 +114,8 @@ function toView(json: unknown): PortalView | null {
     terms: parseTerms({ terms: json.terms }),
     term: toTerm(json.term),
     validUntil: isRecord(json.version) && typeof json.version.validUntil === "string" ? json.version.validUntil : null,
+    // The key is the frozen version's pinned template body, `null` when the database found none; a document without it is an older one.
+    ...("template" in json ? { template: json.template } : {}),
     today: typeof json.today === "string" ? json.today : null,
     decision: decision
       ? {

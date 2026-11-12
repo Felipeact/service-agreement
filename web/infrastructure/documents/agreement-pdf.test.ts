@@ -1,6 +1,7 @@
 import { DEFAULT_ITEM_WORDS, itemWords } from "@/domain/org-settings";
 import { describe, expect, test } from "vitest";
-import { DRAFT_MARK, type AgreementDocument } from "@/domain/agreement";
+import { buildAgreementDocument, DRAFT_MARK, SYSTEM_AGREEMENT_BODY, type AgreementDocument, type AgreementTemplateBody, type DocumentSource } from "@/domain/agreement";
+import type { OrgSettingsValue } from "@/domain/org-settings";
 import { reactPdfDocumentRenderer } from "./index";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
 import { pngBytes } from "./logo.testing";
@@ -273,5 +274,104 @@ describe("the agreement PDF, with a logo", () => {
     // The logo makes room above the name, so a line may move to the next page: the same words appear, in a different place.
     const words = (bytes: Uint8Array) => pdfPages(bytes).join(" ").replace(/Page \d+ of \d+/g, "").split(/\s+/).filter(Boolean).sort();
     expect(words(drawn)).toEqual(words(plain));
+  });
+});
+
+const TEMPLATE: AgreementTemplateBody = {
+  schema: 1,
+  name: "Welcome",
+  description: "",
+  intro: [
+    { type: "heading", text: "About this agreement" },
+    { type: "paragraph", text: "Welcome {{customer.name}}." },
+  ],
+  footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+  sections: { schedule: true, scope: true },
+  preset: { termMonths: null, lines: [] },
+};
+
+const SETTINGS: OrgSettingsValue = {
+  legalName: "Kettle Ridge Mechanical Ltd.",
+  address: "100 Sample Street, Burnaby, BC",
+  phone: "604-555-0100",
+  accentColor: "#1f6f8b",
+  repairDiscountPct: 10,
+  cpiCapPct: 5,
+  cancellationNoticeDays: 30,
+  paymentDays: 30,
+  governingProvince: "BC",
+  taxNote: "GST extra",
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
+  renewalCpiPct: null,
+  renewalCpiAsOf: null,
+  proposalValidityDays: 30,
+  itemSingular: "equipment",
+  itemPlural: "equipment",
+};
+
+const SOURCE: DocumentSource = {
+  number: "AG-1052",
+  customer: { name: "Fernwood Dental" },
+  site: { name: "Fernwood Dental, Main" },
+  editable: false,
+  shown: {
+    versionNo: 1,
+    lines: [{ id: "l1", description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000, visitMonths: [3, 6, 9, 12], equipment: [{ name: "Rooftop unit" }] }],
+    annualCents: 180000,
+  },
+  serviceScope: { source: "live", takenAt: null, types: [] },
+  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
+  term: { start: null, months: 12, end: null },
+  validUntil: null,
+};
+
+const renderBuilt = async (template?: AgreementTemplateBody) =>
+  pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildAgreementDocument(SOURCE, SETTINGS, template)));
+
+describe("the agreement PDF with a template", () => {
+  test("C5320: the page shows the title block, the intro, the price table, the terms, the closing text and the page footer, in this order", async () => {
+    const all = text(await renderBuilt(TEMPLATE));
+    const positions = indexOfIn(
+      all,
+      "Preventive maintenance service agreement",
+      "About this agreement",
+      "Welcome Fernwood Dental.",
+      "Service and price",
+      "Terms",
+      "Thank you, Kettle Ridge Mechanical Ltd..",
+      "Page 1 of 1",
+    );
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(inOrder(positions)).toBe(true);
+  });
+
+  test.each<[string, boolean, boolean]>([
+    ["both shown", true, true],
+    ["schedule hidden", false, true],
+    ["scope hidden", true, false],
+    ["both hidden", false, false],
+  ])("C5321: %s", async (_label, schedule, scope) => {
+    const all = text(await renderBuilt({ ...TEMPLATE, sections: { schedule, scope } }));
+    expect(all.includes("Visit schedule")).toBe(schedule);
+    expect(all.includes("Service included")).toBe(scope);
+    // Always drawn.
+    for (const always of ["Service and price", "Quarterly visit", "Terms", "Repair discount", "Page 1 of 1"]) expect(all).toContain(always);
+  });
+
+  test("C5332: a document built with the system body prints the same page text as one built with no body, and as the document of before templates", async () => {
+    const withSystem = await renderBuilt(SYSTEM_AGREEMENT_BODY);
+    const without = await renderBuilt();
+    expect(withSystem).toEqual(without);
+    const legacy = buildAgreementDocument(SOURCE, SETTINGS);
+    const before: Partial<AgreementDocument> = { ...legacy };
+    delete before.intro;
+    delete before.footer;
+    delete before.sections;
+    expect(pdfPages(await reactPdfDocumentRenderer.renderAgreement(before as AgreementDocument))).toEqual(without);
+    const all = text(without);
+    expect(all).toContain("Visit schedule");
+    expect(all).toContain("Service included");
   });
 });

@@ -5,7 +5,10 @@ import {
   buildTimeline,
   parseServiceScope,
   parseTerms,
+  SYSTEM_AGREEMENT_BODY,
+  validateAgreementTemplate,
   type AgreementStatus,
+  type AgreementTemplateBody,
   type AgreementTerms,
   type EquipmentChoice,
   type TimelineSource,
@@ -62,6 +65,9 @@ type VersionRow = {
   valid_until: string | null;
   created_by: string | null;
   reason: string | null;
+  /** Absent in an older fixture, which means the system template; `null` is a version nobody pinned (a draft, or one sent before templates). */
+  template_version_id?: string | null;
+  document_template_versions?: { body: unknown } | null;
   contracts: { id?: string; status: string }[];
 };
 
@@ -111,6 +117,23 @@ type LineRow = {
   created_at: string;
   service_line_asset_types: { asset_types: CoveredType | null }[] | null;
 };
+
+/**
+ * The template version a version is pinned to. A row that never asked for the pin (an older fixture) has none; an unpinned
+ * version is drawn with the system template; a pin whose version cannot be read throws, and is never drawn with other wording
+ * (agreement-templates AC 14).
+ */
+function templateOf(version: VersionRow | undefined): AgreementTemplateBody | undefined {
+  if (!version || version.template_version_id === undefined) return undefined;
+  if (version.template_version_id === null) return SYSTEM_AGREEMENT_BODY;
+  const checked = validateAgreementTemplate(version.document_template_versions?.body);
+  if (!checked.ok) {
+    throw new Error(
+      `Agreement version ${version.id} has no readable template version ${version.template_version_id}: ${version.document_template_versions ? checked.reason : "it was not found"}`,
+    );
+  }
+  return checked.body;
+}
 
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" });
 
@@ -335,7 +358,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("agreements")
-        .select("id, org_id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, created_by, reason, contracts(id, status))")
+        .select("id, org_id, number, status, renews_agreement_id, sites(id, name, customers(id, name)), agreement_versions(id, version_no, created_at, term_start, term_months, term_end, valid_until, created_by, reason, template_version_id, document_template_versions(body), contracts(id, status))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -383,6 +406,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         terms,
         term: { start: shownVersion?.term_start ?? null, months: shownVersion?.term_months ?? 12, end: shownVersion?.term_end ?? null },
         validUntil: shownVersion?.valid_until ?? null,
+        template: templateOf(shownVersion),
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
         ...links,

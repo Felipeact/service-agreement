@@ -1,4 +1,15 @@
-import { applyAgreementCommand, buildAgreementDocument, parseServiceScope, type AgreementDocument } from "@/domain/agreement";
+import {
+  agreementTemplateValues,
+  applyAgreementCommand,
+  buildAgreementDocument,
+  parseServiceScope,
+  renderAgreementTemplate,
+  SYSTEM_AGREEMENT_BODY,
+  validateAgreementTemplate,
+  type AgreementDocument,
+  type AgreementTemplateBody,
+  type RenderedAgreementTemplate,
+} from "@/domain/agreement";
 import { isPortalToken, portalState, type PortalState } from "@/domain/portal";
 import type { AgreementServiceScope, PortalDecider, PortalReader, PortalTokens, PortalView, PortalViewRecorder } from "@/application/ports";
 
@@ -51,10 +62,31 @@ export function portalScope(view: PortalView): AgreementServiceScope {
   return { source: "frozen", takenAt: scope.takenAt === null ? null : new Date(scope.takenAt), types: scope.types };
 }
 
+/**
+ * The template body the link's version is drawn with: the system body when the view carries none (an older document), else the
+ * frozen pin, which must be a readable body. A missing or invalid one throws, so nothing is drawn with other wording
+ * (agreement-templates AC 14).
+ */
+export function portalTemplate(view: PortalView): AgreementTemplateBody {
+  if (view.template === undefined) return SYSTEM_AGREEMENT_BODY;
+  const checked = validateAgreementTemplate(view.template);
+  if (!checked.ok) throw new Error(`The link's template version cannot be read: ${view.template === null ? "it was not found" : checked.reason}`);
+  return checked.body;
+}
+
+/** The intro, closing text and shown sections of the link's version, filled from its frozen terms: what the PDF of the same view prints (AC 15). */
+export function portalTemplateText(view: PortalView): RenderedAgreementTemplate {
+  return renderAgreementTemplate(
+    portalTemplate(view),
+    agreementTemplateValues(view.terms, view.term.months, { tenant: view.tenant?.name ?? "", customer: view.customer.name, site: view.site.name }),
+  );
+}
+
 /** The PDF content of a link: its tenant's paper, the version's lines, scope and frozen terms. `null` when the tenant has no settings row. */
 export function portalDocument(view: PortalView): AgreementDocument | null {
   if (!view.tenant) return null;
   const terms = view.terms;
+  const template = portalTemplate(view);
   return buildAgreementDocument(
     {
       number: view.agreement.number,
@@ -89,6 +121,7 @@ export function portalDocument(view: PortalView): AgreementDocument | null {
       itemSingular: view.tenant.words.singular,
       itemPlural: view.tenant.words.plural,
     },
+    template,
   );
 }
 

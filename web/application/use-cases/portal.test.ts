@@ -1,7 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 import type { PortalDecider, PortalReader, PortalViewRecorder } from "@/application/ports";
 import { portalView, TOKEN, testTokens } from "@/application/portal-view.testing";
-import { makeDecidePortal, makeRecordPortalView, makeViewPortal, portalDocument, portalScope, portalViewState } from "./portal";
+import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
+import { makeDecidePortal, makeRecordPortalView, makeViewPortal, portalDocument, portalScope, portalTemplate, portalTemplateText, portalViewState } from "./portal";
 
 const HASH = testTokens.hash(TOKEN);
 
@@ -84,5 +85,46 @@ describe("the link's content", () => {
   test("C908: a missing view is the unknown state", () => {
     expect(portalViewState(null)).toBe("unknown");
     expect(portalViewState(portalView())).toBe("open");
+  });
+});
+
+describe("the link's template", () => {
+  const BODY = {
+    schema: 1,
+    name: "Welcome",
+    description: "",
+    intro: [{ type: "paragraph", text: "Welcome {{customer.name}}, payment within {{terms.paymentDays}}." }],
+    footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+    sections: { schedule: false, scope: true },
+    preset: { termMonths: null, lines: [] },
+  };
+
+  test("C5330: the document is built from the frozen version's body", () => {
+    const document = portalDocument(portalView({ template: BODY }));
+    expect(document?.intro).toEqual([{ type: "paragraph", text: "Welcome Fernwood Dental, payment within 30 days." }]);
+    expect(document?.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document?.sections).toEqual({ schedule: false, scope: true });
+    expect(document?.schedule).toEqual([]);
+  });
+
+  test("C5330: the review page text is the PDF's: the same blocks and flags for the same view", () => {
+    const view = portalView({ template: BODY });
+    const document = portalDocument(view);
+    expect(portalTemplateText(view)).toEqual({ intro: document?.intro, footer: document?.footer, sections: document?.sections });
+  });
+
+  test("C5330: a view with no template key is an older document and uses the system body", () => {
+    expect(portalTemplate(portalView())).toEqual(SYSTEM_AGREEMENT_BODY);
+    expect(portalDocument(portalView())?.intro).toEqual([]);
+  });
+
+  test.each<[string, unknown]>([
+    ["missing (the database found none)", null],
+    ["not an object", "x"],
+    ["schema 2", { ...BODY, schema: 2 }],
+    ["an unknown variable", { ...BODY, intro: [{ type: "paragraph", text: "{{nope}}" }] }],
+  ])("C5330: a template that is %s fails and draws nothing", (_label, template) => {
+    expect(() => portalDocument(portalView({ template }))).toThrow();
+    expect(() => portalTemplateText(portalView({ template }))).toThrow();
   });
 });

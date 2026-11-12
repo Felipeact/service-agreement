@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { OrgSettingsValue } from "../org-settings";
 import { buildAgreementDocument, DRAFT_MARK, NEUTRAL_ACCENT, type DocumentSource } from "./document";
+import type { AgreementTemplateBody } from "./template";
 
 const SETTINGS: OrgSettingsValue = {
   legalName: "Kettle Ridge Mechanical Ltd.",
@@ -179,5 +180,76 @@ describe("which terms the document prints", () => {
     const { terms } = buildAgreementDocument({ ...SOURCE, editable: false, terms: null }, { ...SETTINGS, repairDiscountPct: 99 });
     expect(terms).toEqual([]);
     expect(JSON.stringify(buildAgreementDocument({ ...SOURCE, editable: false, terms: null }, { ...SETTINGS, repairDiscountPct: 99 }))).not.toContain("99%");
+  });
+});
+
+const TEMPLATE: AgreementTemplateBody = {
+  schema: 1,
+  name: "Welcome",
+  description: "",
+  intro: [{ type: "paragraph", text: "Welcome {{customer.name}}." }],
+  footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+  sections: { schedule: true, scope: true },
+  preset: { termMonths: null, lines: [] },
+};
+
+describe("buildAgreementDocument with a template", () => {
+  test("C5320: a pinned body's intro and closing text come back rendered with the names filled in", () => {
+    const doc = buildAgreementDocument(SOURCE, SETTINGS, TEMPLATE);
+    expect(doc.intro).toEqual([{ type: "paragraph", text: "Welcome Fernwood Dental." }]);
+    expect(doc.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+  });
+
+  test("C5320: with no template argument the intro and the closing text are empty", () => {
+    const doc = buildAgreementDocument(SOURCE, SETTINGS);
+    expect(doc.intro).toEqual([]);
+    expect(doc.footer).toEqual([]);
+    expect(doc.sections).toEqual({ schedule: true, scope: true });
+  });
+
+  test.each<[string, { schedule: boolean; scope: boolean }]>([
+    ["both shown", { schedule: true, scope: true }],
+    ["schedule hidden", { schedule: false, scope: true }],
+    ["scope hidden", { schedule: true, scope: false }],
+    ["both hidden", { schedule: false, scope: false }],
+  ])("C5321: %s", (_label, sections) => {
+    const shown = buildAgreementDocument(SOURCE, SETTINGS);
+    const doc = buildAgreementDocument(SOURCE, SETTINGS, { ...TEMPLATE, sections });
+    expect(doc.sections).toEqual(sections);
+    expect(doc.schedule).toEqual(sections.schedule ? shown.schedule : []);
+    expect(doc.scope).toEqual(sections.scope ? shown.scope : { kind: "hidden" });
+    // The price table, the terms and the totals are always built.
+    expect(doc.lines).toEqual(shown.lines);
+    expect(doc.totalCents).toBe(387000);
+    expect(doc.terms).toEqual(shown.terms);
+    expect(shown.schedule.length).toBeGreaterThan(0);
+  });
+
+  const TERMS_TEMPLATE: AgreementTemplateBody = {
+    ...TEMPLATE,
+    intro: [{ type: "paragraph", text: "Payment {{terms.paymentDays}}; {{term.label}}." }],
+    footer: [],
+  };
+
+  test("C5322: an editable draft fills the variables from today's settings", () => {
+    const doc = buildAgreementDocument(DRAFT_SOURCE, { ...SETTINGS, paymentDays: 45, defaultTermMonths: 12 }, TERMS_TEMPLATE);
+    expect(doc.intro).toEqual([{ type: "paragraph", text: "Payment 45 days; 12 months." }]);
+  });
+
+  test("C5322: a sent version fills them from its frozen terms, whatever the settings say now", () => {
+    const sent = { ...SOURCE, term: { start: "2027-01-01", months: 24, end: "2028-12-31" } };
+    const doc = buildAgreementDocument(sent, { ...SETTINGS, paymentDays: 45 }, TERMS_TEMPLATE);
+    expect(doc.intro).toEqual([{ type: "paragraph", text: "Payment 30 days; 24 months." }]);
+  });
+
+  test("C5322: a sent version that recorded no terms prints a clause that needs one as nothing, and a paragraph with an empty replacement", () => {
+    const template: AgreementTemplateBody = {
+      ...TEMPLATE,
+      intro: [
+        { type: "clause", text: "Payment {{terms.paymentDays}}." },
+        { type: "paragraph", text: "Within {{terms.paymentDays}}." },
+      ],
+    };
+    expect(buildAgreementDocument({ ...SOURCE, terms: null }, SETTINGS, template).intro).toEqual([{ type: "paragraph", text: "Within ." }]);
   });
 });

@@ -3,7 +3,9 @@ import type { TenantLogo } from "../org-settings/logo";
 import { formatSettingNumber, itemWords } from "../org-settings";
 import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
+import { agreementTemplateValues, renderAgreementTemplate, SYSTEM_AGREEMENT_BODY, type AgreementTemplateBody } from "./template";
 import { formatTermDate, termLine, termMonthsLabel, type AgreementTerm } from "./term";
+import type { RenderedBlock } from "../contract/template";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
 export const NEUTRAL_ACCENT = "#374151";
@@ -15,8 +17,8 @@ export type DocumentLine = { description: string; visitsPerYear: number; costPer
 /** A line as a document source holds it: its printed figures, plus the months and equipment the schedule reads. */
 export type DocumentSourceLine = DocumentLine & { id?: string; visitMonths: number[]; equipment: { code?: string; name: string }[] };
 
-/** The scope part of a document: what the version covers, or that nobody recorded it. */
-export type DocumentScope = { kind: "listed"; recordedOn: Date | null; types: ScopeType[] } | { kind: "not_recorded" };
+/** The scope part of a document: what the version covers, that nobody recorded it, or that its template hides the section. */
+export type DocumentScope = { kind: "listed"; recordedOn: Date | null; types: ScopeType[] } | { kind: "not_recorded" } | { kind: "hidden" };
 
 /**
  * Everything one rendered agreement says, decided and ordered, with no layout in it (agreement-pdf door 2).
@@ -46,6 +48,12 @@ export type AgreementDocument = {
   validity: string | null;
   /** Only the terms that are set, in print order. */
   terms: { label: string; value: string }[];
+  /** The template version's intro, after the title block and before the price table (agreement-templates AC 10). */
+  intro?: RenderedBlock[];
+  /** The template version's closing text, after the terms and before the page footer. */
+  footer?: RenderedBlock[];
+  /** Which optional sections the template shows; the price table, the terms and the page footer are always drawn. */
+  sections?: { schedule: boolean; scope: boolean };
 };
 
 /** The parts of an agreement page's view the document reads. */
@@ -107,7 +115,23 @@ export function documentBody(source: DocumentSource) {
   };
 }
 
-export function buildAgreementDocument(source: DocumentSource, settings: OrgSettingsValue): AgreementDocument {
+/**
+ * `template` is the body of the template version the agreement is pinned to; absent means the system body, which draws what
+ * every agreement drew before templates existed (agreement-templates AC 9).
+ */
+export function buildAgreementDocument(
+  source: DocumentSource,
+  settings: OrgSettingsValue,
+  template: AgreementTemplateBody = SYSTEM_AGREEMENT_BODY,
+): AgreementDocument {
+  const body = documentBody(source);
+  // The same terms the document prints: the org's today for the current draft, only the frozen ones for a sent version.
+  const values = agreementTemplateValues(source.editable ? settings : source.terms, source.term.months, {
+    tenant: settings.legalName,
+    customer: source.customer.name,
+    site: source.site.name,
+  });
+  const { intro, footer, sections } = renderAgreementTemplate(template, values);
   return {
     tenant: { name: settings.legalName, address: settings.address, phone: settings.phone, accent: settings.accentColor ?? NEUTRAL_ACCENT },
     words: itemWords(settings.itemSingular, settings.itemPlural),
@@ -116,10 +140,15 @@ export function buildAgreementDocument(source: DocumentSource, settings: OrgSett
     customerName: source.customer.name,
     siteName: source.site.name,
     mark: source.editable ? DRAFT_MARK : null,
-    ...documentBody(source),
+    ...body,
+    schedule: sections.schedule ? body.schedule : [],
+    scope: sections.scope ? body.scope : { kind: "hidden" },
     validity: source.validUntil ? `Valid until ${formatTermDate(source.validUntil)}` : null,
     // The current draft prints the org's terms as they stand; a frozen version only what it was sent with, never the
     // settings of today (customer-portal AC 32, 33).
     terms: source.editable ? termsOf(settings, source.term.months) : source.terms ? termsOf(source.terms, source.term.months) : [],
+    intro,
+    footer,
+    sections,
   };
 }

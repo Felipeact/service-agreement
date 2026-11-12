@@ -64,6 +64,8 @@ export {
   makeViewPortal,
   portalDocument,
   portalScope,
+  portalTemplate,
+  portalTemplateText,
   portalViewState,
   type DecidePortalResult,
   type PortalDecision,

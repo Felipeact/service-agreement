@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { TenantLogoImage } from "@/components/ui/tenant-logo";
 import type { PortalView } from "@/application/ports";
-import { portalScope, type PortalDecision } from "@/application/use-cases";
+import { portalScope, portalTemplateText, type PortalDecision } from "@/application/use-cases";
 import { ServiceScopeSections } from "@/components/agreements/service-scope";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
 import { NEUTRAL_ACCENT, termLine, termsOf, visitSchedule } from "@/domain/agreement";
 import { formatTermDate } from "@/domain/agreement/term";
+import type { RenderedBlock } from "@/domain/contract";
 import { contrastText, isAccent, type PortalState } from "@/domain/portal";
 import { formatCadExact } from "@/lib/money";
 import { DecisionControls } from "./decision-controls";
@@ -60,12 +61,35 @@ function Phone({ phone }: { phone: string | null }) {
   );
 }
 
+/** The template's text as plain paragraphs, with its headings in the section-heading size: the same blocks the PDF draws. */
+function TemplateText({ label, blocks }: { label: string; blocks: RenderedBlock[] }) {
+  if (blocks.length === 0) return null;
+  return (
+    <section aria-label={label} className="flex flex-col gap-2">
+      {blocks.map((block, index) =>
+        block.type === "heading" ? (
+          <h2 key={index} className="text-[15px] font-semibold break-words">
+            {block.text}
+          </h2>
+        ) : (
+          <p key={index} className="text-[14px] break-words whitespace-pre-line">
+            {block.text}
+          </p>
+        ),
+      )}
+    </section>
+  );
+}
+
 /** What the customer reads: the version's lines, scope and frozen terms. Every state with content shows this. */
 function Content({ view }: { view: PortalView }) {
   const terms = view.terms ? termsOf(view.terms, view.term.months) : [];
   const scope = portalScope(view);
+  const { intro, footer, sections } = portalTemplateText(view);
   return (
     <>
+      <TemplateText label="Introduction" blocks={intro} />
+
       <section aria-label="Service lines" className={panel}>
         <h2 className={heading}>Service lines</h2>
         <div
@@ -95,9 +119,9 @@ function Content({ view }: { view: PortalView }) {
         </div>
       </section>
 
-      <VisitScheduleSection schedule={visitSchedule(view.lines, scope.source === "not_recorded" ? [] : scope.types)} />
+      {sections.schedule && <VisitScheduleSection schedule={visitSchedule(view.lines, scope.source === "not_recorded" ? [] : scope.types)} />}
 
-      <ServiceScopeSections scope={scope} siteId="" canAddEquipment={false} words={view.tenant?.words} />
+      {sections.scope && <ServiceScopeSections scope={scope} siteId="" canAddEquipment={false} words={view.tenant?.words} />}
 
       {terms.length > 0 && (
         <section aria-label="Terms" className={panel}>
@@ -112,6 +136,8 @@ function Content({ view }: { view: PortalView }) {
           </dl>
         </section>
       )}
+
+      <TemplateText label="Closing text" blocks={footer} />
     </>
   );
 }

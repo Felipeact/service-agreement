@@ -126,6 +126,7 @@ export function ScheduleSection({ schedule, accent }: { schedule: ScheduleRow[];
 
 /** "Service included" and the org's item heading ("Equipment" by default), or the sentence that the version never recorded them. */
 export function ScopeSections({ scope, accent, words = DEFAULT_ITEM_WORDS }: { scope: DocumentScope; accent: string; words?: ItemWords }) {
+  if (scope.kind === "hidden") return null;
   if (scope.kind === "not_recorded") {
     return <Text style={[styles.muted, { marginTop: 18 }]}>{`The ${words.plural} covered by this version ${itemWas(words)} not recorded`}</Text>;
   }

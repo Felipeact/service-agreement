@@ -250,3 +250,4 @@ export * from "./version-note";
 export * from "./timeline";
 export * from "./list-filter";
 export * from "./new-agreement";
+export * from "./template";

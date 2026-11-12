@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const settings = await getOrgSettings(member.orgId);
     if (!settings) throw new Error(`org ${member.orgId} has no settings row`);
-    const bytes = await documentRenderer.renderAgreement(withLogo(buildAgreementDocument(agreement, settings), "tenant", await tenantLogo(member.orgId)));
+    const bytes = await documentRenderer.renderAgreement(withLogo(buildAgreementDocument(agreement, settings, agreement.template), "tenant", await tenantLogo(member.orgId)));
     return new Response(bytes as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",

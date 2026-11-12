@@ -2,6 +2,7 @@ import type {
   AgreementDocument,
   AgreementFilter,
   AgreementStatus,
+  AgreementTemplateBody,
   AgreementTerm,
   AgreementTerms,
   EquipmentChoice,
@@ -667,6 +668,11 @@ export type AgreementDetail = {
   /** The last day the shown version can be decided, `YYYY-MM-DD`, or `null` when it was never sent (proposal-expiry door 1). */
   validUntil: string | null;
   /**
+   * The body of the template version the shown version is pinned to; the system body when it has no pin (agreement-templates door 3).
+   * Optional in the type so older fixtures compile (absent draws as the system template); the reader sets it and throws when a pin cannot be read.
+   */
+  template?: AgreementTemplateBody;
+  /**
    * The live customer link of the shown version, when the agreement is `sent` and the version is the current one:
    * when the customer first opened it, or `null` for not yet. `null` too when there is no live link. The link itself
    * is never readable (customer-portal door 1).
@@ -859,6 +865,11 @@ export type PortalView = {
   term: AgreementTerm;
   /** The last day the version can be decided, `YYYY-MM-DD`, or `null` for no bound (proposal-expiry door 7). */
   validUntil: string | null;
+  /**
+   * `template` of `portal_view`: the frozen version's pinned template body, as the database holds it. Absent in an older fixture (the system
+   * template); `portalDocument` validates it and fails when it is missing or invalid (agreement-templates AC 14).
+   */
+  template?: unknown;
   /** Today in America/Vancouver as the database read it, `YYYY-MM-DD`; `null` when the document carries none. */
   today: string | null;
   decision: { status: "accepted" | "refused" | "changes_requested"; decidedAt: Date; reason: string | null } | null;

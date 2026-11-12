@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, CurrentMember, DocumentRenderer, MemberRole } from "@/application/ports";
+import type { AgreementTemplateBody } from "@/domain/agreement";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { TenantLogo } from "@/domain/org-settings/logo";
 
@@ -222,3 +223,46 @@ describe("the logo on the agreement PDF", () => {
   });
 });
 
+
+describe("the agreement PDF route and the template", () => {
+  const TEMPLATE: AgreementTemplateBody = {
+    schema: 1,
+    name: "Welcome",
+    description: "",
+    intro: [{ type: "paragraph", text: "Payment within {{terms.paymentDays}} for {{customer.name}}." }],
+    footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+    sections: { schedule: true, scope: false },
+    preset: { termMonths: null, lines: [] },
+  };
+
+  test("C5329: when the reader throws because a pin cannot be read, the request fails and nothing is drawn", async () => {
+    get.mockRejectedValue(new Error("Agreement version v1 has no readable template version t1: it was not found"));
+    await expect(call()).rejects.toThrow("no readable template version");
+    expect(getOrgSettings).not.toHaveBeenCalled();
+    expect(renderAgreement).not.toHaveBeenCalled();
+  });
+
+  test("C5334: an editable draft draws the pinned body with today's settings", async () => {
+    getOrgSettings.mockResolvedValue({ ...SETTINGS, paymentDays: 45 });
+    get.mockResolvedValue(detail({ status: "draft", stage: "in_progress", editable: true, terms: null, template: TEMPLATE }));
+    await call();
+    const document = renderAgreement.mock.calls[0][0];
+    expect(document.intro).toEqual([{ type: "paragraph", text: "Payment within 45 days for Fernwood Dental." }]);
+    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document.sections).toEqual({ schedule: true, scope: false });
+    expect(document.scope).toEqual({ kind: "hidden" });
+  });
+
+  test("C5334: a sent version draws its frozen pin and frozen terms, whatever the settings say now", async () => {
+    getOrgSettings.mockResolvedValue({ ...SETTINGS, paymentDays: 45 });
+    get.mockResolvedValue(detail({ template: TEMPLATE }));
+    await call();
+    expect(renderAgreement.mock.calls[0][0].intro).toEqual([{ type: "paragraph", text: "Payment within 30 days for Fernwood Dental." }]);
+  });
+
+  test("C5334: a version the reader gives no template (an older fixture) draws the system layout", async () => {
+    await call();
+    const document = renderAgreement.mock.calls[0][0];
+    expect([document.intro, document.footer, document.sections]).toEqual([[], [], { schedule: true, scope: true }]);
+  });
+});

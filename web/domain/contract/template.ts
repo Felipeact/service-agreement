@@ -1,4 +1,5 @@
-import { termMonthsLabel, type AgreementTerms } from "../agreement";
+import type { AgreementTerms } from "../agreement";
+import { termMonthsLabel } from "../agreement/term";
 import { formatSettingNumber, PROVINCE_NAMES } from "../org-settings";
 import type { ContractParties } from "./parties";
 
