@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import type { OrgSettings } from "@/application/ports";
 import { itemWords } from "@/domain/org-settings";
 import { groupSetupCatalog } from "@/domain/org-settings/setup";
+import { DraftPanel } from "./draft-panel";
 import { CatalogReview, SetupView } from "./setup-view";
 
 const settings: OrgSettings = {
@@ -109,5 +110,63 @@ describe("catalog review", () => {
     expect(markup).toContain("2 equipment types");
     expect(markup).toContain(">Sink<");
     expect(markup).not.toMatch(/<(input|select|textarea|button|form)\b/);
+  });
+});
+
+const draftActions = { draftAction: async () => ({ status: "idle" as const }), acceptAction: async () => ({ status: "idle" as const }) };
+const drafted = { status: "drafted" as const, trade: "pest control", types: [{ name: "Rodent stations", months: [3, 9], tasks: ["Check bait", "Replace bait"] }] };
+const panel = (props: Partial<Parameters<typeof DraftPanel>[0]> = {}) => html(createElement(DraftPanel, { ...draftActions, ...props }));
+
+describe("the catalog draft on the setup screen", () => {
+  test("C4100: with no types the owner sees the draft form and the review's No types yet; with a type the form is gone", () => {
+    const empty = html(createElement(SetupView, { settings, groups: [], words, action: noop, draft: draftActions }));
+    expect(empty).toContain("Draft your catalog");
+    expect(empty).toContain('name="trade"');
+    expect(empty).toContain('name="notes"');
+    expect(empty).toContain('name="file"');
+    expect(empty).toContain("No types yet");
+    const groups = groupSetupCatalog([{ pack: "plumbing", name: "Sink" }], words);
+    const full = html(createElement(SetupView, { settings, groups, words, action: noop, draft: draftActions }));
+    expect(full).not.toContain("Draft your catalog");
+    expect(full).not.toContain('name="trade"');
+  });
+
+  test("C4114: the review has rename, remove type, month and remove task controls and none that adds a type or a task", () => {
+    const markup = panel({ initialDraft: drafted });
+    expect(markup).toContain('value="Rodent stations"');
+    expect(markup).toContain("Remove Rodent stations");
+    expect(markup).toContain("Remove task Check bait");
+    expect(markup).toContain("Remove task Replace bait");
+    expect(markup.match(/aria-pressed/g)).toHaveLength(12);
+    expect(markup.match(/aria-pressed="true"/g)).toHaveLength(2);
+    expect(markup).not.toMatch(/>\s*(Add (a )?(type|task)|New (type|task))/i);
+    expect(markup).toContain("Add these to my catalog");
+  });
+
+  test("C4118: an accept refused because the catalog is no longer empty says so", () => {
+    const markup = panel({ initialDraft: drafted, initialAccept: { status: "failed", code: "not_empty" } });
+    expect(markup).toContain("Your catalog is no longer empty");
+  });
+
+  test("C4126: while drafting the form shows a status text and the submit button is disabled", () => {
+    const markup = panel({ initialPending: true });
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("Claude is drafting your catalog");
+    expect(markup).toMatch(/<button[^>]*disabled[^>]*>Drafting/);
+  });
+
+  test("C4127: an unavailable answer shows the message, a Try again control and keeps the trade and notes", () => {
+    const markup = panel({ initialDraft: { status: "failed", code: "unavailable", trade: "pest control", notes: "Commercial kitchens" } });
+    expect(markup).toContain("We couldn&#x27;t draft your catalog. Try again.".replace("&#x27;", "'"));
+    expect(markup).toMatch(/<button[^>]*>Try again/);
+    expect(markup).toContain('value="pest control"');
+    expect(markup).toContain(">Commercial kitchens</textarea>");
+    expect(markup).not.toMatch(/task library/i);
+  });
+
+  test("C4130: the read-only review is unchanged by the draft: No types yet and no button, input or draft text", () => {
+    const markup = html(createElement(CatalogReview, { groups: [], words }));
+    expect(markup).toContain("No types yet");
+    expect(markup).not.toMatch(/<button|<a |<input|draft|generate/i);
   });
 });

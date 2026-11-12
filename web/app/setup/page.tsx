@@ -6,6 +6,7 @@ import { getContainer } from "@/composition";
 import { groupSetupCatalog, setupEntry } from "@/domain/org-settings/setup";
 import { prepareLogoUpload } from "@/app/logo-upload";
 import { setupAction } from "./actions";
+import { acceptDraftAction, draftCatalogAction } from "./draft-actions";
 
 export const metadata: Metadata = { title: "Set up your workspace" };
 
@@ -20,7 +21,7 @@ export async function SetupForRequest() {
 
   const [settings, types, words, logoPath] = await Promise.all([getOrgSettings(member.orgId), setupCatalog(), getItemWords(member.orgId), logo.current(member.orgId)]);
   if (!settings) redirect("/pipeline");
-  return <SetupView settings={settings} groups={groupSetupCatalog(types, words)} words={words} action={setupAction} logoPath={logoPath ?? ""} prepareLogo={prepareLogoUpload} />;
+  return <SetupView settings={settings} groups={groupSetupCatalog(types, words)} words={words} action={setupAction} logoPath={logoPath ?? ""} prepareLogo={prepareLogoUpload} draft={{ draftAction: draftCatalogAction, acceptAction: acceptDraftAction }} />;
 }
 
 export default function SetupPage() {

@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { PROVINCES, PROVINCE_NAMES, type ItemWords } from "@/domain/org-settings";
 import type { SetupCatalogGroup } from "@/domain/org-settings/setup";
+import { DraftPanel, type DraftPanelProps } from "./draft-panel";
 import { toSetupInput, type SetupFormState } from "./state";
 
 type SetupViewProps = {
@@ -25,6 +26,8 @@ type SetupViewProps = {
   prepareLogo?: (file: { type: string; size: number }) => Promise<LogoUploadAnswer>;
   /** Where the form starts with an upload under way; only a test passes it. */
   initialUploading?: boolean;
+  /** The "Other" trade's catalog draft (other-trade-draft); the page passes it only for an org with no types. */
+  draft?: Pick<DraftPanelProps, "draftAction" | "acceptAction"> & Partial<DraftPanelProps>;
 };
 
 const IDLE: SetupFormState = { status: "idle" };
@@ -78,7 +81,7 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
 }
 
 /** The first-login setup page body: confirm the company profile, see the catalog, continue or skip. */
-export function SetupView({ settings, groups, words, action, initialState = IDLE, logoPath = "", prepareLogo, initialUploading = false }: SetupViewProps) {
+export function SetupView({ settings, groups, words, action, initialState = IDLE, logoPath = "", prepareLogo, initialUploading = false, draft }: SetupViewProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const [uploading, setUploading] = useState(initialUploading);
   const values = state.status === "idle" ? { ...toSetupInput(settings), logoPath } : state.values;
@@ -96,6 +99,8 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
           .
         </p>
       </header>
+
+      {draft && groups.length === 0 && <DraftPanel {...draft} />}
 
       <form action={formAction} noValidate className="flex flex-col gap-6">
         <section aria-labelledby="profile-title" className={CARD}>

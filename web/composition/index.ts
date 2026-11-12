@@ -35,6 +35,9 @@ import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
 import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
+import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
+import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
+import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
 import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
@@ -199,6 +202,9 @@ export async function getContainer() {
     stripePublishableKey,
     setupPending: setup.isPending,
     setupCatalog: setup.catalog,
+    // The "Other" trade's catalog draft (other-trade-draft): the Claude call and the one atomic write, both behind the setup screen.
+    draftCatalog: makeDraftCatalog(async () => (await setup.catalog()).length, importParser, claudeCatalogDrafter({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    acceptCatalogDraft: makeAcceptCatalogDraft(supabaseCatalogWriter(supabase)),
     saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),
     skipSetup: (orgId: string) => setup.skip(orgId, systemClock.now()),
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),

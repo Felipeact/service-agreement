@@ -113,3 +113,13 @@ describe("setup catalog review", () => {
     expect(groupSetupCatalog([], equipment)).toEqual([]);
   });
 });
+
+describe("a drafted catalog in the review", () => {
+  test("C4122: types with no pack sit under Added by you with their count in the org's words", () => {
+    const words = itemWords("equipment", "equipment");
+    const groups = groupSetupCatalog([{ pack: null, name: "Rodent stations" }, { pack: null, name: "Gutters" }], words);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ pack: null, label: "Added by you", count: 2, names: ["Rodent stations", "Gutters"] });
+    expect(groups[0].countText).toBe("2 equipment types");
+  });
+});
