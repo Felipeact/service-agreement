@@ -64,6 +64,7 @@ export const RECIPES: Recipe[] = [
   plain("checkout_email_in_use"),
   plain("plan_limits"),
   plain("contract_templates"),
+  { name: "agreement_templates", parts: ["fixture.sql", "../migrations/20261112240000_agreement_templates.sql", "agreement_templates.sql"] },
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
