@@ -246,6 +246,17 @@ begin
   perform tests.ok('C5123 allowed', (a ->> 'allowed')::boolean and a -> 'limit' = 'null'::jsonb and a -> 'plan' = 'null'::jsonb, 'answered ' || a::text);
 end $$;
 
+-- C5121: an admin may ask too (the estimator is promoted inside the transaction).
+reset role;
+update public.memberships set role = 'admin' where user_id = tests.id('uE') and org_id = tests.id('orgA');
+select tests.act_as('uE');
+do $$
+begin
+  perform tests.ok('C5121 admin', (public.import_allowance(tests.id('q5121')) ->> 'plan') = 'starter', 'an admin could not ask the allowance');
+end $$;
+reset role;
+update public.memberships set role = 'estimator' where user_id = tests.id('uE') and org_id = tests.id('orgA');
+
 -- C5124: a viewer is refused, and a non-member, another org's member and a missing job find nothing.
 select tests.act_as('uV');
 select tests.expect_error('C5124 viewer', format('select public.import_allowance(%L)', tests.id('q5121')), '42501');
