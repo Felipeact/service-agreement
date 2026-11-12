@@ -29,7 +29,7 @@ Proof: `npm run test:db contract_templates` (label C5202)
 **C5203** - After a contract exists, inserting a newer version of the template it used leaves the contract's `template_version_id` unchanged (AC 4)
 Proof: `npm run test:db contract_templates` (label C5203)
 
-**C5204** - Updating or deleting a template version fails for the table owner and for an owner member of the org (AC 5)
+**C5204** - Updating or deleting a template version fails for the table owner and for an owner member of the org; the one exception is that an org's own versions go when the org is deleted, and a system version stays (AC 5)
 Proof: `npm run test:db contract_templates` (label C5204)
 
 **C5205** - An authenticated member inserting into `document_templates` or into `document_template_versions` is refused with `42501` (AC 6)
@@ -73,7 +73,7 @@ Proof: `npx vitest run domain/contract/template.test.ts -t "C5216:"`
 **C5217** - A customer name of `{{terms.paymentDays}}` is printed as that text and not expanded (AC 15)
 Proof: `npx vitest run domain/contract/template.test.ts -t "C5217:"`
 
-**C5218** - With no frozen terms the system version renders no blocks at all: the heading "Terms" has no clause under it and is dropped (AC 18, render side)
+**C5218** - With no frozen terms the system version renders no blocks at all: the heading "Terms" has no clause under it and is dropped; a heading followed by another heading, or by nothing, is dropped, and one followed by any other block is kept (AC 18, render side)
 Proof: `npx vitest run domain/contract/template.test.ts -t "C5218:"`
 
 **C5219** - Every one of the eleven whitelisted variables resolves to a value for a full context, and the whitelist is exactly those eleven names (door 4)
@@ -108,7 +108,7 @@ Proof: `npx vitest run application/use-cases/signing-documents.test.ts -t "C5225
 | whitelisted variables (11) | `terms.paymentDays` C5219 · `terms.cancellationNoticeDays` C5219 · `terms.repairDiscountPct` C5219 · `terms.cpiCapPct` C5219 · `terms.cpiRenegotiationThresholdPct` C5219 · `terms.renewalNoticeDays` C5219 · `province` C5219 · `term.label` C5219 · `tenant.legalName` C5219 · `customer.name` C5219 · `site.name` C5219 | - |
 | block types (3) | `heading` C5213 · `paragraph` C5213 · `clause` C5212 | - |
 | invalid body reasons (4) | unknown schema C5215 · unknown block type C5215 · more than 60 blocks C5215 · text over 2,000 characters C5215 | - |
-| template version mutations and writes (4) | update C5204 · delete C5204 · member insert into templates C5205 · member insert into versions C5205 | - |
+| template version mutations and writes (6) | update C5204 · delete C5204 · delete with the owning org C5204 · member insert into templates C5205 · member insert into versions C5205 · anon read and insert C5205 | - |
 | uniqueness constraints (3) | one system template per kind C5208 · one template per org per kind C5208 · `version_no` per template C5208 | - |
 | contract table constraints (3) | not null C5206 · foreign key C5209 · default to system v1 C5206 | - |
 | ways a contract is created (2) | `create_contract` by a member C5201, C5202 · automation path C5210 | - |
@@ -157,4 +157,5 @@ Same as the plan's `Out of scope`: the editor, the agreement-side template, syst
 
 - **Boundary:** C5200-C5225 closed at the commit that adds this line (database half at `3ad2447`)
 - **Settled mid-build:** (1) C5211's expected renewal sentence was written "12 month terms" and is "12 months terms" (the existing wording, which the existing C1639 pins); corrected before any code. (2) C5224's "503" contradicted the approved AC 19 ("as other read failures today"): the route reads the contract outside its `try`, so a failed read fails the request like the agreement read does; the check now says that. (3) The Flow names corrected to the code: contracts are written by `private.make_contract`, and the signing flow's document is the one `makeContractDocuments` builds for the provider (there is no separate signing-page rendering of the clauses). (4) `contractClauses(terms, months)` stays as a thin function over the system wording so C1639 and its siblings are untouched; tests that read or passed `clauses: string[]` (C1640, C1642, C1643, C1714, C3329 and the route test) now use `body` with the same expected sentences. (5) The reader sets `template` only when its row carries a `template_version_id`; older fixtures without one mean the system wording, a real row without a readable version throws. (6) Existing registries updated mechanically: the `test:db` counts (36 to 37 recipes, 38 to 39 files) and `contract_templates` in the recipe list.
+- **Verifier round 1 follow-up:** C5218 gained the consecutive-heading case; C5204 and C5205 gained the org-delete cascade and the anon assertions. The recipe no longer replays the migration (applied by the owner 2026-11-12).
 - **Abandoned:** failing the migration's backfill as a separate UPDATE (the column default backfills every row at once); a `ContractTemplateReader` port (the existing contract reader carries the body)

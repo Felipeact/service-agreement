@@ -128,6 +128,22 @@ describe("values", () => {
     ]);
   });
 
+  test("C5218: a heading is dropped when the next block is another heading or there is none, and kept before any other block", () => {
+    const out = render(
+      body(
+        { type: "heading", text: "A" },
+        { type: "heading", text: "B" },
+        { type: "paragraph", text: "under B" },
+        { type: "heading", text: "C" },
+        { type: "heading", text: "D" },
+      ),
+    );
+    expect(out).toEqual([
+      { type: "heading", text: "B" },
+      { type: "paragraph", text: "under B" },
+    ]);
+  });
+
   test("C5218: with no frozen terms the system version renders nothing, not even its heading", () => {
     expect(render(SYSTEM_CONTRACT_BODY, null)).toEqual([]);
   });

@@ -1,7 +1,6 @@
 -- contract-templates, database side: C5200-C5210 (.specs/features/contract-templates/checks.md).
--- Run after fixture.sql and the migration in the same execute_sql call (npm run test:db contract_templates): the recipe puts
--- 20261112230000_contract_templates.sql between them, inside the rolled-back transaction, so the hosted project needs no change
--- until the owner applies it. Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB. conA and conB are fixture
+-- Run after fixture.sql (npm run test:db contract_templates). The migration 20261112230000_contract_templates.sql was applied to
+-- the hosted project by the owner on 2026-11-12, so this file no longer replays it and tests the hosted objects. Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB. conA and conB are fixture
 -- contracts inserted without naming a template version. Expected values come from the plan, never read back from the migration.
 
 reset role;
@@ -152,6 +151,25 @@ begin
   perform tests.ok('C5208 another kind is allowed', (select count(*) from public.document_templates where org_id is null and kind = 'agreement') = 0
     and exists (select 1 from (select 1 from public.document_templates limit 1) x), 'unexpected system agreement template');
   insert into public.document_templates (org_id, kind) values (tests.id('orgA'), 'agreement');
+end $$;
+
+-- C5205: anon reads nothing and writes nothing.
+select tests.act_as_anon();
+select tests.expect_error('C5205 anon read versions', 'select count(*) from public.document_template_versions', '42501');
+select tests.expect_error('C5205 anon read templates', 'select count(*) from public.document_templates', '42501');
+select tests.expect_error('C5205 anon insert', 'insert into public.document_templates (org_id, kind) values (null, ''agreement'')', '42501');
+reset role;
+
+-- C5204: a version goes with the org that owns it, and a system version stays.
+insert into public.document_templates (id, org_id, kind) values (tests.id('tplB'), tests.id('orgB'), 'contract');
+insert into public.document_template_versions (id, template_id, org_id, version_no, body)
+values (tests.id('tplB:v1'), tests.id('tplB'), tests.id('orgB'), 1, '{"schema":1,"blocks":[]}');
+delete from public.orgs where id = tests.id('orgB');
+do $$
+begin
+  perform tests.ok('C5204 org delete takes its versions', not exists (select 1 from public.document_template_versions where org_id = tests.id('orgB')), 'a version outlived its org');
+  perform tests.ok('C5204 org delete takes its template', not exists (select 1 from public.document_templates where org_id = tests.id('orgB')), 'a template outlived its org');
+  perform tests.ok('C5204 system version stays', (select count(*) from public.document_template_versions where org_id is null) = 1, 'the system version was deleted');
 end $$;
 
 reset role;
