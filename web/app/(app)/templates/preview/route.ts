@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { canWriteTemplates } from "@/components/templates/state";
 import { getContainer } from "@/composition";
 import { buildTemplatePreviewDocument } from "@/domain/agreement";
-import { bodyFromTemplateForm, readTemplateFormInput, type FieldError } from "@/domain/agreement/template-form";
+import { previewBodyFromTemplateForm, readTemplateFormInput, type FieldError } from "@/domain/agreement/template-form";
 import { itemWords } from "@/domain/org-settings";
 
 /** Seconds. Rendering a long agreement measured about 22 s (C870); a template with 20 preset lines is far shorter. */
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   }
   const read = readTemplateFormInput(json);
   if (!read.ok) return invalid(read.errors);
-  const checked = bodyFromTemplateForm(read.input);
+  const checked = previewBodyFromTemplateForm(read.input);
   if (!checked.ok) return invalid(Object.entries(checked.errors).map(([field, message]) => ({ field, message })));
 
   try {

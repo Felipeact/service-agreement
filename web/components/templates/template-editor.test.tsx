@@ -177,3 +177,30 @@ describe("a save that fails for a reason other than a field", () => {
     expect(view()).not.toContain("no longer exists");
   });
 });
+
+describe("the editor's two regions", () => {
+  const editor = () => renderToStaticMarkup(createElement(TemplateEditor, { templateId: null, initial: VALUES, types: TYPES, save: vi.fn() }));
+
+  test("C5430: the form comes first and the preview second, and the preview region is labelled Preview", () => {
+    const html = editor();
+    const form = html.indexOf('<section aria-label="Template form"');
+    const preview = html.indexOf('<section aria-label="Preview"');
+    expect(form).toBeGreaterThan(-1);
+    expect(preview).toBeGreaterThan(form);
+    expect(html.match(/aria-label="Preview"/g)).toHaveLength(1);
+    expect(html.match(/<form/g)).toHaveLength(1);
+    // The fields sit in the first region and the preview heading in the second.
+    expect(html.indexOf('id="template-name"')).toBeGreaterThan(form);
+    expect(html.indexOf('id="template-name"')).toBeLessThan(preview);
+    expect(html.slice(preview)).toContain(">Preview</h2>");
+  });
+
+  test("C5430: the container is a column below 1280 px and two equal tracks from xl", () => {
+    const container = /^<div class="([^"]*)"/.exec(editor())?.[1] ?? "";
+    expect(container).toMatch(/\bflex\b/);
+    expect(container).toMatch(/\bflex-col\b/);
+    expect(container).toMatch(/\bxl:grid\b/);
+    expect(container).toMatch(/\bxl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
+    expect(container).not.toMatch(/(?<![:\w])grid-cols-/);
+  });
+});

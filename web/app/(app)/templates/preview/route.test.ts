@@ -20,8 +20,8 @@ const SETTINGS: OrgSettingsValue = {
   governingProvince: "BC",
   taxNote: null,
   defaultTermMonths: 12,
-  renewalNoticeDays: null,
-  cpiRenegotiationThresholdPct: null,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
   renewalCpiPct: null,
   renewalCpiAsOf: null,
   proposalValidityDays: 30,
@@ -145,7 +145,7 @@ describe("POST /templates/preview, who may call and what is refused", () => {
   });
 
   test("C5437: invalid values answer 422 with { errors: [{ field, message }] } and render nothing", async () => {
-    const response = await post({ ...FORM, name: "", termMonths: "61", lines: [{ ...FORM.lines[0], costPerVisit: "lots" }] });
+    const response = await post({ ...FORM, name: "x".repeat(81), termMonths: "61", lines: [{ ...FORM.lines[0], costPerVisit: "lots" }] });
     expect(response.status).toBe(422);
     expect(response.headers.get("Content-Type")).toContain("application/json");
     const { errors } = (await response.json()) as { errors: { field: string; message: string }[] };
@@ -153,6 +153,13 @@ describe("POST /templates/preview, who may call and what is refused", () => {
     for (const error of errors) expect(error.message).toEqual(expect.any(String));
     expect(renderAgreement).not.toHaveBeenCalled();
     noWrites();
+  });
+
+  test("C5435: a template with no name yet is still drawn, so a new template shows the Standard layout without an edit", async () => {
+    const response = await post({ ...EMPTY_TEMPLATE_FORM });
+    expect(response.status).toBe(200);
+    expect(renderAgreement).toHaveBeenCalledTimes(1);
+    expect(renderAgreement.mock.calls[0][0]).toMatchObject({ lines: [], sections: { schedule: true, scope: true } });
   });
 
   test.each<[string, unknown, string | undefined]>([

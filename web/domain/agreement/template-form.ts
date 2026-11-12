@@ -133,3 +133,14 @@ export function readTemplateFormInput(value: unknown): { ok: true; input: Templa
     },
   };
 }
+
+/** What the preview draws for a template that has no name yet: the name is not printed on the agreement. */
+export const UNTITLED_PREVIEW_NAME = "Untitled template";
+
+/**
+ * `bodyFromTemplateForm` for the preview: a template still being named is drawn like any other, so a new template shows the
+ * Standard layout at once (template-flow AC 24). Saving still requires the name.
+ */
+export function previewBodyFromTemplateForm(input: TemplateFormInput): ReturnType<typeof bodyFromTemplateForm> {
+  return bodyFromTemplateForm(input.name.trim() === "" ? { ...input, name: UNTITLED_PREVIEW_NAME } : input);
+}

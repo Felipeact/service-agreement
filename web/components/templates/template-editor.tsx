@@ -10,8 +10,9 @@ import { MONTH_PRESETS, type MonthPreset } from "@/domain/agreement";
 import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
-import { EMPTY_PRESET_LINE, type TemplateFormErrors, type TemplateFormInput } from "@/domain/agreement/template-form";
+import { EMPTY_PRESET_LINE, previewBodyFromTemplateForm, type TemplateFormErrors, type TemplateFormInput } from "@/domain/agreement/template-form";
 import { SAVE_MESSAGES, type SaveTemplateState } from "./state";
+import { TemplatePreviewFrame } from "./template-preview-frame";
 
 export type TemplateTypeOption = { code: string; name: string };
 
@@ -47,10 +48,12 @@ type ViewProps = {
   message: string | null;
   onChange?: (next: TemplateFormInput) => void;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+  /** Whether the "Fix the highlighted fields" banner shows with the messages; the live messages beside the preview go without it. */
+  banner?: boolean;
 };
 
 /** The editor's fields in order: Name, Description, Intro, Visit schedule, Scope, Closing text, Term length, Preset lines, then Save and Cancel (agreement-templates AC 18). */
-export function TemplateEditorView({ values, errors, types, pending, message, onChange, onSubmit }: ViewProps) {
+export function TemplateEditorView({ values, errors, types, pending, message, onChange, onSubmit, banner = true }: ViewProps) {
   const words = useItemWords();
   const set = (patch: Partial<TemplateFormInput>) => onChange?.({ ...values, ...patch });
   const setLine = (index: number, patch: Partial<TemplateFormInput["lines"][number]>) =>
@@ -60,7 +63,7 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-5">
-      {invalid && (
+      {invalid && banner && (
         <p role="alert" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
           Fix the highlighted fields, then save again. Nothing you typed is lost.
         </p>
@@ -226,27 +229,36 @@ export function TemplateEditor({ templateId, initial, types, save }: EditorProps
   const [state, setState] = useState<SaveTemplateState>({ status: "idle" });
   const [pending, start] = useTransition();
 
-  const errors = state.status === "invalid" ? state.errors : {};
+  const saveErrors = state.status === "invalid" ? state.errors : {};
+  // The fields the preview cannot draw are highlighted as they are typed; the name is only required to save, so it waits for a save.
+  const live = previewBodyFromTemplateForm(values);
+  const errors = { ...(live.ok ? {} : live.errors), ...saveErrors };
   const message = state.status === "idle" || state.status === "invalid" ? null : SAVE_MESSAGES[state.status];
 
   return (
-    <TemplateEditorView
-      values={values}
-      errors={errors}
-      types={types}
-      pending={pending}
-      message={message}
-      onChange={(next) => {
-        // A line removed or added moves the line numbers the messages were written for.
-        if (next.lines.length !== values.lines.length) setState({ status: "idle" });
-        setValues(next);
-      }}
-      onSubmit={(event) => {
-        event.preventDefault();
-        start(async () => {
-          setState(await save(templateId, values));
-        });
-      }}
-    />
+    <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start xl:gap-8">
+      <section aria-label="Template form" className="min-w-0">
+        <TemplateEditorView
+          values={values}
+          errors={errors}
+          types={types}
+          pending={pending}
+          message={message}
+          banner={Object.keys(saveErrors).length > 0}
+          onChange={(next) => {
+            // A line removed or added moves the line numbers the messages were written for.
+            if (next.lines.length !== values.lines.length) setState({ status: "idle" });
+            setValues(next);
+          }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            start(async () => {
+              setState(await save(templateId, values));
+            });
+          }}
+        />
+      </section>
+      <TemplatePreviewFrame values={values} />
+    </div>
   );
 }
