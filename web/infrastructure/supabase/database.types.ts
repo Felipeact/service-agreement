@@ -1374,6 +1374,7 @@ export type Database = {
       }
     }
     Functions: {
+      add_catalog_draft: { Args: { p_org_id: string; p_trade: string; p_types: Json }; Returns: number }
       accept_invitations: { Args: never; Returns: number }
       apply_agreement_transition: {
         Args: {
