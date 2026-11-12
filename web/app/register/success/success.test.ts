@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
-import Page, { metadata } from "./page";
+import { describe, expect, test, vi } from "vitest";
+// The page now mounts the client status panel, whose Server Action reaches the composition root; that is not under test here.
+vi.mock("./actions", () => ({ checkWorkspaceAction: vi.fn() }));
+
+const { default: Page, metadata } = await import("./page");
 
 const decode = (html: string) => html.replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
 const textOf = (html: string) => decode(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();

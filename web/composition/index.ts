@@ -87,6 +87,7 @@ import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
 import { makeTenantLogo } from "@/application/use-cases/tenant-logo";
 import { supabaseOrgLogo } from "@/infrastructure/supabase/org-logo";
 import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
+import { supabaseMemberWorkspace, supabaseWorkspaceStatus } from "@/infrastructure/supabase/workspace-state";
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}`);
@@ -177,6 +178,8 @@ export async function getContainer() {
     verifyEmailLink: auth.verifyEmailLink,
     signOut: auth.signOut,
     currentMember: members.currentMember,
+    // What a signed-in person with no membership is told about their own paid checkout (workspace-pending-state door 3).
+    workspaceState: supabaseMemberWorkspace(supabase).mine,
     transitionAgreement: makeTransitionAgreement(agreementRepository),
     transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
     pipelineBoard: pipeline.board,
@@ -338,6 +341,19 @@ export async function getWebhookContainer() {
 }
 
 export type WebhookContainer = Awaited<ReturnType<typeof getWebhookContainer>>;
+
+/**
+ * Wires the success page's workspace status (workspace-pending-state door 2). No user session: the client is `anon` with the
+ * publishable key and keeps no cookie, and the database answers from the stored Checkout event by session id.
+ */
+export async function getWorkspaceStatusContainer() {
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const supabase = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return { workspaceStatus: supabaseWorkspaceStatus(supabase) };
+}
+
+export type WorkspaceStatusContainer = Awaited<ReturnType<typeof getWorkspaceStatusContainer>>;
 
 /**
  * Wires the register page's start-trial (pricing-page door 3, billing-checkout door 1). It reads no cookie and no database.
