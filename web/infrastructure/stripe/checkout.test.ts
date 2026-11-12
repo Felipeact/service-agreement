@@ -93,7 +93,13 @@ describe("the Stripe checkout starter", () => {
 
   test.each(PLAN_CASES)("C2504: $plan returns to the success page and cancels back to /register?plan=$plan", async ({ plan }) => {
     await start({ plan, trades: ["hvac"] });
-    expect(form().get("success_url")).toBe("https://app.example.com/register/success");
+    expect(form().get("success_url")).toBe("https://app.example.com/register/success?session_id={CHECKOUT_SESSION_ID}");
+    expect(form().get("cancel_url")).toBe(`https://app.example.com/register?plan=${plan}`);
+  });
+
+  test.each(PLAN_CASES)("C4200: $plan asks Stripe to append the session id to the success URL, braces literal, and leaves cancel_url alone", async ({ plan }) => {
+    await start({ plan, trades: ["hvac"] });
+    expect(form().get("success_url")).toBe("https://app.example.com/register/success?session_id={CHECKOUT_SESSION_ID}");
     expect(form().get("cancel_url")).toBe(`https://app.example.com/register?plan=${plan}`);
   });
 

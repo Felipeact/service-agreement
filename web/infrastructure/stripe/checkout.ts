@@ -51,7 +51,8 @@ export function stripeCheckoutStarter(options: { secretKey: string; appBaseUrl: 
           metadata,
         },
         metadata,
-        success_url: `${base}/register/success`,
+        // Stripe fills the braces in with the session id when it redirects (workspace-pending-state door 1).
+        success_url: `${base}/register/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}/register?plan=${plan}`,
       }).join("&");
 

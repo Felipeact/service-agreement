@@ -1458,6 +1458,8 @@ export type Database = {
           role: string
         }[]
       }
+      checkout_workspace_status: { Args: { p_session_id: string }; Returns: string }
+      my_workspace_state: { Args: never; Returns: string }
       list_members: {
         Args: never
         Returns: {

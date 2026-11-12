@@ -1201,6 +1201,19 @@ export interface CheckoutStarter {
   start(selection: CheckoutSelection): Promise<CheckoutResult>;
 }
 
+/**
+ * Whether a paid workspace is built, as the page Stripe returns the visitor to reads it (workspace-pending-state door 2).
+ * Anonymous, by Checkout session id; an unknown id is `pending`. Throws on a database error or an answer it does not know.
+ */
+export interface WorkspaceStatusReader {
+  forSession(sessionId: string): Promise<"pending" | "ready" | "refused">;
+}
+
+/** What a signed-in person with no membership is told about their own paid checkout (door 3). Throws like the reader above. */
+export interface MemberWorkspaceReader {
+  mine(): Promise<"none" | "pending" | "refused">;
+}
+
 /** What an org bought, as its managers read it (billing-portal door 1, extended by billing-page with the subscription id). */
 export type OrgBillingValue = { customerId: string; subscriptionId: string; plan: PlanKey; seats: number };
 
