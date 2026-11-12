@@ -55,12 +55,14 @@ export const RECIPES: Recipe[] = [
   plain("starter_packs"),
   { name: "demo_seed", parts: ["fixture.sql", SEED_BODY, "demo_seed.sql", SEED_BODY, "demo_seed_rerun.sql"] },
   plain("stripe_events"),
-  plain("workspace_provisioning"),
+  // Replays the provisioning proofs with the checkout-email-in-use migration in place (C4312); drop the migration part once applied.
+  { name: "workspace_provisioning", parts: ["fixture.sql", "../migrations/20261112210000_checkout_email_in_use.sql", "workspace_provisioning.sql"] },
   plain("first_login_setup"),
   plain("set_org_plan"),
   plain("tenant_logo"),
   { name: "other_trade_draft", parts: ["fixture.sql", "../migrations/20261112100000_add_catalog_draft.sql", "other_trade_draft.sql"] },
   plain("workspace_pending_state"),
+  { name: "checkout_email_in_use", parts: ["fixture.sql", "../migrations/20261112210000_checkout_email_in_use.sql", "checkout_email_in_use.sql"] },
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;

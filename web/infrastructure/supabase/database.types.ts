@@ -1459,6 +1459,7 @@ export type Database = {
         }[]
       }
       checkout_workspace_status: { Args: { p_session_id: string }; Returns: string }
+      email_has_workspace: { Args: { p_email: string }; Returns: boolean }
       my_workspace_state: { Args: never; Returns: string }
       list_members: {
         Args: never
