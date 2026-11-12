@@ -10,8 +10,9 @@ const redirect = vi.fn((path: string) => {
 });
 
 const pipelineBoard = vi.fn(async () => [] as unknown[]);
+const workspaceState = vi.fn<() => Promise<"none" | "pending" | "refused">>();
 const getItemWords = vi.fn(async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }));
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, signOut, pipelineBoard, getItemWords, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, workspaceState, signOut, pipelineBoard, getItemWords, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
 vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline" }));
 
 const { MemberGate } = await import("./member-gate");
@@ -25,6 +26,7 @@ async function renderLayout() {
 beforeEach(() => {
   vi.clearAllMocks();
   getItemWords.mockResolvedValue({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
+  workspaceState.mockResolvedValue("none");
 });
 
 describe("(app) layout", () => {
@@ -83,6 +85,40 @@ describe("(app) layout", () => {
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Sign out<\/button>/);
     expect(html).not.toContain('href="/pipeline"');
     expect(html).not.toContain("page body");
+  });
+});
+
+describe("(app) layout, paid workspace state", () => {
+  const NO_MEMBERSHIP: CurrentMember = { status: "no_membership", email: "owner@example.com" };
+  const MEMBER: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Kettle Ridge Mechanical Ltd.", role: "owner" };
+
+  test("C4220: no membership asks workspaceState once and shows what it answers", async () => {
+    currentMember.mockResolvedValue(NO_MEMBERSHIP);
+    workspaceState.mockResolvedValue("pending");
+    expect(await renderLayout()).toContain("Setting up your workspace");
+    expect(workspaceState).toHaveBeenCalledTimes(1);
+    workspaceState.mockResolvedValue("refused");
+    expect(await renderLayout()).toContain("Your payment was received");
+  });
+
+  test("C4220: a member never asks workspaceState", async () => {
+    currentMember.mockResolvedValue(MEMBER);
+    await renderLayout();
+    expect(workspaceState).not.toHaveBeenCalled();
+  });
+
+  test("C4220: a signed-out request never asks workspaceState", async () => {
+    currentMember.mockResolvedValue({ status: "signed_out" });
+    await expect(renderLayout()).rejects.toThrow("NEXT_REDIRECT /login");
+    expect(workspaceState).not.toHaveBeenCalled();
+  });
+
+  test("C4220: a failing workspaceState leaves today's No workspace yet copy", async () => {
+    currentMember.mockResolvedValue(NO_MEMBERSHIP);
+    workspaceState.mockRejectedValue(new Error("my_workspace_state failed: 57014"));
+    const html = await renderLayout();
+    expect(html).toContain("No workspace yet");
+    expect(html).not.toContain("Setting up your workspace");
   });
 });
 
