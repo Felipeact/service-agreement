@@ -6,9 +6,7 @@ import type { ImportHistoryRow, PipelineCard } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { Icon } from "@/components/ui/icons";
 import { RooftopScene, Spot } from "@/components/ui/illustrations";
-import { LinkButton } from "@/components/ui/link-button";
 import { isClosedStage, needsFollowUp, sortForColumn, type ExpiringAgreement } from "@/domain/pipeline";
 import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
 import { useItemWords } from "@/components/shell/item-words";
@@ -79,15 +77,7 @@ export function PipelineView({ cards, title = "Pipeline", canCreate = false, new
         large
         title={title}
         subtitle={itemText("Keep every service agreement moving from equipment list to signature.", words)}
-        action={
-          newAgreement ??
-          (canCreate ? (
-            <LinkButton href="/agreements/new" variant="primary">
-              <Icon name="plus" className="size-4" />
-              New agreement
-            </LinkButton>
-          ) : undefined)
-        }
+        action={canCreate ? newAgreement : undefined}
       />
 
       {empty ? (

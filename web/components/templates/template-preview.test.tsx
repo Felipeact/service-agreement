@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementTemplateSummary } from "@/application/ports";
 import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
+import { canUseTemplates, canWriteTemplates } from "./state";
 import { TemplatePreview } from "./template-preview";
 
 const TEMPLATE: AgreementTemplateSummary = {
@@ -57,14 +58,23 @@ describe("the template preview", () => {
     ]);
   });
 
-  test("C5343: Use template is the primary button and Duplicate the secondary one", () => {
+  test("C5410: Use template is a primary button with no href and Duplicate stays the secondary button", () => {
     const html = preview();
-    expect(html).toMatch(/<a[^>]*data-variant="primary"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Use template<\/a>/);
+    expect(html).toMatch(/<button[^>]*data-variant="primary"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Use template<\/button>/);
     expect(html).toMatch(/<button[^>]*data-variant="secondary"[^>]*>Duplicate<\/button>/);
+    expect(html).not.toMatch(/<a[^>]*>(?:<svg[\s\S]*?<\/svg>)?Use template</);
+    expect(html).not.toContain("/agreements/new");
   });
 
-  test("C5357: Use template is a link to /agreements/new with the template's latest version", () => {
-    expect(preview()).toMatch(/<a[^>]*href="\/agreements\/new\?template=77777777-7777-4777-8777-777777777777"/);
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", true],
+    ["viewer", false],
+  ] as const)("C5412: for a %s the preview shows Use template: %s", (role, shown) => {
+    const html = preview(canUseTemplates(role), canWriteTemplates(role));
+    expect(html.includes("Use template")).toBe(shown);
+    expect(/<button[^>]*>(?:<svg[\s\S]*?<\/svg>)?Use template<\/button>/.test(html)).toBe(shown);
   });
 
   test("C5344: without the right to use or write, the buttons are not drawn", () => {

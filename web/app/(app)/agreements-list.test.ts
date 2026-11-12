@@ -19,7 +19,6 @@ vi.mock("next/navigation", () => ({ redirect, notFound: vi.fn(), useRouter: () =
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { AgreementsForRequest } = await import("./agreements/page");
-const { default: NewAgreementPage } = await import("./agreements/new/page");
 
 const SITE = "00000000-0000-4000-8000-0000000000aa";
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role });
@@ -51,45 +50,7 @@ describe("/agreements", () => {
   test("C1357: signed out goes to /login and nothing is read", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(render({})).rejects.toThrow("NEXT_REDIRECT /login");
-    await expect(NewAgreementPage()).rejects.toThrow("NEXT_REDIRECT /login");
     expect(listAgreements).not.toHaveBeenCalled();
     expect(listActiveSites).not.toHaveBeenCalled();
-  });
-});
-
-describe("/agreements/new", () => {
-  test("C1363: a viewer gets a forbidden panel, no form and no site read", async () => {
-    currentMember.mockResolvedValue(member("viewer"));
-    const out = renderToStaticMarkup((await NewAgreementPage()) as ReactElement);
-    expect(out).toContain("don&#x27;t have permission to create agreements");
-    expect(out).not.toContain("<form");
-    expect(listActiveSites).not.toHaveBeenCalled();
-  });
-
-  test("C1363: a writer gets the site picker", async () => {
-    listActiveSites.mockResolvedValue([{ id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null }]);
-    const out = renderToStaticMarkup((await NewAgreementPage()) as ReactElement);
-    expect(out).toContain("<form");
-    expect(out).toContain("Tower A");
-  });
-
-  test("C5357: ?template=<versionId> of a listed template names it above the site choice and pins the form to that version", async () => {
-    const VERSION = "77777777-7777-4777-8777-777777777777";
-    listActiveSites.mockResolvedValue([{ id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null }]);
-    listAgreementTemplates.mockResolvedValue({ ok: true, templates: [{ id: "t-1", versionId: VERSION, body: { name: "Quarterly HVAC" } }] });
-    const element = (await NewAgreementPage({ searchParams: Promise.resolve({ template: VERSION }) })) as ReactElement;
-    expect(renderToStaticMarkup(element)).toContain("From template: Quarterly HVAC");
-    expect(JSON.stringify(element, (_key, value) => (typeof value === "function" ? "fn" : value))).toContain(`"versionId":"${VERSION}"`);
-  });
-
-  test("C5357: a template version that is not listed, or is not an id, is ignored and the form is the plain one", async () => {
-    listActiveSites.mockResolvedValue([{ id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null }]);
-    listAgreementTemplates.mockResolvedValue({ ok: true, templates: [] });
-    const unknown = renderToStaticMarkup((await NewAgreementPage({ searchParams: Promise.resolve({ template: "77777777-7777-4777-8777-777777777777" }) })) as ReactElement);
-    expect(unknown).not.toContain("From template");
-    expect(unknown).toContain("<form");
-    const malformed = renderToStaticMarkup((await NewAgreementPage({ searchParams: Promise.resolve({ template: "nope" }) })) as ReactElement);
-    expect(malformed).not.toContain("From template");
-    expect(listAgreementTemplates).toHaveBeenCalledTimes(1);
   });
 });

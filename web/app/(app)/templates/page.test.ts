@@ -11,7 +11,9 @@ const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listAgreementTemplates = vi.fn();
 const listAssetTypes = vi.fn();
 const getItemWords = vi.fn(async () => ({ singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" }));
-const container = { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
+const listCustomers = vi.fn(async () => []);
+const listActiveSites = vi.fn(async () => []);
+const container = { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);

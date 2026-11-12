@@ -26,9 +26,9 @@ export function dialogTemplates(listed: TemplateListResult): DialogTemplate[] | 
 }
 
 /** What the dialog needs: the customers and sites it offers, the templates it lists and the actions it calls. */
-export async function dialogProps() {
+export async function dialogProps(known?: TemplateListResult) {
   const { listCustomers, listActiveSites, listAgreementTemplates } = await getContainer();
-  const [customers, sites, listed] = await Promise.all([listCustomers(), listActiveSites(), listAgreementTemplates()]);
+  const [customers, sites, listed] = await Promise.all([listCustomers(), listActiveSites(), known ?? listAgreementTemplates()]);
   return {
     customers: customers.filter((customer) => customer.active).map(({ id, name }) => ({ id, name })),
     sites,

@@ -98,15 +98,9 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
   }, 0);
   const wonCents = rows.reduce((sum, row) => sum + (row.status === "accepted" && row.annualCents ? row.annualCents : 0), 0);
 
+  // The New agreement control is the dialog launcher the page supplies for writers; there is no page to link to.
   const canCreate = Boolean(role && canWriteRecords(role));
-  const newAgreement =
-    canCreate &&
-    (newAgreementSlot ?? (
-      <LinkButton href="/agreements/new" variant="primary">
-        <Icon name="plus" className="size-4" />
-        New agreement
-      </LinkButton>
-    ));
+  const newAgreement = canCreate && newAgreementSlot;
 
   const segments: { label: string; href: string; active: boolean }[] = [
     { label: "All", href: agreementsHref({ ...filter, status: undefined }, undefined, filter.expiring), active: !filter.status },

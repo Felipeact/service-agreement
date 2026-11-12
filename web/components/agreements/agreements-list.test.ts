@@ -1,11 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
-import type { AgreementListRow, MemberRole, SiteOption } from "@/application/ports";
+import type { AgreementListRow, MemberRole } from "@/application/ports";
 import type { AgreementFilter } from "@/domain/agreement";
 import { AgreementsListView } from "./agreements-list";
-import { NewAgreementFormView, submitSite } from "./new-agreement-form";
-import type { CreateAgreementState } from "./state";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 
@@ -22,12 +20,6 @@ const row = (patch: Partial<AgreementListRow> = {}): AgreementListRow => ({
   termEnd: null,
   ...patch,
 });
-const sites: SiteOption[] = [
-  { id: SITE, name: "Tower A", customerId: "c1", customer: "Harbourview", liveAgreement: null },
-  { id: "s2", name: "Tower B", customerId: "c1", customer: "Harbourview", liveAgreement: { id: "ag-9", number: "AG-1009" } },
-  { id: "s3", name: "Plant 1", customerId: "c2", customer: "Northside", liveAgreement: null },
-];
-
 const list = (rows: AgreementListRow[], filter: AgreementFilter = {}, role: MemberRole = "estimator") =>
   renderToStaticMarkup(createElement(AgreementsListView, { rows, filter, role })).replace(/&#x27;/g, "'");
 
@@ -111,77 +103,25 @@ describe("agreements list", () => {
     expect(fresh).toContain("1 day<");
   });
 
-  test("C1360: a viewer sees no New agreement, a writer does", () => {
-    expect(list([row()], {}, "viewer")).not.toContain("New agreement");
+  test("C5415: a writer sees the dialog launcher the page supplies, never a link, and a viewer sees none", () => {
+    const launcher = createElement("button", { type: "button", "data-launcher": "new-agreement" }, "New agreement");
+    const render = (role: MemberRole, withSlot: boolean) =>
+      renderToStaticMarkup(createElement(AgreementsListView, { rows: [row()], filter: {}, role, newAgreement: withSlot ? launcher : undefined }));
     for (const role of ["owner", "admin", "estimator"] as const) {
-      expect(list([row()], {}, role)).toMatch(/<a[^>]*href="\/agreements\/new"[^>]*>(?:<svg[\s\S]*?<\/svg>)?New agreement</);
+      const html = render(role, true);
+      expect(html).toContain('data-launcher="new-agreement"');
+      expect(html).not.toMatch(/<a[^>]*>(?:<svg[\s\S]*?<\/svg>)?New agreement</);
+      expect(html).not.toContain('href="/agreements/new"');
     }
-  });
-});
-
-const form = (siteOptions: SiteOption[], state: CreateAgreementState = { status: "idle" }) =>
-  renderToStaticMarkup(createElement(NewAgreementFormView, { sites: siteOptions, state, pending: false }));
-
-describe("new agreement form", () => {
-  test("C1362: only sites without a live agreement are options, grouped by customer; busy sites are links", () => {
-    const html = form(sites);
-    expect(html).toMatch(/<label[^>]*for="siteId"[^>]*>Site</);
-    expect(html).toMatch(/<optgroup label="Harbourview">\s*<option value="[^"]*">Tower A</);
-    expect(html).toMatch(/<optgroup label="Northside">\s*<option value="s3">Plant 1</);
-    expect(html).not.toMatch(/<option[^>]*value="s2"/);
-    expect(html).toMatch(/<a[^>]*href="\/agreements\/ag-9"[^>]*>AG-1009</);
-    expect(html).toContain("Tower B");
+    // Without a slot there is nothing to open the dialog with, and still no link stands in for it.
+    expect(render("estimator", false)).not.toContain("New agreement");
+    expect(render("viewer", true)).not.toContain("New agreement");
   });
 
-  test("C1363: submitting calls the create action once with the chosen site", async () => {
-    const create = vi.fn(async (): Promise<CreateAgreementState> => ({ status: "idle" }));
-    const data = new FormData();
-    data.set("siteId", SITE);
-    await submitSite(create, data);
-    expect(create).toHaveBeenCalledTimes(1);
-    expect(create).toHaveBeenCalledWith(SITE);
-  });
-
-  test("C1364: open_exists names the live agreement; a failure shows its message", () => {
-    const open = form(sites, { status: "open_exists", agreementId: "ag-7", number: "AG-1007" });
-    expect(open).toMatch(/<a[^>]*href="\/agreements\/ag-7"[^>]*>Open AG-1007</);
-    expect(form(sites, { status: "forbidden" })).toContain("You don&#x27;t have permission to change agreements.");
-    expect(form(sites, { status: "not_found" })).toContain("This agreement no longer exists.");
-    expect(form(sites, { status: "unavailable" })).toContain("We couldn&#x27;t save this. Try again.");
-    expect(form(sites)).not.toContain('role="alert"');
-  });
-
-  test("C1365: with no eligible site it shows an empty panel linking to Customers and no select", () => {
-    for (const none of [[], [sites[1]]]) {
-      const html = form(none);
-      expect(html).not.toContain("<select");
-      expect(html).toMatch(/<a[^>]*href="\/customers"/);
-    }
-  });
-});
-
-describe("new agreement form, from a template", () => {
-  const withTemplate = (state: CreateAgreementState = { status: "idle" }) =>
-    renderToStaticMarkup(createElement(NewAgreementFormView, { sites, template: { name: "Quarterly HVAC" }, state, pending: false }));
-
-  test("C5357: the form names the template above the site choice", () => {
-    const html = withTemplate();
-    expect(html).toContain("From template: Quarterly HVAC");
-    expect(html.indexOf("From template: Quarterly HVAC")).toBeLessThan(html.indexOf('for="siteId"'));
-    expect(html).toMatch(/<a[^>]*href="\/templates"[^>]*>Choose another</);
-  });
-
-  test("C5357: without a template the form says nothing about one", () => {
-    expect(form(sites)).not.toContain("From template");
-  });
-
-  test("C5357: a plan-limit refusal shows the New agreement flow's message, with the billing link for an owner", () => {
-    const html = withTemplate({ status: "plan_limit", message: "Your Starter plan allows 15 live agreements and you have 17.", billingHref: "/settings/billing" });
-    expect(html).toContain("allows 15 live agreements and you have 17");
-    expect(html).toContain('href="/settings/billing"');
-  });
-
-  test("C5357: an invalid template is told in words", () => {
-    expect(withTemplate({ status: "invalid_template" })).toContain("That template is no longer available.");
+  test("C5415: the empty list shows the launcher too, for a writer only", () => {
+    const launcher = createElement("button", { type: "button", "data-launcher": "new-agreement" }, "New agreement");
+    const empty = (role: MemberRole) => renderToStaticMarkup(createElement(AgreementsListView, { rows: [], filter: {}, role, newAgreement: launcher }));
+    expect(empty("estimator").match(/data-launcher="new-agreement"/g)?.length).toBeGreaterThanOrEqual(1);
+    expect(empty("viewer")).not.toContain("data-launcher");
   });
 });

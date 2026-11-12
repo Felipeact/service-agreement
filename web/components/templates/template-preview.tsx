@@ -1,6 +1,6 @@
 import type { AgreementTemplateSummary } from "@/application/ports";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { LinkButton } from "@/components/ui/link-button";
 import { derivedFrequency, previewSummary } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { DuplicateControl } from "./duplicate-control";
@@ -17,6 +17,8 @@ type PreviewProps = {
   actions?: Pick<TemplateCardActions, "duplicate">;
   /** The org's item words; the default when absent. */
   words?: ItemWords;
+  /** Called with the template's latest version id when Use template is pressed; the page opens the New agreement dialog with it. */
+  onUse?: (versionId: string) => void;
 };
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -29,7 +31,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /** The selected template's preview: what it presets, then Use template and Duplicate (agreement-templates AC 16). */
-export function TemplatePreview({ template, typeNames, canUse, canWrite, actions, words = DEFAULT_ITEM_WORDS }: PreviewProps) {
+export function TemplatePreview({ template, typeNames, canUse, canWrite, actions, words = DEFAULT_ITEM_WORDS, onUse }: PreviewProps) {
   const { body, system, versionId, id } = template;
   const summary = previewSummary(body, typeNames);
   return (
@@ -48,10 +50,10 @@ export function TemplatePreview({ template, typeNames, canUse, canWrite, actions
       {(canUse || (canWrite && actions)) && (
         <div className="flex flex-col gap-2">
           {canUse && (
-            <LinkButton href={`/agreements/new?template=${versionId}`} variant="primary" className="w-full">
+            <Button variant="primary" className="w-full" onClick={() => onUse?.(versionId)}>
               <Icon name="document" className="size-4" />
               Use template
-            </LinkButton>
+            </Button>
           )}
           {canWrite && actions && <DuplicateControl templateId={id} action={actions.duplicate} />}
         </div>

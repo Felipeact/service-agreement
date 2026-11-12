@@ -77,17 +77,24 @@ describe("PipelineView", () => {
     expect(html).toContain("No agreements yet");
     expect(html).toContain("Agreements you create appear here by stage.");
     expect(html).not.toContain("No agreements match");
-    const writer = renderToStaticMarkup(createElement(PipelineView, { cards: [], canCreate: true }));
+    // The page hands a writer the dialog launcher; with none there is no link to stand in for it.
+    const launcher = createElement("button", { type: "button" }, "New agreement");
+    const writer = renderToStaticMarkup(createElement(PipelineView, { cards: [], canCreate: true, newAgreement: launcher }));
     expect(writer).not.toMatch(/<button[^>]*disabled[^>]*>New agreement</);
     expect(writer).toContain(">New agreement<");
   });
 
-  test("C1359: for a writer New agreement is a link to /agreements/new, on the board and on the empty board", () => {
+  test("C5415: for a writer New agreement is the dialog launcher the page supplies, never a link, on the board and on the empty board", () => {
+    const launcher = createElement("button", { type: "button", "data-launcher": "new-agreement" }, "New agreement");
     for (const cards of [[], [card()]]) {
-      const html = renderToStaticMarkup(createElement(PipelineView, { cards, canCreate: true }));
-      expect(html).toMatch(/<a\b[^>]*href="\/agreements\/new"[^>]*>(?:<svg[\s\S]*?<\/svg>)?New agreement</);
-      expect(html).not.toMatch(/<[^>]*\sdisabled(?:=|\s|>)[^>]*>New agreement</);
+      const html = renderToStaticMarkup(createElement(PipelineView, { cards, canCreate: true, newAgreement: launcher }));
+      expect(html).toContain('data-launcher="new-agreement"');
+      expect(html).not.toMatch(/<a[^>]*>(?:<svg[\s\S]*?<\/svg>)?New agreement</);
+      expect(html).not.toContain("/agreements/new");
     }
+    // With no launcher nothing stands in for it, and a viewer is never handed one.
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [], canCreate: true }))).not.toContain("New agreement");
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()], canCreate: false, newAgreement: launcher }))).not.toContain("New agreement");
   });
 
   test("C1360: without the right to create, the Pipeline header has no New agreement", () => {

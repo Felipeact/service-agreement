@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { canUseTemplates, canWriteTemplates, LOAD_ERROR } from "./state";
 import { TemplateCard, type TemplateCardActions } from "./template-card";
-import { TemplatePreview } from "./template-preview";
+import { TemplateUseDialog, type UseDialogProps } from "./template-use-dialog";
 
 type Props = {
   /** `null` when the list could not be read (agreement-templates AC 22). */
@@ -19,10 +19,12 @@ type Props = {
   actions?: TemplateCardActions;
   /** The org's item words; the default when absent. */
   words?: ItemWords;
+  /** What the New agreement dialog needs, for a member who can use templates; Use template opens it over this page. */
+  dialog?: UseDialogProps;
 };
 
 /** The Templates page body: the cards, then the preview of the selected one (agreement-templates S3). */
-export function TemplatesView({ templates, selectedId, role, typeNames, now, actions, words = DEFAULT_ITEM_WORDS }: Props) {
+export function TemplatesView({ templates, selectedId, role, typeNames, now, actions, words = DEFAULT_ITEM_WORDS, dialog }: Props) {
   const canWrite = canWriteTemplates(role);
   const canUse = canUseTemplates(role);
   const selected = templates?.find((template) => template.id === selectedId) ?? templates?.[0];
@@ -58,7 +60,7 @@ export function TemplatesView({ templates, selectedId, role, typeNames, now, act
               ))}
             </ul>
           </section>
-          <TemplatePreview template={selected} typeNames={typeNames} canUse={canUse} canWrite={canWrite} actions={actions} words={words} />
+          <TemplateUseDialog preview={{ template: selected, typeNames, canUse, canWrite, actions, words }} dialog={dialog} />
         </div>
       )}
     </div>
