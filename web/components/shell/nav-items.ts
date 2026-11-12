@@ -11,6 +11,7 @@ export type NavItem = {
 export const MAIN_NAV: NavItem[] = [
   { label: "Pipeline", href: "/pipeline", icon: "pipeline" },
   { label: "Agreements", href: "/agreements", icon: "document" },
+  { label: "Templates", href: "/templates", icon: "template" },
   { label: "Customers", href: "/customers", icon: "people" },
   { label: "Sites & equipment", href: "/sites", icon: "pin" },
   { label: "Imports", href: "/imports", icon: "upload" },

@@ -20,6 +20,13 @@ const PATHS = {
       <path d="M11.25 2.75v4h4M7.5 11h5M7.5 14h3.5" />
     </>
   ),
+  /** A page split into a header and two panes: a template. */
+  template: (
+    <>
+      <rect x="3" y="3.5" width="14" height="13" rx="2" />
+      <path d="M3 8h14M8 8v8.5" />
+    </>
+  ),
   /** Two people: customers. */
   people: (
     <>

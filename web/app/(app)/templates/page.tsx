@@ -1,0 +1,37 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { canWriteTemplates } from "@/components/templates/state";
+import { TemplatesView } from "@/components/templates/templates-view";
+import { getContainer } from "@/composition";
+import { archiveTemplateAction, duplicateTemplateAction } from "./template-actions";
+
+export const metadata: Metadata = { title: "Agreement templates" };
+
+type Params = Record<string, string | string[] | undefined>;
+
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
+/** Every member sees the list and the preview; `?selected=<templateId>` picks the card, else the first (agreement-templates AC 16, 17, 21, 22). */
+export async function TemplatesForRequest({ params }: { params: Params }) {
+  const { currentMember, listAgreementTemplates, listAssetTypes, clock } = await getContainer();
+  const member = await currentMember();
+  if (member.status !== "member") redirect("/login");
+  const [list, types] = await Promise.all([listAgreementTemplates(), listAssetTypes()]);
+  const templates = list.ok ? list.templates : null;
+  const asked = first(params.selected);
+  const selectedId = templates?.find((template) => template.id === asked)?.id ?? templates?.[0]?.id ?? null;
+  return (
+    <TemplatesView
+      templates={templates}
+      selectedId={selectedId}
+      role={member.role}
+      typeNames={Object.fromEntries(types.map((type) => [type.code, type.name]))}
+      now={clock.now()}
+      actions={canWriteTemplates(member.role) ? { duplicate: duplicateTemplateAction, archive: archiveTemplateAction } : undefined}
+    />
+  );
+}
+
+export default async function TemplatesPage({ searchParams }: PageProps<"/templates">) {
+  return <TemplatesForRequest params={await searchParams} />;
+}

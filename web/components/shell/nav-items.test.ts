@@ -21,6 +21,25 @@ describe("navigation", () => {
     expect(hrefOf(label)).toBe(href);
   });
 
+  test("C5348: Templates links to /templates directly after Agreements, with every other link in its place", () => {
+    expect(hrefOf("Templates")).toBe("/templates");
+    expect(MAIN_NAV.map((item) => item.label)).toEqual(["Pipeline", "Agreements", "Templates", "Customers", "Sites & equipment", "Imports"]);
+  });
+
+  test.each([
+    ["/templates", true],
+    ["/templates/new", true],
+    ["/templates/t-1", true],
+    ["/agreements", false],
+    ["/pipeline", false],
+  ])("C5348: on %s the Templates item is current: %s", (path, current) => {
+    pathname = path;
+    const html = renderToStaticMarkup(createElement(SidebarNav, {}));
+    const link = /<a\b[^>]*href="\/templates"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Templates<\/a>/.exec(html)?.[0] ?? "";
+    expect(link).not.toBe("");
+    expect(link.includes('aria-current="page"')).toBe(current);
+  });
+
   test("C1393: Imports links to /imports", () => {
     expect(hrefOf("Imports")).toBe("/imports");
   });

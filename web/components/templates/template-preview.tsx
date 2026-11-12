@@ -1,0 +1,58 @@
+import type { AgreementTemplateSummary } from "@/application/ports";
+import { Icon } from "@/components/ui/icons";
+import { LinkButton } from "@/components/ui/link-button";
+import { derivedFrequency, previewSummary } from "@/domain/agreement";
+import { DuplicateControl } from "./duplicate-control";
+import { SYSTEM_DESCRIPTION, type TemplateCardActions } from "./template-card";
+
+type PreviewProps = {
+  template: AgreementTemplateSummary;
+  /** The org's own name for each equipment type code. */
+  typeNames: Record<string, string>;
+  /** Owner, admin and estimator start agreements from a template. */
+  canUse: boolean;
+  /** Owner and admin copy a template. */
+  canWrite: boolean;
+  actions?: Pick<TemplateCardActions, "duplicate">;
+};
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-1.5 text-[13px]">
+      <dt className="text-ink-2">{label}</dt>
+      <dd className="text-right font-semibold text-ink">{value}</dd>
+    </div>
+  );
+}
+
+/** The selected template's preview: what it presets, then Use template and Duplicate (agreement-templates AC 16). */
+export function TemplatePreview({ template, typeNames, canUse, canWrite, actions }: PreviewProps) {
+  const { body, system, versionId, id } = template;
+  const summary = previewSummary(body, typeNames);
+  return (
+    <aside id="template-preview" aria-label="Template preview" className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card xl:sticky xl:top-4">
+      <p className="text-[11px] leading-4 font-semibold tracking-wider text-ink-2 uppercase">Template preview</p>
+      <div className="flex flex-col gap-1">
+        <h2 className="font-display text-[20px] leading-tight font-semibold tracking-tight">{body.name}</h2>
+        <p className="text-[13px] text-ink-2">{body.description || (system ? SYSTEM_DESCRIPTION : "")}</p>
+      </div>
+      <dl className="flex flex-col divide-y divide-hairline rounded-control bg-ground px-4 py-1.5">
+        <Row label="Default frequency" value={derivedFrequency(body.preset) ?? "Not set"} />
+        <Row label="Equipment types" value={summary.equipmentTypes.length > 0 ? summary.equipmentTypes.join(", ") : "None"} />
+        <Row label="Sections" value={`${summary.sections} · ${summary.clauses}`} />
+        <Row label="Preset lines" value={summary.preset} />
+      </dl>
+      {(canUse || (canWrite && actions)) && (
+        <div className="flex flex-col gap-2">
+          {canUse && (
+            <LinkButton href={`/agreements/new?template=${versionId}`} variant="primary" className="w-full">
+              <Icon name="document" className="size-4" />
+              Use template
+            </LinkButton>
+          )}
+          {canWrite && actions && <DuplicateControl templateId={id} action={actions.duplicate} />}
+        </div>
+      )}
+    </aside>
+  );
+}
