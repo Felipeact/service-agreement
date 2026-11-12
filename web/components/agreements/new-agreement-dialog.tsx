@@ -14,12 +14,27 @@ import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
 import { runExtraction, uploadFile, uploadMessage, type ConfirmState, type ExtractState, type ReadState, type StartState } from "@/components/imports/state";
-import { FILE_HINT, firstCustomerChoice, LIST_FAILED, NEW_CHOICE, START_MESSAGES, startNotice, type Phase, type StartAgreementState } from "./new-agreement-state";
+import { presetLabel } from "@/domain/agreement/template";
+import {
+  FILE_HINT,
+  firstCustomerChoice,
+  LIST_FAILED,
+  NEW_CHOICE,
+  STANDARD_CHOICE,
+  STANDARD_NAME,
+  START_MESSAGES,
+  startNotice,
+  TEMPLATES_UNAVAILABLE,
+  type DialogTemplate,
+  type NewAgreementInput,
+  type Phase,
+  type StartAgreementState,
+} from "./new-agreement-state";
 
 type Customer = { id: string; name: string };
 
 export type NewAgreementActions = {
-  start: (input: { customer: string; customerName: string; site: string; siteName: string; address: string }) => Promise<StartAgreementState>;
+  start: (input: NewAgreementInput) => Promise<StartAgreementState>;
   startImport: (siteId: string, formData: FormData) => Promise<StartState>;
   confirmImport: (jobId: string) => Promise<ConfirmState>;
   readImport: (jobId: string) => Promise<ReadState>;
@@ -31,6 +46,10 @@ type Props = {
   /** Every active site, each with the agreement already live on it, if any. */
   sites: SiteOption[];
   actions: NewAgreementActions;
+  /** The org's own templates, or `null` when they could not be listed (the dialog still starts a Standard agreement). */
+  templates: DialogTemplate[] | null;
+  /** The template version chosen when the dialog opens; Standard agreement when absent or not in `templates`. */
+  initialTemplateVersionId?: string;
   /** Controlled mode, for a page that opens the dialog itself (the Imports drop banner); without it the dialog brings its own button. */
   open?: boolean;
   /** Called when the dialog closes, however it closed. */
@@ -45,10 +64,13 @@ type Props = {
  * missing, starts the draft, sends the list to the site and carries on to the list's review, so the estimator never
  * leaves the flow to add a customer or a site first.
  */
-export function NewAgreementDialog({ customers, sites, actions, open: controlledOpen, onClose, initialFile }: Props) {
+export function NewAgreementDialog({ customers, sites, actions, templates, initialTemplateVersionId, open: controlledOpen, onClose, initialFile }: Props) {
   const words = useItemWords();
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const offered = [...(templates ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+  const startingTemplate = offered.some((template) => template.versionId === initialTemplateVersionId) ? (initialTemplateVersionId as string) : STANDARD_CHOICE;
+  const [template, setTemplate] = useState(startingTemplate);
   const [customer, setCustomer] = useState(firstCustomerChoice(customers));
   const [customerName, setCustomerName] = useState("");
   const [site, setSite] = useState("");
@@ -68,6 +90,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
   const freeSites = customerSites.filter((option) => !option.liveAgreement);
   const newSite = newCustomer || site === NEW_CHOICE;
   const busy = pending || phase !== "idle";
+  const chosenTemplate = offered.find((option) => option.versionId === template);
 
   function open() {
     dialogRef.current?.showModal();
@@ -79,6 +102,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (controlledOpen && !dialog.open) {
+      setTemplate(startingTemplate);
       if (initialFile) chooseFile(initialFile);
       dialog.showModal();
     } else if (!controlledOpen && dialog.open) {
@@ -93,6 +117,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
   }
 
   function reset() {
+    setTemplate(startingTemplate);
     setCustomer(firstCustomerChoice(customers));
     setCustomerName("");
     setSite("");
@@ -139,6 +164,7 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
         site: created.siteId ?? site,
         siteName,
         address,
+        templateVersionId: template,
       };
       const started = await actions.start(input);
 
@@ -155,7 +181,8 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
         return setPhase("idle");
       }
       if (started.status !== "started") {
-        setCreated({ customerId: started.customerId, siteId: started.siteId });
+        // What an earlier try created stays, so a later refusal that carries no ids does not make the next try create it again.
+        setCreated((earlier) => ({ customerId: started.customerId ?? earlier.customerId, siteId: started.siteId ?? earlier.siteId }));
         setNotice({ text: START_MESSAGES[started.status === "idle" ? "unavailable" : started.status] });
         return setPhase("idle");
       }
@@ -241,6 +268,36 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
             disabled={busy}
             onFile={chooseFile}
           />
+
+          <div className="flex flex-col gap-1.5">
+            <Select
+              id="newAgreementTemplate"
+              label="Template"
+              value={template}
+              disabled={busy}
+              error={errors.templateVersionId}
+              onChange={(event) => {
+                setTemplate(event.target.value);
+                setErrors((current) => ({ ...current, templateVersionId: undefined }));
+                setNotice(null);
+              }}
+            >
+              <option value={STANDARD_CHOICE}>{STANDARD_NAME}</option>
+              {offered.map((option) => (
+                <option key={option.versionId} value={option.versionId}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+            {templates === null ? (
+              <p className="text-[12px] text-ink-2">{TEMPLATES_UNAVAILABLE}</p>
+            ) : (
+              <p className="text-[12px] text-ink-2">
+                {chosenTemplate?.description && <span className="block">{chosenTemplate.description}</span>}
+                <span className="block font-medium">{presetLabel(chosenTemplate?.presetLines ?? 0, chosenTemplate?.termMonths ?? null)}</span>
+              </p>
+            )}
+          </div>
 
           <fieldset disabled={busy} className="flex flex-col gap-4 border-0 p-0">
             <legend className="pb-1 font-display text-[15px] font-semibold tracking-tight">Who is it for?</legend>

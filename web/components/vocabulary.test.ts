@@ -73,7 +73,7 @@ describe("staff screens, item words", () => {
 
   test("C2014: the import flow names the item in the banner, upload, extract button, mapping, row editor, lists and review", () => {
     const actions = { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() };
-    const dialogProps = { customers: [], sites: [], actions } as unknown as Parameters<typeof ImportBanner>[0];
+    const dialogProps = { customers: [], sites: [], templates: [], actions } as unknown as Parameters<typeof ImportBanner>[0];
     const parts: string[] = [
       asStations(createElement(ImportBanner, dialogProps)),
       asStations(createElement(ImportUploadFields, { state: { status: "forbidden" }, fileName: null })),
@@ -100,7 +100,7 @@ describe("staff screens, item words", () => {
   });
 
   test("C2015: the New agreement dialog names the item in its intro and its file field", () => {
-    const dialog = asStations(createElement(NewAgreementDialog, { customers: [], sites: [], actions: { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() } } as unknown as Parameters<typeof NewAgreementDialog>[0]));
+    const dialog = asStations(createElement(NewAgreementDialog, { customers: [], sites: [], templates: [], actions: { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() } } as unknown as Parameters<typeof NewAgreementDialog>[0]));
     expect(dialog).toContain("Start with the customer's station list");
     expect(dialog).toContain("Station list (optional)");
     noEquipment(dialog);

@@ -223,6 +223,11 @@ export function derivedFrequency(preset: AgreementTemplateBody["preset"]): strin
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
+/** `3 lines · 12 months term`, `3 lines` for a preset with no term, or `No preset lines`. */
+export function presetLabel(lineCount: number, termMonths: number | null): string {
+  return lineCount === 0 ? "No preset lines" : `${plural(lineCount, "line", "lines")}${termMonths === null ? "" : ` · ${plural(termMonths, "month", "months")} term`}`;
+}
+
 export type PreviewSummary = {
   /** `N sections`: the optional sections shown. */
   sections: string;
@@ -243,10 +248,7 @@ export function previewSummary(body: AgreementTemplateBody, typeNames: Record<st
     sections: plural(Number(body.sections.schedule) + Number(body.sections.scope), "section", "sections"),
     clauses: plural(clauses, "clause", "clauses"),
     equipmentTypes: codes.map((code) => typeNames[code] ?? code),
-    preset:
-      lines.length === 0
-        ? "No preset lines"
-        : `${plural(lines.length, "line", "lines")}${termMonths === null ? "" : ` · ${plural(termMonths, "month", "months")} term`}`,
+    preset: presetLabel(lines.length, termMonths),
   };
 }
 
