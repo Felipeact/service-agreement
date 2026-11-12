@@ -69,6 +69,7 @@ describe("the draft form in a browser", () => {
     });
     expect(submitted.defaultPrevented).toBe(true);
     expect(reset).not.toHaveBeenCalled();
+    reset.mockRestore();
     expect(form().getAttribute("action")).toBeNull();
     expect(container.textContent).toContain("We couldn't draft your catalog. Try again.");
     expect(field("draft-file")).toBe(fileBefore);
