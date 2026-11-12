@@ -50,8 +50,8 @@ describe("validateAgreementTemplate", () => {
     ["a repeated visit month", withBody({ preset: { termMonths: null, lines: [line({ visitMonths: [3, 3] })] } }), "preset.lines.0.visitMonths", "repeats"],
     ["a negative price", withBody({ preset: { termMonths: null, lines: [line({ costPerVisitCents: -1 })] } }), "preset.lines.0.costPerVisitCents", "not negative"],
     ["a fractional price", withBody({ preset: { termMonths: null, lines: [line({ costPerVisitCents: 10.5 })] } }), "preset.lines.0.costPerVisitCents", "whole number of cents"],
-    ["a term of 0", withBody({ preset: { termMonths: 0, lines: [] } }), "preset.termMonths", "1 to 120"],
-    ["a term of 121", withBody({ preset: { termMonths: 121, lines: [] } }), "preset.termMonths", "1 to 120"],
+    ["a term of 0", withBody({ preset: { termMonths: 0, lines: [] } }), "preset.termMonths", "1 to 60"],
+    ["a term of 61", withBody({ preset: { termMonths: 61, lines: [] } }), "preset.termMonths", "1 to 60"],
     ["an unknown top-level key", { ...GOOD, extra: 1 }, "body", "unknown key: extra"],
   ])("C5324: rejects %s", (_label, input, field, fragment) => {
     const result = rejected(input);
@@ -64,12 +64,12 @@ describe("validateAgreementTemplate", () => {
     expect(rejected(withBody({ intro: [{ type: "clause", text: "{{terms.nope}}" }] }))?.reason).toContain("terms.nope");
   });
 
-  test("C5324: accepts 30 blocks, 20 lines, an 80-character name and 120 months", () => {
+  test("C5324: accepts 30 blocks, 20 lines, an 80-character name and 60 months", () => {
     const body = withBody({
       name: "x".repeat(80),
       intro: Array.from({ length: 30 }, () => ({ type: "paragraph", text: "x" })),
       footer: Array.from({ length: 30 }, () => ({ type: "paragraph", text: "x" })),
-      preset: { termMonths: 120, lines: Array.from({ length: 20 }, () => line()) },
+      preset: { termMonths: 60, lines: Array.from({ length: 20 }, () => line()) },
     });
     expect(validateAgreementTemplate(body).ok).toBe(true);
   });

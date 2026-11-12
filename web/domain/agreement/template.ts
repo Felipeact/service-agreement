@@ -38,7 +38,7 @@ export const MAX_NAME = 80;
 export const MAX_DESCRIPTION = 300;
 export const MAX_LIST_BLOCKS = 30;
 export const MAX_PRESET_LINES = 20;
-export const MAX_PRESET_TERM_MONTHS = 120;
+export const MAX_PRESET_TERM_MONTHS = 60;
 
 /** The system agreement template's version 1: no text, every optional section shown, no preset. Equal to the stored row (parity test). */
 export const SYSTEM_AGREEMENT_BODY: AgreementTemplateBody = {
