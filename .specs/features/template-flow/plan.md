@@ -18,10 +18,10 @@ When this ships, the New agreement dialog asks for a template (Standard agreemen
 Reuses the controlled `NewAgreementDialog` (it already has `open`, `onClose` and an `initialFile`, driven by the Imports drop banner), `listAgreementTemplates`, the batch-1 `buildAgreementDocument` with a template body, `reactPdfDocumentRenderer` (the agreement PDF), `validateAgreementTemplate` and `bodyFromTemplateForm`, and the save, duplicate and archive actions, instead of a second dialog, a second renderer or a second validator.
 
 1. A writer opens the dialog from Pipeline, Agreements or the Imports banner -> `NewAgreementLauncher` / `dialogProps` (exist) now also load the org's templates through `listAgreementTemplates` (exists) -> `NewAgreementDialog` (exists) shows the Template choice and sends `templateVersionId` in the input of `startAgreementAction` (exists) -> `agreementStore.create(siteId, templateVersionId)` (exists) -> `create_agreement` (exists, unchanged).
-2. On `/templates`, Use template (exists) becomes a button that mounts the dialog in controlled mode (new `TemplateUseDialog`, no door - placement) with that template selected; the dialog's actions are the same ones the launcher passes.
+2. On `/templates`, Use template (exists) becomes a button that mounts the dialog in controlled mode (new `TemplateUseDialog`, no door - placement; it wraps the preview and the dialog, and the page reads the dialog's props through the launcher's `dialogProps`, reusing the list it already read) with that template selected; the dialog's actions are the same ones the launcher passes.
 3. `/agreements/new` (exists) and `NewAgreementForm` (exists) are deleted; the two fallback links become the launcher.
-4. The system card's Edit -> `customizeSystemTemplateAction` (new, no door) -> `duplicateAgreementTemplate` (exists) with the name "Standard agreement" -> the editor of the copy.
-5. Editor change -> after 700 ms `POST /templates/preview` (new route handler, no door) -> `canWriteTemplates` gate (exists) -> `bodyFromTemplateForm` + `validateAgreementTemplate` (exist) -> `buildAgreementDocument` (exists) with sample customer and site, the org's settings and logo (exist) -> `reactPdfDocumentRenderer.renderAgreement` (exists) -> `application/pdf` -> the editor shows it in a frame.
+4. The system template's preview Customize (the card menu keeps Duplicate only) -> `customizeSystemTemplateAction` (new, no door) -> `duplicateAgreementTemplate` (exists; gains the option `asOwn`, which keeps the system name unless it is taken) -> the editor of the copy.
+5. Editor change -> after 700 ms `POST /templates/preview` (new route handler, no door) -> `canWriteTemplates` gate (exists) -> `readTemplateFormInput` (new, types the posted JSON) + `previewBodyFromTemplateForm` (new, `bodyFromTemplateForm` with a placeholder name so a new template draws) -> `buildTemplatePreviewDocument` (new, domain) -> `buildAgreementDocument` (exists) with sample customer and site, the org's settings and logo (exist) -> `reactPdfDocumentRenderer.renderAgreement` (exists) -> `application/pdf` -> the editor shows it in a frame.
 
 ## Impact
 
@@ -45,6 +45,8 @@ None - no stored-data shape change.
 | `POST /templates/preview` | JSON: the editor's form values | `application/pdf` bytes | 200, 401, 403, 422 with `{ errors: [{ field, message }] }`, 503 |
 | `GET /agreements/new` | - | removed | 404 |
 | `GET /templates/new`, `GET /templates/[templateId]` | session | the editor with a loading screen | 200, 302 (unchanged), 404 (unchanged) |
+
+Added while building (additive): a signed-out `POST /templates/preview` is redirected to `/login` by the session proxy before the handler can answer 401, so the editor treats any answer that is not `application/pdf` as "Preview unavailable."; the handler's own 401 stays for a request that reaches it. A body over 200,000 characters, or one that is not the editor's shape, answers 422 with one `{ field, message }`.
 
 ## Landing
 
