@@ -1,12 +1,70 @@
 # Plan limits verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: standard
-**Diff range**: fea83cd..HEAD (HEAD = 491ead3)
-**Round**: 2 - scoped (round 1 at 5c24ef9 is kept below as the superseded record; its table headers were renamed so the gate reads only round 2)
+**Diff range**: fea83cd..HEAD (HEAD = 259ae11)
+**Round**: 3 - scoped (rounds 1 and 2 are kept below as superseded records; their table headers were renamed so the gate reads only round 3)
 **Verifier**: independent sub-agent (author != verifier)
 
-## Round 2 (scoped), verified at 491ead3
+## Round 3 (scoped), verified at 259ae11
+
+Scope: commit 259ae11 ("cover an admin on the allowance and type the usage double") and the two round-2 reasons for FAIL. The diff touches only `supabase/tests/plan_limits.sql`, `web/app/(app)/settings/billing/page.test.ts` and this report; no source or migration changed, so everything else is carried from 491ead3 and the proofs were re-run in full at this HEAD.
+
+Round 3 result: both round-2 reasons are closed. All 31 checks are proven, no mutant survives, all three Test policy rows are met.
+
+### Round 3 gate runs at 259ae11
+
+| Run | Command | Result |
+| --- | --- | --- |
+| Named vitest proofs | `npx vitest run <12 files> -t "C51[0-4][0-9]:"` from `web/` | 12 files, 48 passed, 0 failed (93 other tests in those files skipped by the filter), same named set as round 2 |
+| SQL recipe | `npm run test:db plan_limits` | `PASS plan_limits`, 1 passed, 0 failed |
+| Full suite | `npm test` | 270 files, 4510 tests passed, 0 failed |
+| Types | `npx tsc --noEmit -p .` | 4 errors, all pre-existing: `.next/types/validator.ts(432,39)`, `.next/types/validator.ts(440,69)`, `app/setup/draft-actions.test.ts(62,64)`, `app/setup/draft-actions.test.ts(104,64)`; the round-2 error at `app/(app)/settings/billing/page.test.ts(60,40)` is gone (the double is now typed `vi.fn<(member: { orgId: string; role: string }) => Promise<unknown>>` at `page.test.ts:8`) |
+
+### Round 3 checks
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C5121 | allowance 2: `allowed = true, used = 1` at one job, `allowed = false, used = 2` at two, limit 2; an admin may also ask | `npm run test:db plan_limits` PASS | `supabase/tests/plan_limits.sql:202` `used = 1 and limit = 2 and allowed and plan = 'starter'`; `:211` `used = 2 and limit = 2 and not allowed`; new `:255` `(public.import_allowance(tests.id('q5121')) ->> 'plan') = 'starter'` as the estimator promoted to admin at `:251` (restored at `:258`). M15 killed (raw "not allowed to change import job ...") | PASS |
+
+All other checks (C5100-C5120, C5122-C5130, C5140-C5146) carry from 491ead3 and passed again in the gate above, 31 of 31.
+
+### Round 3 Coverage
+
+| Set (size) | Recomputed from | Member -> proof | Unproven |
+| --- | --- | --- | --- |
+| roles on the new RPCs (5: owner, admin, estimator, viewer, non-member) | `supabase/migrations/20261112220000_plan_limits.sql:38,170,173,205` | `org_usage`: owner `plan_limits.sql:273`, admin `:297`, estimator `:281`, viewer `:283`, non-member `:285`. `import_allowance`: estimator `:202`, admin `:255`, owner (org B owner in C5123 `:245`; dropping owner from the list fails the recipe), viewer `:250`, non-member `:252` | - |
+
+Every other set (agreement statuses, plans, `create_agreement` statuses, refusal detail fields, `import_allowance` statuses, `org_usage` statuses, month edges, limit boundary, refusal surfaces and actions, billing page chain, plan_limits exposure) is carried from round 2 with no code change, and its members are proven there.
+
+### Round 3 Test policy rows
+
+| Row | Files it classifies | Required proof | Expectation met |
+| --- | --- | --- | --- |
+| Decides, reached across a boundary | `20261112220000_plan_limits.sql` (`create_agreement` guard, `import_allowance`, `org_usage`), `agreements.ts`, `import-allowance.ts`, `org-usage.ts` | boundary (SQL as the role) and adapter, one case per decision-table row | yes: SQL and adapter proofs exist for all three functions; every role row now has an asserted case (`import_allowance` admin `plan_limits.sql:255`, `org_usage` admin `:297`), the detail fields are told apart (`plan_limits.sql:123`, `agreements.test.ts:170`), and M12, M13, M15 are killed |
+| Decides, not reached across a boundary | `extract-import.ts` allowance branch, `plan-limits.ts`, `billing-view.tsx` usage rows | one at its own layer, one case per table row | yes (carried from 491ead3, unchanged code) |
+| Instrumentation (composition wiring, action pass-through) | `composition/index.ts`, the three actions, `settings/billing/page.tsx` | one wiring proof | yes (carried from 491ead3, unchanged code) |
+
+### Round 3 Faults injected
+
+Real tree, exact file, restored with `git checkout -- <file>`; `git status --porcelain` afterwards showed only `?? node_modules/` (and this file once written).
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| M15 `import_allowance` role list `['owner','admin','estimator']` -> `['owner','estimator']` (admin removed) | `supabase/migrations/20261112220000_plan_limits.sql:173` | yes (recipe fails: "not allowed to change import job" from the new C5121 admin assertion) |
+
+Round 3: 1 injected, 1 killed. Cumulative: 44 injected across three rounds; the 10 survivors found in rounds 1 and 2 (M12, M13, T1, T2, T2b, T12, A1, A2, C1, M15) are all killed at this HEAD. Faults on surfaces the commit did not touch were killed in round 2 against unchanged code and are carried.
+
+### Round 3 residual notes
+
+Accepted low items, unchanged and not counted: the dialog redirect after an allowance refusal, refusal order at the limit, `org_usage` `limit 1`, C5120 stamp not compared to `now()`. Live Playwright pass: not run (not a numbered check).
+
+Round 3 gate: `npm test` 270 files, 4510 passed, 0 failed; `npm run test:db plan_limits` 1 passed, 0 failed; named vitest proofs 48 passed, 0 failed; `tsc` only the 4 pre-existing errors.
+
+---
+
+# Round 2 record (superseded, verified at 491ead3)
+
 
 Scope: the fix commit 491ead3 ("close the verifier round 1 gaps") and every round-1 verdict that was not PASS. The rest is carried from 5c24ef9: `git diff 5c24ef9..HEAD --stat` lists only tests and the two spec files, so the migration and all source files are unchanged. Proofs were re-run in full at the new HEAD.
 
@@ -25,7 +83,7 @@ Round 2 result: all 31 numbered checks are proven by their claims as now written
 
 Re-judged: the checks whose proof or claim text changed. Every other check carries from 5c24ef9 and was re-run green in the gate above.
 
-| Check | Claim | Proof run | Evidence | Result |
+| Check | Claim | Proof run | Evidence | Round 2 status |
 | --- | --- | --- | --- | --- |
 | C5104 | detail `<plan>\|<limit>\|<used>`, now with limit != used | `npm run test:db plan_limits` PASS | `supabase/tests/plan_limits.sql:123` `split_part(tests.pl_create('s5106'), '/', 3) = 'starter\|1\|2'` (limit 1, used 2 after the downgrade); the original `plan_limits.sql:107` `starter\|2\|2` stays. M12 (swap) killed: "C5104 limit and count differ: detail is starter\|2\|1" | PASS |
 | C5110 | adapter maps `starter\|15\|15` and now `starter\|15\|17` | `npx vitest run infrastructure/supabase/agreements.test.ts -t "C5110:"` 1 passed | `web/infrastructure/supabase/agreements.test.ts:170` `toEqual({ ok:false, code:"plan_limit", plan:"starter", limit:15, used:17 })` from `details: "starter\|15\|17"` at `:169`; T1 killed | PASS |
@@ -39,7 +97,7 @@ Re-judged: the checks whose proof or claim text changed. Every other check carri
 
 ### Round 2 Coverage
 
-| Set (size) | Recomputed from | Member -> proof | Unproven |
+| Set (size) | Recomputed from | Member -> proof | Round 2 gap |
 | --- | --- | --- | --- |
 | refusal detail fields (3: plan, limit, used) | `20261112220000_plan_limits.sql:51`, `web/infrastructure/supabase/agreements.ts:404-408`, `web/domain/billing/plan-limits.ts:45-46`, `web/infrastructure/supabase/import-allowance.ts` | distinguished by `plan_limits.sql:123` (1 vs 2), `agreements.test.ts:170` (15 vs 17), `plan-limits.test.ts:31` (15 vs 17), `:36-38` (40 vs 42), `import-allowance.test.ts:29` (40 vs 42) | - |
 | roles on the new RPCs (5) | `20261112220000_plan_limits.sql:38,170,173,205` | `org_usage`: owner `plan_limits.sql:273`, admin `:288`, estimator `:281`, viewer `:283`, non-member `:285`. `import_allowance`: estimator `:202`, owner (org B owner in C5123 `:245`; removing owner from the list fails the recipe), viewer `:250`, non-member `:252`. admin on `import_allowance`: no assertion; changing line 173 to `array['owner','estimator']` leaves the recipe green (M15) | admin on `import_allowance` |
@@ -49,7 +107,7 @@ Re-judged: the checks whose proof or claim text changed. Every other check carri
 
 ### Round 2 Test policy rows
 
-| Row | Files it classifies | Required proof | Expectation met |
+| Row | Files it classifies | Required proof | Round 2 expectation |
 | --- | --- | --- | --- |
 | Decides, reached across a boundary | `20261112220000_plan_limits.sql` (`create_agreement` guard, `import_allowance`, `org_usage`), `agreements.ts`, `import-allowance.ts`, `org-usage.ts` | boundary (SQL as the role) and adapter, one case per decision-table row | no: detail fields, boundary, statuses and the five `org_usage` roles are now asserted, but `import_allowance` has no admin case (M15 survives), so one role row has no asserted case |
 | Decides, not reached across a boundary | `extract-import.ts` allowance branch, `plan-limits.ts`, `billing-view.tsx` usage rows | one at its own layer, one case per table row | yes: `planLimitMessage` has limit != used cases for both kinds (T2, T2b killed); the extract branch and usage rows as in round 1 |
@@ -59,7 +117,7 @@ Re-judged: the checks whose proof or claim text changed. Every other check carri
 
 Real tree, exact file, restored with `git checkout -- <file>`; `git status --porcelain` afterwards showed only `?? node_modules/` (and this file once written).
 
-| Mutation | Location | Killed |
+| Mutation | Location | Round 2 outcome |
 | --- | --- | --- |
 | M12 refusal detail `plan\|limit\|used` -> `plan\|used\|limit` | `supabase/migrations/20261112220000_plan_limits.sql:51` | yes (C5104 limit and count differ) |
 | M13 `org_usage` role list -> `['owner']` | `20261112220000_plan_limits.sql:205` | yes (C5140 admin) |
