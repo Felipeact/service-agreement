@@ -48,18 +48,18 @@ end $$;
 select tests.act_as('uA');
 do $$
 begin
-  perform tests.ok('C5200 org A reads it', (select count(*) from public.document_template_versions where org_id is null) = 1, 'org A member cannot read the system version');
+  perform tests.ok('C5200 org A reads it', (select count(*) from public.document_template_versions where org_id is null and template_id = '00000000-0000-4000-8000-00000000c001') = 1, 'org A member cannot read the system version');
 end $$;
 select tests.act_as('uB');
 do $$
 begin
-  perform tests.ok('C5200 org B reads it', (select count(*) from public.document_template_versions where org_id is null) = 1, 'org B member cannot read the system version');
+  perform tests.ok('C5200 org B reads it', (select count(*) from public.document_template_versions where org_id is null and template_id = '00000000-0000-4000-8000-00000000c001') = 1, 'org B member cannot read the system version');
 end $$;
 reset role;
 
 -- C5206 first: the fixture contracts were inserted without naming a version and point at the system version 1.
 do $$
-declare sys uuid := (select v.id from public.document_template_versions v where v.org_id is null and v.version_no = 1);
+declare sys uuid := (select v.id from public.document_template_versions v where v.org_id is null and v.template_id = '00000000-0000-4000-8000-00000000c001' and v.version_no = 1);
 begin
   perform tests.ok('C5206 none null', (select count(*) from public.contracts where template_version_id is null) = 0, 'a contract has no version');
   perform tests.ok('C5206 default', (select bool_and(template_version_id = sys) from public.contracts), 'a fixture contract does not point at the system version 1');
@@ -75,7 +75,7 @@ select tests.ct_contract('ct1');
 do $$
 begin
   perform tests.ok('C5201 system version', tests.ct_template_of((select id from public.contracts c where c.agreement_version_id = tests.id('ct1:v1')))
-    = (select v.id from public.document_template_versions v where v.org_id is null and v.version_no = 1), 'the contract does not carry the system version');
+    = (select v.id from public.document_template_versions v where v.org_id is null and v.template_id = '00000000-0000-4000-8000-00000000c001' and v.version_no = 1), 'the contract does not carry the system version');
 end $$;
 
 -- C5202: an org with its own contract template gets that template's latest version, not the system one.
@@ -113,7 +113,7 @@ begin
   reset role;
   v_agr := tests.rn_agreement('ct4', 'B');
   v_contract := private.create_contract_for_system(v_agr);
-  perform tests.ok('C5210 system path', tests.ct_template_of(v_contract) = (select v.id from public.document_template_versions v where v.org_id is null and v.version_no = 1),
+  perform tests.ok('C5210 system path', tests.ct_template_of(v_contract) = (select v.id from public.document_template_versions v where v.org_id is null and v.template_id = '00000000-0000-4000-8000-00000000c001' and v.version_no = 1),
     'the automation path did not record the system version');
 end $$;
 
@@ -148,8 +148,8 @@ select tests.expect_error('C5208 second org template', format('insert into publi
 select tests.expect_error('C5208 repeated version_no', format('insert into public.document_template_versions (template_id, org_id, version_no, body) values (%L, %L, 2, ''{}'')', tests.id('tplA'), tests.id('orgA')), '23505');
 do $$
 begin
-  perform tests.ok('C5208 another kind is allowed', (select count(*) from public.document_templates where org_id is null and kind = 'agreement') = 0
-    and exists (select 1 from (select 1 from public.document_templates limit 1) x), 'unexpected system agreement template');
+  perform tests.ok('C5208 another kind is allowed', (select count(*) from public.document_templates where org_id is null and kind = 'agreement') = 1
+    and exists (select 1 from (select 1 from public.document_templates limit 1) x), 'the system agreement template is missing');
   insert into public.document_templates (org_id, kind) values (tests.id('orgA'), 'agreement');
 end $$;
 
@@ -169,7 +169,7 @@ do $$
 begin
   perform tests.ok('C5204 org delete takes its versions', not exists (select 1 from public.document_template_versions where org_id = tests.id('orgB')), 'a version outlived its org');
   perform tests.ok('C5204 org delete takes its template', not exists (select 1 from public.document_templates where org_id = tests.id('orgB')), 'a template outlived its org');
-  perform tests.ok('C5204 system version stays', (select count(*) from public.document_template_versions where org_id is null) = 1, 'the system version was deleted');
+  perform tests.ok('C5204 system version stays', (select count(*) from public.document_template_versions where org_id is null and template_id = '00000000-0000-4000-8000-00000000c001') = 1, 'the system version was deleted');
 end $$;
 
 reset role;

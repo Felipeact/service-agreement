@@ -1,6 +1,6 @@
 -- agreement-templates, database side: C5300-C5318 and the SQL half of C5330 (.specs/features/agreement-templates/checks.md).
--- Run after fixture.sql and the migration 20261112240000_agreement_templates.sql (npm run test:db agreement_templates replays
--- both, rolled back, so the hosted project needs no change until the owner applies it).
+-- Run after fixture.sql (npm run test:db agreement_templates). The migration 20261112240000_agreement_templates.sql was applied to
+-- the hosted project by the owner on 2026-11-12, so this file no longer replays it and tests the hosted objects.
 -- Fixture: org A owner uA, estimator uE, viewer uV, admin uAd (added here); org B owner uB; uX has no membership. Expected
 -- values come from the checks, never read back from the migration.
 
