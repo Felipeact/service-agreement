@@ -40,6 +40,8 @@ Reuses the Claude SDK wiring and prompt-as-data rules of `claudeAssetExtractor` 
 | `POST /api/setup/draft` (multipart, session cookie) | `description` (text, 0 to 1,000 characters), `file` (PDF or DOCX, at most 5 MB, optional; at least one of the two) | `{ types: [{ name, defaultVisitMonths, synonyms, tasks: [{ description }] }] }` or `{ error: <code>, message }` | `200`, `400` `invalid_input`, `401` `signed_out`, `403` `forbidden`, `409` `not_available`, `413` `file_too_large`, `415` `unsupported_type`, `422` `unreadable` or `empty_draft`, `503` `unavailable` |
 | `addCatalogTypesAction` (Server Action on `/setup`) | `types` (the reviewed draft as JSON) | the screen with the catalog updated, or a notice | `200` with the new catalog, a field error per type, `forbidden` notice, `unavailable` notice |
 
+Found while building (additive): `addCatalogTypesAction` answers `{ ok: true, added: [names] }` or `{ ok: false, code: "forbidden" | "invalid" | "unavailable" }` or `{ ok: false, code: "duplicate", name }`, and the screen keeps the just-added names in its own state to show them under "Added from your draft"; it does not re-read the catalog.
+
 ## Landing
 
 | One-way door | Literal shape | Alternative rejected |
