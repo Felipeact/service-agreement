@@ -60,6 +60,7 @@ export const RECIPES: Recipe[] = [
   plain("set_org_plan"),
   plain("tenant_logo"),
   { name: "other_trade_draft", parts: ["fixture.sql", "../migrations/20261112100000_add_catalog_draft.sql", "other_trade_draft.sql"] },
+  { name: "workspace_pending_state", parts: ["fixture.sql", "../migrations/20261112200000_workspace_pending_state.sql", "workspace_pending_state.sql"] },
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;

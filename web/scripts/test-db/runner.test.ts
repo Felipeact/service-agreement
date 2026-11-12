@@ -40,6 +40,7 @@ const ALL = [
   "set_org_plan",
   "tenant_logo",
   "other_trade_draft",
+  "workspace_pending_state",
 ];
 
 const REAL_FILES = readdirSync(testsDir).filter((name) => name.endsWith(".sql"));
