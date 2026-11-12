@@ -85,6 +85,11 @@ describe("POST /api/setup/draft", () => {
     const b = await POST(new NextRequest("http://localhost/api/setup/draft", { method: "POST", body: fileDescription }));
     expect(b.status).toBe(400);
     expect((await b.json()).error).toBe("invalid_input");
+
+    const validWithTextFile = new FormData();
+    validWithTextFile.set("description", "We service pools");
+    validWithTextFile.set("file", "just text");
+    expect((await POST(new NextRequest("http://localhost/api/setup/draft", { method: "POST", body: validWithTextFile }))).status).toBe(400);
     expect(drafterCalls).toHaveLength(0);
   });
 
