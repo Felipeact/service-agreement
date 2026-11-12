@@ -499,6 +499,7 @@ export type Database = {
           created_at: string
           id: string
           org_id: string
+          template_version_id: string
           parties: Json
           status: string
         }
@@ -507,6 +508,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id: string
+          template_version_id?: string
           parties?: Json
           status?: string
         }
@@ -515,6 +517,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id?: string
+          template_version_id?: string
           parties?: Json
           status?: string
         }

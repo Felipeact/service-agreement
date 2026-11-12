@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const settings = await getOrgSettings(member.orgId);
     if (!settings) throw new Error(`org ${member.orgId} has no settings row`);
-    const document = buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural));
+    const document = buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural), contract.template);
     const bytes = await contractRenderer.renderContract(withLogo(document, "contractor", await tenantLogo(member.orgId)));
     return new Response(bytes as BodyInit, {
       headers: {

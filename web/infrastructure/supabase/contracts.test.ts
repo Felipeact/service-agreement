@@ -100,6 +100,24 @@ describe("contract reader", () => {
     expect(calls).toContainEqual({ table: "contracts", method: "eq", args: ["id", CON] });
   });
 
+  test("C5223: the template body of the contract's own version comes back parsed, and the join is selected", async () => {
+    const body = { schema: 1, blocks: [{ type: "paragraph", text: "Org wording {{customer.name}}." }] };
+    const { typed, calls } = stubClient({ contracts: { data: row({ template_version_id: "tv-1", document_template_versions: { body } }), error: null } });
+    expect((await supabaseContractReader(typed).get(CON))?.template).toEqual(body);
+    const select = calls.find((call) => call.table === "contracts" && call.method === "select");
+    expect(String(select?.args[0])).toContain("template_version_id, document_template_versions(body)");
+  });
+
+  test.each([
+    ["no version row", null],
+    ["a body with an unknown block type", { body: { schema: 1, blocks: [{ type: "image", text: "x" }] } }],
+    ["a body with an unknown variable", { body: { schema: 1, blocks: [{ type: "clause", text: "{{terms.nope}}" }] } }],
+    ["a body that is not an object", { body: "nope" }],
+  ])("C5223: %s is an error, never the system wording", async (_name, join) => {
+    const { typed } = stubClient({ contracts: { data: row({ template_version_id: "tv-1", document_template_versions: join }), error: null } });
+    await expect(supabaseContractReader(typed).get(CON)).rejects.toThrow("tv-1");
+  });
+
   test("C1629: stored parties of {} are null", async () => {
     const { typed } = stubClient({ contracts: { data: row({ parties: {} }), error: null } });
     expect((await supabaseContractReader(typed).get(CON))?.parties).toBeNull();

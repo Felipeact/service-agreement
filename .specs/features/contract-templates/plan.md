@@ -12,8 +12,8 @@ When this ships, a contract's wording is a stored, versioned, immutable template
 
 Reuses `contractClauses`' six sentences (they become the system template's first version), `buildContractDocument` as the one seam that feeds the contract PDF and the signing page, and `create_contract` as the one place a contract is made.
 
-1. Staff accept an agreement -> `create_contract` (exists, extended) picks the org's current contract template version, or the system one when the org has none, and writes its id on the new `contracts` row (door 2).
-2. PDF route and signing page (`app/(app)/contracts/[contractId]/pdf/route.ts`, `application/use-cases/signing.ts`, both exist) -> read the contract's template version through a reader port (`ContractTemplateReader`, new, no door - placement per conventions) -> `buildContractDocument` (exists, extended) -> `renderBlocks` (new, no door) turns blocks and the frozen terms into `RenderedBlock[]`.
+1. Staff accept an agreement -> `create_contract`, or the automation's `create_contract_for_system` (both exist, unchanged) -> `private.make_contract` (exists, redefined) picks the org's current contract template version, or the system one when the org has none, and writes its id on the new `contracts` row (door 2).
+2. PDF route and the signing documents (`app/(app)/contracts/[contractId]/pdf/route.ts`, `makeContractDocuments` in `application/use-cases/signing.ts`, both exist; the signing page itself shows the provider's embedded form of that PDF) -> the existing `ContractReader` (exists, extended) returns the contract's template body from the joined version row -> `buildContractDocument` (exists, extended) -> `renderBlocks` (new, `domain/contract/template.ts`, no door) turns blocks and the frozen terms into `RenderedBlock[]`.
 3. `contract-pdf.tsx` (exists) draws `RenderedBlock[]` where it drew `clauses: string[]`; the Signatures block stays fixed and after them.
 4. out: the same PDF and signing page as today for the system template, and `contracts.template_version_id` answers "which words did this contract carry".
 
@@ -52,6 +52,8 @@ None - nothing consumed outside. `create_contract(p_agreement_id)` keeps its sig
 | 4. The merge-variable names | a fixed list in `web/domain/contract/template.ts`, written `{{group.name}}`: `terms.paymentDays`, `terms.cancellationNoticeDays`, `terms.repairDiscountPct`, `terms.cpiCapPct`, `terms.cpiRenegotiationThresholdPct`, `terms.renewalNoticeDays`, `province`, `term.label`, `tenant.legalName`, `customer.name`, `site.name`. A value is already formatted with its unit where it has one (`30 days`, `10%`) | Free-form variables: stored templates bind to names, so an open set can never be renamed. Per-variable format arguments (`{{x\|days}}`): a second mini-language for the editor to explain |
 
 - A stored template names variables by door 4's list, so a rename is a migration of stored text from now on
+- Door 2 as built: the column also has a default, the system version 1, so a direct insert that names no version (the shared test fixture, a future path) records the same wording instead of failing; `make_contract` always names the version explicitly
+- Door 4 as built: a value carries its unit, and the cancellation notice is the possessive phrase (`60 days'`, `1 day's`) so today's sentence is reproduced word for word; a heading with no content under it before the next heading is dropped, which is how the Terms heading disappears for a contract with no frozen terms
 - Nothing else in this change is hard to reverse
 
 ## Criteria

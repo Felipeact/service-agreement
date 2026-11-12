@@ -105,6 +105,30 @@ describe("what sending does before it begins", () => {
   });
 });
 
+describe("the document the contract is sent as, template", () => {
+  const body = { schema: 1 as const, blocks: [{ type: "paragraph" as const, text: "Org wording." }] };
+  const load = () => makeContractDocuments({ get }, { get: agreementGet } as never, settings).load("c1", "org-1");
+
+  test("C5225: the contract's own template version is what the document is built from", async () => {
+    get.mockResolvedValue({ ...contract, template: body });
+    await load();
+    expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, "#1f6f8b", undefined, body);
+  });
+
+  test("C5225: with the org's words the template follows them", async () => {
+    settings.mockResolvedValue({ accentColor: null, itemSingular: "station", itemPlural: "stations" } as never);
+    get.mockResolvedValue({ ...contract, template: body });
+    await load();
+    expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, null, { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" }, body);
+  });
+
+  test("C5225: a read of the contract that throws propagates and nothing is built", async () => {
+    get.mockRejectedValue(new Error("Contract c1 has no readable template version"));
+    await expect(load()).rejects.toThrow("no readable template version");
+    expect(buildContractDocument).not.toHaveBeenCalled();
+  });
+});
+
 describe("the document the contract is sent as, item words", () => {
   test("C2023: the org's stored words reach the document that goes to the signature provider", async () => {
     settings.mockResolvedValue({ accentColor: null, itemSingular: "station", itemPlural: "stations" } as never);

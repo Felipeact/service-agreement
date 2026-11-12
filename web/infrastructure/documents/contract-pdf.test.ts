@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { contractClauses, type ContractDocument } from "@/domain/contract";
+import { contractClauses, type ContractDocument, type RenderedBlock } from "@/domain/contract";
 import type { AgreementTerms } from "@/domain/agreement";
 import { itemWords } from "@/domain/org-settings";
 import { reactPdfContractRenderer } from "./index";
+import { TermsBlocks } from "./contract-pdf";
+import { styles } from "./pdf-sections";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
 import { pngBytes } from "./logo.testing";
 
@@ -18,6 +20,10 @@ const TERMS: AgreementTerms = {
 };
 
 const asset = (unitNo: string) => ({ unitNo, typeModel: "Model X", location: "Roof" });
+
+/** The Terms heading and one clause block per sentence, or nothing for no sentences: what the system wording renders to. */
+const termsBody = (clauses: string[]): RenderedBlock[] =>
+  clauses.length === 0 ? [] : [{ type: "heading", text: "Terms" }, ...clauses.map((text): RenderedBlock => ({ type: "clause", text }))];
 
 const base: ContractDocument = {
   number: "AG-1052",
@@ -42,7 +48,7 @@ const base: ContractDocument = {
   },
   term: "Term: Jan 1, 2027 – Dec 31, 2027 (12 months)",
   taxNote: "GST extra",
-  clauses: contractClauses(TERMS, 12),
+  body: termsBody(contractClauses(TERMS, 12)),
   mark: null,
 };
 
@@ -148,7 +154,7 @@ describe("the contract PDF, rendered", () => {
 
   test("C1643: a null payment, cancellation, governing province and renewal print none of those four clauses", async () => {
     const terms = { ...TERMS, paymentDays: null, cancellationNoticeDays: null, governingProvince: null, renewalNoticeDays: null };
-    const all = unwrapped(await pages({ clauses: contractClauses(terms, 12) }));
+    const all = unwrapped(await pages({ body: termsBody(contractClauses(terms, 12)) }));
     for (const absent of ["Invoices are payable", "Either party may cancel", "governed by the laws", "renews for successive"]) expect(all, absent).not.toContain(absent);
     expect(all).toContain("Repair work is discounted by 10%.");
     expect(all).toContain("capped at 3%.");
@@ -214,7 +220,7 @@ describe("the DocuSeal tags in the signature blocks", () => {
 
   test("C1714: with 40 clauses the last page holds both headings and all four tags", async () => {
     const clauses = Array.from({ length: 40 }, (_, i) => `Clause ${i + 1}: Invoices are payable within 30 days of receipt by the customer.`);
-    const all = await pages({ clauses });
+    const all = await pages({ body: termsBody(clauses) });
     expect(all.length).toBeGreaterThan(1);
     const last = compact([all[all.length - 1]]);
     expect(last).toContain("FortheCustomer:PatLee");
@@ -244,5 +250,37 @@ describe("the contract PDF, with a logo", () => {
     // The logo makes room above the name, so a line may move to the next page: the same words appear, in a different place.
     const words = (bytes: Uint8Array) => pdfPages(bytes).join(" ").replace(/Page \d+ of \d+/g, "").split(/\s+/).filter(Boolean).sort();
     expect(words(drawn)).toEqual(words(plain));
+  });
+});
+
+describe("the template's blocks on the contract", () => {
+  const custom: RenderedBlock[] = [
+    { type: "heading", text: "Our agreement" },
+    { type: "paragraph", text: "Paragraph words here." },
+    { type: "clause", text: "Clause words here." },
+  ];
+
+  test("C5221: the blocks come after the scope and before the signatures, in their own order", async () => {
+    const all = winAnsi(text(await pages({ body: custom })));
+    expect(inOrder(indexOfIn(all, "Equipment", "Our agreement", "Paragraph words here.", "Clause words here.", "For the Customer: Pat Lee"))).toBe(true);
+    expect(all).not.toContain("Invoices are payable");
+  });
+
+  test("C5221: a heading is drawn in the second-level heading style with the accent, a paragraph and a clause in body text with 4 points below", () => {
+    const accent = { color: "#1f6f8b" };
+    // The element tree is read as plain objects: an adapter test imports no UI library.
+    type Node = { props: { style: unknown; children: string } };
+    const fragment = TermsBlocks({ body: custom, accent }) as unknown as { props: { children: unknown } };
+    const nodes = ([] as unknown[]).concat(fragment.props.children).flat() as Node[];
+    expect(nodes.map((node) => node.props.children)).toEqual(["Our agreement", "Paragraph words here.", "Clause words here."]);
+    expect(nodes[0].props.style).toEqual([styles.h2, accent]);
+    expect(nodes[1].props.style).toEqual({ marginBottom: 4 });
+    expect(nodes[2].props.style).toEqual({ marginBottom: 4 });
+  });
+
+  test("C5222: an empty body draws no Terms section and still ends with the signatures", async () => {
+    const all = winAnsi(text(await pages({ body: [] })));
+    expect(all).not.toContain("Terms");
+    expect(all).toContain("For the Customer: Pat Lee");
   });
 });

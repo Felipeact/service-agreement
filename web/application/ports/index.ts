@@ -9,7 +9,7 @@ import type {
   ServiceLineValue,
   TimelineEntry,
 } from "@/domain/agreement";
-import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
+import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind, TemplateBody } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { DraftType } from "@/domain/catalog-draft";
@@ -767,6 +767,11 @@ export type ContractDetail = {
   createdAt: Date;
   /** `null` when the contract recorded no parties (stored `{}`). */
   parties: ContractParties | null;
+  /**
+   * The wording of the template version this contract was made from (contract-templates door 2). Optional in the type so older
+   * fixtures compile (they mean the system wording); the reader always sets it, and throws rather than leave it out.
+   */
+  template?: TemplateBody;
   /**
    * The newest signature request of the contract, or `null` when none was ever begun (signature-provider AC 7, AC 11).
    * Optional in the type so older fixtures compile; the reader always sets it.

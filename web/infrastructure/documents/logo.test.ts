@@ -69,7 +69,7 @@ describe("a logo the renderer cannot draw", () => {
       scope: agreement.scope,
       term: agreement.term,
       words: DEFAULT_ITEM_WORDS,
-      clauses: ["One clause."],
+      body: [{ type: "heading", text: "Terms" }, { type: "clause", text: "One clause." }],
     } as unknown as Parameters<typeof reactPdfContractRenderer.renderContract>[0];
     const bytes = await reactPdfContractRenderer.renderContract(contract);
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("/Subtype /Image");

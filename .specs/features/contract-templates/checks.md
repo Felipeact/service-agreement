@@ -93,7 +93,7 @@ Proof: `npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C5222:"
 **C5223** - The contract reader returns the template body of the contract's own version, and throws (never answering the system wording) when the version row is missing, malformed or the read errors (AC 19, reader)
 Proof: `npx vitest run infrastructure/supabase/contracts.test.ts -t "C5223:"`
 
-**C5224** - The PDF route answers 503 with no PDF when reading the contract throws, and uses the template the reader returned (AC 16, AC 19)
+**C5224** - The PDF route draws the template the reader returned, and when reading the contract throws the request fails the way any read failure does (the error propagates, as for the agreement read) and no PDF is drawn (AC 16, AC 19)
 Proof: `npx vitest run "app/(app)/contracts/[contractId]/pdf/route.test.ts" -t "C5224:"`
 
 **C5225** - The document the signing flow hands to the provider (`makeContractDocuments`) is built from the contract's own template version, and a read that throws propagates (AC 17, AC 19)
@@ -114,7 +114,7 @@ Proof: `npx vitest run application/use-cases/signing-documents.test.ts -t "C5225
 | ways a contract is created (2) | `create_contract` by a member C5201, C5202 · automation path C5210 | - |
 | consumers of the document (3) | PDF route C5224 · signing documents C5225 · PDF drawing C5221 | - |
 
-- Claims naming a status code or response shape: C5205 (`42501`), C5206 (`23502`), C5208 (`23505`), C5209 (`23503`), C5224 (503) - each has a proof that crosses the boundary (the SQL runs as the role; the route test calls the handler)
+- Claims naming a status code or response shape: C5205 (`42501`), C5206 (`23502`), C5208 (`23505`), C5209 (`23503`) - each has a proof that crosses the boundary (the SQL runs as the role; the route test calls the handler)
 - No other check claims more than the single case its proof exercises
 
 ## Test policy
@@ -154,3 +154,7 @@ Same as the plan's `Out of scope`: the editor, the agreement-side template, syst
 
 - S1 = ~10k (one migration, one SQL recipe), S2 = ~6k (one new domain file and its test), S3 = ~18k (document builder, PDF, reader, route, signing documents and their tests, about 70 KB of existing files to read). About 34k, plus about 25k of new tests; all in Contracts. Under the 150k budget - one builder
 - Mechanism: one builder
+
+- **Boundary:** C5200-C5225 closed at the commit that adds this line (database half at `3ad2447`)
+- **Settled mid-build:** (1) C5211's expected renewal sentence was written "12 month terms" and is "12 months terms" (the existing wording, which the existing C1639 pins); corrected before any code. (2) C5224's "503" contradicted the approved AC 19 ("as other read failures today"): the route reads the contract outside its `try`, so a failed read fails the request like the agreement read does; the check now says that. (3) The Flow names corrected to the code: contracts are written by `private.make_contract`, and the signing flow's document is the one `makeContractDocuments` builds for the provider (there is no separate signing-page rendering of the clauses). (4) `contractClauses(terms, months)` stays as a thin function over the system wording so C1639 and its siblings are untouched; tests that read or passed `clauses: string[]` (C1640, C1642, C1643, C1714, C3329 and the route test) now use `body` with the same expected sentences. (5) The reader sets `template` only when its row carries a `template_version_id`; older fixtures without one mean the system wording, a real row without a readable version throws. (6) Existing registries updated mechanically: the `test:db` counts (36 to 37 recipes, 38 to 39 files) and `contract_templates` in the recipe list.
+- **Abandoned:** failing the migration's backfill as a separate UPDATE (the column default backfills every row at once); a `ContractTemplateReader` port (the existing contract reader carries the body)

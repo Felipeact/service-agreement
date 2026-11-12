@@ -107,7 +107,19 @@ describe("GET /contracts/[contractId]/pdf", () => {
     const document = renderContract.mock.calls[0][0];
     expect(document.contractor).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.customerName).toBe("Fernwood Dental");
-    expect(document.clauses).toContain("Repair work is discounted by 10%.");
+    expect(document.body.map((block: { text: string }) => block.text)).toContain("Repair work is discounted by 10%.");
+  });
+
+  test("C5224: the template the reader returned is the wording drawn", async () => {
+    contractGet.mockResolvedValue(contract({ template: { schema: 1, blocks: [{ type: "paragraph", text: "Org wording for {{customer.name}}." }] } }));
+    await call();
+    expect(renderContract.mock.calls[0][0].body).toEqual([{ type: "paragraph", text: "Org wording for Fernwood Dental." }]);
+  });
+
+  test("C5224: a failed read of the contract fails the request, as any read failure does, and draws nothing", async () => {
+    contractGet.mockRejectedValue(new Error("Contract c has no readable template version"));
+    await expect(call()).rejects.toThrow("no readable template version");
+    expect(renderContract).not.toHaveBeenCalled();
   });
 
   test("C1636: the route allows at least twice the measured render time of a long document", () => {

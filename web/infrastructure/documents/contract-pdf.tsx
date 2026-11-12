@@ -1,5 +1,5 @@
 import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer";
-import type { ContractDocument } from "@/domain/contract";
+import type { ContractDocument, RenderedBlock } from "@/domain/contract";
 import { renderWithoutLogoOnFailure } from "./logo-fallback";
 import { LetterHead, PageFooter, PriceSection, ScheduleSection, ScopeSections, styles } from "./pdf-sections";
 
@@ -34,6 +34,25 @@ function SignatureBlock({ heading, role }: { heading: string; role: "Customer" |
   );
 }
 
+/** The contract's terms as its template version words them: a heading in the second-level style, everything else as body text. */
+export function TermsBlocks({ body, accent }: { body: RenderedBlock[]; accent: { color: string } }) {
+  return (
+    <>
+      {body.map((block, index) =>
+        block.type === "heading" ? (
+          <Text key={index} style={[styles.h2, accent]} minPresenceAhead={80}>
+            {block.text}
+          </Text>
+        ) : (
+          <Text key={index} style={{ marginBottom: 4 }}>
+            {block.text}
+          </Text>
+        ),
+      )}
+    </>
+  );
+}
+
 /** The contract as a Letter-size document, drawn with the same sections as the agreement. */
 export function ContractPdf({ document }: { document: ContractDocument }) {
   const { contractor, signer } = document;
@@ -59,18 +78,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
         <ScheduleSection schedule={document.schedule} accent={contractor.accent} />
         <ScopeSections scope={document.scope} accent={contractor.accent} words={document.words} />
 
-        {document.clauses.length > 0 && (
-          <>
-            <Text style={[styles.h2, accent]} minPresenceAhead={80}>
-              Terms
-            </Text>
-            {document.clauses.map((clause, index) => (
-              <Text key={index} style={{ marginBottom: 4 }}>
-                {clause}
-              </Text>
-            ))}
-          </>
-        )}
+        <TermsBlocks body={document.body} accent={accent} />
 
         <View wrap={false} minPresenceAhead={160}>
           <Text style={[styles.h2, accent]}>Signatures</Text>

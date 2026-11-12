@@ -123,8 +123,28 @@ describe("buildContractDocument", () => {
   });
 
   test("C1640: the clauses come from the source's frozen terms, and none without them", () => {
-    expect(document.clauses).toEqual(contractClauses(TERMS, 12));
-    expect(buildContractDocument(source({ terms: null }), PARTIES, "#1f6f8b").clauses).toEqual([]);
+    const clauseTexts = (built: typeof document) => built.body.filter((block) => block.type === "clause").map((block) => block.text);
+    expect(clauseTexts(document)).toEqual(contractClauses(TERMS, 12));
+    expect(buildContractDocument(source({ terms: null }), PARTIES, "#1f6f8b").body).toEqual([]);
+  });
+
+  test("C5220: a contract's own template body is rendered in order; without one the system wording is", () => {
+    const own = {
+      schema: 1 as const,
+      blocks: [
+        { type: "heading" as const, text: "Our terms" },
+        { type: "paragraph" as const, text: "This contract is between {{tenant.legalName}} and {{customer.name}}." },
+        { type: "clause" as const, text: "Work is done at {{site.name}}." },
+      ],
+    };
+    expect(buildContractDocument(source(), PARTIES, "#1f6f8b", undefined, own).body).toEqual([
+      { type: "heading", text: "Our terms" },
+      { type: "paragraph", text: "This contract is between Kettle Ridge Mechanical Ltd. and Fernwood Dental." },
+      { type: "clause", text: "Work is done at Fernwood Dental, Main." },
+    ]);
+    const system = buildContractDocument(source(), PARTIES, "#1f6f8b").body;
+    expect(system[0]).toEqual({ type: "heading", text: "Terms" });
+    expect(system).toHaveLength(7);
   });
 
   test("C1640: it carries the agreement's number, version, lines, total, term, tax note and no draft mark", () => {

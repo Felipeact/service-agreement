@@ -126,9 +126,12 @@ export function makeContractDocuments(
       if (!agreement) return null;
       const settings = await getSettings(orgId);
       if (!settings) throw new Error(`org ${orgId} has no settings row`);
+      // The contract's own template version is passed only when the reader set one (it always does); older fixtures mean the system wording.
       const document = settings.itemSingular && settings.itemPlural
-        ? buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural))
-        : buildContractDocument(agreement, contract.parties, settings.accentColor);
+        ? buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural), ...(contract.template ? [contract.template] : []))
+        : contract.template
+          ? buildContractDocument(agreement, contract.parties, settings.accentColor, undefined, contract.template)
+          : buildContractDocument(agreement, contract.parties, settings.accentColor);
       return { number: contract.number, document: withLogo(document, "contractor", await loadLogo(orgId)) };
     },
   };

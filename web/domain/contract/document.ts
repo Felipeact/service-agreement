@@ -1,7 +1,8 @@
-import { documentBody, NEUTRAL_ACCENT, termMonthsLabel, type AgreementDocument, type AgreementTerms, type DocumentSource } from "../agreement";
-import { DEFAULT_ITEM_WORDS, formatSettingNumber, PROVINCE_NAMES, type ItemWords } from "../org-settings";
+import { documentBody, NEUTRAL_ACCENT, type AgreementDocument, type AgreementTerms, type DocumentSource } from "../agreement";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "../org-settings";
 import type { TenantLogo } from "../org-settings/logo";
 import type { ContractParties } from "./parties";
+import { renderBlocks, SYSTEM_CONTRACT_BODY, templateValues, type RenderedBlock, type TemplateBody } from "./template";
 
 /**
  * Everything one rendered contract says, decided and ordered, with no layout in it. The agreement's lines, schedule,
@@ -16,37 +17,31 @@ export type ContractDocument = Pick<AgreementDocument, "number" | "versionNo" | 
   signer: { name: string; email: string } | null;
   /** The frozen tax note, printed under the total. */
   taxNote: string | null;
-  /** One sentence per term that is set, in print order. */
-  clauses: string[];
+  /** The contract's terms as its template version words them: headings, paragraphs and the clauses whose terms are set, in order (contract-templates). */
+  body: RenderedBlock[];
   /** Always `null`: only an accepted agreement becomes a contract. */
   mark: null;
 };
 
-const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
-const daysNotice = (count: number) => `${count} ${count === 1 ? "day's" : "days'"} written notice`;
-const provinceName = (code: string) => (code in PROVINCE_NAMES ? PROVINCE_NAMES[code as keyof typeof PROVINCE_NAMES] : code);
-
-/** The terms the contract states as clauses, from the accepted version's frozen terms (contract-generation AC 28). */
+/**
+ * The sentences the system template states as clauses for the accepted version's frozen terms (contract-generation AC 28):
+ * the system wording rendered, without its heading.
+ */
 export function contractClauses(terms: AgreementTerms | null, termMonths: number): string[] {
-  if (terms === null) return [];
-  const clauses: string[] = [];
-  if (terms.paymentDays !== null) clauses.push(`Invoices are payable within ${days(terms.paymentDays)}.`);
-  if (terms.cancellationNoticeDays !== null) clauses.push(`Either party may cancel this contract with ${daysNotice(terms.cancellationNoticeDays)}.`);
-  clauses.push(`Repair work is discounted by ${formatSettingNumber(terms.repairDiscountPct)}%.`);
-  clauses.push(`The annual price may rise with CPI, capped at ${formatSettingNumber(terms.cpiCapPct)}%.`);
-  if (terms.governingProvince !== null) clauses.push(`This contract is governed by the laws of ${provinceName(terms.governingProvince)}.`);
-  if (terms.renewalNoticeDays !== null && terms.cpiRenegotiationThresholdPct !== null) {
-    clauses.push(
-      `This contract renews for successive ${termMonthsLabel(termMonths)} terms unless CPI is at or above ` +
-        `${formatSettingNumber(terms.cpiRenegotiationThresholdPct)}%, when the parties renegotiate; the customer is notified ` +
-        `${days(terms.renewalNoticeDays)} before the end date.`,
-    );
-  }
-  return clauses;
+  return renderBlocks(SYSTEM_CONTRACT_BODY, templateValues(terms, termMonths, null))
+    .filter((block) => block.type === "clause")
+    .map((block) => block.text);
 }
 
 /** `accent` is the tenant's colour as the settings hold it now; a colour is branding, not who is bound. */
-export function buildContractDocument(source: DocumentSource, parties: ContractParties, accent: string | null, words: ItemWords = DEFAULT_ITEM_WORDS): ContractDocument {
+export function buildContractDocument(
+  source: DocumentSource,
+  parties: ContractParties,
+  accent: string | null,
+  words: ItemWords = DEFAULT_ITEM_WORDS,
+  /** The template version the contract was made from; absent means the system wording (which every older fixture assumed). */
+  template: TemplateBody = SYSTEM_CONTRACT_BODY,
+): ContractDocument {
   const body = documentBody(source);
   return {
     number: source.number,
@@ -62,7 +57,7 @@ export function buildContractDocument(source: DocumentSource, parties: ContractP
     site: parties.site,
     signer: parties.signer,
     taxNote: source.terms?.taxNote ?? null,
-    clauses: contractClauses(source.terms, source.term.months),
+    body: renderBlocks(template, templateValues(source.terms, source.term.months, parties)),
     mark: null,
   };
 }

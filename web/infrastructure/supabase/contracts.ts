@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseContractParties, SIGNATURE_REQUEST_STATUSES, SIGNED_DOCUMENT_KINDS, type ContractStatus, type SignatureRequestStatus } from "@/domain/contract";
+import { parseContractParties, SIGNATURE_REQUEST_STATUSES, SIGNED_DOCUMENT_KINDS, validateBlocks, type ContractStatus, type SignatureRequestStatus, type TemplateBody } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { isNotEmailedReason } from "@/domain/notifications";
 import type { ContractReader, ContractStore, GenerateContractFailure, LinkEmailView, SignedCopyView } from "@/application/ports";
@@ -37,6 +37,9 @@ type ContractRow = {
   status: string;
   created_at: string;
   parties: unknown;
+  /** Present when the reader selects it; its join is the version's body. */
+  template_version_id?: string;
+  document_template_versions?: { body: unknown } | null;
   agreement_versions: { version_no: number; agreement_id: string; agreements: { number: string | null } };
   /** Embedded when the reader selects it; absent in a row that did not ask. */
   contract_signature_requests?: RequestRow[];
@@ -76,6 +79,17 @@ function signedCopy(rows: RequestRow[]): SignedCopyView | null {
   return { documents, signers: signers.sort((a, b) => (a.role === b.role ? 0 : a.role === "customer" ? -1 : 1)) };
 }
 
+/**
+ * The template version the contract points at. A row that never asked for it (an older fixture) has none; a row that did and
+ * has no readable version is an error, never the system wording, so a contract is not drawn with words it did not carry.
+ */
+function templateOf(row: ContractRow): TemplateBody | undefined {
+  if (row.template_version_id === undefined) return undefined;
+  const checked = validateBlocks(row.document_template_versions?.body);
+  if (!checked.ok) throw new Error(`Contract ${row.id} has no readable template version ${row.template_version_id}: ${row.document_template_versions ? checked.reason : "it was not found"}`);
+  return checked.body;
+}
+
 export function supabaseContractReader(client: Client): ContractReader {
   /** The `customer_signing_link` notification of the contract's latest send; `null` when it was never sent (contract-automation AC 13). */
   async function signingLinkEmail(contractId: string): Promise<LinkEmailView | null> {
@@ -108,7 +122,7 @@ export function supabaseContractReader(client: Client): ContractReader {
       if (!isUuid(id)) return null;
       const { data, error } = await client
         .from("contracts")
-        .select("id, status, created_at, parties, agreement_versions(version_no, agreement_id, agreements(number)), contract_signature_requests(id, status, created_at, contract_signers(role, name, signed_at, signed_ip), contract_signed_documents(kind, size_bytes, sha256))")
+        .select("id, status, created_at, parties, template_version_id, document_template_versions(body), agreement_versions(version_no, agreement_id, agreements(number)), contract_signature_requests(id, status, created_at, contract_signers(role, name, signed_at, signed_ip), contract_signed_documents(kind, size_bytes, sha256))")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
@@ -122,6 +136,7 @@ export function supabaseContractReader(client: Client): ContractReader {
         number: row.agreement_versions.agreements.number ?? "",
         createdAt: new Date(row.created_at),
         parties: parseContractParties(row.parties),
+        template: templateOf(row),
         signing: row.contract_signature_requests ? newestRequest(row.contract_signature_requests) : undefined,
         signed: row.contract_signature_requests ? signedCopy(row.contract_signature_requests) : undefined,
         signingLinkEmail: row.contract_signature_requests ? await signingLinkEmail(row.id) : undefined,
