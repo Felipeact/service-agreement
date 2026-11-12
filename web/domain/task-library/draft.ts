@@ -2,8 +2,8 @@ import { MAX_TASK_DESCRIPTION, validateTypeName } from "./index";
 
 export const MAX_DRAFT_TYPES = 30;
 export const MAX_DRAFT_TASKS = 15;
-export const MAX_DRAFT_SYNONYMS = 10;
-export const MAX_SYNONYM_LENGTH = 60;
+export const MAX_DRAFT_SPELLINGS = 10;
+export const MAX_SPELLING_LENGTH = 60;
 
 /** One proposed type, as Claude drafts it and the owner reviews it (other-trade-draft door 1). Never persisted as a draft. */
 export type DraftType = {
@@ -34,8 +34,8 @@ function synonymsOf(value: unknown): string[] {
   const spellings = value
     .filter((s): s is string => typeof s === "string")
     .map((s) => s.trim().toLowerCase())
-    .filter((s) => s.length >= 1 && s.length <= MAX_SYNONYM_LENGTH && /[\p{L}\p{N}]/u.test(s));
-  return [...new Set(spellings)].slice(0, MAX_DRAFT_SYNONYMS);
+    .filter((s) => s.length >= 1 && s.length <= MAX_SPELLING_LENGTH && /[\p{L}\p{N}]/u.test(s));
+  return [...new Set(spellings)].slice(0, MAX_DRAFT_SPELLINGS);
 }
 
 function tasksOf(value: unknown): { description: string }[] {

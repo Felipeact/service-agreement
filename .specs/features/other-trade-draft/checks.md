@@ -47,7 +47,7 @@ Proof: `cd web && npx vitest run app/api/setup/draft/route.test.ts -t "C3407:"`
 Proof: `cd web && npx vitest run app/api/setup/draft/route.test.ts -t "C3408:"`
 
 **C3409** - A DOCX read by the real `importParser` (fixture `text-only.docx`) reaches the drafter as `{ kind: "text", text }` holding the document's text, and the route answers `200` (AC 8)
-Proof: `cd web && npx vitest run application/use-cases/draft-catalog.test.ts -t "C3409:"`
+Proof: `cd web && npx vitest run infrastructure/import-parsers/draft-catalog.test.ts -t "C3409:"`
 
 **C3410** - A request with a file and a description passes both to the drafter, and a file alone or a description alone passes only that one (AC 9)
 Proof: `cd web && npx vitest run application/use-cases/draft-catalog.test.ts -t "C3410:"`
