@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
+import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
@@ -16,10 +17,15 @@ const NOT_FOUND = { status: "not_found" } as const;
 
 /** The container, or `null` when the member may not write agreements. Signed out goes to /login. */
 async function writer() {
+  return (await writerWithRole())?.container ?? null;
+}
+
+/** The same, with the member's role, for an answer that depends on who is asking. */
+async function writerWithRole() {
   const container = await getContainer();
   const member = await container.currentMember();
   if (member.status !== "member") redirect("/login");
-  return canWriteRecords(member.role) ? container : null;
+  return canWriteRecords(member.role) ? { container, role: member.role } : null;
 }
 
 /**
@@ -34,11 +40,12 @@ function lineFields(formData: FormData): ServiceLineInput {
 
 /** Creates a draft with version 1 on the site, then opens it; a site with a live agreement names that one. */
 export async function createAgreementAction(siteId: string): Promise<CreateAgreementState> {
-  const container = await writer();
-  if (!container) return FORBIDDEN;
+  const ctx = await writerWithRole();
+  if (!ctx) return FORBIDDEN;
   if (!isUuid(siteId)) return NOT_FOUND;
-  const created = await container.agreementStore.create(siteId);
+  const created = await ctx.container.agreementStore.create(siteId);
   if (created.ok) redirect(`/agreements/${created.id}`);
+  if (created.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", created, audienceOf(ctx.role)) };
   if (created.code === "open_exists") return { status: "open_exists", agreementId: created.agreementId, number: created.number };
   return { status: created.code };
 }

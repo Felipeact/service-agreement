@@ -1,4 +1,5 @@
 import { NEW_CHOICE, type NewAgreementField, type NewAgreementInput } from "@/domain/agreement/new-agreement";
+import type { PlanLimitNotice } from "@/domain/billing/plan-limits";
 import { itemText, type ItemWords } from "@/domain/org-settings";
 
 export { NEW_CHOICE, type NewAgreementInput };
@@ -14,7 +15,8 @@ export type StartAgreementState =
   | { status: "idle" | Failure; customerId?: string; siteId?: string }
   | { status: "started"; agreementId: string; siteId: string }
   | { status: "invalid"; errors: Partial<Record<NewAgreementField, string>> }
-  | { status: "open_exists"; agreementId: string; number: string };
+  | { status: "open_exists"; agreementId: string; number: string }
+  | ({ status: "plan_limit" } & PlanLimitNotice);
 
 /** The dialog's own messages for a refusal; field errors are shown on their fields instead. */
 export const START_MESSAGES = {
@@ -22,6 +24,11 @@ export const START_MESSAGES = {
   not_found: "That customer or site no longer exists. Close this and try again.",
   unavailable: "We couldn't create the agreement. Try again.",
 } as const;
+
+/** The dialog's notice for a plan-limit refusal: the message, and a link to change plan for an owner or admin. */
+export function startNotice(state: Extract<StartAgreementState, { status: "plan_limit" }>): { text: string; href?: string; linkText?: string } {
+  return state.billingHref ? { text: state.message, href: state.billingHref, linkText: "Change plan" } : { text: state.message };
+}
 
 /** What the dialog says after the agreement exists but the equipment list could not be sent. */
 export const LIST_FAILED = "The agreement was created, but we couldn't read the equipment list. You can add it from the agreement's site.";

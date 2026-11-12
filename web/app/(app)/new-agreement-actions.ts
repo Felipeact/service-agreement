@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
+import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { validateNewAgreement, type NewAgreementInput } from "@/domain/agreement/new-agreement";
 import type { StartAgreementState } from "@/components/agreements/new-agreement-state";
 import { canWriteRecords } from "@/components/records/state";
@@ -45,6 +46,7 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
 
   const agreement = await container.agreementStore.create(siteId);
   if (agreement.ok) return { status: "started", agreementId: agreement.id, siteId };
+  if (agreement.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", agreement, audienceOf(member.role)) };
   if (agreement.code === "open_exists") return { status: "open_exists", agreementId: agreement.agreementId, number: agreement.number };
   return { status: agreement.code, customerId, siteId };
 }

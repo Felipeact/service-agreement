@@ -238,7 +238,7 @@ describe("composition root", () => {
   test("C537: extractImport is built on the request's import job store and catalog, from the one Supabase client", () => {
     const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
     expect(source).toMatch(/const importJobs = supabaseImportJobStore\(supabase, /);
-    expect(source).toMatch(/extractImport: makeExtractImport\(importJobs, importParser, .*supabaseAssetTypeCatalog\(supabase\)\)/);
+    expect(source).toMatch(/extractImport: makeExtractImport\(importJobs, importParser, .*supabaseAssetTypeCatalog\(supabase\)(, supabaseImportAllowance\(supabase\))?\)/);
     expect(source.match(/createServerClient</g)).toHaveLength(1);
   });
 

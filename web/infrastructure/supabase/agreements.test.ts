@@ -162,6 +162,14 @@ describe("agreement store", () => {
     }
   });
 
+  test("C5110: a plan-limit refusal carries the plan, the limit and the count; a site_inactive refusal is still unavailable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const limited = storeWith({ data: null, error: { code: "55000", message: "the starter plan allows 15 live agreements", hint: "plan_limit_agreements", details: "starter|15|15" } });
+    expect(await limited.store.create(SITE)).toEqual({ ok: false, code: "plan_limit", plan: "starter", limit: 15, used: 15 });
+    const inactive = storeWith({ data: null, error: { code: "55000", message: "site is inactive", hint: "site_inactive", details: null } });
+    expect(await inactive.store.create(SITE)).toEqual({ ok: false, code: "unavailable" });
+  });
+
   test.each<[string, () => ReturnType<typeof storeWith>]>([
     ["a thrown rpc", () => {
       const stub = storeWith(ok(null));

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import type { BillingLoad } from "@/application/use-cases";
 import { canChangeBilling, cardLine, dateLine, formatDay, invoiceRows, statusLabel, type BillingOverview } from "@/domain/billing/overview";
 import { PLANS } from "@/domain/billing";
+import { formatResetDate, isFull, type OrgUsage, type UsageFigure } from "@/domain/billing/plan-limits";
 import { CardUpdate } from "./card-update";
 import { PlanSwitcher } from "./plan-switcher";
 import { SubscriptionControls } from "./subscription-controls";
@@ -16,6 +17,8 @@ export type BillingPageState = Exclude<BillingLoad, { kind: "forbidden" }>;
 
 type Props = {
   state: BillingPageState;
+  /** Live agreements and AI imports against the plan; `null` is a failed read, absent shows no section (plan-limits S3). */
+  usage?: OrgUsage | null;
   /** The publishable key, or `null` when card updates are not set up. */
   publishableKey: string | null;
   /** The Server Actions; absent in tests that only render markup. */
@@ -58,7 +61,38 @@ function Invoices({ invoices }: { invoices: BillingOverview["invoices"] }) {
   );
 }
 
-function Ready({ plan, overview, publishableKey, actions }: { plan: string; overview: BillingOverview; publishableKey: string | null; actions?: BillingActions }) {
+function UsageRow({ label, figure }: { label: string; figure: UsageFigure }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0">
+      <dt className="text-[13px] text-ink-2">{label}</dt>
+      <dd className="flex items-center gap-2 text-[13px] font-medium text-ink">
+        {figure.limit === null ? `${figure.used}` : `${figure.used} of ${figure.limit}`}
+        {isFull(figure) && <span className="rounded-control bg-board px-2 py-0.5 text-[12px] font-semibold text-danger">Full</span>}
+      </dd>
+    </div>
+  );
+}
+
+/** Live agreements and this month's AI imports against the plan (plan-limits S3); `null` is a failed read. */
+function Usage({ usage }: { usage: OrgUsage | null }) {
+  return (
+    <Section title="Usage">
+      {usage === null ? (
+        <p className="text-[13px] text-ink-2">Usage unavailable</p>
+      ) : (
+        <>
+          <dl className="flex flex-col divide-y divide-hairline">
+            <UsageRow label="Live agreements" figure={usage.liveAgreements} />
+            <UsageRow label="AI imports this month" figure={usage.aiImports} />
+          </dl>
+          <p className="text-[12px] text-ink-2">{`The AI import count resets on ${formatResetDate(usage.resetsOn)}.`}</p>
+        </>
+      )}
+    </Section>
+  );
+}
+
+function Ready({ plan, overview, usage, publishableKey, actions }: { plan: string; overview: BillingOverview; usage?: OrgUsage | null; publishableKey: string | null; actions?: BillingActions }) {
   const line = dateLine(overview);
   const mayChange = canChangeBilling(overview.status);
   const ending = overview.endsAt !== null;
@@ -84,6 +118,7 @@ function Ready({ plan, overview, publishableKey, actions }: { plan: string; over
           />
         )}
       </Section>
+      {usage !== undefined && <Usage usage={usage} />}
       <Section title="Payment method">
         <p className="text-[13px] text-ink">{cardLine(overview.card)}</p>
         {mayChange && <CardUpdate publishableKey={publishableKey} actions={actions} />}
@@ -96,14 +131,14 @@ function Ready({ plan, overview, publishableKey, actions }: { plan: string; over
 }
 
 /** The in-app billing page body (billing-page S1 to S3): plan, card and invoices for an owner or admin. */
-export function BillingView({ state, publishableKey, actions }: Props) {
+export function BillingView({ state, usage, publishableKey, actions }: Props) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <PageHeader title="Billing" subtitle="Your plan, your card and your invoices." />
       <Link href="/settings" className="inline-flex h-11 w-fit items-center text-[13px] font-semibold text-action hover:underline lg:h-auto">
         ← Settings
       </Link>
-      {state.kind === "ready" && <Ready plan={state.plan} overview={state.overview} publishableKey={publishableKey} actions={actions} />}
+      {state.kind === "ready" && <Ready plan={state.plan} overview={state.overview} usage={usage} publishableKey={publishableKey} actions={actions} />}
       {state.kind === "no_subscription" && <p className="rounded-control bg-board px-4 py-3 text-[13px] text-ink-2">This workspace has no subscription</p>}
       {state.kind === "not_configured" && <p className="rounded-control bg-board px-4 py-3 text-[13px] text-ink-2">Billing isn&apos;t available yet</p>}
       {state.kind === "error" && (

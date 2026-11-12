@@ -634,6 +634,7 @@ export type Database = {
           created_by: string | null
           created_by_email: string | null
           extract_cursor: number | null
+          extract_started_at: string | null
           extract_total: number | null
           extracted_at: string | null
           id: string
@@ -657,6 +658,7 @@ export type Database = {
           created_by?: string | null
           created_by_email?: string | null
           extract_cursor?: number | null
+          extract_started_at?: string | null
           extract_total?: number | null
           extracted_at?: string | null
           id?: string
@@ -680,6 +682,7 @@ export type Database = {
           created_by?: string | null
           created_by_email?: string | null
           extract_cursor?: number | null
+          extract_started_at?: string | null
           extract_total?: number | null
           extracted_at?: string | null
           id?: string
@@ -1577,6 +1580,8 @@ export type Database = {
         Args: { p_active: boolean; p_customer_id: string }
         Returns: string[]
       }
+      import_allowance: { Args: { p_job_id: string }; Returns: Json }
+      org_usage: { Args: Record<PropertyKey, never>; Returns: Json }
       set_member_role: { Args: { p_role: string; p_user_id: string }; Returns: undefined }
       set_org_plan: { Args: { p_plan: string; p_seats: number }; Returns: undefined }
       set_site_active: {

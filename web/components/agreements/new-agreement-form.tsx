@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import type { SiteOption } from "@/application/ports";
 import { messageFor, type CreateAgreementState } from "@/components/agreements/state";
+import { PlanLimitAlert } from "@/components/billing/plan-limit-alert";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { LinkButton } from "@/components/ui/link-button";
@@ -27,7 +28,7 @@ export function NewAgreementFormView({ sites, state, pending, action }: FormProp
   const free = sites.filter((site) => !site.liveAgreement);
   const busy = sites.filter((site) => site.liveAgreement);
   const customers = [...new Set(free.map((site) => site.customer))];
-  const message = state.status === "open_exists" ? null : messageFor(state.status);
+  const message = state.status === "open_exists" || state.status === "plan_limit" ? null : messageFor(state.status);
 
   return (
     <div className="flex flex-col gap-4">
@@ -68,6 +69,7 @@ export function NewAgreementFormView({ sites, state, pending, action }: FormProp
           </Link>
         </p>
       )}
+      {state.status === "plan_limit" && <PlanLimitAlert message={state.message} billingHref={state.billingHref} />}
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {message}

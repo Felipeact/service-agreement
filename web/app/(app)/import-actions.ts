@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
+import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { flagRows, isBlocking, isUuid, normalized, validateImportFile } from "@/domain/imports";
 import { validateAsset } from "@/domain/records";
 import { canWriteRecords } from "@/components/records/state";
@@ -10,12 +11,12 @@ import type { CommitState, ConfirmState, DiscardState, ExtractState, MapState, R
 
 const FORBIDDEN = { status: "forbidden" } as const;
 
-/** The container and the member's org, or `null` when the member may not import. Signed out goes to /login. */
+/** The container, the member's org and role, or `null` when the member may not import. Signed out goes to /login. */
 async function writer() {
   const container = await getContainer();
   const member = await container.currentMember();
   if (member.status !== "member") redirect("/login");
-  return canWriteRecords(member.role) ? { container, orgId: member.orgId } : null;
+  return canWriteRecords(member.role) ? { container, orgId: member.orgId, role: member.role } : null;
 }
 
 /**
@@ -68,7 +69,10 @@ export async function extractImportAction(jobId: string): Promise<ExtractState> 
   if (!ctx) return FORBIDDEN;
   if (!isUuid(jobId)) return { status: "not_found" };
   const extracted = await ctx.container.extractImport(jobId);
-  if (!extracted.ok) return { status: extracted.code };
+  if (!extracted.ok) {
+    if (extracted.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("imports", extracted, audienceOf(ctx.role)) };
+    return { status: extracted.code };
+  }
   refresh();
   if (extracted.state === "extracting") return { status: "extracting", done: extracted.done, total: extracted.total };
   return { status: "extracted", rows: extracted.rows, unmatched: extracted.unmatched };

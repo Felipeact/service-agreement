@@ -1,9 +1,13 @@
+import type { PlanLimitNotice } from "@/domain/billing/plan-limits";
 import type { AgreementTermInput, ServiceLineErrors, ServiceLineInput } from "@/domain/agreement";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
 /** What `createAgreementAction` answers when it does not redirect. */
-export type CreateAgreementState = { status: "idle" | Failure } | { status: "open_exists"; agreementId: string; number: string };
+export type CreateAgreementState =
+  | { status: "idle" | Failure }
+  | { status: "open_exists"; agreementId: string; number: string }
+  | ({ status: "plan_limit" } & PlanLimitNotice);
 
 /** What the three line actions answer; `invalid` keeps what was typed. */
 export type LineState =

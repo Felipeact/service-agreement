@@ -401,6 +401,11 @@ export function supabaseAgreementStore(client: Client): AgreementStore {
         if (!error) return { ok: true, id: data };
         if (error.code === "P0002") return { ok: false, code: "not_found" };
         if (error.code === "42501") return { ok: false, code: "forbidden" };
+        if (error.code === "55000" && error.hint === "plan_limit_agreements") {
+          // The detail is `<plan>|<limit>|<used>` (plan-limits door 1); a detail that does not read that way is not a limit we can name.
+          const [plan, limit, used] = (error.details ?? "").split("|");
+          if (plan && /^\d+$/.test(limit ?? "") && /^\d+$/.test(used ?? "")) return { ok: false, code: "plan_limit", plan, limit: Number(limit), used: Number(used) };
+        }
         if (error.code !== "23505") return unavailable("Creating an agreement", `${error.code} ${error.message}`);
 
         // The site already has a live agreement (door 2): name it, so the writer can open it.

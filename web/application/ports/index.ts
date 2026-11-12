@@ -454,6 +454,22 @@ export interface ImportJobStore {
 
 export type DiscardImportResult = { ok: true } | { ok: false; code: WriteFailure | "locked" };
 
+/** What an org has started this month against its plan's AI-import allowance (plan-limits door 2). */
+export type ImportAllowanceResult =
+  | { ok: true; allowed: true }
+  | { ok: true; allowed: false; plan: string; limit: number; used: number; resetsOn: string }
+  | { ok: false; code: WriteFailure };
+
+export interface ImportAllowance {
+  /** Whether the org of this job may start another AI import this month. An org with no plan is always allowed. */
+  check(jobId: string): Promise<ImportAllowanceResult>;
+}
+
+/** The plan and usage of the member's own org for the billing page; `null` when it cannot be read. */
+export interface OrgUsageReader {
+  read(): Promise<import("@/domain/billing/plan-limits").OrgUsage | null>;
+}
+
 export type CommitImportResult = ({ ok: true } & CommitView) | { ok: false; code: WriteFailure | "not_ready" | "incomplete" };
 
 /** One extracted row as the review grid shows it (import-review door 6). */
@@ -698,7 +714,8 @@ export interface AgreementReader {
 export type CreateAgreementResult =
   | { ok: true; id: string }
   | { ok: false; code: WriteFailure }
-  | { ok: false; code: "open_exists"; agreementId: string; number: string };
+  | { ok: false; code: "open_exists"; agreementId: string; number: string }
+  | { ok: false; code: "plan_limit"; plan: string; limit: number; used: number };
 
 export interface AgreementStore {
   /** Numbers the agreement and creates version 1 in one transaction (`create_agreement`, door 3). */

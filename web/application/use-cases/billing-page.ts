@@ -1,7 +1,8 @@
-import type { BillingGateway, GatewayFailure, OrgBilling, OrgBillingValue, OrgPlanRecorder, StripeIds } from "@/application/ports";
+import type { BillingGateway, GatewayFailure, OrgBilling, OrgBillingValue, OrgPlanRecorder, OrgUsageReader, StripeIds } from "@/application/ports";
 import { PLANS, PLAN_KEYS, type PlanKey } from "@/domain/billing";
 import { canManageBilling, type BillingOverview } from "@/domain/billing/overview";
 import { planChangeSummary } from "@/domain/billing/plan-change";
+import type { OrgUsage } from "@/domain/billing/plan-limits";
 
 type Member = { orgId: string; role: string };
 
@@ -27,7 +28,7 @@ const nameOf = (cause: unknown) => (cause instanceof Error ? cause.name : "a non
  * Stripe ids come from `org_billing` under the member's own session and never from the caller, and a failed read stops the
  * action before Stripe is called.
  */
-export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans: OrgPlanRecorder) {
+export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans: OrgPlanRecorder, usageReader?: OrgUsageReader) {
   /** The member's stored ids, or why there are none. Never throws. */
   async function idsOf(member: Member): Promise<{ ok: true; value: OrgBillingValue } | { ok: false; code: "forbidden" | "no_subscription" | "unavailable" }> {
     if (!canManageBilling(member.role)) return { ok: false, code: "forbidden" };
@@ -56,6 +57,20 @@ export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans:
       if (!answer.ok) return answer.code === "not_configured" ? { kind: "not_configured" } : { kind: "error" };
       const plan = PLANS.find((candidate) => candidate.key === found.value.plan)?.name ?? found.value.plan;
       return { kind: "ready", plan, overview: answer.overview };
+    },
+
+    /**
+     * The plan's usage for the billing page (plan-limits S3), read apart from `load` so Stripe's page keeps its own reads. `null`
+     * when the member may not see billing, there is no reader, or the read failed: the page then says "Usage unavailable".
+     */
+    async usage(member: Member): Promise<OrgUsage | null> {
+      if (!usageReader || !canManageBilling(member.role)) return null;
+      try {
+        return await usageReader.read();
+      } catch (cause) {
+        console.error(`Reading usage failed: ${nameOf(cause)}`);
+        return null;
+      }
     },
 
     startCardUpdate: (member: Member) => act(member, (ids) => gateway.startCardUpdate(ids)),

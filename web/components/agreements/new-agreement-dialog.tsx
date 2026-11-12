@@ -14,7 +14,7 @@ import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
 import { runExtraction, uploadFile, uploadMessage, type ConfirmState, type ExtractState, type ReadState, type StartState } from "@/components/imports/state";
-import { FILE_HINT, firstCustomerChoice, LIST_FAILED, NEW_CHOICE, START_MESSAGES, type Phase, type StartAgreementState } from "./new-agreement-state";
+import { FILE_HINT, firstCustomerChoice, LIST_FAILED, NEW_CHOICE, START_MESSAGES, startNotice, type Phase, type StartAgreementState } from "./new-agreement-state";
 
 type Customer = { id: string; name: string };
 
@@ -148,6 +148,10 @@ export function NewAgreementDialog({ customers, sites, actions, open: controlled
       }
       if (started.status === "open_exists") {
         setNotice({ text: `${started.number} is already in progress for this site.`, href: `/agreements/${started.agreementId}`, linkText: `Open ${started.number}` });
+        return setPhase("idle");
+      }
+      if (started.status === "plan_limit") {
+        setNotice(startNotice(started));
         return setPhase("idle");
       }
       if (started.status !== "started") {

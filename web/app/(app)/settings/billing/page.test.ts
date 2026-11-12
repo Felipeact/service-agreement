@@ -5,9 +5,10 @@ import type { CurrentMember } from "@/application/ports";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const loadBilling = vi.fn();
+const loadBillingUsage = vi.fn(async () => null);
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, loadBilling, stripePublishableKey: "pk_test_x" }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, loadBilling, loadBillingUsage, stripePublishableKey: "pk_test_x" }) }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     redirect(to);

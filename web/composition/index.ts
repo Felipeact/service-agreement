@@ -32,7 +32,9 @@ import {
 import { systemClock } from "@/infrastructure/clock";
 import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
 import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
+import { supabaseImportAllowance } from "@/infrastructure/supabase/import-allowance";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
+import { supabaseOrgUsage } from "@/infrastructure/supabase/org-usage";
 import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
@@ -159,7 +161,7 @@ export async function getContainer() {
           resume: async () => notConfigured,
           changePlan: async () => notConfigured,
         };
-  const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase));
+  const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase), supabaseOrgUsage(supabase));
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -198,6 +200,7 @@ export async function getContainer() {
     getItemWords: itemWordsReader(settings.get),
     billingLink: makeBillingEntry(orgBilling),
     loadBilling: billing.load,
+    loadBillingUsage: billing.usage,
     startCardUpdate: billing.startCardUpdate,
     finishCardUpdate: billing.finishCardUpdate,
     cancelSubscription: billing.cancel,
@@ -247,7 +250,7 @@ export async function getContainer() {
     discardImport: importJobs.discard,
     // The same member-scoped store: the file is downloaded under RLS, never with a service-role key.
     readImport: makeReadImport(importJobs, importParser),
-    extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase)),
+    extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase), supabaseImportAllowance(supabase)),
     reviewImport: supabaseImportReviewReader(supabase).forJob,
     updateImportRow: importRows.update,
     skipImportRow: importRows.setSkipped,
