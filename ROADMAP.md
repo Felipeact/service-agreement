@@ -319,8 +319,8 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [ ] Supabase Auth SMTP sender on the verified Resend domain (blocks launch)
 
 ### Phase 5.5: Document templates (M19)
-- [ ] Template and template-version tables; agreements and contracts record the template version used
-- [ ] Block model, merge-variable whitelist and validation; blocks replace `clauses: string[]` in the document models
+- [ ] Template and template-version tables; agreements and contracts record the template version used. **Contract half done 2026-11-12** (`.specs/features/contract-templates/`, AD-186, migration `20261112230000_contract_templates.sql` applied by the owner; `contracts.template_version_id`, immutable versions, system contract template v1); the agreement half (record the version at send) remains, so this stays open
+- [x] Block model, merge-variable whitelist and validation; blocks replace `clauses: string[]` in the document models (`.specs/features/contract-templates/`, built 2026-11-12, AD-186: `domain/contract/template.ts`, `ContractDocument.body` replaces `clauses`, the contract PDF draws it; Verifier round 2 PASS, 26 of 26 checks, 27 faults injected and killed over both rounds; the agreement document has no clauses today, so nothing else to replace; the system wording is unchanged word for word)
 - [ ] Block editor with live PDF preview, plus clone
 - [ ] Starter agreement and contract templates in each pack, province-aware, legally reviewed
 - [ ] Upload an existing contract and let Claude split it into blocks and variables
