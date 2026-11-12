@@ -211,4 +211,11 @@ describe("the contact fields (register-seats)", () => {
     expect(inputs(html, "checkbox").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["hvac", "other"]);
     expect(attrsOf(html, "company")).not.toContain("aria-invalid");
   });
+
+  test("C4309: the rendered email_in_use message names no role, org, invitation or count", () => {
+    const html = renderFields({ status: "email_in_use", trades: ["hvac"], values: { ...TYPED, plan: "team", seats: "8" }, fields: { email: true } });
+    const message = textOf(html.match(/<p id="register-email-message"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? "");
+    expect(message).toBe("This email already has a workspace. Sign in");
+    expect(message).not.toMatch(/owner|admin|member|invit|org|\d/i);
+  });
 });

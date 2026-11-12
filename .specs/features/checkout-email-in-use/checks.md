@@ -46,6 +46,7 @@ Proof: `npx vitest run app/register/register.test.ts -t "C4308:"`
 
 **C4309** - The `email_in_use` state `startTrialAction` returns is exactly `{ status, trades, values, fields: { email: true } }` with no role, org or count, and the rendered message names none (AC 8)
 Proof: `npx vitest run app/register/register-action.test.ts -t "C4309:"`
+Proof: `npx vitest run app/register/register.test.ts -t "C4309:"`
 
 **C4314** - `getBillingContainer`: with no environment the check is skipped and no Supabase client is created (C2422 stays true); with `STRIPE_SECRET_KEY`, `APP_BASE_URL` and the Supabase variables set, a selection makes one `anon` client from the publishable key and asks `email_has_workspace` once before any Stripe request; a taken email makes 0 Stripe requests
 Proof: `npx vitest run composition/billing-container.stripe.test.ts -t "C4314:"`
