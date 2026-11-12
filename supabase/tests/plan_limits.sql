@@ -1,6 +1,6 @@
 -- plan-limits, database side: C5100-C5109, C5120-C5124, C5140-C5142 (.specs/features/plan-limits/checks.md).
--- Run after fixture.sql and the migration in the same execute_sql call (npm run test:db plan_limits): the recipe puts
--- 20261112220000_plan_limits.sql between them, inside the rolled-back transaction, so the hosted project needs no change.
+-- Run after fixture.sql (npm run test:db plan_limits). The migration 20261112220000_plan_limits.sql was applied to the hosted
+-- project by the owner on 2026-11-12, so this file no longer replays it and tests the hosted functions.
 -- Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB; uX has no membership. agrA is a draft on siteA.
 -- Expected values come from the plan, never read back from the migration.
 

@@ -62,7 +62,7 @@ export const RECIPES: Recipe[] = [
   { name: "other_trade_draft", parts: ["fixture.sql", "../migrations/20261112100000_add_catalog_draft.sql", "other_trade_draft.sql"] },
   plain("workspace_pending_state"),
   plain("checkout_email_in_use"),
-  { name: "plan_limits", parts: ["fixture.sql", "../migrations/20261112220000_plan_limits.sql", "plan_limits.sql"] },
+  plain("plan_limits"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
