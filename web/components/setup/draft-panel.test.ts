@@ -50,6 +50,8 @@ describe("the draft form in a browser", () => {
     await submit();
     expect(draftAction).toHaveBeenCalledTimes(1);
     await act(async () => release({ status: "failed", code: "unavailable", trade: "pest control", notes: "" }));
+    // The queued second dispatch would run now if the guard let it through.
+    expect(draftAction).toHaveBeenCalledTimes(1);
   });
 
   test("C4127: after a failed draft the form is not reset: the same trade field and file input stay, with their values", async () => {
@@ -60,7 +62,14 @@ describe("the draft form in a browser", () => {
     typeTrade("pest control");
     const file = new File(["x"], "proposal.pdf");
     Object.defineProperty(fileBefore, "files", { value: [file], configurable: true });
-    await submit();
+    const reset = vi.spyOn(HTMLFormElement.prototype, "reset");
+    const submitted = new Event("submit", { bubbles: true, cancelable: true });
+    await act(async () => {
+      form().dispatchEvent(submitted);
+    });
+    expect(submitted.defaultPrevented).toBe(true);
+    expect(reset).not.toHaveBeenCalled();
+    expect(form().getAttribute("action")).toBeNull();
     expect(container.textContent).toContain("We couldn't draft your catalog. Try again.");
     expect(field("draft-file")).toBe(fileBefore);
     expect((field("draft-file") as HTMLInputElement).files?.[0]).toBe(file);

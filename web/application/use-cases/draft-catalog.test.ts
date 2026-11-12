@@ -86,7 +86,7 @@ describe("draftCatalog", () => {
     expect(await run(ask({ file: { name: "a.pdf", bytes: new Uint8Array([1]) } }))).toEqual({ ok: false, code: "too_large" });
   });
 
-  test("C4113: the file is not stored: the use case has no storage dependency, makes one drafter call and returns no file bytes", async () => {
+  test("C4113: the file is not stored: the use case takes three dependencies (no storage), parses once and returns no file bytes", async () => {
     const bytes = new Uint8Array([9, 9, 9]);
     const { run, parse } = setup({ parsed: { ok: true, parsed: { format: "pdf", bytes } } });
     const result = await run(ask({ file: { name: "a.pdf", bytes } }));

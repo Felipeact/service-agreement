@@ -141,6 +141,22 @@ begin
   perform tests.ok('C4116 trade once', (select trade_context from public.org_settings where org_id = tests.id('orgF')) = 'pest control', 'the trade was appended twice');
 end $$;
 
+-- C4116: a draft at every upper limit is accepted (40 types, 60-character names, 12 tasks of 200 characters, 12 months).
+do $$
+begin
+  delete from public.asset_types where org_id = tests.id('orgF');
+  perform tests.act_as('uOf');
+  perform public.add_catalog_draft(tests.id('orgF'), repeat('a', 60), (
+    select jsonb_agg(jsonb_build_object(
+      'name', case when n = 1 then repeat('N', 60) else 'Type ' || n end,
+      'months', jsonb_build_array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+      'tasks', (select jsonb_agg(repeat('t', 200)) from generate_series(1, 12))))
+    from generate_series(1, 40) n));
+  reset role;
+  perform tests.ok('C4116 upper limits', (select count(*) from public.asset_types where org_id = tests.id('orgF')) = 40, 'not 40 types');
+  perform tests.ok('C4116 upper tasks', (select count(*) from public.asset_type_tasks where org_id = tests.id('orgF')) = 480, 'not 480 tasks');
+end $$;
+
 -- C4123: door 2's shape.
 do $$
 declare
