@@ -38,12 +38,16 @@ function lineFields(formData: FormData): ServiceLineInput {
   return { description: text("description"), visitMonths: all("visitMonths"), costPerVisit: text("costPerVisit"), assetTypeIds: all("assetTypeIds") };
 }
 
-/** Creates a draft with version 1 on the site, then opens it; a site with a live agreement names that one. */
-export async function createAgreementAction(siteId: string): Promise<CreateAgreementState> {
+/**
+ * Creates a draft with version 1 on the site, then opens it; a site with a live agreement names that one. With a template
+ * version (Use template, agreement-templates AC 24) the draft is pinned to it and starts with its preset lines.
+ */
+export async function createAgreementAction(siteId: string, templateVersionId?: string): Promise<CreateAgreementState> {
   const ctx = await writerWithRole();
   if (!ctx) return FORBIDDEN;
   if (!isUuid(siteId)) return NOT_FOUND;
-  const created = await ctx.container.agreementStore.create(siteId);
+  if (templateVersionId !== undefined && !isUuid(templateVersionId)) return { status: "invalid_template" };
+  const created = await ctx.container.agreementStore.create(siteId, ...(templateVersionId === undefined ? [] : [templateVersionId]));
   if (created.ok) redirect(`/agreements/${created.id}`);
   if (created.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", created, audienceOf(ctx.role)) };
   if (created.code === "open_exists") return { status: "open_exists", agreementId: created.agreementId, number: created.number };

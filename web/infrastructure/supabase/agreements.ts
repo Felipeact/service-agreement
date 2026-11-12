@@ -419,12 +419,17 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
 
 export function supabaseAgreementStore(client: Client): AgreementStore {
   return {
-    async create(siteId) {
+    async create(siteId, templateVersionId) {
       try {
-        const { data, error } = await client.rpc("create_agreement", { p_site_id: siteId });
+        // The second argument is sent only when a template is used, so a plain New agreement calls the function as it always did.
+        const { data, error } = await client.rpc("create_agreement", {
+          p_site_id: siteId,
+          ...(templateVersionId ? { p_template_version_id: templateVersionId } : {}),
+        });
         if (!error) return { ok: true, id: data };
         if (error.code === "P0002") return { ok: false, code: "not_found" };
         if (error.code === "42501") return { ok: false, code: "forbidden" };
+        if (error.code === "22023") return { ok: false, code: "invalid_template" };
         if (error.code === "55000" && error.hint === "plan_limit_agreements") {
           // The detail is `<plan>|<limit>|<used>` (plan-limits door 1); a detail that does not read that way is not a limit we can name.
           const [plan, limit, used] = (error.details ?? "").split("|");

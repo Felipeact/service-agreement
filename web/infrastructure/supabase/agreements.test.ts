@@ -173,6 +173,29 @@ describe("agreement store", () => {
     expect(await inactive.store.create(SITE)).toEqual({ ok: false, code: "unavailable" });
   });
 
+  test("C5356: create sends p_template_version_id when a version is given, and only then", async () => {
+    const VERSION = "77777777-7777-4777-8777-777777777777";
+    const withVersion = storeWith(ok(AGR));
+    expect(await withVersion.store.create(SITE, VERSION)).toEqual({ ok: true, id: AGR });
+    expect(withVersion.client.rpc).toHaveBeenCalledWith("create_agreement", { p_site_id: SITE, p_template_version_id: VERSION });
+    const without = storeWith(ok(AGR));
+    await without.store.create(SITE);
+    expect(without.client.rpc).toHaveBeenCalledWith("create_agreement", { p_site_id: SITE });
+    expect(Object.keys(without.client.rpc.mock.calls[0][1] as object)).toEqual(["p_site_id"]);
+  });
+
+  test("C5356: 22023 is invalid_template, creating nothing and logging nothing", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { store } = storeWith(fail("22023"));
+    expect(await store.create(SITE, "77777777-7777-4777-8777-777777777777")).toEqual({ ok: false, code: "invalid_template" });
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("C5356: the plan-limit refusal is mapped as before when a version is given", async () => {
+    const limited = storeWith({ data: null, error: { code: "55000", message: "x", hint: "plan_limit_agreements", details: "starter|15|15" } });
+    expect(await limited.store.create(SITE, "77777777-7777-4777-8777-777777777777")).toEqual({ ok: false, code: "plan_limit", plan: "starter", limit: 15, used: 15 });
+  });
+
   test.each<[string, () => ReturnType<typeof storeWith>]>([
     ["a thrown rpc", () => {
       const stub = storeWith(ok(null));

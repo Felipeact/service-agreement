@@ -67,3 +67,44 @@ describe("the actions that meet a plan limit", () => {
     expect(state).toHaveProperty("message", expect.stringContaining("you have 17"));
   });
 });
+
+describe("Use template: createAgreementAction with a template version", () => {
+  const VERSION = "77777777-7777-4777-8777-777777777777";
+
+  test("C5357: the version reaches the store with the site, and an opened agreement redirects", async () => {
+    as("estimator");
+    create.mockResolvedValue({ ok: true, id: "ag-1" });
+    const { createAgreementAction } = await import("./agreement-actions");
+    await expect(createAgreementAction(SITE, VERSION)).rejects.toThrow("NEXT_REDIRECT /agreements/ag-1");
+    expect(create).toHaveBeenCalledWith(SITE, VERSION);
+  });
+
+  test.each([
+    ["owner", "/settings/billing"],
+    ["estimator", null],
+  ])("C5357: a plan-limit refusal for a %s shows the New agreement flow's message and creates nothing else", async (role, link) => {
+    as(role);
+    create.mockResolvedValue(AGREEMENTS_REFUSED);
+    const { createAgreementAction } = await import("./agreement-actions");
+    const state = await createAgreementAction(SITE, VERSION);
+    expect(state).toMatchObject({ status: "plan_limit", billingHref: link });
+    expect(state).toHaveProperty("message", expect.stringContaining("allows 15 live agreements and you have 17"));
+  });
+
+  test("C5357: a version the database refuses is invalid_template, and a malformed one never reaches the store", async () => {
+    as("estimator");
+    create.mockResolvedValue({ ok: false, code: "invalid_template" });
+    const { createAgreementAction } = await import("./agreement-actions");
+    expect(await createAgreementAction(SITE, VERSION)).toEqual({ status: "invalid_template" });
+    create.mockClear();
+    expect(await createAgreementAction(SITE, "not-a-uuid")).toEqual({ status: "invalid_template" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  test("C5357: a viewer is forbidden and nothing is created", async () => {
+    as("viewer");
+    const { createAgreementAction } = await import("./agreement-actions");
+    expect(await createAgreementAction(SITE, VERSION)).toEqual({ status: "forbidden" });
+    expect(create).not.toHaveBeenCalled();
+  });
+});

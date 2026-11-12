@@ -12,7 +12,7 @@ When this ships, a tenant keeps several agreement templates on a Templates scree
 
 Reuses the contract-templates machinery (`document_templates`, immutable `document_template_versions`, `validateBlocks` and `renderBlocks` with the merge-variable whitelist, the `ContractReader` pattern of returning the joined body) instead of a second template store; the agreement document builder `buildAgreementDocument` stays the one seam for the PDF, the portal and the staff preview.
 
-1. Owner or admin opens `/templates` -> `makeTemplates.list` (new, no door - placement) reads `document_templates` and the latest version of each through RLS (exists) -> cards and the preview panel.
+1. Owner or admin opens `/templates` -> `makeListAgreementTemplates` over `supabaseAgreementTemplateReader` (new, no door - placement; the reader returns every template RLS shows, the use case keeps the org's own and falls back to the system one) reads `document_templates` and the latest version of each through RLS (exists) -> cards and the preview panel.
 2. New template, Edit, Duplicate -> `saveAgreementTemplateAction` (new) validates the body with `validateAgreementTemplate` (new, extends the exists `validateBlocks`) -> `public.save_agreement_template` (new, door 2) inserts the template row when new and always a new immutable version.
 3. Estimator chooses Use template on a site -> `startAgreementAction` / `createAgreementAction` (exist) -> `public.create_agreement(p_site_id, p_template_version_id)` (exists, extended, door 3) creates the draft pinned to that version -> the preset lines are copied into version 1 by `private.apply_template_preset` (new, no door).
 4. Staff send -> `public.send_agreement` (exists, extended) freezes the pin: a draft with no pin gets the system agreement template's latest version; the id never changes afterwards (door 3).
@@ -48,6 +48,8 @@ One-way constraints: an agreement version's pin is set once and never changed af
 | `GET /templates` | session | the template list and preview | 200, 302 to `/login` |
 | `GET /templates/new` | session (owner, admin) | the editor, empty | 200, 302 to `/login`, 302 to `/templates` |
 | `GET /templates/[templateId]` | session (owner, admin) | the editor with the latest version | 200, 302 to `/login`, 302 to `/templates`, 404 |
+| `GET /templates?selected=<templateId>` | session | the same list with that card selected (the first when absent or unknown) | 200, 302 to `/login` |
+| `GET /agreements/new?template=<versionId>` | session (owner, admin, estimator) | the New agreement form with "From template: <name>" above the site choice | 200, 302 to `/login` |
 | `rpc save_agreement_template(p_template_id, p_body)` | template id or null, body | the template id and version number | 200, 403 `42501`, 404 `P0002`, 422 `22023` |
 | `rpc archive_agreement_template(p_template_id)` | template id | nothing | 200, 403 `42501`, 404 `P0002` |
 | `rpc create_agreement(p_site_id, p_template_version_id)` | site, optional version | agreement id | 200, 404 `P0002`, 403 `42501`, 409 `23505`, 409 `55000` (`site_inactive`, `plan_limit_agreements`), 422 `22023` for a version that is not an agreement template of the org or the system |

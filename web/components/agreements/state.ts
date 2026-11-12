@@ -5,7 +5,7 @@ type Failure = "forbidden" | "not_found" | "unavailable";
 
 /** What `createAgreementAction` answers when it does not redirect. */
 export type CreateAgreementState =
-  | { status: "idle" | Failure }
+  | { status: "idle" | "invalid_template" | Failure }
   | { status: "open_exists"; agreementId: string; number: string }
   | ({ status: "plan_limit" } & PlanLimitNotice);
 
@@ -51,6 +51,7 @@ export const AGREEMENT_MESSAGES = {
   forbidden: "You don't have permission to change agreements.",
   not_found: "This agreement no longer exists.",
   unavailable: "We couldn't save this. Try again.",
+  invalid_template: "That template is no longer available. Choose another one from Templates.",
 } as const;
 
 /** The alert for a state, or `null` when it needs none. */

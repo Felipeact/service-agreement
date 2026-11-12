@@ -276,3 +276,16 @@ export function renderAgreementTemplate(body: AgreementTemplateBody, values: Tem
     sections: { schedule: body.sections.schedule, scope: body.sections.scope },
   };
 }
+
+/**
+ * The name of a duplicate: `<name> (copy)`, then `<name> (copy 2)` and so on until no name in `taken` (compared ignoring case and
+ * outer spaces) is the same. A long name is cut so the copy still fits the name limit.
+ */
+export function copyName(name: string, taken: readonly string[]): string {
+  const used = new Set(taken.map((other) => other.trim().toLowerCase()));
+  for (let n = 1; ; n += 1) {
+    const suffix = n === 1 ? " (copy)" : ` (copy ${n})`;
+    const candidate = `${name.trim().slice(0, MAX_NAME - suffix.length).trimEnd()}${suffix}`;
+    if (!used.has(candidate.toLowerCase())) return candidate;
+  }
+}

@@ -583,6 +583,65 @@ export type Database = {
           },
         ]
       }
+      document_template_versions: {
+        Row: {
+          body: Json
+          created_at: string
+          id: string
+          org_id: string | null
+          template_id: string
+          version_no: number
+        }
+        Insert: {
+          body: Json
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          template_id: string
+          version_no: number
+        }
+        Update: {
+          body?: Json
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          template_id?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          org_id: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          org_id?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          org_id?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           actor_id: string | null
@@ -1439,7 +1498,7 @@ export type Database = {
         Args: { p_contract_id: string }
         Returns: string
       }
-      create_agreement: { Args: { p_site_id: string }; Returns: string }
+      create_agreement: { Args: { p_site_id: string; p_template_version_id?: string }; Returns: string }
       create_contract: { Args: { p_agreement_id: string }; Returns: string }
       create_task_library_type: { Args: { p_name: string; p_org_id: string }; Returns: string }
       rename_task_library_type: { Args: { p_name: string; p_type_code: string }; Returns: undefined }
@@ -1509,8 +1568,13 @@ export type Database = {
             }
             Returns: string
           }
+      archive_agreement_template: { Args: { p_template_id: string }; Returns: undefined }
       remove_member: { Args: { p_user_id: string }; Returns: undefined }
       revoke_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
+      save_agreement_template: {
+        Args: { p_body: Json; p_template_id: string | null }
+        Returns: { template_id: string; version_no: number }[]
+      }
       save_agreement_term: {
         Args: {
           p_agreement_id: string

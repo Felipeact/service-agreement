@@ -721,11 +721,43 @@ export type CreateAgreementResult =
   | { ok: true; id: string }
   | { ok: false; code: WriteFailure }
   | { ok: false; code: "open_exists"; agreementId: string; number: string }
-  | { ok: false; code: "plan_limit"; plan: string; limit: number; used: number };
+  | { ok: false; code: "plan_limit"; plan: string; limit: number; used: number }
+  /** `create_agreement` raised `22023`: the version is not an agreement template of the org or the system (agreement-templates AC 5). */
+  | { ok: false; code: "invalid_template" };
 
 export interface AgreementStore {
-  /** Numbers the agreement and creates version 1 in one transaction (`create_agreement`, door 3). */
-  create(siteId: string): Promise<CreateAgreementResult>;
+  /**
+   * Numbers the agreement and creates version 1 in one transaction (`create_agreement`, door 3). `templateVersionId` pins the
+   * new version to that template version and copies its preset lines (agreement-templates AC 24); without it nothing is sent.
+   */
+  create(siteId: string, templateVersionId?: string): Promise<CreateAgreementResult>;
+}
+
+/** An agreement template as the Templates screen lists it: the template and its latest version (agreement-templates S3). */
+export type AgreementTemplateSummary = {
+  id: string;
+  /** The latest version's id: what Use template pins a new agreement to. */
+  versionId: string;
+  versionNo: number;
+  /** When the latest version was written. */
+  updatedAt: Date;
+  /** The system template (no org): readable by everyone, editable by no one. */
+  system: boolean;
+  body: AgreementTemplateBody;
+};
+
+export type TemplateFailure = "forbidden" | "invalid" | "name_taken" | "not_found" | "unavailable";
+
+export interface AgreementTemplateReader {
+  /** The non-archived agreement templates RLS shows the member (the org's own and the system one), by name. */
+  list(): Promise<{ ok: true; templates: AgreementTemplateSummary[] } | { ok: false; code: "unavailable" }>;
+}
+
+export interface AgreementTemplateStore {
+  /** `save_agreement_template`: a new template when `templateId` is null, else the next version of that one. */
+  save(templateId: string | null, body: AgreementTemplateBody): Promise<{ ok: true; templateId: string; versionNo: number } | { ok: false; code: TemplateFailure }>;
+  /** `archive_agreement_template`: the template leaves the list, its versions stay. */
+  archive(templateId: string): Promise<{ ok: true } | { ok: false; code: TemplateFailure }>;
 }
 
 export type AddServiceLineResult = { ok: true; id: string } | { ok: false; code: WriteFailure | "locked" | "too_many" };

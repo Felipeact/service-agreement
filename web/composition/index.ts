@@ -8,7 +8,9 @@ import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
   makeDecidePortal,
+  makeDuplicateAgreementTemplate,
   makeInviteMember,
+  makeListAgreementTemplates,
   makeContractDocuments,
   makeExtractImport,
   makeNotify,
@@ -58,6 +60,7 @@ import {
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
+import { supabaseAgreementTemplateReader, supabaseAgreementTemplateStore } from "@/infrastructure/supabase/templates";
 import { supabaseSignatureWebhooks } from "@/infrastructure/supabase/signature-webhook";
 import { supabaseStripeEvents } from "@/infrastructure/supabase/stripe-events";
 import { supabaseSignedCopyReader } from "@/infrastructure/supabase/signed-copy";
@@ -259,6 +262,11 @@ export async function getContainer() {
     // Agreements and their lines are read and written as the member, from the same client (AC 29).
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
+    // Agreement templates are read and written as the member: the definer functions check owner or admin themselves.
+    listAgreementTemplates: makeListAgreementTemplates(supabaseAgreementTemplateReader(supabase)),
+    saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,
+    archiveAgreementTemplate: supabaseAgreementTemplateStore(supabase).archive,
+    duplicateAgreementTemplate: makeDuplicateAgreementTemplate(supabaseAgreementTemplateReader(supabase), supabaseAgreementTemplateStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),

@@ -77,3 +77,4 @@ export { makeInviteMember, type InviteOutcome, type InviteState } from "./invite
 export { makeReceiveSignatureEvent } from "./signature-webhook";
 export { makeReceiveStripeEvent } from "./stripe-webhook";
 export { makeContractDocuments, makeSendForSignature, makeViewSigning, type SendForSignatureInput, type ViewSigningResult } from "./signing";
+export { makeDuplicateAgreementTemplate, makeListAgreementTemplates, type DuplicateTemplateResult, type TemplateListResult } from "./templates";
