@@ -27,7 +27,7 @@ const TEMPLATE: AgreementTemplateSummary = {
     },
   },
 };
-const actions = { duplicate: vi.fn() };
+const actions = { duplicate: vi.fn(), customize: vi.fn() };
 
 const preview = (canUse = true, canWrite = true) =>
   renderToStaticMarkup(createElement(TemplatePreview, { template: TEMPLATE, typeNames: { RTU: "RTUs", HP: "Heat pumps" }, canUse, canWrite, actions }));
@@ -98,5 +98,30 @@ describe("the template preview", () => {
       createElement(TemplatePreview, { template: { ...TEMPLATE, system: true, body: SYSTEM_AGREEMENT_BODY }, typeNames: {}, canUse: true, canWrite: true, actions }),
     );
     expect([...html.matchAll(/<dd[^>]*>([^<]*)<\/dd>/g)].map((match) => match[1])).toEqual(["Not set", "None", "2 sections · 0 clauses", "No preset lines"]);
+  });
+});
+
+describe("Edit and Customize on the preview", () => {
+  const roleView = (role: "owner" | "admin" | "estimator" | "viewer", template = TEMPLATE) =>
+    renderToStaticMarkup(createElement(TemplatePreview, { template, typeNames: {}, canUse: canUseTemplates(role), canWrite: canWriteTemplates(role), actions: canWriteTemplates(role) ? actions : undefined }));
+
+  test.each(["owner", "admin"] as const)("C5421: for a %s the preview of an org template links Edit to /templates/<templateId>", (role) => {
+    const html = roleView(role);
+    expect(html).toMatch(/<a[^>]*href="\/templates\/t-1"[^>]*>Edit<\/a>/);
+    expect(html).not.toContain("Customize");
+  });
+
+  test.each(["estimator", "viewer"] as const)("C5421: for a %s the preview has no Edit", (role) => {
+    const html = roleView(role);
+    expect(html).not.toContain("/templates/t-1");
+    expect(html).not.toContain(">Edit<");
+  });
+
+  test("C5421: on the system template the preview shows Customize, a button, and no Edit", () => {
+    const html = roleView("owner", { ...TEMPLATE, id: "t-0", system: true, body: SYSTEM_AGREEMENT_BODY });
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Customize<\/button>/);
+    expect(html).not.toContain(">Edit<");
+    expect(html).not.toContain("/templates/t-0");
+    expect(roleView("estimator", { ...TEMPLATE, system: true, body: SYSTEM_AGREEMENT_BODY })).not.toContain("Customize");
   });
 });

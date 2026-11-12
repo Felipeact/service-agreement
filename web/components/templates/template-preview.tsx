@@ -1,8 +1,10 @@
 import type { AgreementTemplateSummary } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { LinkButton } from "@/components/ui/link-button";
 import { derivedFrequency, previewSummary } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
+import { CustomizeControl } from "./customize-control";
 import { DuplicateControl } from "./duplicate-control";
 import { SYSTEM_DESCRIPTION, type TemplateCardActions } from "./template-card";
 
@@ -14,7 +16,7 @@ type PreviewProps = {
   canUse: boolean;
   /** Owner and admin copy a template. */
   canWrite: boolean;
-  actions?: Pick<TemplateCardActions, "duplicate">;
+  actions?: Pick<TemplateCardActions, "duplicate" | "customize">;
   /** The org's item words; the default when absent. */
   words?: ItemWords;
   /** Called with the template's latest version id when Use template is pressed; the page opens the New agreement dialog with it. */
@@ -47,7 +49,7 @@ export function TemplatePreview({ template, typeNames, canUse, canWrite, actions
         <Row label="Sections" value={`${summary.sections} · ${summary.clauses}`} />
         <Row label="Preset lines" value={summary.preset} />
       </dl>
-      {(canUse || (canWrite && actions)) && (
+      {(canUse || canWrite) && (
         <div className="flex flex-col gap-2">
           {canUse && (
             <Button variant="primary" className="w-full" onClick={() => onUse?.(versionId)}>
@@ -55,6 +57,13 @@ export function TemplatePreview({ template, typeNames, canUse, canWrite, actions
               Use template
             </Button>
           )}
+          {/* The system template is customised into the org's own; an org's own template is edited. */}
+          {canWrite && !system && (
+            <LinkButton href={`/templates/${id}`} className="w-full">
+              Edit
+            </LinkButton>
+          )}
+          {canWrite && system && actions?.customize && <CustomizeControl templateId={id} action={actions.customize} />}
           {canWrite && actions && <DuplicateControl templateId={id} action={actions.duplicate} />}
         </div>
       )}

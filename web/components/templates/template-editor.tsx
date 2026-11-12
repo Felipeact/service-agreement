@@ -11,7 +11,7 @@ import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
 import { EMPTY_PRESET_LINE, type TemplateFormErrors, type TemplateFormInput } from "@/domain/agreement/template-form";
-import { TEMPLATE_MESSAGES, type SaveTemplateState } from "./state";
+import { SAVE_MESSAGES, type SaveTemplateState } from "./state";
 
 export type TemplateTypeOption = { code: string; name: string };
 
@@ -227,7 +227,7 @@ export function TemplateEditor({ templateId, initial, types, save }: EditorProps
   const [pending, start] = useTransition();
 
   const errors = state.status === "invalid" ? state.errors : {};
-  const message = state.status === "idle" || state.status === "invalid" ? null : TEMPLATE_MESSAGES[state.status];
+  const message = state.status === "idle" || state.status === "invalid" ? null : SAVE_MESSAGES[state.status];
 
   return (
     <TemplateEditorView

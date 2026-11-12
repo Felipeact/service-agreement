@@ -1,5 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { AgreementTemplateReader, AgreementTemplateStore, AgreementTemplateSummary } from "@/application/ports";
+import { makeDuplicateAgreementTemplate } from "@/application/use-cases/templates";
+import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
 import { EMPTY_TEMPLATE_FORM } from "@/domain/agreement/template-form";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
@@ -143,5 +146,82 @@ describe("archiveTemplateAction", () => {
     archiveAgreementTemplate.mockClear();
     expect(await archiveTemplateAction("nope")).toEqual({ status: "not_found" });
     expect(archiveAgreementTemplate).not.toHaveBeenCalled();
+  });
+});
+
+describe("customizeSystemTemplateAction", () => {
+  const SYSTEM = "00000000-0000-4000-8000-00000000c002";
+  // A queued implementation that a refused call never used must not reach the next test.
+  beforeEach(() => duplicateAgreementTemplate.mockReset());
+  const summary = (id: string, name: string, system: boolean): AgreementTemplateSummary => ({
+    id,
+    versionId: `${id}-v`,
+    versionNo: 1,
+    updatedAt: new Date("2026-11-12T12:00:00Z"),
+    system,
+    body: { ...SYSTEM_AGREEMENT_BODY, name },
+  });
+
+  /** The real duplicate use case over a reader holding `templates`, and a store that records what it is asked to save. */
+  function useCaseOver(templates: AgreementTemplateSummary[]) {
+    const reader: AgreementTemplateReader = { list: async () => ({ ok: true, templates }) };
+    const save = vi.fn<AgreementTemplateStore["save"]>(async () => ({ ok: true, templateId: COPY, versionNo: 1 }));
+    duplicateAgreementTemplate.mockImplementationOnce(makeDuplicateAgreementTemplate(reader, { save, archive: vi.fn() }));
+    return save;
+  }
+
+  test.each(["owner", "admin"])("C5420: a %s saves a copy of the system template named Standard agreement and is sent to the editor of the copy", async (role) => {
+    as(role);
+    const save = useCaseOver([summary(SYSTEM, "Standard agreement", true)]);
+    const { customizeSystemTemplateAction } = await import("./template-actions");
+    await expect(customizeSystemTemplateAction(SYSTEM)).rejects.toThrow(`NEXT_REDIRECT /templates/${COPY}`);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith(null, expect.objectContaining({ name: "Standard agreement" }));
+  });
+
+  test("C5420: when Standard agreement is taken the copy is Standard agreement (copy), then (copy 2)", async () => {
+    const { customizeSystemTemplateAction } = await import("./template-actions");
+    const system = summary(SYSTEM, "Standard agreement", true);
+
+    let save = useCaseOver([system, summary("t-own", "Standard agreement", false)]);
+    await expect(customizeSystemTemplateAction(SYSTEM)).rejects.toThrow(`NEXT_REDIRECT /templates/${COPY}`);
+    expect(save).toHaveBeenCalledWith(null, expect.objectContaining({ name: "Standard agreement (copy)" }));
+
+    save = useCaseOver([system, summary("t-own", "Standard agreement", false), summary("t-copy", "standard agreement (copy)", false)]);
+    await expect(customizeSystemTemplateAction(SYSTEM)).rejects.toThrow(`NEXT_REDIRECT /templates/${COPY}`);
+    expect(save).toHaveBeenCalledWith(null, expect.objectContaining({ name: "Standard agreement (copy 2)" }));
+  });
+
+  test("C5420: the copy carries the system body (sections, intro, preset) and only the name is decided here", async () => {
+    const save = useCaseOver([summary(SYSTEM, "Standard agreement", true)]);
+    const { customizeSystemTemplateAction } = await import("./template-actions");
+    await expect(customizeSystemTemplateAction(SYSTEM)).rejects.toThrow("NEXT_REDIRECT");
+    expect(save.mock.calls[0][1]).toEqual({ ...SYSTEM_AGREEMENT_BODY, name: "Standard agreement" });
+  });
+
+  test.each(["estimator", "viewer"])("C5420: a %s is forbidden and nothing is saved", async (role) => {
+    as(role);
+    const save = useCaseOver([summary(SYSTEM, "Standard agreement", true)]);
+    const { customizeSystemTemplateAction } = await import("./template-actions");
+    expect(await customizeSystemTemplateAction(SYSTEM)).toEqual({ status: "forbidden" });
+    expect(save).not.toHaveBeenCalled();
+    expect(duplicateAgreementTemplate).not.toHaveBeenCalled();
+  });
+
+  test("C5420: an org template is never saved under its own name: customizing it falls back to the copy naming", async () => {
+    const save = useCaseOver([summary(SYSTEM, "Standard agreement", true), summary(TEMPLATE, "Quarterly HVAC", false)]);
+    const { customizeSystemTemplateAction } = await import("./template-actions");
+    await expect(customizeSystemTemplateAction(TEMPLATE)).rejects.toThrow(`NEXT_REDIRECT /templates/${COPY}`);
+    expect(save).toHaveBeenCalledWith(null, expect.objectContaining({ name: "Quarterly HVAC (copy)" }));
+  });
+
+  test("C5420: a malformed id is not_found, a failed copy answers its code, and signed out goes to /login", async () => {
+    const { customizeSystemTemplateAction } = await import("./template-actions");
+    expect(await customizeSystemTemplateAction("nope")).toEqual({ status: "not_found" });
+    expect(duplicateAgreementTemplate).not.toHaveBeenCalled();
+    duplicateAgreementTemplate.mockResolvedValueOnce({ ok: false, code: "unavailable" });
+    expect(await customizeSystemTemplateAction(SYSTEM)).toEqual({ status: "unavailable" });
+    currentMember.mockResolvedValue({ status: "signed_out" });
+    await expect(customizeSystemTemplateAction(SYSTEM)).rejects.toThrow("NEXT_REDIRECT /login");
   });
 });

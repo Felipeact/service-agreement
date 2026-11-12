@@ -5,11 +5,13 @@ import { derivedFrequency } from "@/domain/agreement";
 import { updatedAgo } from "@/lib/relative-time";
 import { ArchiveControl } from "./archive-control";
 import { DuplicateControl } from "./duplicate-control";
-import type { ArchiveTemplateState, DuplicateTemplateState } from "./state";
+import type { ArchiveTemplateState, CustomizeTemplateState, DuplicateTemplateState } from "./state";
 
 export type TemplateCardActions = {
   duplicate: (templateId: string) => Promise<DuplicateTemplateState>;
   archive: (templateId: string) => Promise<ArchiveTemplateState>;
+  /** Saves the system template as the org's own (template-flow AC 14); the preview offers it. */
+  customize?: (templateId: string) => Promise<CustomizeTemplateState>;
 };
 
 /** The system template has no description of its own; this says what it is. */

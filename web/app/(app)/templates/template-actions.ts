@@ -9,6 +9,7 @@ import {
   canWriteTemplates,
   NAME_TAKEN_FIELD_MESSAGE,
   type ArchiveTemplateState,
+  type CustomizeTemplateState,
   type DuplicateTemplateState,
   type SaveTemplateState,
 } from "@/components/templates/state";
@@ -49,6 +50,20 @@ export async function duplicateTemplateAction(templateId: string): Promise<Dupli
   if (!isUuid(templateId)) return { status: "not_found" };
   const copied = await container.duplicateAgreementTemplate(templateId);
   if (!copied.ok) return { status: copied.code === "invalid" ? "unavailable" : copied.code };
+  revalidatePath("/templates");
+  redirect(`/templates/${copied.templateId}`);
+}
+
+/**
+ * Saves a copy of the system template as the org's own, named "Standard agreement" (a clash takes the copy naming), and opens its
+ * editor (template-flow AC 14). Owners and admins only; the use case keeps the system name only for the system template.
+ */
+export async function customizeSystemTemplateAction(templateId: string): Promise<CustomizeTemplateState> {
+  const container = await writer();
+  if (!container) return { status: "forbidden" };
+  if (!isUuid(templateId)) return { status: "not_found" };
+  const copied = await container.duplicateAgreementTemplate(templateId, { asOwn: true });
+  if (!copied.ok) return { status: copied.code === "invalid" || copied.code === "name_taken" ? "unavailable" : copied.code };
   revalidatePath("/templates");
   redirect(`/templates/${copied.templateId}`);
 }

@@ -65,6 +65,11 @@ describe("a template card", () => {
     expect(html).toContain(">Archive<");
   });
 
+  test("C5421: the menu's Edit goes to /templates/<templateId>, the address the preview's Edit uses", () => {
+    expect(card()).toMatch(/<a[^>]*href="\/templates\/t-1"[^>]*>Edit<\/a>/);
+    expect(card({ canWrite: false })).not.toContain("/templates/t-1");
+  });
+
   test("C5342: the selected card carries aria-current=true and an unselected one does not", () => {
     expect(card({ selected: true })).toContain('aria-current="true"');
     expect(card({ selected: false })).not.toContain("aria-current");

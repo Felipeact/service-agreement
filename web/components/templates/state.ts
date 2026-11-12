@@ -11,6 +11,9 @@ export type SaveTemplateState =
 /** What `duplicateTemplateAction` answers when it does not redirect to the copy's editor. */
 export type DuplicateTemplateState = { status: "idle" | "name_taken" | Failure };
 
+/** What `customizeSystemTemplateAction` answers when it does not redirect to the copy's editor. */
+export type CustomizeTemplateState = { status: "idle" | Failure };
+
 /** What `archiveTemplateAction` answers. */
 export type ArchiveTemplateState = { status: "idle" | "archived" | Failure };
 
@@ -29,6 +32,13 @@ export const TEMPLATE_MESSAGES = {
   not_found: "That template no longer exists.",
   name_taken: "A template with that name already exists. Try again.",
   unavailable: "We couldn't do that. Try again.",
+} as const;
+
+/** The editor's words for a save that failed for a reason other than a field (template-flow AC 18). */
+export const SAVE_MESSAGES = {
+  forbidden: "You don't have permission to save templates.",
+  not_found: "This template no longer exists.",
+  unavailable: "We couldn't save the template. Try again.",
 } as const;
 
 export const NAME_TAKEN_FIELD_MESSAGE = "Another template already has this name. Choose a different one.";

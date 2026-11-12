@@ -81,8 +81,8 @@ describe("controls by role", () => {
   });
 
   test.each(["owner", "admin"] as const)("C5344: a %s sees New template, a menu on each card (Edit, Duplicate, Archive), Duplicate and Use template", (role) => {
-    // Two cards: two menus with Edit, Duplicate and Archive each; the preview adds one more Duplicate.
-    expect(menuItems(render(role))).toEqual({ newButton: true, menu: 2, edit: 2, duplicate: 3, archive: 2, use: true });
+    // Two cards: two menus with Edit, Duplicate and Archive each; the preview of the selected org template adds one more Edit and one more Duplicate.
+    expect(menuItems(render(role))).toEqual({ newButton: true, menu: 2, edit: 3, duplicate: 3, archive: 2, use: true });
   });
 
   test("C5344: an estimator sees Use template and none of the writer controls", () => {

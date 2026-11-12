@@ -55,6 +55,18 @@ describe("/templates", () => {
     expect(html).toMatch(/<h2[^>]*>Semiannual chiller<\/h2>/);
   });
 
+  test("C5422: after a save the page opens on the saved template: selected, with its new name on its card and in the preview", async () => {
+    const saved = { ...template("t-new", "Renamed by the owner"), updatedAt: new Date("2026-11-12T17:59:00Z") };
+    listAgreementTemplates.mockResolvedValue({ ok: true, templates: [...TEMPLATES, saved] });
+    const element = await render({ selected: "t-new" });
+    expect(element.props.selectedId).toBe("t-new");
+    const html = renderToStaticMarkup(element);
+    expect(html.match(/aria-current="true"/g)).toHaveLength(1);
+    expect(html).toMatch(/<a[^>]*aria-current="true"[^>]*>Renamed by the owner<\/a>/);
+    expect(html).toMatch(/<h2[^>]*>Renamed by the owner<\/h2>/);
+    expect(html).toContain("Updated today");
+  });
+
   test("C5347: with no ?selected the first card is selected", async () => {
     expect((await render({})).props.selectedId).toBe("t-a");
   });

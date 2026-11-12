@@ -4,7 +4,7 @@ import { canUseTemplates, canWriteTemplates } from "@/components/templates/state
 import { TemplatesView } from "@/components/templates/templates-view";
 import { getContainer } from "@/composition";
 import { dialogProps } from "../new-agreement-launcher";
-import { archiveTemplateAction, duplicateTemplateAction } from "./template-actions";
+import { archiveTemplateAction, customizeSystemTemplateAction, duplicateTemplateAction } from "./template-actions";
 
 export const metadata: Metadata = { title: "Agreement templates" };
 
@@ -32,7 +32,7 @@ export async function TemplatesForRequest({ params }: { params: Params }) {
       now={clock.now()}
       words={words}
       dialog={dialog}
-      actions={canWriteTemplates(member.role) ? { duplicate: duplicateTemplateAction, archive: archiveTemplateAction } : undefined}
+      actions={canWriteTemplates(member.role) ? { duplicate: duplicateTemplateAction, archive: archiveTemplateAction, customize: customizeSystemTemplateAction } : undefined}
     />
   );
 }

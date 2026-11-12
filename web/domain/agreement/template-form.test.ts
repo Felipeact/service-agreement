@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { copyName } from "./template";
+import { copyName, SYSTEM_AGREEMENT_BODY } from "./template";
 import { bodyFromTemplateForm, EMPTY_TEMPLATE_FORM, templateFormFromBody } from "./template-form";
 
 const LINE = { description: "Quarterly HVAC visit", visitMonths: [9, 3, 6, 12], assetTypeCodes: ["RTU"], costPerVisit: "$450.00" };
@@ -54,5 +54,32 @@ describe("the name of a duplicate", () => {
   test("C5352: a name at the 80-character limit is cut so the copy fits", () => {
     expect(copyName("x".repeat(80), []).length).toBe(80);
     expect(copyName("x".repeat(80), []).endsWith(" (copy)")).toBe(true);
+  });
+});
+
+describe("a saved body opened in the editor", () => {
+  test("C5422: the editor's values for a stored body give back exactly that body, with its intro, closing text, both switches and two preset lines", () => {
+    const body = {
+      ...SYSTEM_AGREEMENT_BODY,
+      name: "Quarterly HVAC",
+      description: "Four visits a year.",
+      intro: [{ type: "heading" as const, text: "About this agreement" }, { type: "paragraph" as const, text: "Welcome {{customer.name}}." }, { type: "clause" as const, text: "Pay in {{terms.paymentDays}} days." }],
+      footer: [{ type: "paragraph" as const, text: "Thank you." }],
+      sections: { schedule: false, scope: true },
+      preset: {
+        termMonths: 24,
+        lines: [
+          { description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU", "HP"], costPerVisitCents: 45000 },
+          { description: "Annual inspection", visitMonths: [6], assetTypeCodes: [], costPerVisitCents: null },
+        ],
+      },
+    };
+    const reopened = bodyFromTemplateForm(templateFormFromBody(body));
+    expect(reopened).toEqual({ ok: true, body });
+  });
+
+  test("C5422: both switches on, no term and no lines also come back unchanged", () => {
+    const body = { ...SYSTEM_AGREEMENT_BODY, name: "Plain" };
+    expect(bodyFromTemplateForm(templateFormFromBody(body))).toEqual({ ok: true, body });
   });
 });

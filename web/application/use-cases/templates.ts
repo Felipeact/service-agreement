@@ -20,16 +20,19 @@ export type DuplicateTemplateResult = { ok: true; templateId: string } | { ok: f
 
 /**
  * Saves a copy of a template's latest version as a new template named `<name> (copy)`, `(copy 2)` and so on until the name is free
- * among the org's templates (agreement-templates AC 19). The system template can be copied too: that is how an org starts its own.
+ * among the org's templates (agreement-templates AC 19). The system template can be copied too: that is how an org starts its own;
+ * with `asOwn` it is saved under its own name, "Standard agreement" (template-flow AC 14).
  */
 export function makeDuplicateAgreementTemplate(reader: AgreementTemplateReader, store: AgreementTemplateStore) {
-  return async function duplicateAgreementTemplate(templateId: string): Promise<DuplicateTemplateResult> {
+  return async function duplicateAgreementTemplate(templateId: string, options: { asOwn?: boolean } = {}): Promise<DuplicateTemplateResult> {
     const read = await reader.list();
     if (!read.ok) return read;
     const source = read.templates.find((template) => template.id === templateId);
     if (!source) return { ok: false, code: "not_found" };
     const taken = read.templates.filter((template) => !template.system).map((template) => template.body.name);
-    const saved = await store.save(null, { ...source.body, name: copyName(source.body.name, taken) });
+    // Customizing the system template makes it the org's own under the same name; only a clash falls back to the copy naming.
+    const keepsName = options.asOwn === true && source.system && !taken.some((name) => name.trim().toLowerCase() === source.body.name.trim().toLowerCase());
+    const saved = await store.save(null, { ...source.body, name: keepsName ? source.body.name : copyName(source.body.name, taken) });
     return saved.ok ? { ok: true, templateId: saved.templateId } : saved;
   };
 }
