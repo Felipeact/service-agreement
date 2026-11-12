@@ -12,6 +12,7 @@ import type {
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
+import type { DraftType } from "@/domain/catalog-draft";
 import type { TenantLogo } from "@/domain/org-settings/logo";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
@@ -544,6 +545,23 @@ export type ExtractResult = { ok: true; rows: ExtractedRow[] } | { ok: false; co
  */
 export interface AssetExtractor {
   extract(chunk: ExtractChunk, tradeContext?: string | null): Promise<ExtractResult>;
+}
+
+/** What a catalog draft is made from besides the trade name and notes: a read file's text, or a whole PDF (other-trade-draft door 1). */
+export type DraftSource = { kind: "text"; text: string } | { kind: "pdf"; bytes: Uint8Array };
+
+export type DraftResult = { ok: true; types: DraftType[] } | { ok: false; code: "unavailable" | "too_large" };
+
+/** Drafts a catalog of types, checklists and months for a trade. Knows nothing about orgs: it receives the trade, the notes and the file only. */
+export interface CatalogDrafter {
+  draft(input: { trade: string; notes: string; file?: DraftSource }): Promise<DraftResult>;
+}
+
+export type AddDraftResult = { ok: true; added: number } | { ok: false; code: "forbidden" | "not_empty" | "invalid" | "unavailable" };
+
+/** Writes an accepted draft in one transaction (`add_catalog_draft`, door 2). */
+export interface CatalogWriter {
+  add(orgId: string, trade: string, types: DraftType[]): Promise<AddDraftResult>;
 }
 
 export type ImportFileResult =
