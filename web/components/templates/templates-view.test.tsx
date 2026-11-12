@@ -125,3 +125,24 @@ describe("empty and error states", () => {
     expect(html).not.toContain('aria-label="Template preview"');
   });
 });
+
+describe("the two regions, arranged", () => {
+  test("C5341: the preview sits beside the grid section, not inside it, and the container is a flex column that becomes a two-track grid from xl", () => {
+    const html = render("owner");
+    const sectionEnd = html.indexOf("</section>");
+    expect(sectionEnd).toBeGreaterThan(html.indexOf('aria-label="Templates"'));
+    expect(html.indexOf('aria-label="Template preview"')).toBeGreaterThan(sectionEnd);
+    const container = /<div class="([^"]*)"><section aria-label="Templates"/.exec(html)?.[1] ?? "";
+    expect(container.split(" ")).toEqual(expect.arrayContaining(["flex", "flex-col", "xl:grid", "xl:grid-cols-[minmax(0,1fr)_22rem]"]));
+    expect(container).not.toMatch(/(?:^| )(?:sm|md|lg):grid\b/);
+  });
+
+  test("C5341: every card is one cell of the grid list, one per template, inside the grid section", () => {
+    const html = render("owner");
+    const section = html.slice(html.indexOf('<section aria-label="Templates"'), html.indexOf("</section>"));
+    expect(section.match(/<li>/g)).toHaveLength(2);
+    expect(section.match(/<article/g)).toHaveLength(2);
+    expect(html.slice(html.indexOf("</section>")).match(/<article/g)).toBeNull();
+  });
+});
+

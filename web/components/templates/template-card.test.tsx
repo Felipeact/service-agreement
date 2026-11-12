@@ -90,3 +90,22 @@ describe("a template card", () => {
     expect(html).toMatch(/<a[^>]*class="[^"]*min-h-11[^"]*"[^>]*>Edit</);
   });
 });
+
+describe("a template card, arranged", () => {
+  test("C5342: the icon tile and the menu share one row with the menu pushed to the right, and a read-only member has the tile alone", () => {
+    const html = card();
+    expect(html).toMatch(/<div class="[^"]*\bjustify-between\b[^"]*"><span aria-hidden="true"[^>]*>[\s\S]*?<\/span><details/);
+    expect(card({ canWrite: false })).not.toContain("<details");
+  });
+
+  test("C5342: the footer is one justified row with the frequency first at the left and Updated second at the right", () => {
+    const html = card();
+    expect(html).toMatch(/<div class="[^"]*\bjustify-between\b[^"]*"><span[^>]*>Quarterly<\/span><span[^>]*>Updated 2 weeks ago<\/span><\/div>/);
+  });
+
+  test("C5342: the selected card carries its own border and ring and the others do not", () => {
+    expect(card({ selected: true })).toMatch(/<article[^>]*class="[^"]*\bborder-action\b[^"]*\bring-1\b/);
+    expect(card({ selected: false })).not.toMatch(/<article[^>]*class="[^"]*\bborder-action\b/);
+  });
+});
+

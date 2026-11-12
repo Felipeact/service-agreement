@@ -39,6 +39,11 @@ export const MAX_DESCRIPTION = 300;
 export const MAX_LIST_BLOCKS = 30;
 export const MAX_PRESET_LINES = 20;
 export const MAX_PRESET_TERM_MONTHS = 60;
+/** The database refuses a code longer than this and a price above the ceiling; the app says so first (the save function's limits). */
+export const MAX_CODE_LENGTH = 80;
+export const MAX_PRICE_CENTS = 1_000_000_000_000;
+/** The database caps a body at 64 KB of jsonb text, which spells `: ` and `, ` with a space; a body this long as plain JSON is certainly over. */
+export const MAX_BODY_JSON_LENGTH = 60_000;
 
 /** The system agreement template's version 1: no text, every optional section shown, no preset. Equal to the stored row (parity test). */
 export const SYSTEM_AGREEMENT_BODY: AgreementTemplateBody = {
@@ -119,10 +124,12 @@ function checkLine(line: unknown, index: number, errors: AgreementTemplateError[
   const codes = line.assetTypeCodes;
   if (!Array.isArray(codes) || !codes.every((code) => typeof code === "string" && code.trim() !== "")) {
     errors.push({ field: at("assetTypeCodes"), message: `Preset line ${n} has an equipment type code that is not text.` });
+  } else if (!codes.every((code) => code.trim().length <= MAX_CODE_LENGTH)) {
+    errors.push({ field: at("assetTypeCodes"), message: `Preset line ${n} has an equipment type code over ${MAX_CODE_LENGTH} characters.` });
   }
 
   const cost = line.costPerVisitCents;
-  if (cost !== null && !(isWhole(cost) && cost >= 0)) {
+  if (cost !== null && !(isWhole(cost) && cost >= 0 && cost <= MAX_PRICE_CENTS)) {
     errors.push({ field: at("costPerVisitCents"), message: `Preset line ${n} needs a price per visit that is empty or a whole number of cents, not negative.` });
   }
 }
@@ -173,6 +180,10 @@ export function validateAgreementTemplate(input: unknown): AgreementTemplateVali
     } else {
       for (const [index, line] of preset.lines.entries()) checkLine(line, index, errors);
     }
+  }
+
+  if (errors.length === 0 && JSON.stringify(input).length > MAX_BODY_JSON_LENGTH) {
+    errors.push({ field: "body", message: "The template is too long to save. Shorten the texts or remove preset lines." });
   }
 
   if (errors.length > 0) return { ok: false, reason: errors[0].message, errors };

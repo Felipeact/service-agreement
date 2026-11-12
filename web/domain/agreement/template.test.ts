@@ -74,6 +74,18 @@ describe("validateAgreementTemplate", () => {
     expect(validateAgreementTemplate(body).ok).toBe(true);
   });
 
+  test("C5324: what the save function refuses with 22023 the app refuses first: a code over 80 characters, a price over the ceiling, a body over the size cap", () => {
+    const bad = (patch: Record<string, unknown>) => validateAgreementTemplate(withBody({ preset: { termMonths: null, lines: [line(patch)] } }));
+    const code = bad({ assetTypeCodes: ["x".repeat(81)] });
+    expect(!code.ok && code.errors[0].message).toContain("80");
+    expect(bad({ assetTypeCodes: ["x".repeat(80)] }).ok).toBe(true);
+    const price = bad({ costPerVisitCents: 1_000_000_000_001 });
+    expect(!price.ok && price.errors[0].field).toBe("preset.lines.0.costPerVisitCents");
+    expect(bad({ costPerVisitCents: 1_000_000_000_000 }).ok).toBe(true);
+    const big = validateAgreementTemplate(withBody({ intro: Array.from({ length: 30 }, () => ({ type: "paragraph", text: "x".repeat(2000) })) }));
+    expect(!big.ok && big.errors.at(-1)).toEqual({ field: "body", message: expect.stringContaining("too long") });
+  });
+
   test("C5324: a body that is not an object, or is schema 2, is rejected", () => {
     expect(rejected([])?.reason).toContain("not an object");
     expect(rejected(null)?.ok).toBe(false);
