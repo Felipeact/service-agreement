@@ -94,7 +94,7 @@ Reuses the exact predicate the webhook already applies (a membership or a live i
 
 | Assumption | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| Telling an anonymous visitor that an email has an account is acceptable | Yes, on submit only, with a sign-in link | Decision 9 says "refuse with a clear message", and sign-up forms commonly do this; the alternative (a generic message) cannot tell the visitor what to do. It does let someone test whether an email has an account, one submit at a time | n |
+| Telling an anonymous visitor that an email has an account is acceptable | Yes, on submit only, with a sign-in link | Decision 9 says "refuse with a clear message", and sign-up forms commonly do this; the alternative (a generic message) cannot tell the visitor what to do. It does let someone test whether an email has an account, one submit at a time | y (owner, 2026-11-12) |
 | A failed check blocks Checkout | Answer `unavailable` (AC 6) | Refusing to start is cheaper than taking a card for a workspace the webhook may then refuse; the form already has an `unavailable` message | n |
 | The check runs after validation, before Stripe | As in Flow | A malformed email never reaches the database; Stripe is never called for a taken one | n |
 | Check uses the anon client | Same as `workspaceStatus` | AD-037, AD-073 | n |
@@ -103,7 +103,7 @@ Reuses the exact predicate the webhook already applies (a membership or a live i
 
 | # | Kind | Question | Until answered |
 | --- | --- | --- | --- |
-| 1 | open | Is the account-existence exposure of assumption 1 acceptable before a rate limit exists? | The default is written; reversing it means a generic message, which loses the "Sign in" hint and changes AC 7 and 8 |
+| 1 | open | Resolved 2026-11-12: the owner accepted the exposure ("go with your recommendation"). Was: is the account-existence exposure of assumption 1 acceptable before a rate limit exists? | The default is written; reversing it means a generic message, which loses the "Sign in" hint and changes AC 7 and 8 |
 
 ## Observable
 

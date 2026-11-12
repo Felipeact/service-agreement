@@ -255,11 +255,10 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 - **Tests:** the files above with `.test.ts`, [supabase/tests/workspace_pending_state.sql](supabase/tests/workspace_pending_state.sql) (`npm run test:db workspace_pending_state`), [web/composition/workspace-state-wiring.test.ts](web/composition/workspace-state-wiring.test.ts).
 
 **What we built (checkout-email-in-use, 2026-11-12):** `/register` refuses an email that already belongs to an org before Checkout opens, so no card is taken for a workspace the webhook would refuse.
-- **Rule:** `private.email_in_use` (a membership, or a live invitation, anywhere) is the one definition; `provision_workspace` and the new anonymous `public.email_has_workspace(p_email)` both call it. Migration [20261112210000_checkout_email_in_use.sql](supabase/migrations/20261112210000_checkout_email_in_use.sql) is written and **not applied** (AD-184).
+- **Rule:** `private.email_in_use` (a membership, or a live invitation, anywhere) is the one definition; `provision_workspace` and the new anonymous `public.email_has_workspace(p_email)` both call it. Migration [20261112210000_checkout_email_in_use.sql](supabase/migrations/20261112210000_checkout_email_in_use.sql) was applied by the owner on 2026-11-12 (AD-184).
 - **Form:** `makeStartTrial(checkout, emailCheck?)` in [start-trial.ts](web/application/use-cases/start-trial.ts) asks the `WorkspaceEmailCheck` port ([workspace-email.ts](web/infrastructure/supabase/workspace-email.ts)) after validation and before Stripe. `email_in_use` shows "This email already has a workspace." with a Sign in link under the email field; a failed check is `unavailable`. With Stripe unconfigured the check is skipped.
-- **Not covered:** two checkouts for the same new email open at once (the webhook still refuses the second after payment); no rate limit on the anonymous read; whether telling a visitor that an email has an account is acceptable is the owner's open question.
-- **Go-live:** apply the migration, then drop its part from the `workspace_provisioning` recipe in [runner.mts](web/scripts/test-db/runner.mts).
-- **Tests:** the files above with `.test.ts`, [supabase/tests/checkout_email_in_use.sql](supabase/tests/checkout_email_in_use.sql) (`npm run test:db checkout_email_in_use`) and `workspace_provisioning` replayed with the migration.
+- **Not covered:** two checkouts for the same new email open at once (the webhook still refuses the second after payment); no rate limit on the anonymous read; the owner accepted telling a visitor an email has an account (2026-11-12), so a rate limit is a later item.
+- **Tests:** the files above with `.test.ts`, [supabase/tests/checkout_email_in_use.sql](supabase/tests/checkout_email_in_use.sql) (`npm run test:db checkout_email_in_use`) and `workspace_provisioning`, both now plain recipes against the applied migration.
 
 ### Public site (M21)
 **What it is:** the marketing front door at `/`, so a visitor sees what the product is, how a deal moves, which trades it fits, what it costs and how to start, before any sign-in. Sign in is a link in the header.
@@ -360,7 +359,7 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 
 ## Build log
 
-- **2026-11-12:** checkout-email-in-use (Phase 5, Checkout refuses a taken email). `/register` refuses an email that has a membership or a live invitation before Stripe opens (AD-184, migration `20261112210000` written, not applied). Plan and checks in `.specs/features/checkout-email-in-use/`.
+- **2026-11-12:** checkout-email-in-use (Phase 5, Checkout refuses a taken email). `/register` refuses an email that has a membership or a live invitation before Stripe opens (AD-184, migration `20261112210000` applied 2026-11-12). Plan and checks in `.specs/features/checkout-email-in-use/`.
 - **2026-11-12:** workspace-pending-state (Phase 5, "Setting up your workspace" item). The success page polls for the workspace and `NoWorkspace` reports a refused or unresolved paid checkout (AD-182, AD-183, migration `20261112200000` applied 2026-11-12). Plan and checks in `.specs/features/workspace-pending-state/`.
 - **2026-11-12:** other-trade-draft (Phase 5, "Other" trade item). An empty catalog on `/setup` offers a Claude draft from a trade name, notes or a proposal file; the owner reviews and adds it in one transaction (AD-181, migration `20261112100000` written, not applied). Verifier not yet run; live pass not run.
 - **2026-11-10:** plan-change (Phase 5, change plan from the billing page). Switch between Starter, Team and Business with a confirming step, prorated, seats by the sign-up rule; Checkout tags its products; `set_org_plan` records the plan (migration written, not applied). AD-179.
