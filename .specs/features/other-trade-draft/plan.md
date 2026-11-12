@@ -124,7 +124,7 @@ Nothing is written until the owner says so, and then everything is written toget
 
 | Excluded | Why |
 | --- | --- |
-| Drafting for an org that already has types, or adding to an existing catalog | The form exists only for the empty catalog; the task library owns later changes |
+| Drafting for an org that already has types, or adding to an existing catalog | The form exists only for the empty catalog; nothing edits a type in the app since the task library screen was removed (2026-11-10), which is not this feature's gap |
 | Synonyms, packs or a release review for a drafted catalog | The owner reviews it themselves on this screen; a drafted type has no pack (decision 5 covers shipped packs only) |
 | Storing the draft, resuming it later, or a draft history | Door 3 |
 | Metering drafts against the AI-import allowance, and recording tokens per call | Needs the plan-limits item; see open question 2 |

@@ -1,7 +1,7 @@
 -- other-trade-draft, database side: C4116, C4117, C4118, C4119, C4121, C4123 (.specs/features/other-trade-draft/checks.md).
 -- Run after fixture.sql and migration 20261112100000_add_catalog_draft.sql in the same execute_sql call (npm run test:db
--- other_trade_draft): the recipe puts the migration between them, inside the rolled-back transaction, so the hosted project
--- needs no change. Fixture orgs A and B already hold a type, so the empty orgs are made here: org E (owner uOw, admin uAd,
+-- other_trade_draft): the recipe puts the migration between them, inside the rolled-back transaction (create or replace, so it
+-- also runs where the function already exists). Fixture orgs A and B already hold a type, so the empty orgs are made here: org E (owner uOw, admin uAd,
 -- estimator uEs, viewer uVw) and org F (owner uOf). Expected values come from the plan, never read back from the migration.
 
 reset role;
@@ -57,7 +57,10 @@ declare
     jsonb_build_array(jsonb_build_object('name', 'A', 'months', jsonb_build_array(3), 'tasks', jsonb_build_array(repeat('x', 201)))),
     ('[' || good::text || ',' || replace(good::text, 'Termite inspection', 'TERMITE INSPECTION') || ']')::jsonb,
     '[]'::jsonb,
-    '[{"name":"A","months":[],"tasks":[]}]'::jsonb
+    '[{"name":"A","months":[],"tasks":[]}]'::jsonb,
+    '[{"name":"A","months":[0],"tasks":[]}]'::jsonb,
+    (select jsonb_agg(jsonb_build_object('name', 'Type ' || n, 'months', jsonb_build_array(1), 'tasks', jsonb_build_array())) from generate_series(1, 41) n),
+    jsonb_build_array(jsonb_build_object('name', 'A', 'months', jsonb_build_array(1), 'tasks', (select jsonb_agg('t' || n) from generate_series(1, 13) n)))
   ];
   b jsonb;
   i integer := 0;

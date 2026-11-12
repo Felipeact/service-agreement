@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { claudeCatalogDrafter, DRAFT_SCHEMA, DRAFT_SYSTEM_PROMPT, draftRequest } from "./catalog-drafter";
+import { claudeCatalogDrafter, DRAFT_SCHEMA, DRAFT_TIMEOUT_MS, DRAFT_SYSTEM_PROMPT, draftRequest } from "./catalog-drafter";
 import type { ClaudeMessage } from ".";
 
 /** An Anthropic client double: it answers with the scripted message, or never answers, and records each request. */
@@ -113,5 +113,20 @@ describe("claudeCatalogDrafter", () => {
     const cut = say("{", "max_tokens");
     expect(await drafterFor(cut).drafter.draft({ ...input, file: { kind: "text", text: "x" } })).toEqual({ ok: false, code: "too_large" });
     expect(await drafterFor(cut).drafter.draft(input)).toEqual({ ok: false, code: "unavailable" });
+  });
+});
+
+describe("the drafter's own timeout", () => {
+  test("C4105: with no override the call is given up at exactly 120 seconds", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(DRAFT_TIMEOUT_MS).toBe(120_000);
+    vi.useFakeTimers();
+    const hung = drafterFor("hang");
+    let result: unknown;
+    void hung.drafter.draft(input).then((r) => (result = r));
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(result).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(result).toEqual({ ok: false, code: "unavailable" });
   });
 });

@@ -4,7 +4,6 @@ import type { CurrentMember } from "@/application/ports";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const draftCatalog = vi.fn();
 const acceptCatalogDraft = vi.fn();
-const writerAdd = vi.fn();
 const redirect = vi.fn();
 const revalidatePath = vi.fn();
 
@@ -42,7 +41,6 @@ describe("draftCatalogAction", () => {
     expect(result).toEqual({ status: "drafted", trade: "pest control", types });
     expect(draftCatalog).toHaveBeenCalledWith({ role: "owner", trade: "pest control", notes: "Commercial kitchens", file: undefined });
     expect(acceptCatalogDraft).not.toHaveBeenCalled();
-    expect(writerAdd).not.toHaveBeenCalled();
   });
 
   test("C4110: an attached file goes to the use case as its name and bytes; an empty file input is no file", async () => {

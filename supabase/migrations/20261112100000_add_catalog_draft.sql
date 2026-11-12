@@ -1,11 +1,12 @@
 -- other-trade-draft door 2 (.specs/features/other-trade-draft/plan.md): an owner or admin of an org with no types adds a reviewed
--- draft catalog in one transaction. Not applied to the hosted project without the owner's go-ahead.
+-- draft catalog in one transaction. `create or replace` because the Verifier found an identical function already on the hosted
+-- project (2026-11-12); this file was not applied by the author. Version 20261112100000 is also used there by add_catalog_types.
 --
 -- p_types is a jsonb array of {name, months, tasks}. Names follow private.clean_type_name (1 to 60 characters with a letter or
 -- number), codes are derived exactly as create_task_library_type derives them, and the trade is appended once to
 -- org_settings.trade_context. A type made here has pack null, like one made by hand.
 
-create function public.add_catalog_draft(p_org_id uuid, p_trade text, p_types jsonb) returns integer
+create or replace function public.add_catalog_draft(p_org_id uuid, p_trade text, p_types jsonb) returns integer
 language plpgsql
 security invoker
 set search_path = ''

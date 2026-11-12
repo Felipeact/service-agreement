@@ -8,9 +8,9 @@ Plan: `.specs/features/other-trade-draft/plan.md`
 ## How proofs run
 
 - **vitest** runs from `web/`; every new test name starts with its check id and a colon (`C4100:`). This feature numbers from C4100 (no id above C3986 exists). `npx vitest run <file> -t "C4100:"` selects one.
-- **SQL** recipe `other_trade_draft` runs with `npm run test:db other_trade_draft` from `web/` (new `supabase/tests/other_trade_draft.sql`, registered in `RECIPES`, run after `fixture.sql`, rolled back). The migration is **not applied to the hosted project** without the owner's go-ahead (rule 8), so the recipe puts the migration file between the fixture and the test, inside the rolled-back transaction. Assertions are labelled with the check id; expected values come from the plan, never read back from the migration.
+- **SQL** recipe `other_trade_draft` runs with `npm run test:db other_trade_draft` from `web/` (new `supabase/tests/other_trade_draft.sql`, registered in `RECIPES`, run after `fixture.sql`, rolled back). The author did not apply the migration (rule 8), but the Verifier found an identical function already on the hosted project, so the migration uses `create or replace` and the recipe still puts the file between the fixture and the test, inside the rolled-back transaction. Assertions are labelled with the check id; expected values come from the plan, never read back from the migration.
 - **Claude** is never called by a proof: the adapter tests use the `ClaudeClient` double of `extractor.test.ts`.
-- **Live** check C4127 follows AGENTS.md: Playwright MCP at 375, 768 and 1440 px, nothing committed.
+- **Live** check C4128 follows AGENTS.md: Playwright MCP at 375, 768 and 1440 px, nothing committed.
 - Concurrency is not driven by any proof; see Swept.
 - **First-login-setup C2817 is not edited**: the read-only review keeps its text and holds no draft control; the draft form is a separate section (C4100). Found while building: the task library screen was removed on 2026-11-10 and C3001 forbids user-facing text that names it, so no copy here mentions it.
 
@@ -120,7 +120,7 @@ Proof: live Playwright MCP run per AGENTS.md (author-run, nothing committed); th
 Proof: `cd web && npx vitest run composition/draft-wiring.test.ts -t "C4129:"`
 
 **C4130** - The read-only review is unchanged by the draft form: with no types `CatalogReview` still says "No types yet" and holds no button, input or draft text (first-login-setup AC 17 stays true of it)
-Proof: `cd web && npx vitest run components/setup/setup.test.ts -t "C2817:"`
+Proof: `cd web && npx vitest run components/setup/setup.test.ts -t "C4130:"`
 
 ## Coverage
 
