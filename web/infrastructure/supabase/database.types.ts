@@ -1435,6 +1435,7 @@ export type Database = {
       create_agreement: { Args: { p_site_id: string }; Returns: string }
       create_contract: { Args: { p_agreement_id: string }; Returns: string }
       create_task_library_type: { Args: { p_name: string; p_org_id: string }; Returns: string }
+      add_catalog_types: { Args: { p_org_id: string; p_types: Json }; Returns: string[] }
       rename_task_library_type: { Args: { p_name: string; p_type_code: string }; Returns: undefined }
       remove_task_library_type: { Args: { p_type_code: string }; Returns: undefined }
       reset_task_library_type: { Args: { p_type_code: string }; Returns: undefined }
