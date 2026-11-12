@@ -109,9 +109,11 @@ Proof: `cd web && npx vitest run app/setup/setup-wiring.test.ts -t "C4125:"`
 
 **C4126** - While the draft is being made the form shows a status text, the submit button is disabled and a second click sends no second request (AC 23)
 Proof: `cd web && npx vitest run components/setup/setup.test.ts -t "C4126:"`
+Proof: `cd web && npx vitest run components/setup/draft-panel.test.ts -t "C4126:"`
 
 **C4127** - An `unavailable` answer shows "We couldn't draft your catalog. Try again." with a Try again control and the trade, notes and file choice kept (AC 24)
 Proof: `cd web && npx vitest run components/setup/setup.test.ts -t "C4127:"`
+Proof: `cd web && npx vitest run components/setup/draft-panel.test.ts -t "C4127:"`
 
 **C4128** - `/setup` with the draft form and a draft shown, at 375, 768 and 1440 px, has no horizontal scroll, every control is at least 44 by 44 px on mobile and tablet, and the console has no error (AC 25)
 Proof: live Playwright MCP run per AGENTS.md (author-run, nothing committed); the report lists pages, sizes, touch actions and fixes
