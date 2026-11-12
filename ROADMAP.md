@@ -358,7 +358,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 7 | "Other" trade | Both routes. "Upload your proposal" first, "describe your trade" second | A catalog read from a real document is less likely to invent tasks than one drafted from a sentence |
 | 8 | Trial | 14-day trial with the card collected up front. Cancel the subscription if payment fails at the end | Card-required trials convert about 5x better than no-card ones (ChartMogul bands: 25-35% against 4-6%), at the cost of fewer trial starts. Third-party reports say Jobber and Housecall Pro both use 14 days (unchecked against their own pages). Stripe Checkout does this by default (`trial_period_days`) |
 | 9 | Returning email | Refuse with a clear message | There is no org switcher; attaching a plan to an existing org is a separate feature |
-| 10 | Plan limits | Limit by live agreements and an AI-import allowance. Charge a flat monthly fee per seat beyond the seats each plan includes (amended 2026-11-09: 2, 5 and 10 included, $15 an extra seat, all draft). Price points still open | Field-service tools charge per user add-on; flat seats is a simple edge for a small office. Imports have a real Claude cost; each completed signature costs about $0.20 plus a DocuSeal Pro seat. Numbers: size with the `ai-pricing` skill. **Needs you** for the price points |
+| 10 | Plan limits | Limit by live agreements and an AI-import allowance. Charge a flat monthly fee per seat beyond the seats each plan includes (amended 2026-11-09: 2, 5 and 10 included, $15 an extra seat, all draft). Limits confirmed as enforced on 2026-11-12 (the owner accepted the draft numbers: 15/60/200 live agreements, 10/40/120 AI imports); the dollar price points stay drafts | Field-service tools charge per user add-on; flat seats is a simple edge for a small office. Imports have a real Claude cost; each completed signature costs about $0.20 plus a DocuSeal Pro seat. Numbers: size with the `ai-pricing` skill. **Needs you** for the dollar price points only |
 | 11 | SMTP sender | Move Supabase Auth's sender to the verified Resend domain before launch | Otherwise invitations reach only the account owner. Launch blocker |
 | 12 | Template editor | Block editor with variables, live PDF preview | Predictable output; no DOCX-to-PDF step |
 | 13 | Templates per org | One default plus clone | A picker on every new agreement is friction; several templates can follow a real request |
@@ -372,7 +372,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 21 | Build order | Finish Phase 4, then 4.5, 5, 5.5, then reporting (5.6) | Nobody can be sold a contract that cannot complete (the DocuSeal webhook, signed PDF and audit log are still open). Templates decide whether a contractor adopts the product; reports need real tenant data to say anything |
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
 
-**Needs you:** a pilot contractor (2), a lawyer for the starter wording (14), plan price points (10), and the Supabase SMTP change (11).
+**Needs you:** a pilot contractor (2), a lawyer for the starter wording (14), plan dollar price points (10; the limits were confirmed 2026-11-12), and the Supabase SMTP change (11).
 
 ## Research sources
 - n8n license FAQ (backend-only use is allowed; Cloud has separate terms): https://docs.n8n.io/n8n-community-license/community-license/license-faq

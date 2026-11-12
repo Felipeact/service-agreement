@@ -135,7 +135,7 @@ A Starter org that has started 10 imports this month cannot start an 11th until 
 
 | # | Kind | Question | Until answered |
 | --- | --- | --- | --- |
-| 1 | blocks go-live | Are the draft limits (15/60/200 and 10/40/120) the numbers to enforce? Size them with the `ai-pricing` skill from the first pilot's tokens per import | Enforcement runs on the drafts; one migration changes them |
+| 1 | open | Resolved 2026-11-12: the owner confirmed the draft limits (15/60/200 and 10/40/120) as the numbers to enforce. Re-size them with the `ai-pricing` skill from the first pilot's tokens per import | One migration changes them |
 
 ## Observable
 
