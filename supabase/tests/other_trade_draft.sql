@@ -62,7 +62,8 @@ declare
   v_before bigint := tests.od_count('orgA');
 begin
   perform tests.act_as('uA');
-  perform tests.expect_error('C3420 existing', tests.od_call('orgA', jsonb_build_array(tests.od_type('Fresh type'), tests.od_type('POOL PUMP'))), '23505');
+  perform tests.expect_hint('C3420 existing', tests.od_call('orgA', jsonb_build_array(tests.od_type('Fresh type'), tests.od_type('POOL PUMP'))), '23505', 'POOL PUMP');
+  perform tests.expect_hint('C3420 inside the list hint', tests.od_call('orgA', jsonb_build_array(tests.od_type('Twin2'), tests.od_type('twin2'))), '23505', 'twin2');
   perform tests.expect_error('C3420 seeded', tests.od_call('orgA', jsonb_build_array(tests.od_type('rooftop UNIT'))), '23505');
   perform tests.expect_error('C3420 inside the list', tests.od_call('orgA', jsonb_build_array(tests.od_type('Twin'), tests.od_type('twin'))), '23505');
   reset role;

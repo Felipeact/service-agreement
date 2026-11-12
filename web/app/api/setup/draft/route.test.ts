@@ -71,6 +71,23 @@ describe("POST /api/setup/draft", () => {
     expect(drafterCalls).toHaveLength(2);
   });
 
+  test("C3405: a body that is not multipart, a file field holding text and a description field holding a file are 400 invalid_input", async () => {
+    const raw = await POST(new NextRequest("http://localhost/api/setup/draft", { method: "POST", body: "not a form", headers: { "content-type": "multipart/form-data; boundary=x" } }));
+    expect(raw.status).toBe(400);
+
+    const textFile = new FormData();
+    textFile.set("file", "just text");
+    const a = await POST(new NextRequest("http://localhost/api/setup/draft", { method: "POST", body: textFile }));
+    expect(a.status).toBe(400);
+
+    const fileDescription = new FormData();
+    fileDescription.set("description", new File(["x"], "d.txt"));
+    const b = await POST(new NextRequest("http://localhost/api/setup/draft", { method: "POST", body: fileDescription }));
+    expect(b.status).toBe(400);
+    expect((await b.json()).error).toBe("invalid_input");
+    expect(drafterCalls).toHaveLength(0);
+  });
+
   test("C3406: an owner and an admin get 200 with the cleaned draft", async () => {
     for (const role of ["owner", "admin"] as const) {
       member = asMember(role);

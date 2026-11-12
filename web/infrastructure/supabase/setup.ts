@@ -25,12 +25,15 @@ export function supabaseOrgSetup(client: Client): OrgSetup {
     }
   }
 
+  /** A plain function, not a method: the container hands members out detached, so none may use `this`. */
+  async function isPending(orgId: string): Promise<boolean> {
+    const { data, error } = await client.from("org_settings").select("setup_completed_at").eq("org_id", orgId).maybeSingle();
+    if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
+    return data !== null && data.setup_completed_at === null;
+  }
+
   return {
-    async isPending(orgId) {
-      const { data, error } = await client.from("org_settings").select("setup_completed_at").eq("org_id", orgId).maybeSingle();
-      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-      return data !== null && data.setup_completed_at === null;
-    },
+    isPending,
 
     async catalog() {
       const { data, error } = await client.from("asset_types").select("pack, name").order("name");
@@ -71,7 +74,7 @@ export function supabaseOrgSetup(client: Client): OrgSetup {
     skip: stamp,
 
     async draftAllowed(orgId) {
-      if (!(await this.isPending(orgId))) return false;
+      if (!(await isPending(orgId))) return false;
       const { data, error } = await client.from("org_billing").select("other_trade").eq("org_id", orgId).maybeSingle();
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
       return data?.other_trade === true;

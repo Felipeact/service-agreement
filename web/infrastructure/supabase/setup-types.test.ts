@@ -46,6 +46,15 @@ describe("setup store: adding a drafted catalog", () => {
   });
 });
 
+describe("setup store: members are handed out detached", () => {
+  test("C3427: draftAllowed works when called without its object, as the container calls it", async () => {
+    const { typed } = stubClient({ org_settings: { data: [{ setup_completed_at: null }], error: null }, org_billing: { data: [{ other_trade: true }], error: null } });
+    const { draftAllowed, isPending } = supabaseOrgSetup(typed);
+    expect(await isPending(ORG)).toBe(true);
+    expect(await draftAllowed(ORG)).toBe(true);
+  });
+});
+
 describe("setup store: whether a draft is allowed", () => {
   const allowed = async (settings: unknown, billing: unknown) => {
     const { typed } = stubClient({
