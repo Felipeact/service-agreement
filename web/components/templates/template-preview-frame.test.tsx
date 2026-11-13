@@ -189,6 +189,18 @@ describe("the preview frame", () => {
     expect(calls).toHaveLength(2);
   });
 
+  test("C5433: when the server answers 422 the last good PDF is kept and the invalid-values message is shown", async () => {
+    await show(SAVED);
+    await answer(0);
+    await show(edited("Typing."));
+    await tick(700);
+    await answer(1, new Response(JSON.stringify({ errors: [{ field: "name", message: "x" }] }), { status: 422, headers: { "Content-Type": "application/json" } }));
+    expect(text()).toContain("Fix the highlighted fields to refresh the preview.");
+    expect(text()).not.toContain("Preview unavailable.");
+    expect(text()).not.toContain("Updating preview…");
+    expect(frameSrc()).toBe("blob:preview-1#toolbar=0&view=FitH");
+  });
+
   test("C5433: values that turn invalid while a request is in flight cancel it", async () => {
     await show(SAVED);
     await answer(0);

@@ -182,6 +182,15 @@ describe("POST /templates/preview, who may call and what is refused", () => {
     expect(renderAgreement).not.toHaveBeenCalled();
   });
 
+  test("C5437: a body over the size cap is refused as too large before anything reads it, even when its fields would otherwise be fine", async () => {
+    // Padding in the closing text only: a field the validator alone would answer with its own field and message.
+    const response = await post(undefined, JSON.stringify({ ...FORM, footer: "x".repeat(200_001) }));
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ errors: [{ field: "body", message: "The template is too large to preview." }] });
+    expect(renderAgreement).not.toHaveBeenCalled();
+    noWrites();
+  });
+
   test("C5437: when the renderer throws the answer is 503 with no body, and nothing is written", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     renderAgreement.mockRejectedValue(new Error("react-pdf failed"));
