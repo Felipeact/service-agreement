@@ -242,6 +242,17 @@ describe("the preview follows the editor", () => {
     expect([...container.querySelectorAll("button")].find((button) => button.type === "submit")!.disabled).toBe(false);
   });
 
+  test("C5548: invalid values mark the price field aria-invalid and the preview frame says Fix the highlighted fields to refresh the preview.", async () => {
+    await open();
+    expect(container.querySelector("#line-0-price")!.getAttribute("aria-invalid")).not.toBe("true");
+    expect(container.textContent).not.toContain("Fix the highlighted fields to refresh the preview.");
+    await type("line-0-price", "lots");
+    await tick(2000);
+    expect(container.querySelector("#line-0-price")!.getAttribute("aria-invalid")).toBe("true");
+    expect(container.textContent).toContain("Fix the highlighted fields to refresh the preview.");
+    expect(calls).toHaveLength(1);
+  });
+
   test("C5549: values the preview cannot draw make no request and the row's message shows without the save banner", async () => {
     await open();
     await type("line-0-price", "lots");
