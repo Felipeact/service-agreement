@@ -460,7 +460,8 @@ export interface ImportJobStore {
   /** Status, progress and result of extraction; the file's bytes are downloaded as the member only while `parsed` or `extracting` (import-extract door 6). */
   sourceOf(jobId: string): Promise<SourceOfResult>;
   /** Records one chunk's rows and moves the cursor in one transaction; a stale cursor answers with the stored progress. */
-  recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[]): Promise<RecordExtractionResult>;
+  /** Records one chunk's rows and adds the tokens its call used (when known) to the job's totals. */
+  recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[], usage?: ExtractUsage): Promise<RecordExtractionResult>;
   /** Adds every included row to the job's site as an asset, once (import-review door 3); a repeat answers with the stored result. */
   commit(jobId: string): Promise<CommitImportResult>;
 }
@@ -566,7 +567,10 @@ export type ExtractChunk =
   | { kind: "text"; text: string }
   | { kind: "pdf"; bytes: Uint8Array };
 
-export type ExtractResult = { ok: true; rows: ExtractedRow[] } | { ok: false; code: "unavailable" | "too_large" };
+/** The tokens one Claude call used, as the API reports them. Cached input counts as input. */
+export type ExtractUsage = { inputTokens: number; outputTokens: number };
+
+export type ExtractResult = { ok: true; rows: ExtractedRow[]; usage?: ExtractUsage } | { ok: false; code: "unavailable" | "too_large" };
 
 /**
  * Turns a chunk of a read file into candidate rows. Knows nothing about orgs, sites or customers beyond `tradeContext`,

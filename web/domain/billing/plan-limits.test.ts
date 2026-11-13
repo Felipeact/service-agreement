@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { PLANS } from "@/domain/billing";
-import { planLimitMessage } from "./plan-limits";
+import { formatTokens, planLimitMessage, remaining } from "./plan-limits";
 
 const MIGRATION = readFileSync(new URL("../../../supabase/migrations/20261112220000_plan_limits.sql", import.meta.url), "utf8");
 
@@ -41,5 +41,19 @@ describe("planLimitMessage", () => {
     const notice = planLimitMessage("imports", { plan: "starter", limit: 10, used: 10, resetsOn: "2026-12-01" }, "manager");
     expect(notice.message).toBe("Your Starter plan allows 10 AI imports a month and you have used 10. The count resets on December 1.");
     expect(notice.billingHref).toBe("/settings/billing");
+  });
+});
+
+describe("what is left and the tokens line", () => {
+  test("what is left of a limit never goes below zero, and is null with no limit", () => {
+    expect(remaining({ used: 3, limit: 10 })).toBe(7);
+    expect(remaining({ used: 12, limit: 10 })).toBe(0);
+    expect(remaining({ used: 3, limit: null })).toBeNull();
+  });
+
+  test("tokens read as one total with thousands separators", () => {
+    expect(formatTokens({ input: 21000, output: 30200 })).toBe("51,200 tokens");
+    expect(formatTokens({ input: 1, output: 0 })).toBe("1 token");
+    expect(formatTokens({ input: 0, output: 0 })).toBe("0 tokens");
   });
 });

@@ -96,6 +96,7 @@ export function makeExtractImport(store: ImportJobStore, parser: ImportParser, e
       cursor,
       total,
       answered.rows.map((row) => rowFor(row, chunk, refs, types)),
+      answered.usage,
     );
     if (!recorded.ok) return recorded;
     if (!recorded.done) return { ok: true, state: "extracting", done: recorded.progress.cursor, total: recorded.progress.total };

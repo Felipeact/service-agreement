@@ -251,7 +251,7 @@ describe("composition root", () => {
     const extractedRow = ports.match(/export type ExtractedRow = \{([\s\S]*?)\r?\n\};/)?.[1] ?? "";
     for (const field of ["assetTypeRaw:", "unitNo:", "typeModel:", "location:", "confidence:", "sourceRef:"]) expect(extractedRow).toContain(field);
     expect(body("ImportJobStore")).toContain("sourceOf(jobId: string)");
-    expect(body("ImportJobStore")).toContain("recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[])");
+    expect(body("ImportJobStore")).toContain("recordExtraction(jobId: string, expectedCursor: number | null, total: number, rows: ImportRowInput[], usage?: ExtractUsage)");
     const status = ports.match(/export type ImportJobStatus =([^;]*);/)?.[1] ?? "";
     expect(status).toContain('"extracting"');
     expect(status).toContain('"extracted"');

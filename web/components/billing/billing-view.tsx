@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import type { BillingLoad } from "@/application/use-cases";
 import { canChangeBilling, isEnded, cardLine, dateLine, formatDay, invoiceRows, statusLabel, type BillingOverview } from "@/domain/billing/overview";
 import { PLANS } from "@/domain/billing";
-import { formatResetDate, isFull, type OrgUsage, type UsageFigure } from "@/domain/billing/plan-limits";
+import { formatResetDate, formatTokens, isFull, remaining, type OrgUsage, type UsageFigure } from "@/domain/billing/plan-limits";
 import { Button } from "@/components/ui/button";
 import { CardUpdate } from "./card-update";
 import { PlanSwitcher } from "./plan-switcher";
@@ -68,6 +68,7 @@ function UsageRow({ label, figure }: { label: string; figure: UsageFigure }) {
       <dt className="text-[13px] text-ink-2">{label}</dt>
       <dd className="flex items-center gap-2 text-[13px] font-medium text-ink">
         {figure.limit === null ? `${figure.used}` : `${figure.used} of ${figure.limit}`}
+        {remaining(figure) !== null && !isFull(figure) && <span className="font-normal text-ink-2">{`${remaining(figure)} left`}</span>}
         {isFull(figure) && <span className="rounded-control bg-board px-2 py-0.5 text-[12px] font-semibold text-danger">Full</span>}
       </dd>
     </div>
@@ -85,6 +86,12 @@ function Usage({ usage }: { usage: OrgUsage | null }) {
           <dl className="flex flex-col divide-y divide-hairline">
             <UsageRow label="Live agreements" figure={usage.liveAgreements} />
             <UsageRow label="AI imports this month" figure={usage.aiImports} />
+            {usage.aiTokens && (
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0">
+                <dt className="text-[13px] text-ink-2">AI reading used this month</dt>
+                <dd className="text-[13px] font-medium text-ink">{formatTokens(usage.aiTokens)}</dd>
+              </div>
+            )}
           </dl>
           <p className="text-[12px] text-ink-2">{`The AI import count resets on ${formatResetDate(usage.resetsOn)}.`}</p>
         </>

@@ -52,7 +52,20 @@ export const ROWS_SCHEMA = {
 } as const;
 
 /** What the extractor needs of the SDK, so a test can stand in for it. */
-export type ClaudeMessage = { stop_reason: string | null; content: { type: string; text?: string }[] };
+export type ClaudeMessage = {
+  stop_reason: string | null;
+  content: { type: string; text?: string }[];
+  usage?: { input_tokens?: number; output_tokens?: number; cache_creation_input_tokens?: number | null; cache_read_input_tokens?: number | null };
+};
+
+const count = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
+
+/** The tokens a message used, or `undefined` when the API said nothing about them. Cached input is input too. */
+export function usageOf(message: ClaudeMessage): { inputTokens: number; outputTokens: number } | undefined {
+  const usage = message.usage;
+  if (!usage) return undefined;
+  return { inputTokens: count(usage.input_tokens) + count(usage.cache_creation_input_tokens) + count(usage.cache_read_input_tokens), outputTokens: count(usage.output_tokens) };
+}
 export type ClaudeClient = {
   beta: { messages: { stream(params: Record<string, unknown>): { finalMessage(): Promise<ClaudeMessage> } } };
 };
@@ -144,7 +157,7 @@ export function claudeAssetExtractor({ apiKey, client }: ExtractorOptions): Asse
         }
         const text = message.content.find((block) => block.type === "text")?.text ?? "";
         const rows = readRows(text);
-        return rows ? { ok: true, rows } : unavailable("the answer did not match the schema");
+        return rows ? { ok: true, rows, usage: usageOf(message) } : unavailable("the answer did not match the schema");
       } catch (cause) {
         return unavailable(describe(cause));
       }
