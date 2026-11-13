@@ -1,6 +1,16 @@
 import { describe, expect, test } from "vitest";
 import { copyName, SYSTEM_AGREEMENT_BODY } from "./template";
-import { bodyFromTemplateForm, EMPTY_TEMPLATE_FORM, templateFormFromBody } from "./template-form";
+import { layoutOf } from "./layout";
+import {
+  bodyFromLayoutForm,
+  bodyFromTemplateForm,
+  EMPTY_LAYOUT_FORM,
+  EMPTY_TEMPLATE_FORM,
+  layoutFormFromBody,
+  previewBodyFromLayoutForm,
+  readLayoutFormInput,
+  templateFormFromBody,
+} from "./template-form";
 
 const LINE = { description: "Quarterly HVAC visit", visitMonths: [9, 3, 6, 12], assetTypeCodes: ["RTU"], costPerVisit: "$450.00" };
 
@@ -81,5 +91,110 @@ describe("a saved body opened in the editor", () => {
   test("C5422: both switches on, no term and no lines also come back unchanged", () => {
     const body = { ...SYSTEM_AGREEMENT_BODY, name: "Plain" };
     expect(bodyFromTemplateForm(templateFormFromBody(body))).toEqual({ ok: true, body });
+  });
+});
+
+describe("a schema 1 template opened in the block editor", () => {
+  const V1 = {
+    ...SYSTEM_AGREEMENT_BODY,
+    name: "Quarterly HVAC",
+    description: "Four visits a year.",
+    intro: [{ type: "heading" as const, text: "About this agreement" }, { type: "paragraph" as const, text: "Welcome {{customer.name}}." }],
+    footer: [{ type: "clause" as const, text: "Thank you." }],
+    sections: { schedule: false, scope: true },
+    preset: { termMonths: 24, lines: [{ description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 }] },
+  };
+
+  test("C5547: it opens as its layoutOf rows and document options", () => {
+    const form = layoutFormFromBody(V1);
+    expect(form.doc).toEqual({ title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "first", pageFooter: "number" });
+    expect(form.layout.map((row) => (row.kind === "block" ? `${row.type}:${row.text}` : row.key))).toEqual([
+      "heading:About this agreement",
+      "paragraph:Welcome {{customer.name}}.",
+      "price",
+      "included",
+      "equipment",
+      "terms",
+      "clause:Thank you.",
+    ]);
+    expect(form.name).toBe("Quarterly HVAC");
+    expect(form.termMonths).toBe("24");
+    expect(form.lines[0].costPerVisit).toBe("$450.00");
+  });
+
+  test("C5547: saving it posts a schema 2 body whose layout equals the rows it opened with, and the preset is unchanged", () => {
+    const saved = bodyFromLayoutForm(layoutFormFromBody(V1));
+    expect(saved.ok).toBe(true);
+    if (!saved.ok || saved.body.schema !== 2) throw new Error("expected a schema 2 body");
+    expect(saved.body.layout).toEqual(layoutOf(V1).layout);
+    expect(saved.body.doc).toEqual(layoutOf(V1).doc);
+    expect(saved.body.preset).toEqual(V1.preset);
+    expect(saved.body.name).toBe("Quarterly HVAC");
+  });
+
+  test("C5547: a schema 2 body with options opens and saves back as the same body", () => {
+    const body = {
+      schema: 2 as const,
+      name: "Proposal",
+      description: "",
+      doc: { title: "Maintenance schedule for {{site.name}}", showMeta: false, pageHeader: "every" as const, pageFooter: "letterhead" as const },
+      layout: [
+        { kind: "block" as const, type: "heading" as const, text: "Schedule", level: 1 as const },
+        { kind: "block" as const, type: "clause" as const, text: "Filters.", indent: 2 as const, pageBreakBefore: true },
+        { kind: "section" as const, key: "included" as const, options: { title: "Service included:", showFrequency: true, uppercase: true } },
+        {
+          kind: "section" as const,
+          key: "price" as const,
+          options: { title: "CHARGE", columns: { description: "A", visits: "B", perVisit: "C", perYear: "D", total: "E" }, visitsFormat: "times_per_year" as const },
+        },
+        { kind: "section" as const, key: "equipment" as const, options: { title: "EQUIPMENT LIST" } },
+      ],
+      preset: { termMonths: null, lines: [] },
+    };
+    expect(bodyFromLayoutForm(layoutFormFromBody(body))).toEqual({ ok: true, body });
+  });
+
+  test("C5548: a row's message is keyed layout.<row> so the editor shows it beside that row, and the typed rows are untouched", () => {
+    const form = layoutFormFromBody(V1);
+    const row = form.layout[1];
+    if (row.kind !== "block") throw new Error("expected a block row");
+    form.layout[1] = { ...row, text: "Hello {{nope}}." };
+    const result = bodyFromLayoutForm(form);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors["layout.1.text"]).toContain("unknown variable");
+    expect(form.layout[1]).toMatchObject({ text: "Hello {{nope}}." });
+  });
+
+  test("C5547: a half-typed column set is flagged on its row, and an untouched option is not stored", () => {
+    const form = layoutFormFromBody(V1);
+    const price = form.layout.findIndex((row) => row.kind === "section" && row.key === "price");
+    const row = form.layout[price];
+    if (row.kind !== "section") throw new Error("expected a section row");
+    form.layout[price] = { ...row, columns: { ...row.columns, description: "Item" } };
+    const half = bodyFromLayoutForm(form);
+    expect(half.ok).toBe(false);
+    if (!half.ok) expect(half.errors[`layout.${price}.options.columns.visits`]).toBeDefined();
+    form.layout[price] = row;
+    const saved = bodyFromLayoutForm(form);
+    expect(saved.ok && saved.body.schema === 2 && saved.body.layout[price]).toEqual({ kind: "section", key: "price" });
+  });
+
+  test("C5547: a new template starts from the Standard layout and today's options, and the preview draws it before it is named", () => {
+    expect(EMPTY_LAYOUT_FORM.layout.map((row) => (row.kind === "section" ? row.key : row.type))).toEqual(["price", "schedule", "included", "equipment", "terms"]);
+    expect(EMPTY_LAYOUT_FORM.doc.title).toBe("Preventive maintenance service agreement");
+    expect(bodyFromLayoutForm(EMPTY_LAYOUT_FORM).ok).toBe(false);
+    expect(previewBodyFromLayoutForm(EMPTY_LAYOUT_FORM).ok).toBe(true);
+  });
+
+  test("C5547: a posted form is read field by field and anything off is one error naming where", () => {
+    expect(readLayoutFormInput(JSON.parse(JSON.stringify(EMPTY_LAYOUT_FORM))).ok).toBe(true);
+    expect(readLayoutFormInput({ ...EMPTY_LAYOUT_FORM, doc: { ...EMPTY_LAYOUT_FORM.doc, pageHeader: "sometimes" } })).toEqual({
+      ok: false,
+      errors: [{ field: "doc.pageHeader", message: "The page header must be first or every." }],
+    });
+    const bad = readLayoutFormInput({ ...EMPTY_LAYOUT_FORM, layout: [{ kind: "block", type: "heading", text: "x", level: 3, indent: 0, pageBreakBefore: false }] });
+    expect(bad).toEqual({ ok: false, errors: [{ field: "layout.0.level", message: "The heading level must be 1 or 2." }] });
+    expect(readLayoutFormInput({ ...EMPTY_LAYOUT_FORM, name: 3 }).ok).toBe(false);
   });
 });
