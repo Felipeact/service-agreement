@@ -1525,7 +1525,11 @@ export type Database = {
       }
       checkout_workspace_status: { Args: { p_session_id: string }; Returns: string }
       email_has_workspace: { Args: { p_email: string }; Returns: boolean }
+      company_has_workspace: { Args: { p_name: string }; Returns: boolean }
+      agreement_recipient: { Args: { p_agreement_id: string }; Returns: string | null }
+      set_agreement_recipient: { Args: { p_agreement_id: string; p_email: string }; Returns: boolean }
       my_workspace_state: { Args: never; Returns: string }
+      my_org_frozen: { Args: never; Returns: boolean }
       list_members: {
         Args: never
         Returns: {

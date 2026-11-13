@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   title: "Pricing",
 };
 
-/** Shown above the plans; the roadmap's trial terms (decision 8). */
-const TRIAL_LINE = "14-day free trial. A card is required to start, and billing is monthly after the trial.";
+/** Shown above the plans; the billing terms. */
+const TRIAL_LINE = "Simple monthly plans. Billing starts at checkout. Cancel any time.";
 
 const BILLING_QUESTIONS = ["What is a live agreement?", "Do you charge per seat?", "Can I use more than one trade?"];
 
@@ -40,8 +40,8 @@ export default function PricingPage() {
                   <li>{plan.aiImports} AI imports a month</li>
                   <li>{plan.includedSeats} seats included</li>
                 </ul>
-                <LinkButton href={`/register?plan=${plan.key}`} variant="primary" aria-label={`Start 14-day trial, ${plan.name} plan`} className="mt-auto w-full">
-                  Start 14-day trial
+                <LinkButton href={`/register?plan=${plan.key}`} variant="primary" aria-label={`Get started, ${plan.name} plan`} className="mt-auto w-full">
+                  Get started
                 </LinkButton>
               </article>
             ))}

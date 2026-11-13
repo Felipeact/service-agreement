@@ -178,8 +178,8 @@ describe("adding, moving, removing, hiding and showing", () => {
     expect(named(rows()[0], "Remove")).toBeDefined();
     expect(named(rows()[0], "Hide")).toBeUndefined();
     const price = rows()[2];
-    expect(buttons(price).map((button) => button.textContent)).toEqual(["Up", "Down"]);
-    for (const at of [3, 4, 5, 6]) expect(buttons(rows()[at]).map((button) => button.textContent), `row ${at}`).toEqual(["Up", "Down", "Hide"]);
+    expect(buttons(price).slice(1).map((button) => button.textContent)).toEqual(["Up", "Down"]);
+    for (const at of [3, 4, 5, 6]) expect(buttons(rows()[at]).slice(1).map((button) => button.textContent), `row ${at}`).toEqual(["Up", "Down", "Hide"]);
     await press(named(rows()[1], "Remove"));
     expect(keys(seen.value)).not.toContain("paragraph:Welcome.");
     await press(named(container, "Hide Visit schedule"));
@@ -188,9 +188,9 @@ describe("adding, moving, removing, hiding and showing", () => {
 
   test("C5543: in a contract the signatures row has no Remove and no Hide either", async () => {
     await mount(CONTRACT, "contract");
-    expect(buttons(rows()[2]).map((button) => button.textContent)).toEqual(["Up", "Down"]);
-    expect(buttons(rows()[0]).map((button) => button.textContent)).toEqual(["Up", "Down"]);
-    expect(buttons(rows()[1]).map((button) => button.textContent)).toEqual(["Up", "Down", "Remove"]);
+    expect(buttons(rows()[2]).slice(1).map((button) => button.textContent)).toEqual(["Up", "Down"]);
+    expect(buttons(rows()[0]).slice(1).map((button) => button.textContent)).toEqual(["Up", "Down"]);
+    expect(buttons(rows()[1]).slice(1).map((button) => button.textContent)).toEqual(["Up", "Down", "Remove"]);
   });
 
   test("C5544: showing a hidden section appends it at the end of the layout", async () => {

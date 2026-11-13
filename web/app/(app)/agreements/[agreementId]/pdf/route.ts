@@ -14,7 +14,7 @@ function versionOf(value: string | null): number | undefined {
   return value !== null && /^[1-9]\d*$/.test(value) ? Number(value) : undefined;
 }
 
-/** Any member of the org downloads the agreement as a PDF, for one version (door 3). */
+/** Any member of the org downloads the agreement as a PDF, for one version (door 3). `?inline=1` asks for the page's own preview instead of a download. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ agreementId: string }> }) {
   const { agreementId } = await params;
   if (!isUuid(agreementId)) return empty(404);
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new Response(bytes as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${agreement.number}-v${agreement.shown.versionNo}.pdf"`,
+        "Content-Disposition": `${request.nextUrl.searchParams.get("inline") === "1" ? "inline" : "attachment"}; filename="${agreement.number}-v${agreement.shown.versionNo}.pdf"`,
         "Cache-Control": "private, no-store",
       },
     });

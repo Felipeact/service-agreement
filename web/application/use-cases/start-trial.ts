@@ -4,7 +4,7 @@ import { parseCheckoutSelection, type FieldErrors, type SelectionInput } from "@
 export type StartTrialOutcome =
   | { status: "redirect"; url: string }
   | { status: "no_trade" | "invalid_choice" | "invalid_details"; fields: FieldErrors }
-  | { status: "email_in_use" | "not_configured" | "unavailable" };
+  | { status: "email_in_use" | "company_in_use" | "not_configured" | "unavailable" };
 
 /** What a form posted, before anything is trusted (pricing-page S2, register-seats). */
 export type StartTrialInput = SelectionInput;
@@ -30,6 +30,7 @@ export function makeStartTrial(checkout: CheckoutStarter, emailCheck?: Workspace
     if (emailCheck) {
       try {
         if (await emailCheck.inUse(parsed.value.email)) return { status: "email_in_use" };
+        if (await emailCheck.companyInUse(parsed.value.company)) return { status: "company_in_use" };
       } catch (cause) {
         console.error(`Starting a trial failed: the email check threw ${cause instanceof Error ? cause.name : "a non-error"}`);
         return { status: "unavailable" };

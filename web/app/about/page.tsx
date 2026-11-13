@@ -51,7 +51,7 @@ export default function AboutPage() {
           </div>
         </Wrap>
       </section>
-      <CtaBand title="Want to shape it with us?" text="Start a trial, or write to us about your trade and the lists you quote from." />
+      <CtaBand title="Want to shape it with us?" text="Create a workspace, or write to us about your trade and the lists you quote from." />
     </SiteShell>
   );
 }

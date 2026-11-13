@@ -68,7 +68,7 @@ describe("the public site", () => {
 describe("the seat answer (register-seats)", () => {
   test("C2616: the FAQ answer to 'Do you charge per seat?' names the included seats and the extra-seat price", () => {
     const answer = FAQS.find((faq) => faq.q === "Do you charge per seat?")?.a ?? "";
-    expect(answer).toContain("$15 a month");
+    expect(answer).toContain("$19 a month");
     expect(answer).toContain("Starter 2");
     expect(answer).toContain("Team 5");
     expect(answer).toContain("Business 10");
@@ -76,11 +76,11 @@ describe("the seat answer (register-seats)", () => {
   });
 
   test.each([["home (concept A)", HomeA], ["concept B", HomeB], ["concept C", HomeC]] as [string, ComponentType][])(
-    "C2624: %s shows the seats included per plan and 'Extra seats $15 a month'",
+    "C2624: %s shows the seats included per plan and 'Extra seats $19 a month'",
     (_name, Home) => {
       const text = renderToStaticMarkup(createElement(Home)).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
       for (const included of ["2 seats included", "5 seats included", "10 seats included"]) expect(text).toContain(included);
-      expect(text).toContain("Extra seats $15 a month");
+      expect(text).toContain("Extra seats $19 a month");
     },
   );
 });

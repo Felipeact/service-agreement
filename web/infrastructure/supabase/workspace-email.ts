@@ -11,5 +11,11 @@ export function supabaseWorkspaceEmailCheck(client: SupabaseClient<Database>): W
       if (typeof data === "boolean") return data;
       throw new Error("email_has_workspace answered a value it should not");
     },
+    async companyInUse(name) {
+      const { data, error } = await client.rpc("company_has_workspace", { p_name: name });
+      if (error) throw new Error(`company_has_workspace failed: ${error.code}`);
+      if (typeof data === "boolean") return data;
+      throw new Error("company_has_workspace answered a value it should not");
+    },
   };
 }

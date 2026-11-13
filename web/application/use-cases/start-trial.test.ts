@@ -133,11 +133,19 @@ describe("startTrial and the contact fields", () => {
 
 describe("startTrial asks whether the email already belongs to an org (checkout-email-in-use)", () => {
   const inUse = vi.fn<WorkspaceEmailCheck["inUse"]>();
-  const checked = makeStartTrial({ start }, { inUse });
+  const companyInUse = vi.fn<WorkspaceEmailCheck["companyInUse"]>().mockResolvedValue(false);
+  const checked = makeStartTrial({ start }, { inUse, companyInUse });
   const SELECTION = { plan: "team", trades: ["hvac"], ...DETAILS };
 
   beforeEach(() => {
     inUse.mockResolvedValue(false);
+    companyInUse.mockResolvedValue(false);
+  });
+
+  test("a company name that already has a workspace is company_in_use and the starter is never called", async () => {
+    companyInUse.mockResolvedValue(true);
+    expect(await checked(SELECTION)).toEqual({ status: "company_in_use" });
+    expect(start).not.toHaveBeenCalled();
   });
 
   test("C4300: a taken email is email_in_use and the starter is never called", async () => {

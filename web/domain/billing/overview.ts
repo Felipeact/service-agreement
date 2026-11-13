@@ -109,7 +109,14 @@ export function invoiceRows(invoices: InvoiceSummary[]): InvoiceRow[] {
     }));
 }
 
-/** Update card, Cancel and Resume are offered for every status except a canceled subscription. */
+/** The statuses that freeze the workspace until the company renews (the same set as `public.my_org_frozen`). */
+export const ENDED_STATUSES = ["canceled", "unpaid", "incomplete_expired"] as const;
+
+export function isEnded(status: string): boolean {
+  return (ENDED_STATUSES as readonly string[]).includes(status);
+}
+
+/** Update card, Cancel and Resume are offered for every status except an ended subscription. */
 export function canChangeBilling(status: string): boolean {
-  return status !== "canceled";
+  return !isEnded(status);
 }

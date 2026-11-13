@@ -12,13 +12,13 @@ import { SiteShell } from "./site-shell";
  * C the year of visits. The owner picks one; the other two are deleted.
  */
 
-const FAQ_PREVIEW = FAQS.filter((f) => ["Does my customer need an account?", "Are e-signatures legally valid?", "How does the free trial work?", "What does it not do?"].includes(f.q));
+const FAQ_PREVIEW = FAQS.filter((f) => ["Does my customer need an account?", "Are e-signatures legally valid?", "How does billing work?", "What does it not do?"].includes(f.q));
 
 function Actions({ onDark = false }: { onDark?: boolean }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
       <LinkButton href="/register" variant="primary" className={`h-12 px-5 text-[14px] lg:h-11 ${onDark ? "bg-surface text-ink hover:bg-surface/90" : ""}`}>
-        Start free trial
+        Get started
       </LinkButton>
       <LinkButton
         href="/demo"
@@ -31,7 +31,7 @@ function Actions({ onDark = false }: { onDark?: boolean }) {
   );
 }
 
-const trialNote = "14 days free. A card is required to start. Built for Canadian trade contractors.";
+const trialNote = "Monthly plans from $79. Built for Canadian trade contractors.";
 
 function Portal({ flip = false }: { flip?: boolean }) {
   return (

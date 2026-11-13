@@ -52,10 +52,10 @@ describe("the success page wiring", () => {
 
   test("C4201: the real page with no session_id shows its own copy and the Sign in link to /login, and asks nothing", async () => {
     await mount(createElement(Page));
-    expect(container.textContent).toContain("Your trial is registered.");
+    expect(container.textContent).toContain("You are subscribed.");
     expect(container.textContent).toContain("We will email a sign-in link to the address you gave at checkout.");
     // The site header has its own Sign in link; the claim is about the one under the page's heading.
-    const hero = [...container.querySelectorAll("section")].find((section) => section.querySelector("h1")?.textContent === "Your trial is registered.");
+    const hero = [...container.querySelectorAll("section")].find((section) => section.querySelector("h1")?.textContent === "You are subscribed.");
     const signIn = [...(hero?.querySelectorAll("a") ?? [])].filter((a) => a.textContent?.trim() === "Sign in");
     expect(signIn).toHaveLength(1);
     expect(signIn[0].getAttribute("href")).toBe("/login");
@@ -65,8 +65,8 @@ describe("the success page wiring", () => {
 
   test("C4201: the page rendered on the server (no client hooks) is the same static copy", () => {
     const html = renderToStaticMarkup(createElement(Page));
-    expect(html).toContain("Your trial is registered.");
-    const hero = html.slice(html.indexOf("Your trial is registered."), html.indexOf("If the email does not arrive"));
+    expect(html).toContain("You are subscribed.");
+    const hero = html.slice(html.indexOf("You are subscribed."), html.indexOf("If the email does not arrive"));
     expect(hero).toMatch(/<a\b[^>]*href="\/login"[^>]*>\s*Sign in\s*<\/a>/);
   });
 });

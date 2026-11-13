@@ -12,6 +12,6 @@ export default async function SettingsPage() {
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
 
-  const [settings, showBilling, logoPath] = await Promise.all([getOrgSettings(member.orgId), billingLink(member.orgId, member.role), logo.current(member.orgId)]);
+  const [settings, showBilling, logoPath] = await Promise.all([getOrgSettings(member.orgId), billingLink(member.orgId, member.billingRole ?? member.role), logo.current(member.orgId)]);
   return <SettingsView settings={settings} role={member.role} action={saveSettingsAction} billingLink={showBilling} logoPath={logoPath ?? ""} prepareLogo={prepareLogoUpload} />;
 }

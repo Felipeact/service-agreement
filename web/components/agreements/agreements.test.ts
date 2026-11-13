@@ -7,11 +7,12 @@ import type { ContractStatus } from "@/domain/contract";
 import { itemWords } from "@/domain/org-settings";
 import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./agreement-view";
+import { AgreementPdfPreview } from "./agreement-pdf-preview";
 import { LineForm } from "./line-form";
 import { RemovePrompt } from "./line-row";
 import { GenerateContractControl, GenerateContractPrompt } from "./contract-controls";
 import { CONTRACT_MESSAGES } from "./contract-state";
-import { LinkPanel, ReissuePrompt, SendPrompt } from "./link-controls";
+import { SendPrompt } from "./link-controls";
 import { RevisePrompt, WithdrawPrompt } from "./move-controls";
 import { VersionCompare } from "./version-compare";
 import type { LineState, MoveState } from "./state";
@@ -338,17 +339,10 @@ describe("sending an agreement and its customer link", () => {
   const sendPrompt = (props: Partial<Parameters<typeof SendPrompt>[0]> = {}) =>
     renderToStaticMarkup(createElement(SendPrompt, { number: "AG-1052", confirming: false, pending: false, state: idle, ...props }));
 
-  test("C901: the link panel shows the full URL and a Copy link button", () => {
-    const url = "https://app.example.com/review/" + "A".repeat(43);
-    const html = renderToStaticMarkup(createElement(LinkPanel, { url }));
-    expect(html).toContain(`value="${url}"`);
-    expect(has(html, "Copy link")).toBe(true);
-  });
-
   test("C901: Send to customer asks first, then submits Send, with a Cancel that does not submit", () => {
     expect(has(sendPrompt(), "Send to customer")).toBe(true);
     const html = sendPrompt({ confirming: true });
-    expect(text(html)).toContain("Send AG-1052 to the customer?");
+    expect(text(html)).toContain("Email AG-1052 to the customer?");
     expect(html).toMatch(/<form[^>]*>.*<button type="submit"[^>]*>Send<\/button>/);
     expect(html).toMatch(/<button type="button"[^>]*>Cancel<\/button>/);
   });
@@ -365,17 +359,16 @@ describe("sending an agreement and its customer link", () => {
 
   test("C903: a stale send says the agreement was changed by someone else", () => {
     expect(text(sendPrompt({ state: { status: "conflict" } }))).toContain("This agreement was changed by someone else. Reload the page.");
-    const reissue = renderToStaticMarkup(createElement(ReissuePrompt, { confirming: false, pending: false, state: { status: "conflict" } }));
-    expect(text(reissue)).toContain("This agreement was changed by someone else. Reload the page.");
   });
 
-  test("C904: Get a new link is offered to a writer on the current version of a sent agreement", () => {
-    expect(has(view(agreement({ status: "sent" })), "Get a new link")).toBe(true);
-    expect(has(view(agreement({ status: "draft" })), "Get a new link")).toBe(false);
-    expect(has(view(agreement({ status: "accepted" })), "Get a new link")).toBe(false);
-    expect(has(view(agreement({ status: "sent", shownNo: 1, versions: 2 })), "Get a new link")).toBe(false);
-    const html = renderToStaticMarkup(createElement(ReissuePrompt, { confirming: true, pending: false, state: idle }));
-    expect(text(html)).toContain("The link already given to the customer stops working.");
+  test("the sender is asked for the customer's email only when none is on file, and no link is shown", () => {
+    const known = sendPrompt({ confirming: true, recipient: "owner@shop.ca" });
+    expect(text(known)).toContain("Email AG-1052 to owner@shop.ca?");
+    expect(known).not.toContain('name="email"');
+    const missing = sendPrompt({ confirming: true, recipient: null });
+    expect(missing).toContain('name="email"');
+    expect(text(sendPrompt({ state: { status: "needs_email" } }))).toContain("Enter the customer's email");
+    expect(has(view(agreement({ status: "sent" })), "Get a new link")).toBe(false);
   });
 
   test("C905: a sent agreement says when the customer first opened the link, or that it has not been", () => {
@@ -763,5 +756,60 @@ describe("the skipped equipment codes of a template", () => {
   test("C5358: the note comes before the service lines", () => {
     const html = view(["NOPE"]);
     expect(html.indexOf("not in your catalog")).toBeLessThan(html.indexOf('aria-label="Service lines"'));
+  });
+});
+
+describe("the PDF preview on the agreement page", () => {
+  test("it starts closed: a Preview PDF button, no frame and no request until it is asked for", () => {
+    const html = renderToStaticMarkup(createElement(AgreementPdfPreview, { agreementId: "a1", versionNo: 2, revision: "x" }));
+    expect(text(html)).toContain("PDF preview");
+    expect(text(html)).toContain("Preview PDF");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("<iframe");
+  });
+
+  test("every agreement page carries it, beside the existing Download PDF link", () => {
+    const html = view(agreement({ status: "draft" }));
+    expect(html).toContain('aria-label="PDF preview"');
+    expect(html).toContain("Download PDF");
+  });
+});
+
+describe("the versions list marks the version on screen", () => {
+  const at = (day: number) => new Date(Date.UTC(2026, 9, day, 18));
+  const version = (versionNo: number) => ({ versionNo, createdAt: at(20 + versionNo), reason: null, author: null, events: [] });
+
+  test("only the shown version is on screen, tinted and marked, and it has no Compare link", () => {
+    const html = view(agreement({ versions: 2, detail: { versions: [version(2), version(1)] } }));
+    const rows = html.split(/(?=<li[^>]*data-version=)/).filter((part) => part.startsWith("<li"));
+    const shown = rows.find((row) => row.includes('aria-current="true"')) ?? "";
+    expect(shown).toContain("On screen");
+    expect(shown).not.toContain("Compare with version");
+    expect(rows.filter((row) => row.includes('aria-current="true"'))).toHaveLength(1);
+  });
+
+  test("a version's events fold behind a History control that counts them", () => {
+    const events = [{ type: "sent" as const, at: at(21), by: "estimator" as const }, { type: "viewed" as const, at: at(22), by: "customer" as const }];
+    const html = view(agreement({ detail: { versions: [{ ...version(1), events }] } }));
+    expect(text(html)).toContain("History · 2 events");
+    expect(html).toMatch(/<details[^>]*data-history/);
+  });
+});
+
+describe("the activity timeline folds older events", () => {
+  const entry = (n: number) => ({ type: "viewed" as const, label: `Event ${n}`, at: new Date(Date.UTC(2026, 9, 20, n)), versionNo: 1, by: "customer", reason: null, detail: null });
+  const section = (html: string) => html.split(/(?=<section)/).find((part) => part.includes('aria-label="Activity"')) ?? "";
+
+  test("up to six entries all show with nothing folded", () => {
+    const out = section(view(agreement({ detail: { timeline: [1, 2, 3, 4, 5, 6].map(entry) } })));
+    expect(out).not.toContain("<details");
+    expect(out.match(/data-activity=/g)).toHaveLength(6);
+  });
+
+  test("beyond six, the rest sit behind a control that says how many, still newest first", () => {
+    const out = section(view(agreement({ detail: { timeline: [1, 2, 3, 4, 5, 6, 7, 8].map(entry) } })));
+    expect(text(out)).toContain("Show 2 earlier events");
+    expect(out.match(/data-activity=/g)).toHaveLength(8);
+    expect(out.indexOf("Event 1<")).toBeLessThan(out.indexOf("Event 8<"));
   });
 });

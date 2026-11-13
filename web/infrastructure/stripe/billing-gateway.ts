@@ -56,7 +56,7 @@ function invoiceOf(raw: unknown): InvoiceSummary | null {
  * The in-app billing page's Stripe calls over `fetch`, no SDK (billing-page door 2). Reads happen on every request. A failure is
  * `unavailable` and logged once with the HTTP status and Stripe's error code only, never an id, the key or a body.
  */
-export function stripeBillingGateway(options: { secretKey: string }): BillingGateway {
+export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: string }): BillingGateway {
   /** One request. `what` names the call in the log; no id or body ever reaches it. */
   async function call(what: string, method: "GET" | "POST", path: string, form?: Parameters<typeof encodeForm>[0], tolerate404 = false): Promise<Answer> {
     const controller = new AbortController();
@@ -200,6 +200,34 @@ export function stripeBillingGateway(options: { secretKey: string }): BillingGat
 
     cancel({ subscriptionId }: StripeIds) {
       return write("cancel", `/subscriptions/${encodeURIComponent(subscriptionId)}`, { cancel_at_period_end: "true" });
+    },
+
+    async startRenewal({ orgId, customerId, plan, seats }) {
+      const chosen = PLANS.find((candidate) => candidate.key === plan);
+      const base = options.appBaseUrl?.replace(/\/+$/, "");
+      if (!chosen || !base) return unavailable;
+      const extraSeats = Math.max(0, seats - chosen.includedSeats);
+      const metadata = { sa_renew_org: orgId, plan, seats };
+      const answer = await call("renewal checkout", "POST", "/checkout/sessions", {
+        mode: "subscription",
+        customer: customerId,
+        line_items: [
+          {
+            quantity: 1,
+            price_data: { currency: "cad", unit_amount: chosen.monthlyCents, recurring: { interval: "month" }, product_data: { name: `${chosen.name} plan`, metadata: { sa_kind: "plan", sa_plan: chosen.key } } },
+          },
+          ...(extraSeats > 0
+            ? [{ quantity: extraSeats, price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product_data: { name: "Extra seat", metadata: { sa_kind: "seat" } } } }]
+            : []),
+        ],
+        payment_method_collection: "always",
+        subscription_data: { metadata },
+        metadata,
+        success_url: `${base}/settings/billing`,
+        cancel_url: `${base}/settings/billing`,
+      });
+      const url = answer.ok ? text(answer.body.url) : null;
+      return url ? ({ ok: true, url } as const) : unavailable;
     },
 
     resume({ subscriptionId }: StripeIds) {

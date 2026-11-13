@@ -122,7 +122,7 @@ describe("changing the plan", () => {
     const body = form(updates()[0]);
     expect(body.get("items[0][id]")).toBe("si_plan");
     expect(body.get("items[0][price_data][currency]")).toBe("cad");
-    expect(body.get("items[0][price_data][unit_amount]")).toBe("9900");
+    expect(body.get("items[0][price_data][unit_amount]")).toBe("14900");
     expect(body.get("items[0][price_data][recurring][interval]")).toBe("month");
     expect(body.get("items[0][price_data][product]")).toBe("sa_plan_team");
     expect(body.get("proration_behavior")).toBe("create_prorations");
@@ -133,9 +133,9 @@ describe("changing the plan", () => {
   });
 
   test.each([
-    ["starter", "team", "Starter plan", "4900"],
-    ["team", "starter", "Team plan", "9900"],
-    ["business", "starter", "Business plan", "19900"],
+    ["starter", "team", "Starter plan", "7900"],
+    ["team", "starter", "Team plan", "14900"],
+    ["business", "starter", "Business plan", "29900"],
   ] as const)("C3206: a 404 on the product read creates %s once with its id, name and tags, then updates the price", async (plan, from, name, unit) => {
     handler = routes({ productRead: () => reply(404, { error: { code: "resource_missing" } }), sub: subWith([planItem(from)]) });
     expect(await gateway().changePlan(IDS, { plan, extraSeats: 0 })).toEqual({ ok: true, changed: true });
@@ -167,14 +167,14 @@ describe("changing the plan", () => {
     expect(body.get("items[1][quantity]")).toBeNull();
   });
 
-  test("C3206: with no seat item and extra seats needed, one is added on the extra-seat product at 15 dollars", async () => {
+  test("C3206: with no seat item and extra seats needed, one is added on the extra-seat product at 19 dollars", async () => {
     handler = routes({ sub: subWith([planItem("business")]) });
     expect(await gateway().changePlan(IDS, { plan: "starter", extraSeats: 2 })).toEqual({ ok: true, changed: true });
     expect(calls.map((call) => `${call.method} ${call.url.pathname}`)).toContain("GET /v1/products/sa_extra_seat");
     const body = form(updates()[0]);
     expect(body.get("items[1][price_data][product]")).toBe("sa_extra_seat");
     expect(body.get("items[1][price_data][currency]")).toBe("cad");
-    expect(body.get("items[1][price_data][unit_amount]")).toBe("1500");
+    expect(body.get("items[1][price_data][unit_amount]")).toBe("1900");
     expect(body.get("items[1][price_data][recurring][interval]")).toBe("month");
     expect(body.get("items[1][quantity]")).toBe("2");
     expect(body.get("items[1][id]")).toBeNull();

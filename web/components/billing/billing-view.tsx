@@ -2,9 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import type { BillingLoad } from "@/application/use-cases";
-import { canChangeBilling, cardLine, dateLine, formatDay, invoiceRows, statusLabel, type BillingOverview } from "@/domain/billing/overview";
+import { canChangeBilling, isEnded, cardLine, dateLine, formatDay, invoiceRows, statusLabel, type BillingOverview } from "@/domain/billing/overview";
 import { PLANS } from "@/domain/billing";
 import { formatResetDate, isFull, type OrgUsage, type UsageFigure } from "@/domain/billing/plan-limits";
+import { Button } from "@/components/ui/button";
 import { CardUpdate } from "./card-update";
 import { PlanSwitcher } from "./plan-switcher";
 import { SubscriptionControls } from "./subscription-controls";
@@ -107,6 +108,16 @@ function Ready({ plan, overview, usage, publishableKey, actions }: { plan: strin
           </p>
           {line && <p className="text-[13px] text-ink-2">{line}</p>}
         </div>
+        {isEnded(overview.status) && actions?.renew && (
+          <form action={actions.renew} className="flex flex-col gap-2 rounded-control border border-hairline bg-ground p-4">
+            <p className="text-[13px] font-medium text-ink">Your plan has ended, so the workspace is read-only. Renew to start editing and sending again. Nothing is deleted.</p>
+            <div>
+              <Button type="submit" variant="primary">
+                Renew subscription
+              </Button>
+            </div>
+          </form>
+        )}
         {mayChange && <SubscriptionControls ending={ending} endDate={endDate} actions={actions} />}
         {mayChange && (
           <PlanSwitcher

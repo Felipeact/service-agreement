@@ -33,7 +33,7 @@ export async function MemberGate({ children }: { children: ReactNode }) {
   const words = await getItemWords(member.orgId);
 
   return (
-    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} todayLabel={TODAY.format(clock.now())} words={words}>
+    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} todayLabel={TODAY.format(clock.now())} words={words} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
       {children}
     </AppShell>
   );

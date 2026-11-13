@@ -46,9 +46,9 @@ describe("the plan list", () => {
   test("C3204: it lists the three plans with price and included seats, and marks the current one without a switch control", async () => {
     await mount({ current: "starter" });
     expect(text()).toContain("Starter");
-    expect(text()).toContain("$49/month");
-    expect(text()).toContain("$99/month");
-    expect(text()).toContain("$199/month");
+    expect(text()).toContain("$79/month");
+    expect(text()).toContain("$149/month");
+    expect(text()).toContain("$299/month");
     expect(text()).toContain("2 seats included");
     expect(text()).toContain("5 seats included");
     expect(text()).toContain("10 seats included");
@@ -64,9 +64,9 @@ describe("the confirming step", () => {
     await mount({ current: "starter", seats: 2, trialEndsOn: "Nov 24, 2026" });
     await press("Switch to Team");
     expect(text()).toContain("Switch to Team?");
-    expect(text()).toContain("$99/month");
+    expect(text()).toContain("$149/month");
     expect(text()).toContain("Included seats: 5. Extra seats: 0.");
-    expect(text()).toContain("New monthly total: $99.00.");
+    expect(text()).toContain("New monthly total: $149.00.");
     expect(text()).toContain("Nothing is charged until your trial ends on Nov 24, 2026.");
     expect(text()).not.toContain("prorated");
   });
@@ -82,7 +82,7 @@ describe("the confirming step", () => {
     await mount({ current: "team", seats: 7 });
     await press("Switch to Starter");
     expect(text()).toContain("Included seats: 2. Extra seats: 5.");
-    expect(text()).toContain("New monthly total: $124.00.");
+    expect(text()).toContain("New monthly total: $174.00.");
   });
 
   test("C3205: Switch to Team only opens the prompt and calls nothing", async () => {

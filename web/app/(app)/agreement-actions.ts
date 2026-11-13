@@ -178,8 +178,22 @@ async function issueLink(
 }
 
 /** Sends a draft to the customer: `sent`, frozen, and a link shown once. */
-export async function sendAgreementAction(agreementId: string): Promise<LinkState> {
-  return issueLink(agreementId, "sent", (container) => container.sendAgreement(agreementId));
+export async function sendAgreementAction(agreementId: string, email?: string): Promise<LinkState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  // The customer's contact email is where the agreement goes; without one on file the sender gives it first.
+  try {
+    if (!(await container.agreementRecipient.get(agreementId))) {
+      const typed = (email ?? "").trim().toLowerCase();
+      if (!typed) return { status: "needs_email" };
+      if (!(await container.agreementRecipient.set(agreementId, typed))) return { status: "invalid_email" };
+    }
+  } catch (cause) {
+    console.error(`Agreement send failed: the contact email step threw ${cause instanceof Error ? cause.message : String(cause)}`);
+    return { status: "unavailable" };
+  }
+  return issueLink(agreementId, "sent", (ready) => ready.sendAgreement(agreementId));
 }
 
 /** Replaces the live link of a sent agreement; the old address stops working. */

@@ -70,7 +70,7 @@ export function WorkspaceStatus({ sessionId, check, fallback }: Props) {
   }
   if (panel === "slow") {
     return (
-      <PageHero title="This is taking longer than usual." text="Your trial is registered and your workspace is still being set up. Look for a sign-in link in your email, or try signing in. If nothing arrives, write to us.">
+      <PageHero title="This is taking longer than usual." text="Your subscription is registered and your workspace is still being set up. Look for a sign-in link in your email, or try signing in. If nothing arrives, write to us.">
         <div className="flex flex-wrap gap-3">
           <LinkButton href="/login" variant="primary">
             Sign in

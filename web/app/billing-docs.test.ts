@@ -31,8 +31,8 @@ test("C2536: ROADMAP, CONTEXT and STATE record billing-checkout", () => {
 test("C2622: ROADMAP, CONTEXT, STATE and PRODUCT record that seats are charged beyond the included ones", () => {
   const roadmap = document("ROADMAP.md");
   expect(roadmap).toContain("| Plan | Per month | Live agreements | AI imports a month | Seats included |");
-  for (const row of ["| Starter | $49 | 15 | 10 | 2 |", "| Team | $99 | 60 | 40 | 5 |", "| Business | $199 | 200 | 120 | 10 |"]) expect(roadmap).toContain(row);
-  expect(roadmap).toContain("$15");
+  for (const row of ["| Starter | $79 | 15 | 10 | 2 |", "| Team | $149 | 60 | 40 | 5 |", "| Business | $299 | 200 | 120 | 10 |"]) expect(roadmap).toContain(row);
+  expect(roadmap).toContain("$19");
   const decision = (number: number) => lines(roadmap).find((line) => line.startsWith(`| ${number} |`)) ?? "";
   expect(decision(10)).toContain("per seat beyond");
   expect(decision(20)).toContain("include seats");

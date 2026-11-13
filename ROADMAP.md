@@ -49,9 +49,9 @@ Price points are **not decided** (decision 10, needs you). The table is a starti
 
 | Plan | Per month | Live agreements | AI imports a month | Seats included |
 |---|---|---|---|---|
-| Starter | $49 | 15 | 10 | 2 |
-| Team | $99 | 60 | 40 | 5 |
-| Business | $199 | 200 | 120 | 10 |
+| Starter | $79 | 15 | 10 | 2 |
+| Team | $149 | 60 | 40 | 5 |
+| Business | $299 | 200 | 120 | 10 |
 
 - **Axis:** plans limit volume and include some seats; every seat beyond that is $15 a month in CAD, one price for all plans (draft, decisions 10 and 20 as amended 2026-11-09). Features, templates and reports are the same on every plan. What counts as a "live agreement" is defined in Phase 5.
 - **Trial and billing:** 14 days free with the card collected up front, then monthly. An annual option at two months free is worth testing. Stripe handles Checkout, the Customer Portal and failed-payment retries.
@@ -358,7 +358,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 7 | "Other" trade | Both routes. "Upload your proposal" first, "describe your trade" second | A catalog read from a real document is less likely to invent tasks than one drafted from a sentence |
 | 8 | Trial | 14-day trial with the card collected up front. Cancel the subscription if payment fails at the end | Card-required trials convert about 5x better than no-card ones (ChartMogul bands: 25-35% against 4-6%), at the cost of fewer trial starts. Third-party reports say Jobber and Housecall Pro both use 14 days (unchecked against their own pages). Stripe Checkout does this by default (`trial_period_days`) |
 | 9 | Returning email | Refuse with a clear message | There is no org switcher; attaching a plan to an existing org is a separate feature |
-| 10 | Plan limits | Limit by live agreements and an AI-import allowance. Charge a flat monthly fee per seat beyond the seats each plan includes (amended 2026-11-09: 2, 5 and 10 included, $15 an extra seat, all draft). Limits confirmed as enforced on 2026-11-12 (the owner accepted the draft numbers: 15/60/200 live agreements, 10/40/120 AI imports); the dollar price points stay drafts | Field-service tools charge per user add-on; flat seats is a simple edge for a small office. Imports have a real Claude cost; each completed signature costs about $0.20 plus a DocuSeal Pro seat. Numbers: size with the `ai-pricing` skill. **Needs you** for the dollar price points only |
+| 10 | Plan limits | Limit by live agreements and an AI-import allowance. Charge a flat monthly fee per seat beyond the seats each plan includes (amended 2026-11-09: 2, 5 and 10 included, $15 an extra seat, all draft; set by the owner on 2026-11-13 to $79, $149 and $299 with $19 an extra seat, and no free trial: a card is charged at checkout). Limits confirmed as enforced on 2026-11-12 (the owner accepted the draft numbers: 15/60/200 live agreements, 10/40/120 AI imports); the dollar price points stay drafts | Field-service tools charge per user add-on; flat seats is a simple edge for a small office. Imports have a real Claude cost; each completed signature costs about $0.20 plus a DocuSeal Pro seat. Numbers: size with the `ai-pricing` skill. **Needs you** for the dollar price points only |
 | 11 | SMTP sender | Move Supabase Auth's sender to the verified Resend domain before launch | Otherwise invitations reach only the account owner. Launch blocker |
 | 12 | Template editor | Block editor with variables, live PDF preview | Predictable output; no DOCX-to-PDF step |
 | 13 | Templates per org | **Amended 2026-11-12 by the owner:** an org keeps several agreement templates (a Templates screen with a card list, preview, Use template, Duplicate and Archive); the system template stays the default for an agreement started without one. Contracts keep one template per org | The owner supplied a Templates screen showing several reusable presets; the original rationale (a picker on every new agreement is friction) is met because Use template is opt-in |

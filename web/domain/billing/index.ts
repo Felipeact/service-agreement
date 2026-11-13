@@ -24,16 +24,16 @@ export type Plan = {
 };
 
 /** One flat monthly price for every seat beyond a plan's included ones, in CAD cents (draft, decision 10). */
-export const EXTRA_SEAT_CENTS = cents(1500);
+export const EXTRA_SEAT_CENTS = cents(1900);
 
 /** The most seats a visitor can pick at sign-up; a larger team talks to us. */
 export const MAX_SEATS = 50;
 
 /** The draft price table from ROADMAP.md (decision 10: the price points still need the owner). One source for the page and, later, the limits. */
 export const PLANS: readonly Plan[] = [
-  { key: "starter", name: "Starter", monthlyCents: cents(4900), liveAgreements: 15, aiImports: 10, includedSeats: 2 },
-  { key: "team", name: "Team", monthlyCents: cents(9900), liveAgreements: 60, aiImports: 40, includedSeats: 5 },
-  { key: "business", name: "Business", monthlyCents: cents(19900), liveAgreements: 200, aiImports: 120, includedSeats: 10 },
+  { key: "starter", name: "Starter", monthlyCents: cents(7900), liveAgreements: 15, aiImports: 10, includedSeats: 2 },
+  { key: "team", name: "Team", monthlyCents: cents(14900), liveAgreements: 60, aiImports: 40, includedSeats: 5 },
+  { key: "business", name: "Business", monthlyCents: cents(29900), liveAgreements: 200, aiImports: 120, includedSeats: 10 },
 ];
 
 export type Trade = { code: TradeCode; label: string };

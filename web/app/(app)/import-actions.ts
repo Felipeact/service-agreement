@@ -150,3 +150,27 @@ export async function commitImportAction(jobId: string): Promise<CommitState> {
   refresh();
   return { status: "committed", added: committed.added, skipped: committed.skipped };
 }
+
+/**
+ * After a list is read: adds it to the site at once when nothing in it needs a person (no row without a type, too long, low
+ * confidence, repeated or already on the site). Otherwise nothing is added and the answer is `needs_review`, so the estimator
+ * is sent to the review only when the file has something wrong.
+ */
+export async function commitCleanImportAction(jobId: string): Promise<CommitState | { status: "needs_review" }> {
+  const ctx = await writer();
+  if (!ctx) return FORBIDDEN;
+  if (!isUuid(jobId)) return { status: "not_found" };
+  const review = await ctx.container.reviewImport(jobId);
+  if (!review) return { status: "not_found" };
+  if (review.job.status !== "extracted" || !review.rows.some((row) => !row.skipped)) return { status: "needs_review" };
+  const [types, site] = await Promise.all([ctx.container.listAssetTypes(), ctx.container.siteRegister(review.job.siteId)]);
+  const idOf = new Map(types.map((type) => [type.code, type.id]));
+  const siteAssets = (site?.assets ?? []).flatMap((asset) => {
+    const assetTypeId = idOf.get(asset.typeCode);
+    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo }] : [];
+  });
+  const flags = flagRows(review.rows, siteAssets);
+  if ([...flags.values()].some((found) => found.length > 0)) return { status: "needs_review" };
+  const committed = await commitImportAction(jobId);
+  return committed.status === "committed" ? committed : { status: "needs_review" };
+}

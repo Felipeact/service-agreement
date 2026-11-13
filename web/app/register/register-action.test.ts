@@ -6,7 +6,7 @@ import { INITIAL_PRICING_STATE } from "./state";
 const start = vi.fn<CheckoutStarter["start"]>();
 const inUse = vi.fn<WorkspaceEmailCheck["inUse"]>(async () => false);
 vi.mock("@/composition", () => ({
-  getBillingContainer: async () => ({ startTrial: makeStartTrial({ start: (selection) => start(selection) }, { inUse: (email) => inUse(email) }) }),
+  getBillingContainer: async () => ({ startTrial: makeStartTrial({ start: (selection) => start(selection) }, { inUse: (email) => inUse(email), companyInUse: async () => false }) }),
 }));
 const redirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT ${url}`);

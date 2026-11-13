@@ -51,9 +51,9 @@ describe("the Stripe checkout starter", () => {
   });
 
   const PLAN_CASES = [
-    { plan: "starter", cents: "4900", name: "Starter plan" },
-    { plan: "team", cents: "9900", name: "Team plan" },
-    { plan: "business", cents: "19900", name: "Business plan" },
+    { plan: "starter", cents: "7900", name: "Starter plan" },
+    { plan: "team", cents: "14900", name: "Team plan" },
+    { plan: "business", cents: "29900", name: "Business plan" },
   ] as const;
   const TRADE_CASES = [["hvac"], ["hvac", "plumbing", "electrical", "other"]] as const;
 
@@ -71,12 +71,12 @@ describe("the Stripe checkout starter", () => {
     },
   );
 
-  test.each(PLAN_CASES)("C2502: $plan asks for a 14-day trial, a card up front and cancellation without one", async ({ plan }) => {
+  test.each(PLAN_CASES)("C2502: $plan asks for a card up front and no trial, so billing starts at checkout", async ({ plan }) => {
     await start({ plan, trades: ["hvac"] });
     const body = form();
-    expect(body.get("subscription_data[trial_period_days]")).toBe("14");
+    expect(body.get("subscription_data[trial_period_days]")).toBeNull();
     expect(body.get("payment_method_collection")).toBe("always");
-    expect(body.get("subscription_data[trial_settings][end_behavior][missing_payment_method]")).toBe("cancel");
+    expect(body.get("subscription_data[trial_settings][end_behavior][missing_payment_method]")).toBeNull();
   });
 
   test.each([
@@ -191,7 +191,7 @@ describe("the Stripe checkout starter", () => {
       const body = form();
       expect(body.get("line_items[1][price_data][product_data][name]")).toBe("Extra seat");
       expect(body.get("line_items[1][price_data][currency]")).toBe("cad");
-      expect(body.get("line_items[1][price_data][unit_amount]")).toBe("1500");
+      expect(body.get("line_items[1][price_data][unit_amount]")).toBe("1900");
       expect(body.get("line_items[1][price_data][recurring][interval]")).toBe("month");
       expect(body.get("line_items[1][quantity]")).toBe(String(seats - included));
     },

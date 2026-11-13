@@ -111,6 +111,8 @@ describe("GET /agreements/[agreementId]/pdf", () => {
     expect((await call()).headers.get("Content-Disposition")).toBe('attachment; filename="AG-1052-v1.pdf"');
 
     get.mockResolvedValue(detail({}, 2));
+    expect((await call(AGR, "?inline=1")).headers.get("Content-Disposition")).toBe('inline; filename="AG-1052-v2.pdf"');
+    expect((await call(AGR, "?inline=yes")).headers.get("Content-Disposition")).toBe('attachment; filename="AG-1052-v2.pdf"');
     expect((await call(AGR, "?version=9")).headers.get("Content-Disposition")).toBe('attachment; filename="AG-1052-v2.pdf"');
   });
 

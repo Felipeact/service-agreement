@@ -16,7 +16,7 @@ const source = () => readFileSync(path.join(__dirname, "page.tsx"), "utf8");
 describe("the success page", () => {
   test("C2532: it says the trial is registered and a sign-in link will be emailed, links to /login, and claims nothing it cannot back", () => {
     const text = textOf(html());
-    expect(text).toContain("Your trial is registered.");
+    expect(text).toContain("You are subscribed.");
     expect(text).toContain("We will email a sign-in link to the address you gave at checkout.");
     expect(html()).toMatch(/<a\b[^>]*href="\/login"[^>]*>\s*Sign in\s*<\/a>/);
     expect(metadata.title).toBe("Thanks");

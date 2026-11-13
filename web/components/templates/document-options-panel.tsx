@@ -3,6 +3,7 @@
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { PAGE_FOOTERS, type DocOptions, type PageFooter } from "@/domain/agreement/layout";
+import { MoreOptions } from "./more-options";
 import { Switch } from "./switch";
 
 const FOOTER_LABELS: Record<PageFooter, string> = {
@@ -35,6 +36,7 @@ export function DocumentOptionsPanel({ doc, onChange, errors = {}, idPrefix = "d
         onChange={(event) => set({ title: event.target.value })}
         error={errors["doc.title"]}
       />
+      <MoreOptions>
       <fieldset className="flex flex-col gap-1">
         <legend className="sr-only">Lines and repeated parts</legend>
         <Switch
@@ -69,6 +71,7 @@ export function DocumentOptionsPanel({ doc, onChange, errors = {}, idPrefix = "d
           </option>
         ))}
       </Select>
+      </MoreOptions>
     </section>
   );
 }

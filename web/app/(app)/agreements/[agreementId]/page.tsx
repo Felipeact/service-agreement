@@ -9,7 +9,6 @@ import { skippedCodes } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
 import {
   addServiceLineAction,
-  reissueLinkAction,
   removeServiceLineAction,
   reviseAgreementAction,
   saveTermAction,
@@ -34,7 +33,7 @@ function versionOf(value: string | undefined): number | undefined {
 /** Reads the agreement and `?version` at request time. */
 export async function AgreementForRequest({ agreementId, searchParams }: AgreementProps) {
   if (!isUuid(agreementId)) notFound();
-  const { currentMember, agreementReader, getItemWords, listAssetTypes } = await getContainer();
+  const { currentMember, agreementReader, getItemWords, listAssetTypes, agreementRecipient } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const params = await searchParams;
@@ -52,7 +51,6 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         revise: reviseAgreementAction.bind(null, agreementId),
         withdraw: withdrawAgreementAction.bind(null, agreementId),
         send: sendAgreementAction.bind(null, agreementId),
-        reissue: reissueLinkAction.bind(null, agreementId),
         saveTerm: saveTermAction.bind(null, agreementId),
         saveNote: saveVersionNoteAction.bind(null, agreementId),
         generate: generateContractAction.bind(null, agreementId),
@@ -62,7 +60,9 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
   // Only a preset with lines can name a code the org lacks, so the types are read only then (agreement-templates AC 25).
   const skipped = agreement.template && agreement.template.preset.lines.length > 0 ? skippedCodes(agreement.template, (await listAssetTypes()).map((type) => type.code)) : [];
 
-  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} skippedCodes={skipped} />;
+  const recipient = actions && agreement.editable ? await agreementRecipient.get(agreementId).catch(() => null) : null;
+
+  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} skippedCodes={skipped} recipient={recipient} />;
 }
 
 export default async function AgreementPage({ params, searchParams }: PageProps<"/agreements/[agreementId]">) {

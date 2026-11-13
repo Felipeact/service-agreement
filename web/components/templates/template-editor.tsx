@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { MonthGrid, monthBox, monthChoice } from "@/components/ui/month-grid";
@@ -12,6 +12,7 @@ import { itemText } from "@/domain/org-settings";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
 import { EMPTY_PRESET_LINE, previewBodyFromLayoutForm, type AgreementLayoutForm, type TemplateFormErrors } from "@/domain/agreement/template-form";
 import { LayoutFields } from "./layout-fields";
+import { MoreOptions } from "./more-options";
 import { SAVE_MESSAGES, type SaveTemplateState } from "./state";
 import { TemplatePreviewFrame } from "./template-preview-frame";
 
@@ -87,8 +88,13 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
           const at = (key: string) => errors[`preset.lines.${index}.${key}`];
           const codes = [...types.map((type) => type.code), ...line.assetTypeCodes.filter((code) => !types.some((type) => type.code === code))];
           return (
-            <fieldset key={index} className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card">
-              <legend className="px-1 text-[13px] font-semibold text-ink">{`Line ${index + 1}`}</legend>
+            <PresetLine
+              key={index}
+              index={index}
+              line={line}
+              invalid={Object.keys(errors).some((field) => field.startsWith(`preset.lines.${index}`))}
+              onRemove={() => set({ lines: values.lines.filter((_, other) => other !== index) })}
+            >
               <div className="grid gap-3 md:grid-cols-[minmax(0,3fr)_minmax(0,1fr)] md:items-start">
                 <TextInput
                   id={`line-${index}-description`}
@@ -146,10 +152,7 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
                 )}
               </fieldset>
               {errors[`preset.lines.${index}`] && <p className="text-[12px] font-medium text-danger">{errors[`preset.lines.${index}`]}</p>}
-              <div>
-                <Button onClick={() => set({ lines: values.lines.filter((_, other) => other !== index) })}>{`Remove line ${index + 1}`}</Button>
-              </div>
-            </fieldset>
+            </PresetLine>
           );
         })}
         <div className="flex flex-wrap items-center gap-3">
@@ -177,6 +180,34 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
         <LinkButton href="/templates">Cancel</LinkButton>
       </div>
     </form>
+  );
+}
+
+/**
+ * One preset line, folded to its description, visit-month count and price. A line that is new or has a problem starts open, and what is
+ * open stays as the member leaves it (the open state is read once, so typing never closes the line under the cursor).
+ */
+function PresetLine({ index, line, invalid, onRemove, children }: { index: number; line: AgreementLayoutForm["lines"][number]; invalid: boolean; onRemove: () => void; children: ReactNode }) {
+  const [startsOpen] = useState(() => invalid || line.description.trim() === "");
+  const months = line.visitMonths.length;
+  const price = line.costPerVisit.trim();
+  return (
+    <details open={startsOpen} className="group rounded-panel border border-hairline bg-surface">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-1.5 text-[13.5px] marker:hidden lg:min-h-10 [&::-webkit-details-marker]:hidden">
+        <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-2 transition-transform duration-150 group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 4l6 6-6 6" />
+        </svg>
+        <span className="shrink-0 font-semibold text-ink">{`Line ${index + 1}`}</span>
+        <span className="min-w-0 truncate text-ink-2">{line.description.trim() || "No description yet"}</span>
+        <span className={`ml-auto shrink-0 text-[12px] ${invalid ? "font-semibold text-danger" : "text-ink-2"}`}>{invalid ? "Needs attention" : [`${months} ${months === 1 ? "month" : "months"}`, price ? `$${price.replace(/^\$/, "")}` : null].filter(Boolean).join(" · ")}</span>
+      </summary>
+      <div className="flex flex-col gap-3 border-t border-hairline p-4">
+        {children}
+        <div className="flex justify-end border-t border-hairline pt-3">
+          <Button onClick={onRemove}>{`Remove line ${index + 1}`}</Button>
+        </div>
+      </div>
+    </details>
   );
 }
 

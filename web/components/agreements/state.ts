@@ -29,7 +29,7 @@ export type MoveState = { status: "idle" | "withdrawn" | "conflict" | "invalid_t
 
 /** What `sendAgreementAction` and `reissueLinkAction` answer: the full link once, or why nothing was written. */
 export type LinkState =
-  | { status: "idle" | "no_lines" | "no_term_start" | "conflict" | Failure }
+  | { status: "idle" | "no_lines" | "no_term_start" | "conflict" | "needs_email" | "invalid_email" | Failure }
   | { status: "sent" | "reissued"; url: string };
 
 /** The send and new-link alerts; `conflict` and `no_lines` say what to do next (customer-portal AC 2, 3). */
@@ -37,6 +37,8 @@ export const LINK_MESSAGES = {
   no_lines: "Add at least one service line before sending.",
   no_term_start: "Set the term start date before sending.",
   conflict: "This agreement was changed by someone else. Reload the page.",
+  needs_email: "Enter the customer's email so we can send the agreement.",
+  invalid_email: "That email address doesn't look right. Check it and try again.",
   forbidden: "You don't have permission to send agreements.",
   not_found: "This agreement no longer exists.",
   unavailable: "We couldn't do that. Try again.",

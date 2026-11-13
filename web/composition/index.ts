@@ -158,7 +158,7 @@ export async function getContainer() {
   const notConfigured = { ok: false, code: "not_configured" } as const;
   const billingGateway: BillingGateway =
     stripeKey && stripeBase
-      ? stripeBillingGateway({ secretKey: stripeKey })
+      ? stripeBillingGateway({ secretKey: stripeKey, appBaseUrl: stripeBase })
       : {
           overview: async () => notConfigured,
           startCardUpdate: async () => notConfigured,
@@ -166,6 +166,7 @@ export async function getContainer() {
           cancel: async () => notConfigured,
           resume: async () => notConfigured,
           changePlan: async () => notConfigured,
+          startRenewal: async () => notConfigured,
         };
   const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase), supabaseOrgUsage(supabase));
   const customerStore = supabaseCustomerStore(supabase);
@@ -209,6 +210,7 @@ export async function getContainer() {
     loadBillingUsage: billing.usage,
     startCardUpdate: billing.startCardUpdate,
     finishCardUpdate: billing.finishCardUpdate,
+    renewSubscription: billing.renew,
     cancelSubscription: billing.cancel,
     resumeSubscription: billing.resume,
     changePlan: billing.changePlan,
@@ -265,6 +267,19 @@ export async function getContainer() {
     // Agreements and their lines are read and written as the member, from the same client (AC 29).
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
+    // The site contact's email, which a send writes to (the database checks the member's org and role).
+    agreementRecipient: {
+      async get(agreementId: string): Promise<string | null> {
+        const { data, error } = await supabase.rpc("agreement_recipient", { p_agreement_id: agreementId });
+        if (error) throw new Error(`agreement_recipient failed: ${error.code}`);
+        return data;
+      },
+      async set(agreementId: string, email: string): Promise<boolean> {
+        const { data, error } = await supabase.rpc("set_agreement_recipient", { p_agreement_id: agreementId, p_email: email });
+        if (error) throw new Error(`set_agreement_recipient failed: ${error.code}`);
+        return data === true;
+      },
+    },
     // Agreement templates are read and written as the member: the definer functions check owner or admin themselves.
     listAgreementTemplates: makeListAgreementTemplates(supabaseAgreementTemplateReader(supabase)),
     saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,
@@ -387,13 +402,16 @@ export async function getBillingContainer() {
   // client is built on the first question, so missing Supabase variables are an `unavailable` answer, not a failed page.
   const emailCheck: WorkspaceEmailCheck | undefined =
     secretKey && appBaseUrl
-      ? {
-          inUse: (email) => {
+      ? (() => {
+          // One anon client, made on the first question, answers both the email and the company name.
+          let check: WorkspaceEmailCheck | undefined;
+          const made = () => {
             const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
             const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
-            return supabaseWorkspaceEmailCheck(createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } })).inUse(email);
-          },
-        }
+            return (check ??= supabaseWorkspaceEmailCheck(createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } })));
+          };
+          return { inUse: (email: string) => made().inUse(email), companyInUse: (name: string) => made().companyInUse(name) };
+        })()
       : undefined;
   return { startTrial: makeStartTrial(checkout, emailCheck) };
 }

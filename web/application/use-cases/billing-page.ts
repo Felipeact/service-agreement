@@ -75,6 +75,12 @@ export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans:
 
     startCardUpdate: (member: Member) => act(member, (ids) => gateway.startCardUpdate(ids)),
     finishCardUpdate: (member: Member, setupIntentId: string) => act(member, (ids) => gateway.finishCardUpdate(ids, setupIntentId)),
+    /** A new subscription for the org's plan and seats, through Checkout for its existing Stripe customer (frozen-workspace renewal). */
+    async renew(member: Member) {
+      const found = await idsOf(member);
+      if (!found.ok) return found;
+      return gateway.startRenewal({ orgId: member.orgId, customerId: found.value.customerId, plan: found.value.plan, seats: found.value.seats });
+    },
     cancel: (member: Member) => act(member, (ids) => gateway.cancel(ids)),
     resume: (member: Member) => act(member, (ids) => gateway.resume(ids)),
 

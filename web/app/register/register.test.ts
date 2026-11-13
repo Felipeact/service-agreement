@@ -34,7 +34,7 @@ describe("the register page", () => {
     expect(metadata.title).toBe("Register");
     const text = textOf(renderToStaticMarkup(createElement(RegisterPage, { searchParams: Promise.resolve({}) } as never)));
     expect(text).toContain("What does your business do?");
-    expect(text).toContain("Start your free trial.");
+    expect(text).toContain("Create your workspace.");
   });
 });
 
@@ -162,9 +162,9 @@ describe("the contact fields (register-seats)", () => {
   });
 
   test.each([
-    { plan: "team", seats: "8", total: "$99 + 3 extra seats x $15 = $144" },
-    { plan: "starter", seats: "3", total: "$49 + 1 extra seat x $15 = $64" },
-    { plan: "business", seats: "50", total: "$199 + 40 extra seats x $15 = $799" },
+    { plan: "team", seats: "8", total: "$149 + 3 extra seats x $19 = $206" },
+    { plan: "starter", seats: "3", total: "$79 + 1 extra seat x $19 = $98" },
+    { plan: "business", seats: "50", total: "$299 + 40 extra seats x $19 = $1,059" },
   ])("C2611: $plan with $seats seats shows $total", ({ plan, seats, total }) => {
     const html = renderFields({ status: "invalid_details", trades: ["hvac"], values: { ...TYPED, plan, seats }, fields: { phone: true } });
     expect(textOf(html)).toContain(total);

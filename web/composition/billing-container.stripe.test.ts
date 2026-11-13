@@ -76,8 +76,9 @@ describe("the billing container asks whether the email is taken (checkout-email-
     expect((await startTrial(SELECTION)).status).toBe("redirect");
     expect(createClient).toHaveBeenCalledTimes(1);
     expect(createClient.mock.calls[0].slice(0, 2)).toEqual(["https://db.example.com", "sb_publishable_x"]);
-    expect(rpc).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledWith("email_has_workspace", { p_email: "owner@shop.ca" });
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenNthCalledWith(1, "email_has_workspace", { p_email: "owner@shop.ca" });
+    expect(rpc).toHaveBeenNthCalledWith(2, "company_has_workspace", { p_name: "Shop Ltd" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

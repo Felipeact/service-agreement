@@ -36,7 +36,7 @@ const view = (values: AgreementLayoutForm = VALUES, errors: Record<string, strin
 describe("the template editor", () => {
   test("C5349: each preset line has a description, a month grid, equipment types and a price per visit, then Remove; Add line follows the lines", () => {
     const html = view();
-    const line = html.slice(html.indexOf('<fieldset class="flex flex-col gap-3 rounded-panel'));
+    const line = html.slice(html.indexOf("<details"));
     const order = [
       line.search(/<label[^>]*for="line-0-description"[^>]*>Description</),
       line.search(/<label[^>]*for="line-0-price"[^>]*>Price per visit</),

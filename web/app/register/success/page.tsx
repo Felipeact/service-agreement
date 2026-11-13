@@ -8,14 +8,14 @@ import { SuccessStatus } from "./success-status";
 export const metadata: Metadata = { title: "Thanks" };
 
 /**
- * Where Stripe returns a visitor after the trial is set up (billing-checkout S3). Static on purpose: it reads nothing from
+ * Where Stripe returns a visitor after the subscription is set up (billing-checkout S3). Static on purpose: it reads nothing from
  * the request on the server. `SuccessStatus` reads `session_id` on the client and shows whether the workspace is built
  * (workspace-pending-state); without one, or until it loads, the visitor sees this page's own copy.
  */
 export default function RegisterSuccessPage() {
   const hero = (
     <PageHero
-      title="Your trial is registered."
+      title="You are subscribed."
       text="We will email a sign-in link to the address you gave at checkout. Open it to set up your company."
     >
       <div>

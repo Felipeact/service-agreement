@@ -23,9 +23,9 @@ describe("the plan and trade identifiers", () => {
 
 describe("the price shown", () => {
   test.each([
-    [4900, "$49"],
-    [9900, "$99"],
-    [19900, "$199"],
+    [7900, "$79"],
+    [14900, "$149"],
+    [29900, "$299"],
     [12300, "$123"],
   ])("C2404: %i cents is %s a month, in whole dollars", (amount, shown) => {
     expect(formatPlanPrice(cents(amount))).toBe(shown);
@@ -130,9 +130,9 @@ describe("parseCheckoutSelection on the phone", () => {
 });
 
 describe("the seats", () => {
-  test("C2608: Starter, Team and Business include 2, 5 and 10 seats, an extra seat is 1500 cents and the ceiling is 50", () => {
+  test("C2608: Starter, Team and Business include 2, 5 and 10 seats, an extra seat is 1900 cents and the ceiling is 50", () => {
     expect(PLANS.map((plan) => [plan.key, plan.includedSeats])).toEqual([["starter", 2], ["team", 5], ["business", 10]]);
-    expect(EXTRA_SEAT_CENTS).toBe(1500);
+    expect(EXTRA_SEAT_CENTS).toBe(1900);
     expect(MAX_SEATS).toBe(50);
   });
 

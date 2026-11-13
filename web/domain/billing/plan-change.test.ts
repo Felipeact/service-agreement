@@ -8,10 +8,10 @@ const money = (cents: number) => formatInvoiceAmount(cents, "cad");
 
 describe("the plan change summary", () => {
   test.each([
-    ["starter", "team", 2, 5, 0, "$99.00"],
-    ["team", "starter", 5, 2, 0, "$49.00"],
-    ["team", "starter", 7, 7, 5, "$124.00"],
-    ["starter", "business", 4, 10, 0, "$199.00"],
+    ["starter", "team", 2, 5, 0, "$149.00"],
+    ["team", "starter", 5, 2, 0, "$79.00"],
+    ["team", "starter", 7, 7, 5, "$174.00"],
+    ["starter", "business", 4, 10, 0, "$299.00"],
   ] as const)("C3200: %s to %s with %i seats gives %i seats, %i extra, %s a month", (from, to, seats, newSeats, extra, total) => {
     const summary = planChangeSummary(from, to, seats);
     expect(summary.seats).toBe(newSeats);
@@ -35,8 +35,8 @@ describe("the plan change summary", () => {
     expect(planChangeSummary("starter", "business", 12).extraSeats).toBe(2);
   });
 
-  test("C3200: the extra seats are charged at 15 dollars each on top of the plan price", () => {
+  test("C3200: the extra seats are charged at 19 dollars each on top of the plan price", () => {
     const summary = planChangeSummary("team", "starter", 7);
-    expect(summary.totalCents).toBe(4900 + 5 * 1500);
+    expect(summary.totalCents).toBe(7900 + 5 * 1900);
   });
 });

@@ -73,7 +73,19 @@ export type MemberRole = "owner" | "admin" | "estimator" | "viewer";
 export type CurrentMember =
   | { status: "signed_out" }
   | { status: "no_membership"; email: string }
-  | { status: "member"; userId: string; email: string; orgId: string; orgName: string; role: MemberRole };
+  | {
+      status: "member";
+      userId: string;
+      email: string;
+      orgId: string;
+      orgName: string;
+      /** What the member may do now: `viewer` while the company's plan has ended, so every write check refuses. */
+      role: MemberRole;
+      /** The role the member holds, kept for the billing page and renewal. Same as `role` unless the workspace is frozen. */
+      billingRole?: MemberRole;
+      /** The company's subscription has ended: read-only until it renews. */
+      frozen?: boolean;
+    };
 
 export interface MemberDirectory {
   currentMember(): Promise<CurrentMember>;
@@ -1286,6 +1298,8 @@ export interface CheckoutStarter {
  */
 export interface WorkspaceEmailCheck {
   inUse(email: string): Promise<boolean>;
+  /** Whether a workspace already carries this company name (names compare without case or extra spaces). */
+  companyInUse(name: string): Promise<boolean>;
 }
 
 /**
@@ -1330,6 +1344,8 @@ export interface BillingGateway {
    * Stripe already holds exactly that. `unsupported`: no item is tagged as the plan item, so none is guessed.
    */
   changePlan(ids: StripeIds, change: { plan: PlanKey; extraSeats: number }): Promise<{ ok: true; changed: boolean } | { ok: false; code: GatewayFailure | "unsupported" }>;
+  /** A Checkout for the org's existing customer that starts a new subscription; its metadata names the org so the webhook thaws it. */
+  startRenewal(renewal: { orgId: string; customerId: string; plan: PlanKey; seats: number }): Promise<{ ok: true; url: string } | { ok: false; code: GatewayFailure }>;
 }
 
 /** Records the plan and seat count on `org_billing` as the signed-in member, through `set_org_plan` (plan-change door 2). */

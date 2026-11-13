@@ -12,8 +12,9 @@ function stubAuth(auth: Record<string, unknown>, rows: unknown[] = []) {
     order: vi.fn(() => query),
     limit: vi.fn(async () => ({ data: rows, error: null })),
   };
-  const client = { auth, from: vi.fn(() => query) };
-  return { client, query, typed: client as unknown as SupabaseClient<Database> };
+  const rpc = vi.fn(async (): Promise<{ data: boolean | null; error: { code: string } | null }> => ({ data: false, error: null }));
+  const client = { auth, from: vi.fn(() => query), rpc };
+  return { client, query, rpc, typed: client as unknown as SupabaseClient<Database> };
 }
 
 const otpReply = (error: AuthError) => vi.fn(async () => ({ data: { user: null, session: null }, error }));
@@ -133,7 +134,24 @@ describe("supabaseMemberDirectory", () => {
       orgId: "o1",
       orgName: "Kettle Ridge Mechanical Ltd.",
       role: "owner",
+      billingRole: "owner",
+      frozen: false,
     });
+  });
+
+  test("a frozen workspace gives the member the viewer's read-only role and keeps the real one for billing", async () => {
+    const { typed, rpc } = stubAuth({ getClaims: claimsReply(claims) }, [{ org_id: "o1", role: "owner", orgs: { name: "Kettle Ridge Mechanical Ltd." } }]);
+    rpc.mockResolvedValue({ data: true, error: null });
+
+    expect(await supabaseMemberDirectory(typed).currentMember()).toMatchObject({ status: "member", role: "viewer", billingRole: "owner", frozen: true });
+    expect(rpc).toHaveBeenCalledWith("my_org_frozen");
+  });
+
+  test("a failed freeze read leaves the member's own role, so a database hiccup does not lock anyone out", async () => {
+    const { typed, rpc } = stubAuth({ getClaims: claimsReply(claims) }, [{ org_id: "o1", role: "estimator", orgs: { name: "Kettle Ridge Mechanical Ltd." } }]);
+    rpc.mockResolvedValue({ data: null, error: { code: "XX000" } });
+
+    expect(await supabaseMemberDirectory(typed).currentMember()).toMatchObject({ role: "estimator", frozen: false });
   });
 
   test("C19: no membership row is no_membership", async () => {

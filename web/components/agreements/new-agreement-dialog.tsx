@@ -39,6 +39,8 @@ export type NewAgreementActions = {
   confirmImport: (jobId: string) => Promise<ConfirmState>;
   readImport: (jobId: string) => Promise<ReadState>;
   extractImport: (jobId: string) => Promise<ExtractState>;
+  /** Adds a clean list to the site without a review; `needs_review` when something in it needs a person. */
+  commitCleanImport?: (jobId: string) => Promise<{ status: string }>;
 };
 
 type Props = {
@@ -116,6 +118,13 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     dialogRef.current?.close();
   }
 
+  /** Leaves for another page with the dialog shut: a modal left open would stay on top of the page it navigates to. */
+  function go(href: string) {
+    const dialog = dialogRef.current;
+    if (dialog?.open) dialog.close();
+    router.push(href);
+  }
+
   function reset() {
     setTemplate(startingTemplate);
     setCustomer(firstCustomerChoice(customers));
@@ -188,7 +197,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       }
 
       const agreementHref = `/agreements/${started.agreementId}`;
-      if (!file) return router.push(agreementHref);
+      if (!file) return go(agreementHref);
 
       // The list goes to the site the agreement is on; then it is read and its equipment found.
       let jobId: string | null = null;
@@ -213,8 +222,13 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
 
       setPhase("extracting");
       const extracted = await runExtraction(jobId, { extract: actions.extractImport, onProgress: setProgress });
+      // A list with nothing wrong goes straight to the agreement; the review opens only when something needs a person.
+      if (extracted.status === "extracted" && actions.commitCleanImport) {
+        const committed = await actions.commitCleanImport(jobId).catch(() => ({ status: "needs_review" }));
+        if (committed.status === "committed") return go(agreementHref);
+      }
       // Rows found go to the review grid; a list that could not be read through is finished from the site's import page.
-      router.push(
+      go(
         extracted.status === "extracted" ? `/imports/${jobId}?agreement=${started.agreementId}` : `/sites/${started.siteId}/import?agreement=${started.agreementId}`,
       );
     });

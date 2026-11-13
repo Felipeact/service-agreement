@@ -121,7 +121,7 @@ export function FaqList({ items = FAQS }: { items?: readonly Faq[] }) {
 }
 
 /** The closing band of a page: one sentence and the two doors, trial and demo. */
-export function CtaBand({ title = "See it with your own list.", text = "14 days free. A card is required to start, and your workspace is set up for your trade." }: { title?: string; text?: string }) {
+export function CtaBand({ title = "See it with your own list.", text = "Monthly plans from $79, and your workspace is set up for your trade." }: { title?: string; text?: string }) {
   return (
     <section className="bg-night text-surface ring-on-dark">
       <Wrap className="flex flex-col items-start gap-6 py-14 lg:flex-row lg:items-center lg:justify-between lg:py-20">
@@ -131,7 +131,7 @@ export function CtaBand({ title = "See it with your own list.", text = "14 days 
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <LinkButton href="/register" variant="primary">
-            Start free trial
+            Get started
           </LinkButton>
           <LinkButton href="/demo" variant="secondary" className="border-surface/40 bg-transparent text-surface hover:bg-surface/10">
             Watch the demo

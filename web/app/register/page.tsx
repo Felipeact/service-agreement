@@ -24,7 +24,7 @@ export default function RegisterPage({ searchParams }: PageProps<"/register">) {
       <section className="bg-ground">
         <Wrap className="grid gap-8 py-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14 lg:py-16">
           <div className="flex flex-col gap-4">
-            <h1 className="max-w-[14ch] font-display text-[36px] leading-[1.05] font-semibold tracking-tight text-balance lg:text-[52px]">Start your free trial.</h1>
+            <h1 className="max-w-[14ch] font-display text-[36px] leading-[1.05] font-semibold tracking-tight text-balance lg:text-[52px]">Create your workspace.</h1>
             <p className="max-w-[44ch] text-[15px] leading-relaxed text-ink-2">
               Tell us your trade and we set up your workspace to match: service types, checklists and visit months, all editable.
             </p>

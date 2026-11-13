@@ -11,7 +11,7 @@ const container = {
   listAgreementTemplates,
 };
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
-vi.mock("./import-actions", () => ({ confirmImportAction: vi.fn(), extractImportAction: vi.fn(), readImportAction: vi.fn(), startImportAction: vi.fn() }));
+vi.mock("./import-actions", () => ({ commitCleanImportAction: vi.fn(), confirmImportAction: vi.fn(), extractImportAction: vi.fn(), readImportAction: vi.fn(), startImportAction: vi.fn() }));
 vi.mock("./new-agreement-actions", () => ({ startAgreementAction: vi.fn() }));
 
 const { Banner, Dialog, dialogProps } = await import("./new-agreement-launcher");
