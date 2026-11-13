@@ -359,6 +359,43 @@ describe("the contract PDF, layout and options (block-editor)", () => {
     expect(joined.indexOf("2. Price & payment")).toBeLessThan(joined.indexOf("Service charge"));
   });
 
+  test("C5522: the included options change the contract PDF as they do the agreement's: showFrequency, uppercase and the title", async () => {
+    const included = (options?: Extract<Item, { key: "included" }>["options"]): Item => ({ kind: "section", key: "included", ...(options ? { options } : {}) });
+    const frequencies = { frequencies: { RTU: "QUARTERLY" } };
+    const plain = text(await draw([included(), signatures()], {}, frequencies)).split("\n");
+    expect(plain.some((row) => row.startsWith("Rooftop unit, "))).toBe(true);
+    expect(plain.some((row) => row.includes("QUARTERLY"))).toBe(false);
+    const asked = text(await draw([included({ showFrequency: true }), signatures()], {}, frequencies)).split("\n");
+    expect(asked).toContain("Rooftop unit (QUARTERLY)");
+    expect(asked.some((row) => row.startsWith("Rooftop unit, "))).toBe(false);
+    const upper = text(await draw([included({ showFrequency: true, uppercase: true }), signatures()], {}, frequencies)).split("\n");
+    expect(upper).toContain("ROOFTOP UNIT (QUARTERLY)");
+    expect(upper).not.toContain("Rooftop unit (QUARTERLY)");
+    const titled = text(await draw([included({ title: "Service included:" }), signatures()])).split("\n");
+    expect(titled).toContain("Service included:");
+    expect(titled).not.toContain("Service included");
+  });
+
+  test("C5522: an equipment title option replaces the default Equipment heading of the contract PDF", async () => {
+    const titled = text(await draw([{ kind: "section", key: "equipment", options: { title: "EQUIPMENT LIST" } }, signatures()])).split("\n");
+    expect(titled).toContain("EQUIPMENT LIST");
+    expect(titled).not.toContain("Equipment");
+    const defaults = text(await draw([{ kind: "section", key: "equipment" }, signatures()])).split("\n");
+    expect(defaults).toContain("Equipment");
+  });
+
+  test("C5522: price columns replace the header and total labels of the contract PDF, and times_per_year prints 4 times per year and 2 times per year", async () => {
+    const columns = { description: "PREVENTATIVE MAINTENANCE", visits: "NUMBER OF TIMES PER YEAR", perVisit: "COST PER VISIT", perYear: "TOTAL COST PER YEAR", total: "TOTAL" };
+    const rows = text(await draw([{ kind: "section", key: "price", options: { columns, visitsFormat: "times_per_year" } }, signatures()])).split("\n");
+    for (const label of Object.values(columns).slice(0, 4)) expect(rows, label).toContain(label);
+    expect(rows).toContain("TOTAL $3,690.00");
+    expect(rows).toContain("4 times per year");
+    expect(rows).toContain("2 times per year");
+    for (const gone of ["Description", "Visits per year", "Per visit", "Per year"]) expect(rows, gone).not.toContain(gone);
+    const defaults = text(await draw([price, signatures()])).split("\n");
+    for (const label of ["Description", "Visits per year", "Per visit", "Per year"]) expect(defaults, label).toContain(label);
+  });
+
   test("C5523: the default customer block is headed For the Customer and the signer, the contractor block For the company, each with one Signature and one Date line and its tags", async () => {
     const all = await draw([price, signatures()]);
     const joined = text(all);
