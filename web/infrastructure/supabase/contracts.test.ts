@@ -265,3 +265,38 @@ describe("contract reader, the signing-link email (contract-automation AC 13)", 
     expect((await read(null, null)).view?.signingLinkEmail).toBeNull();
   });
 });
+
+describe("contract reader, schema 2 wording (block-editor)", () => {
+  const wording = {
+    schema: 2,
+    doc: { title: "PREVENTIVE MAINTENANCE SERVICE AGREEMENT", showMeta: false, pageHeader: "every", pageFooter: "letterhead" },
+    layout: [
+      { kind: "block", type: "paragraph", text: "Client: {{customer.name}}" },
+      { kind: "section", key: "price", options: { title: "Price & payment" } },
+      { kind: "section", key: "signatures", options: { nameField: true } },
+      { kind: "block", type: "heading", text: "SCHEDULE A", level: 1, pageBreakBefore: true },
+      { kind: "section", key: "equipment" },
+    ],
+  };
+  const read = (body: unknown) => {
+    const { typed } = stubClient({ contracts: { data: row({ template_version_id: "tv-2", document_template_versions: { body } }), error: null } });
+    return supabaseContractReader(typed).get(CON);
+  };
+
+  test("C5530: the body of a schema 1 version and of a schema 2 version both come back as stored", async () => {
+    const one = { schema: 1, blocks: [{ type: "paragraph", text: "Org wording." }] };
+    expect((await read(one))?.template).toEqual(one);
+    expect((await read(wording))?.template).toEqual(wording);
+  });
+
+  test.each<[string, unknown]>([
+    ["a schema 2 layout with no signatures", { ...wording, layout: [{ kind: "section", key: "price" }] }],
+    ["a schema 2 layout with a terms section", { ...wording, layout: [...wording.layout, { kind: "section", key: "terms" }] }],
+    ["a schema 2 body with an unknown block kind", { ...wording, layout: [...wording.layout, { kind: "image", text: "x" }] }],
+    ["a schema 2 body with an unknown document option", { ...wording, doc: { ...wording.doc, pageHeader: "last" } }],
+    ["a schema 2 body with an unknown variable", { ...wording, layout: [{ kind: "block", type: "paragraph", text: "{{nope}}" }, ...wording.layout] }],
+    ["an unknown schema", { schema: 3, blocks: [] }],
+  ])("C5530: %s throws and never answers other wording", async (_label, body) => {
+    await expect(read(body)).rejects.toThrow("tv-2");
+  });
+});

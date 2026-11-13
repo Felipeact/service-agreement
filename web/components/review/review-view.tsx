@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 import { TenantLogoImage } from "@/components/ui/tenant-logo";
 import type { PortalView } from "@/application/ports";
-import { portalScope, portalTemplateText, type PortalDecision } from "@/application/use-cases";
-import { ServiceScopeSections } from "@/components/agreements/service-scope";
+import { portalLayout, portalScope, type PortalDecision } from "@/application/use-cases";
+import { ServiceEquipmentSection, ServiceIncludedSection } from "@/components/agreements/service-scope";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
-import { NEUTRAL_ACCENT, termLine, termsOf, visitSchedule } from "@/domain/agreement";
+import { NEUTRAL_ACCENT, termLine, termsOf, typeFrequencies, visitSchedule, type BlockItem, type IncludedOptions, type LayoutItem, type PriceOptions, type TitleOptions } from "@/domain/agreement";
 import { formatTermDate } from "@/domain/agreement/term";
-import type { RenderedBlock } from "@/domain/contract";
 import { contrastText, isAccent, type PortalState } from "@/domain/portal";
 import { formatCadExact } from "@/lib/money";
 import { DecisionControls } from "./decision-controls";
@@ -61,85 +60,145 @@ function Phone({ phone }: { phone: string | null }) {
   );
 }
 
-/** The template's text as plain paragraphs, with its headings in the section-heading size: the same blocks the PDF draws. */
-function TemplateText({ label, blocks }: { label: string; blocks: RenderedBlock[] }) {
+const INDENT_CLASS = ["", "ml-4", "ml-8", "ml-12"] as const;
+
+/** The template's text blocks as plain paragraphs, headings in the section-heading size (level 1 larger): the same blocks the PDF draws. */
+function TemplateText({ label, blocks }: { label: string; blocks: BlockItem[] }) {
   if (blocks.length === 0) return null;
   return (
     <section aria-label={label} className="flex flex-col gap-2">
-      {blocks.map((block, index) =>
-        block.type === "heading" ? (
-          <h2 key={index} className="text-[15px] font-semibold break-words">
+      {blocks.map((block, index) => {
+        const indent = INDENT_CLASS[block.indent ?? 0];
+        return block.type === "heading" ? (
+          <h2 key={index} className={`${block.level === 1 ? "text-[18px] font-bold" : "text-[15px] font-semibold"} break-words ${indent}`.trim()}>
             {block.text}
           </h2>
         ) : (
-          <p key={index} className="text-[14px] break-words whitespace-pre-line">
+          <p key={index} className={`text-[14px] break-words whitespace-pre-line ${indent}`.trim()}>
             {block.text}
           </p>
-        ),
-      )}
+        );
+      })}
     </section>
   );
 }
 
-/** What the customer reads: the version's lines, scope and frozen terms. Every state with content shows this. */
+const DEFAULT_COLUMNS = { description: "Description", visits: "Visits per year", perVisit: "Per visit", perYear: "Per year", total: "Total per year" };
+
+/** What the customer reads: the version's layout in its order (text, service lines, schedule, scope, terms). Every state with content shows this. */
 function Content({ view }: { view: PortalView }) {
   const terms = view.terms ? termsOf(view.terms, view.term.months) : [];
   const scope = portalScope(view);
-  const { intro, footer, sections } = portalTemplateText(view);
-  return (
-    <>
-      <TemplateText label="Introduction" blocks={intro} />
+  const types = scope.source === "not_recorded" ? [] : scope.types;
+  const { layout } = portalLayout(view);
+  const lastSection = layout.reduce((last, item, index) => (item.kind === "section" ? index : last), -1);
+  const firstSection = layout.findIndex((item) => item.kind === "section");
+  const scopeProps = { scope, siteId: "", canAddEquipment: false, words: view.tenant?.words };
 
-      <section aria-label="Service lines" className={panel}>
-        <h2 className={heading}>Service lines</h2>
-        <div
-          data-line-head
-          className="hidden gap-x-3 border-b border-hairline px-4 py-2 text-[12px] font-medium text-ink-2 md:grid md:grid-cols-[minmax(0,3fr)_6rem_8rem_8rem]"
-        >
-          <span>Description</span>
-          <span>Visits per year</span>
-          <span className="text-right">Per visit</span>
-          <span className="text-right">Per year</span>
-        </div>
-        <ul className="divide-y divide-hairline">
-          {view.lines.map((line, index) => (
-            <li key={index} className="grid gap-x-3 gap-y-0.5 px-4 py-3 text-[14px] md:grid-cols-[minmax(0,3fr)_6rem_8rem_8rem]">
-              <span className="font-medium break-words">{line.description}</span>
-              <span className="text-ink-2 md:text-ink">{`${line.visitsPerYear} ${line.visitsPerYear === 1 ? "visit" : "visits"} per year`}</span>
-              <span className="text-ink-2 md:text-right md:text-ink">{`${formatCadExact(line.costPerVisitCents)} per visit`}</span>
-              <span className="font-medium md:text-right">{formatCadExact(line.annualCents)}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
-          <p className="text-[15px] font-semibold">
-            Total per year <span>{formatCadExact(view.annualCents)}</span>
-          </p>
-          <p className="text-[12px] text-ink-2">before tax</p>
-        </div>
-      </section>
+  const drawSection = (item: Extract<LayoutItem, { kind: "section" }>, key: number) => {
+    switch (item.key) {
+      case "price": {
+        const options: PriceOptions = item.options ?? {};
+        const columns = options.columns ?? DEFAULT_COLUMNS;
+        const title = options.title ?? "Service lines";
+        return (
+          <section key={key} aria-label={title} className={panel}>
+            <h2 className={heading}>{title}</h2>
+            <div
+              data-line-head
+              className="hidden gap-x-3 border-b border-hairline px-4 py-2 text-[12px] font-medium text-ink-2 md:grid md:grid-cols-[minmax(0,3fr)_6rem_8rem_8rem]"
+            >
+              <span>{columns.description}</span>
+              <span>{columns.visits}</span>
+              <span className="text-right">{columns.perVisit}</span>
+              <span className="text-right">{columns.perYear}</span>
+            </div>
+            <ul className="divide-y divide-hairline">
+              {view.lines.map((line, index) => (
+                <li key={index} className="grid gap-x-3 gap-y-0.5 px-4 py-3 text-[14px] md:grid-cols-[minmax(0,3fr)_6rem_8rem_8rem]">
+                  <span className="font-medium break-words">{line.description}</span>
+                  <span className="text-ink-2 md:text-ink">
+                    {options.visitsFormat === "times_per_year"
+                      ? `${line.visitsPerYear} ${line.visitsPerYear === 1 ? "time" : "times"} per year`
+                      : `${line.visitsPerYear} ${line.visitsPerYear === 1 ? "visit" : "visits"} per year`}
+                  </span>
+                  <span className="text-ink-2 md:text-right md:text-ink">{`${formatCadExact(line.costPerVisitCents)} per visit`}</span>
+                  <span className="font-medium md:text-right">{formatCadExact(line.annualCents)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
+              <p className="text-[15px] font-semibold">
+                {columns.total} <span>{formatCadExact(view.annualCents)}</span>
+              </p>
+              <p className="text-[12px] text-ink-2">before tax</p>
+            </div>
+          </section>
+        );
+      }
+      case "schedule": {
+        const options: TitleOptions = item.options ?? {};
+        return <VisitScheduleSection key={key} schedule={visitSchedule(view.lines, types)} title={options.title} />;
+      }
+      case "included": {
+        const options: IncludedOptions = item.options ?? {};
+        return (
+          <ServiceIncludedSection
+            key={key}
+            {...scopeProps}
+            title={options.title}
+            showFrequency={options.showFrequency}
+            uppercase={options.uppercase}
+            frequencies={options.showFrequency ? typeFrequencies(view.lines, types) : undefined}
+          />
+        );
+      }
+      case "equipment": {
+        const options: TitleOptions = item.options ?? {};
+        return <ServiceEquipmentSection key={key} {...scopeProps} title={options.title} />;
+      }
+      case "terms":
+        return (
+          terms.length > 0 && (
+            <section key={key} aria-label="Terms" className={panel}>
+              <h2 className={heading}>Terms</h2>
+              <dl className="divide-y divide-hairline">
+                {terms.map((term) => (
+                  <div key={term.label} className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 px-4 py-2.5 text-[14px]">
+                    <dt className="text-ink-2">{term.label}</dt>
+                    <dd className="font-medium">{term.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )
+        );
+      default:
+        return null;
+    }
+  };
 
-      {sections.schedule && <VisitScheduleSection schedule={visitSchedule(view.lines, scope.source === "not_recorded" ? [] : scope.types)} />}
-
-      {sections.scope && <ServiceScopeSections scope={scope} siteId="" canAddEquipment={false} words={view.tenant?.words} />}
-
-      {terms.length > 0 && (
-        <section aria-label="Terms" className={panel}>
-          <h2 className={heading}>Terms</h2>
-          <dl className="divide-y divide-hairline">
-            {terms.map((term) => (
-              <div key={term.label} className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 px-4 py-2.5 text-[14px]">
-                <dt className="text-ink-2">{term.label}</dt>
-                <dd className="font-medium">{term.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
-
-      <TemplateText label="Closing text" blocks={footer} />
-    </>
-  );
+  // Consecutive text blocks are one run: before the first section it is the introduction, after the last the closing text.
+  const out: ReactNode[] = [];
+  let run: BlockItem[] = [];
+  let runStart = 0;
+  const flush = () => {
+    if (run.length === 0) return;
+    const label = firstSection === -1 || runStart < firstSection ? "Introduction" : runStart > lastSection ? "Closing text" : "Text";
+    out.push(<TemplateText key={`text-${runStart}`} label={label} blocks={run} />);
+    run = [];
+  };
+  layout.forEach((item, index) => {
+    if (item.kind === "block") {
+      if (run.length === 0) runStart = index;
+      run.push(item);
+      return;
+    }
+    flush();
+    out.push(drawSection(item, index));
+  });
+  flush();
+  return <>{out}</>;
 }
 
 /**

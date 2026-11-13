@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseContractParties, SIGNATURE_REQUEST_STATUSES, SIGNED_DOCUMENT_KINDS, validateBlocks, type ContractStatus, type SignatureRequestStatus, type TemplateBody } from "@/domain/contract";
+import { parseContractParties, SIGNATURE_REQUEST_STATUSES, SIGNED_DOCUMENT_KINDS, validateContractWording, type ContractStatus, type ContractWordingBody, type SignatureRequestStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { isNotEmailedReason } from "@/domain/notifications";
 import type { ContractReader, ContractStore, GenerateContractFailure, LinkEmailView, SignedCopyView } from "@/application/ports";
@@ -83,9 +83,9 @@ function signedCopy(rows: RequestRow[]): SignedCopyView | null {
  * The template version the contract points at. A row that never asked for it (an older fixture) has none; a row that did and
  * has no readable version is an error, never the system wording, so a contract is not drawn with words it did not carry.
  */
-function templateOf(row: ContractRow): TemplateBody | undefined {
+function templateOf(row: ContractRow): ContractWordingBody | undefined {
   if (row.template_version_id === undefined) return undefined;
-  const checked = validateBlocks(row.document_template_versions?.body);
+  const checked = validateContractWording(row.document_template_versions?.body);
   if (!checked.ok) throw new Error(`Contract ${row.id} has no readable template version ${row.template_version_id}: ${row.document_template_versions ? checked.reason : "it was not found"}`);
   return checked.body;
 }

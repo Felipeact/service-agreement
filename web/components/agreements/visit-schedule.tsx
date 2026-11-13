@@ -1,10 +1,10 @@
 import { MONTH_NAMES, type ScheduleRow } from "@/domain/agreement";
 
 /** "Visit schedule": each month with a visit, the equipment visited in it and its seasonal tasks (cadence AC 20 to 22, seasonal-tasks AC 16). */
-export function VisitScheduleSection({ schedule }: { schedule: ScheduleRow[] }) {
+export function VisitScheduleSection({ schedule, title = "Visit schedule" }: { schedule: ScheduleRow[]; title?: string }) {
   return (
-    <section aria-label="Visit schedule" className="overflow-hidden rounded-panel border border-hairline bg-surface">
-      <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Visit schedule</h2>
+    <section aria-label={title} className="overflow-hidden rounded-panel border border-hairline bg-surface">
+      <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">{title}</h2>
       {schedule.length === 0 ? (
         <p className="px-4 py-6 text-center text-[13px] text-ink-2">No visits scheduled yet</p>
       ) : (
