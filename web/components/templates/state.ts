@@ -1,12 +1,18 @@
 import type { MemberRole } from "@/application/ports";
-import type { TemplateFormErrors, TemplateFormInput } from "@/domain/agreement/template-form";
+import type { AgreementLayoutForm, TemplateFormErrors, TemplateFormInput } from "@/domain/agreement/template-form";
+import type { ContractLayoutForm } from "@/domain/contract/layout-form";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
 /** What `saveAgreementTemplateAction` answers when it does not redirect; `invalid` keeps what was typed (agreement-templates AC 18). */
 export type SaveTemplateState =
   | { status: "idle" | Failure }
-  | { status: "invalid"; errors: TemplateFormErrors; values: TemplateFormInput };
+  | { status: "invalid"; errors: TemplateFormErrors; values: TemplateFormInput | AgreementLayoutForm };
+
+/** What `saveContractWordingAction` answers (block-editor AC 42, AC 43): `saved` keeps the editor open on the saved wording, `invalid` keeps what was typed. */
+export type SaveContractWordingState =
+  | { status: "idle" | "saved" | Failure }
+  | { status: "invalid"; errors: TemplateFormErrors; values: ContractLayoutForm };
 
 /** What `duplicateTemplateAction` answers when it does not redirect to the copy's editor. */
 export type DuplicateTemplateState = { status: "idle" | "name_taken" | Failure };
@@ -39,6 +45,14 @@ export const SAVE_MESSAGES = {
   forbidden: "You don't have permission to save templates.",
   not_found: "This template no longer exists.",
   unavailable: "We couldn't save the template. Try again.",
+} as const;
+
+/** The contract wording editor's words for a save that did not go through, and for one that did. */
+export const WORDING_MESSAGES = {
+  forbidden: "You don't have permission to save the contract wording.",
+  not_found: "The contract wording no longer exists.",
+  unavailable: "We couldn't save the contract wording. Try again.",
+  saved: "Saved. Contracts made from now on use this wording.",
 } as const;
 
 export const NAME_TAKEN_FIELD_MESSAGE = "Another template already has this name. Choose a different one.";

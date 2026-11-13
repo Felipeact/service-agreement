@@ -10,35 +10,18 @@ import { MONTH_PRESETS, type MonthPreset } from "@/domain/agreement";
 import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
-import { EMPTY_PRESET_LINE, previewBodyFromTemplateForm, type TemplateFormErrors, type TemplateFormInput } from "@/domain/agreement/template-form";
+import { EMPTY_PRESET_LINE, previewBodyFromLayoutForm, type AgreementLayoutForm, type TemplateFormErrors } from "@/domain/agreement/template-form";
+import { LayoutFields } from "./layout-fields";
 import { SAVE_MESSAGES, type SaveTemplateState } from "./state";
 import { TemplatePreviewFrame } from "./template-preview-frame";
 
 export type TemplateTypeOption = { code: string; name: string };
 
-type SaveAction = (templateId: string | null, input: TemplateFormInput) => Promise<SaveTemplateState>;
-
-const TEXT_HINT = "Start a line with # for a heading and with - for a clause. Any other line is a paragraph. You can use merge variables such as {{customer.name}}.";
-
-/** A labelled on/off switch: a checkbox with the switch role, 44px tall below desktop. */
-function Switch({ id, label, hint, checked, onChange, error }: { id: string; label: string; hint: string; checked: boolean; onChange: (next: boolean) => void; error?: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="flex min-h-11 cursor-pointer items-center gap-3 lg:min-h-9">
-        <input id={id} type="checkbox" role="switch" checked={checked} onChange={(event) => onChange(event.target.checked)} className="size-4 shrink-0 accent-action" />
-        <span className="flex flex-col">
-          <span className="text-[13px] font-medium text-ink">{label}</span>
-          <span className="text-[12px] text-ink-2">{hint}</span>
-        </span>
-      </label>
-      {error && <p className="text-[12px] font-medium text-danger">{error}</p>}
-    </div>
-  );
-}
+type SaveAction = (templateId: string | null, input: AgreementLayoutForm) => Promise<SaveTemplateState>;
 
 type ViewProps = {
   /** The values shown in the fields: what the member typed, kept across a failed save. */
-  values: TemplateFormInput;
+  values: AgreementLayoutForm;
   errors: TemplateFormErrors;
   /** The org's equipment types, by code. A code already on a line that is not here is still shown, as its code. */
   types: TemplateTypeOption[];
@@ -46,17 +29,17 @@ type ViewProps = {
   pending: boolean;
   /** A refusal that is not about one field (forbidden, not found, unavailable). */
   message: string | null;
-  onChange?: (next: TemplateFormInput) => void;
+  onChange?: (next: AgreementLayoutForm) => void;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
   /** Whether the "Fix the highlighted fields" banner shows with the messages; the live messages beside the preview go without it. */
   banner?: boolean;
 };
 
-/** The editor's fields in order: Name, Description, Intro, Visit schedule, Scope, Closing text, Term length, Preset lines, then Save and Cancel (agreement-templates AC 18). */
+/** The editor's fields in order: Name, Description, Term length, the document options, the layout rows, the preset lines, then Save and Cancel (block-editor AC 29; the preset and the name as agreement-templates AC 18 had them). */
 export function TemplateEditorView({ values, errors, types, pending, message, onChange, onSubmit, banner = true }: ViewProps) {
   const words = useItemWords();
-  const set = (patch: Partial<TemplateFormInput>) => onChange?.({ ...values, ...patch });
-  const setLine = (index: number, patch: Partial<TemplateFormInput["lines"][number]>) =>
+  const set = (patch: Partial<AgreementLayoutForm>) => onChange?.({ ...values, ...patch });
+  const setLine = (index: number, patch: Partial<AgreementLayoutForm["lines"][number]>) =>
     set({ lines: values.lines.map((line, at) => (at === index ? { ...line, ...patch } : line)) });
   const toggle = <T,>(list: readonly T[], item: T) => (list.includes(item) ? list.filter((other) => other !== item) : [...list, item]);
   const invalid = Object.keys(errors).length > 0;
@@ -80,31 +63,6 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
         hint={`Up to ${MAX_DESCRIPTION} characters. Shown on the template's card.`}
         error={errors.description}
       />
-      <TextArea
-        id="template-intro"
-        name="intro"
-        label="Intro"
-        hint={`Printed after the title block and before the price table. ${TEXT_HINT}`}
-        value={values.intro}
-        onChange={(event) => set({ intro: event.target.value })}
-        error={errors.intro}
-      />
-
-      <fieldset className="flex flex-col gap-1">
-        <legend className="sr-only">Optional sections</legend>
-        <Switch id="template-schedule" label="Visit schedule" hint="Show the visit schedule on the agreement." checked={values.schedule} onChange={(schedule) => set({ schedule })} error={errors.sections} />
-        <Switch id="template-scope" label="Scope" hint={itemText("Show the service included, by equipment type.", words)} checked={values.scope} onChange={(scope) => set({ scope })} />
-      </fieldset>
-
-      <TextArea
-        id="template-footer"
-        name="footer"
-        label="Closing text"
-        hint={`Printed after the terms and before the page footer. ${TEXT_HINT}`}
-        value={values.footer}
-        onChange={(event) => set({ footer: event.target.value })}
-        error={errors.footer}
-      />
       <TextInput
         id="template-term"
         name="termMonths"
@@ -116,6 +74,8 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
         error={errors["preset.termMonths"]}
         className="sm:max-w-xs"
       />
+
+      <LayoutFields value={values} onChange={(next) => set(next)} document="agreement" errors={errors} />
 
       <section aria-label="Preset lines" className="flex flex-col gap-3">
         <div className="flex flex-col gap-0.5">
@@ -200,6 +160,11 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
         </div>
       </section>
 
+      {errors.body && (
+        <p role="alert" className="text-[13px] font-medium text-danger">
+          {errors.body}
+        </p>
+      )}
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {message}
@@ -218,10 +183,15 @@ export function TemplateEditorView({ values, errors, types, pending, message, on
 type EditorProps = {
   /** `null` for a new template. */
   templateId: string | null;
-  initial: TemplateFormInput;
+  initial: AgreementLayoutForm;
   types: TemplateTypeOption[];
   save: SaveAction;
 };
+
+/** What a row is, in order: a message keyed to a row number stops being true when this changes. */
+const shapeOf = (form: AgreementLayoutForm) => form.layout.map((row) => (row.kind === "block" ? `block:${row.type}` : `section:${row.key}`)).join();
+
+const canDrawLayout = (values: AgreementLayoutForm) => previewBodyFromLayoutForm(values).ok;
 
 /** Holds what is typed, sends it to the save action, and keeps it on the page when the answer is a refusal. */
 export function TemplateEditor({ templateId, initial, types, save }: EditorProps) {
@@ -231,7 +201,7 @@ export function TemplateEditor({ templateId, initial, types, save }: EditorProps
 
   const saveErrors = state.status === "invalid" ? state.errors : {};
   // The fields the preview cannot draw are highlighted as they are typed; the name is only required to save, so it waits for a save.
-  const live = previewBodyFromTemplateForm(values);
+  const live = previewBodyFromLayoutForm(values);
   const errors = { ...(live.ok ? {} : live.errors), ...saveErrors };
   const message = state.status === "idle" || state.status === "invalid" ? null : SAVE_MESSAGES[state.status];
 
@@ -246,8 +216,8 @@ export function TemplateEditor({ templateId, initial, types, save }: EditorProps
           message={message}
           banner={Object.keys(saveErrors).length > 0}
           onChange={(next) => {
-            // A line removed or added moves the line numbers the messages were written for.
-            if (next.lines.length !== values.lines.length) setState({ status: "idle" });
+            // A line or a row added, removed or moved shifts the numbers the messages were written for.
+            if (next.lines.length !== values.lines.length || shapeOf(next) !== shapeOf(values)) setState({ status: "idle" });
             setValues(next);
           }}
           onSubmit={(event) => {
@@ -258,7 +228,7 @@ export function TemplateEditor({ templateId, initial, types, save }: EditorProps
           }}
         />
       </section>
-      <TemplatePreviewFrame values={values} />
+      <TemplatePreviewFrame values={values} canDraw={canDrawLayout} />
     </div>
   );
 }

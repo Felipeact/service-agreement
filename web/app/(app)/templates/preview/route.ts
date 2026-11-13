@@ -2,7 +2,14 @@ import type { NextRequest } from "next/server";
 import { canWriteTemplates } from "@/components/templates/state";
 import { getContainer } from "@/composition";
 import { buildTemplatePreviewDocument } from "@/domain/agreement";
-import { previewBodyFromTemplateForm, readTemplateFormInput, type FieldError } from "@/domain/agreement/template-form";
+import {
+  isLayoutFormInput,
+  previewBodyFromLayoutForm,
+  previewBodyFromTemplateForm,
+  readLayoutFormInput,
+  readTemplateFormInput,
+  type FieldError,
+} from "@/domain/agreement/template-form";
 import { itemWords } from "@/domain/org-settings";
 
 /** Seconds. Rendering a long agreement measured about 22 s (C870); a template with 20 preset lines is far shorter. */
@@ -32,9 +39,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return invalid([{ field: "body", message: "Send the template's fields as JSON." }]);
   }
-  const read = readTemplateFormInput(json);
+  // The block editor posts `doc` and `layout`; the older text form posts `intro`, `footer` and the two switches (block-editor Landing row 8).
+  const read = isLayoutFormInput(json) ? readLayoutFormInput(json) : readTemplateFormInput(json);
   if (!read.ok) return invalid(read.errors);
-  const checked = previewBodyFromTemplateForm(read.input);
+  const checked = isLayoutFormInput(read.input) ? previewBodyFromLayoutForm(read.input) : previewBodyFromTemplateForm(read.input);
   if (!checked.ok) return invalid(Object.entries(checked.errors).map(([field, message]) => ({ field, message })));
 
   try {

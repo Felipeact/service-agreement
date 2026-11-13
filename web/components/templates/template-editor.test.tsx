@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test, vi } from "vitest";
-import type { TemplateFormInput } from "@/domain/agreement/template-form";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
+import { layoutFormFromBody, type AgreementLayoutForm } from "@/domain/agreement/template-form";
 import type { SaveTemplateState } from "./state";
 import { TemplateEditor, TemplateEditorView } from "./template-editor";
 
@@ -13,51 +14,26 @@ const TYPES = [
   { code: "RTU", name: "Rooftop units" },
   { code: "HP", name: "Heat pumps" },
 ];
-const VALUES: TemplateFormInput = {
+const VALUES: AgreementLayoutForm = layoutFormFromBody({
+  ...SYSTEM_AGREEMENT_BODY,
   name: "Quarterly HVAC",
   description: "Quarterly visits",
-  intro: "# Welcome\nHello {{customer.name}}.",
-  footer: "- Thank you.",
-  schedule: true,
-  scope: false,
-  termMonths: "24",
-  lines: [{ description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisit: "$450.00" }],
-};
+  intro: [
+    { type: "heading", text: "Welcome" },
+    { type: "paragraph", text: "Hello {{customer.name}}." },
+  ],
+  footer: [{ type: "clause", text: "Thank you." }],
+  sections: { schedule: true, scope: false },
+  preset: { termMonths: 24, lines: [{ description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 }] },
+});
 
 /** Every input tag of the markup whose attributes include all of `parts`. */
 const inputs = (html: string, ...parts: string[]) => (html.match(/<input[^>]*>/g) ?? []).filter((tag) => parts.every((part) => tag.includes(part)));
 
-const view = (values: TemplateFormInput = VALUES, errors: Record<string, string> = {}, message: string | null = null) =>
+const view = (values: AgreementLayoutForm = VALUES, errors: Record<string, string> = {}, message: string | null = null) =>
   renderToStaticMarkup(createElement(TemplateEditorView, { values, errors, types: TYPES, pending: false, message }));
 
 describe("the template editor", () => {
-  test("C5349: the fields come in order: Name, Description, Intro, Visit schedule, Scope, Closing text, Term length, Preset lines, then Save and Cancel", () => {
-    const html = view();
-    const labels = [
-      html.search(/<label[^>]*for="template-name"[^>]*>Name</),
-      html.search(/<label[^>]*for="template-description"[^>]*>Description</),
-      html.search(/<label[^>]*for="template-intro"[^>]*>Intro</),
-      html.search(/<label[^>]*for="template-schedule"/),
-      html.search(/<label[^>]*for="template-scope"/),
-      html.search(/<label[^>]*for="template-footer"[^>]*>Closing text</),
-      html.search(/<label[^>]*for="template-term"[^>]*>Term length</),
-      html.search(/<section aria-label="Preset lines"/),
-      html.indexOf(">Save template<"),
-      html.search(/<a[^>]*href="\/templates"[^>]*>Cancel</),
-    ];
-    expect(labels.every((index) => index > -1)).toBe(true);
-    expect(labels).toEqual([...labels].sort((a, b) => a - b));
-    expect(html).toContain("Visit schedule");
-    expect(html).toMatch(/<label[^>]*for="template-scope"[\s\S]*?>Scope</);
-  });
-
-  test("C5349: the two sections are switches and say whether they are on", () => {
-    const html = view();
-    expect(inputs(html, 'id="template-schedule"', 'role="switch"', 'checked=""')).toHaveLength(1);
-    expect(inputs(html, 'id="template-scope"', 'role="switch"')).toHaveLength(1);
-    expect(inputs(html, 'id="template-scope"', 'checked=""')).toHaveLength(0);
-  });
-
   test("C5349: each preset line has a description, a month grid, equipment types and a price per visit, then Remove; Add line follows the lines", () => {
     const html = view();
     const line = html.slice(html.indexOf('<fieldset class="flex flex-col gap-3 rounded-panel'));
@@ -85,14 +61,6 @@ describe("the template editor", () => {
     expect(html).toContain("NOPE");
   });
 
-  test("C5349: the buttons are real buttons and the fields are labelled, so the controls can be reached by touch and by name", () => {
-    const html = view();
-    expect(html).toMatch(/<button[^>]*type="button"[^>]*>Add line<\/button>/);
-    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Save template<\/button>/);
-    expect(html.match(/<textarea/g)).toHaveLength(3);
-    for (const id of ["template-name", "template-description", "template-intro", "template-footer", "template-term"]) expect(html).toContain(`id="${id}"`);
-  });
-
   test("C5349: Add line is disabled at 20 lines", () => {
     const lines = Array.from({ length: 20 }, () => VALUES.lines[0]);
     expect(view({ ...VALUES, lines })).toMatch(/<button[^>]*disabled=""[^>]*>Add line<\/button>/);
@@ -101,37 +69,6 @@ describe("the template editor", () => {
 });
 
 describe("a field that fails validation", () => {
-  const typed: TemplateFormInput = { ...VALUES, name: "", termMonths: "61", lines: [{ description: "", visitMonths: [], assetTypeCodes: [], costPerVisit: "lots" }] };
-  const errors = {
-    name: "Name is required.",
-    "preset.termMonths": "Term length must be empty or a whole number of months from 1 to 60.",
-    "preset.lines.0.description": "Preset line 1 needs a description.",
-    "preset.lines.0.visitMonths": "Preset line 1 needs at least one visit month.",
-    "preset.lines.0.costPerVisitCents": "Enter a price per visit like $450.00, or leave it empty.",
-    intro: "The intro has an unknown variable.",
-  };
-
-  test("C5350: the editor stays open and shows each message beside its field, announced with it", () => {
-    const html = view(typed, errors);
-    expect(html).toMatch(/id="template-name"[^>]*aria-invalid="true"[^>]*aria-describedby="template-name-error"[\s\S]*?<p id="template-name-error"[^>]*>Name is required\.<\/p>/);
-    expect(html).toMatch(/id="template-term"[^>]*aria-invalid="true"[\s\S]*?<p id="template-term-error"[^>]*>Term length must be empty/);
-    expect(html).toMatch(/id="line-0-description"[^>]*aria-invalid="true"[\s\S]*?Preset line 1 needs a description\./);
-    expect(html).toMatch(/id="line-0-price"[^>]*aria-invalid="true"[\s\S]*?Enter a price per visit like \$450\.00/);
-    expect(html).toContain("Preset line 1 needs at least one visit month.");
-    expect(html).toContain("The intro has an unknown variable.");
-    expect(html).toContain('role="alert"');
-  });
-
-  test("C5350: every field keeps what was typed", () => {
-    const html = view(typed, errors);
-    expect(html).toMatch(/id="template-term"[^>]*value="61"/);
-    expect(html).toMatch(/id="line-0-price"[^>]*value="lots"/);
-    expect(html).toMatch(/<textarea[^>]*id="template-description"[^>]*>Quarterly visits<\/textarea>/);
-    expect(html).toContain("# Welcome\nHello {{customer.name}}.");
-    expect(html).toContain("- Thank you.");
-    expect(inputs(html, 'id="template-scope"', 'checked=""')).toHaveLength(0);
-  });
-
   test("C5350: a form with no errors shows no alert, and a refusal that is not about a field is shown in words", () => {
     expect(view()).not.toContain('role="alert"');
     expect(view(VALUES, {}, "Only owners and admins can change templates.")).toContain("Only owners and admins can change templates.");
@@ -155,19 +92,33 @@ describe("a save that fails for a reason other than a field", () => {
     ["forbidden", "You don't have permission to save templates."],
     ["not_found", "This template no longer exists."],
     ["unavailable", "We couldn't save the template. Try again."],
-  ])("C5424: a save answering %s shows %s, keeps every typed value and re-enables Save", async (status, message) => {
+  ])("C5548: a save answering %s shows %s, keeps every typed value and every row, and re-enables Save", async (status, message) => {
     const { save: action, container, root } = await submitWith({ status } as SaveTemplateState);
     expect(action).toHaveBeenCalledTimes(1);
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(message);
     expect(field(container, "template-name").value).toBe("Quarterly HVAC");
     expect(field(container, "template-description").value).toBe("Quarterly visits");
-    expect(field(container, "template-intro").value).toBe(VALUES.intro);
-    expect(field(container, "template-footer").value).toBe("- Thank you.");
     expect(field(container, "template-term").value).toBe("24");
     expect(field(container, "line-0-price").value).toBe("$450.00");
-    expect(container.querySelector<HTMLInputElement>("#template-scope")!.checked).toBe(false);
+    expect(field(container, "doc-title").value).toBe("Preventive maintenance service agreement");
+    expect(field(container, "layout-0-text").value).toBe("Welcome");
+    expect(field(container, "layout-1-text").value).toBe("Hello {{customer.name}}.");
+    expect(container.querySelectorAll('section[aria-label="Layout"] > ol > li')).toHaveLength(VALUES.layout.length);
     expect(save(container).disabled).toBe(false);
     expect(save(container).textContent).toBe("Save template");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  test("C5548: the invalid answer of a save keeps the editor open with the row's message beside it and the typed text", async () => {
+    const errors = { "layout.1.text": "Item 2 uses an unknown variable: nope.", name: "Name is required." };
+    const { container, root } = await submitWith({ status: "invalid", errors, values: { ...VALUES, name: "" } });
+    const rows = container.querySelectorAll('section[aria-label="Layout"] > ol > li');
+    expect(rows[1].textContent).toContain("Item 2 uses an unknown variable: nope.");
+    expect(rows[0].textContent).not.toContain("unknown variable");
+    expect(field(container, "layout-1-text").value).toBe("Hello {{customer.name}}.");
+    expect(field(container, "template-name").getAttribute("aria-invalid")).toBe("true");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Fix the highlighted fields");
     act(() => root.unmount());
     container.remove();
   });
@@ -202,5 +153,101 @@ describe("the editor's two regions", () => {
     expect(container).toMatch(/\bxl:grid\b/);
     expect(container).toMatch(/\bxl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
     expect(container).not.toMatch(/(?<![:\w])grid-cols-/);
+  });
+});
+
+describe("the preview follows the editor", () => {
+  type Call = { url: string; init: RequestInit };
+  let calls: Call[];
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    calls = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: RequestInit) => {
+        calls.push({ url, init });
+        return new Promise<Response>(() => {});
+      }),
+    );
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  const open = (initial: AgreementLayoutForm = VALUES) => act(async () => root.render(createElement(TemplateEditor, { templateId: "88888888-8888-4888-8888-888888888888", initial, types: TYPES, save: vi.fn() })));
+  const tick = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
+  const bodyOf = (index: number) => JSON.parse(String(calls[index].init.body)) as AgreementLayoutForm;
+  const type = (id: string, value: string) =>
+    act(async () => {
+      const input = container.querySelector<HTMLInputElement>(`#${id}`)!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  const press = (label: string) => act(async () => void [...container.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === label || button.textContent === label)!.click());
+
+  test("C5549: opened on a saved template it requests the PDF once on mount, with its layout and options, and no more without an edit", async () => {
+    await open();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("/templates/preview");
+    expect(bodyOf(0)).toEqual(JSON.parse(JSON.stringify(VALUES)));
+    await tick(5000);
+    expect(calls).toHaveLength(1);
+  });
+
+  test("C5549: a change to a document option makes one request, 700 ms after the change, carrying the new option", async () => {
+    await open();
+    await type("doc-title", "Maintenance schedule");
+    await tick(699);
+    expect(calls).toHaveLength(1);
+    await tick(1);
+    expect(calls).toHaveLength(2);
+    expect(bodyOf(1).doc.title).toBe("Maintenance schedule");
+    await tick(3000);
+    expect(calls).toHaveLength(2);
+  });
+
+  test("C5549: moving a row and then changing a section option 300 ms later makes one request, at 1,000 ms, carrying both", async () => {
+    await open();
+    await press("Move row 2 up");
+    await tick(300);
+    await type("layout-3-title", "Visits this year");
+    await tick(699);
+    expect(calls).toHaveLength(1);
+    await tick(1);
+    expect(calls).toHaveLength(2);
+    const sent = bodyOf(1);
+    expect(sent.layout[0]).toMatchObject({ kind: "block", text: "Hello {{customer.name}}." });
+    expect(sent.layout[1]).toMatchObject({ kind: "block", text: "Welcome" });
+    expect(sent.layout.find((row) => row.kind === "section" && row.key === "schedule")).toMatchObject({ title: "Visits this year" });
+  });
+
+  test("C5549: with the preview unavailable the form's fields and Save stay editable", async () => {
+    let fail: (error: unknown) => void = () => {};
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((_resolve, reject) => void (fail = reject))));
+    await open();
+    await act(async () => fail(new TypeError("Failed to fetch")));
+    expect(container.textContent).toContain("Preview unavailable.");
+    for (const id of ["template-name", "doc-title", "layout-0-text", "template-term", "line-0-price"]) {
+      expect(container.querySelector<HTMLInputElement>(`#${id}`)!.disabled, id).toBe(false);
+    }
+    expect([...container.querySelectorAll("button")].find((button) => button.type === "submit")!.disabled).toBe(false);
+  });
+
+  test("C5549: values the preview cannot draw make no request and the row's message shows without the save banner", async () => {
+    await open();
+    await type("line-0-price", "lots");
+    await tick(2000);
+    expect(calls).toHaveLength(1);
+    expect(container.textContent).toContain("Enter a price per visit like $450.00");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 });

@@ -260,6 +260,23 @@ Cost: about 55 proofs at their own layer across about 30 files. Without these ro
 
 Same as the plan's `Out of scope`: click-on-the-page editing and drag-and-drop, moving the title block and page footer as items, editing the task library, a DocuSeal sandbox run of the new Name field, starter wording per trade and province, upload of an existing contract, contract wording reset, rewriting schema 1 versions.
 
+## Retired by instruction (batch 2)
+
+The owner's instruction that the agreement editor becomes a block editor replaces the Intro and Closing text areas and the two switches. Each test below asserts that replaced structure (or opens the editor on the old form) and is replaced by the check named; nothing else is weakened or deleted. The old `bodyFromTemplateForm` / `templateFormFromBody` pair, the save action and the preview route keep reading the old form (plan Landing row 8), so C5351, C5422, C5435 and C5437 stay unedited.
+
+- `web/components/templates/template-editor.test.tsx` "C5349: the fields come in order: Name, Description, Intro, Visit schedule, Scope, Closing text, Term length, Preset lines, then Save and Cancel" -> C5540
+- `web/components/templates/template-editor.test.tsx` "C5349: the two sections are switches and say whether they are on" -> C5540, C5543
+- `web/components/templates/template-editor.test.tsx` "C5349: the buttons are real buttons and the fields are labelled, so the controls can be reached by touch and by name" -> C5540, C5550
+- `web/components/templates/template-editor.test.tsx` "C5350: the editor stays open and shows each message beside its field, announced with it" -> C5548
+- `web/components/templates/template-editor.test.tsx` "C5350: every field keeps what was typed" -> C5548
+- `web/components/templates/template-editor.test.tsx` "C5424: a save answering %s shows %s, keeps every typed value and re-enables Save" (three cases: forbidden, not_found, unavailable) -> C5548
+- `web/components/templates/template-preview-frame.test.tsx` "C5431: typing in the editor's own Intro field is what the request carries" -> C5549
+- `web/components/templates/template-preview-frame.test.tsx` "C5433: in the editor the fields the preview cannot draw show their messages as soon as they are typed, without the save banner" -> C5548
+- `web/components/templates/template-preview-frame.test.tsx` "C5438: with the preview unavailable the form's fields stay editable" (opens the editor on the old form and reads its Intro and Closing text fields) -> C5549
+- `web/components/templates/template-preview-frame.test.tsx` "C5434: an editor opened on a saved template requests a PDF once on mount, with no edit" -> C5549
+- `web/components/templates/template-preview-frame.test.tsx` "C5434: an editor opened on a new template requests a PDF once on mount too, before a name is typed" -> C5549
+- `web/app/(app)/templates/[templateId]/page.test.ts` "C5349: a %s gets the editor filled with the latest version and told which version saving writes" (owner, admin) -> C5547
+
 ## Handoff
 
 - Batch 1 = S1 + S2 + S3 (C5500-C5531: the migration `save_contract_template` and the schema 2 checks, `layoutOf` and `contractLayoutOf`, the validators, the variables, both PDF renderers, the review page, the contract reader, `buildContractPreviewDocument`, the `block_editor` SQL recipe): about 95k to write plus about 45k of existing files to read (about 180 KB: `document.ts` both, `agreement-pdf.tsx`, `contract-pdf.tsx`, `pdf-sections.tsx`, `review-view.tsx`, `portal.ts`, `template.ts` both, `agreement-pdf.test.ts`, `contract-pdf.test.ts`). About 140k.

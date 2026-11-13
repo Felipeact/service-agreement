@@ -4,7 +4,7 @@ import { canWriteTemplates } from "@/components/templates/state";
 import { TemplateEditor } from "@/components/templates/template-editor";
 import { PageHeader } from "@/components/shell/page-header";
 import { getContainer } from "@/composition";
-import { EMPTY_TEMPLATE_FORM } from "@/domain/agreement/template-form";
+import { EMPTY_LAYOUT_FORM } from "@/domain/agreement/template-form";
 import { saveAgreementTemplateAction } from "../template-actions";
 
 export const metadata: Metadata = { title: "New template" };
@@ -19,7 +19,7 @@ export default async function NewTemplatePage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="New template" subtitle="Wording, sections and the lines a new agreement starts with." />
-      <TemplateEditor templateId={null} initial={EMPTY_TEMPLATE_FORM} types={types.map(({ code, name }) => ({ code, name }))} save={saveAgreementTemplateAction} />
+      <TemplateEditor templateId={null} initial={EMPTY_LAYOUT_FORM} types={types.map(({ code, name }) => ({ code, name }))} save={saveAgreementTemplateAction} />
     </div>
   );
 }

@@ -7,7 +7,6 @@ import { EMPTY_TEMPLATE_FORM, type TemplateFormInput } from "@/domain/agreement/
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const { TemplatePreviewFrame } = await import("./template-preview-frame");
-const { TemplateEditor } = await import("./template-editor");
 
 const SAVED: TemplateFormInput = {
   ...EMPTY_TEMPLATE_FORM,
@@ -96,21 +95,6 @@ describe("the preview frame", () => {
     expect(bodyOf(1).intro).toBe("Second.");
     await tick(2000);
     expect(calls).toHaveLength(2);
-  });
-
-  test("C5431: typing in the editor's own Intro field is what the request carries", async () => {
-    await act(async () => root.render(createElement(TemplateEditor, { templateId: null, initial: EMPTY_TEMPLATE_FORM, types: [], save: vi.fn() })));
-    await answer(0);
-    const intro = container.querySelector<HTMLTextAreaElement>("#template-intro")!;
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(intro, "A new intro.");
-      intro.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    await tick(699);
-    expect(calls).toHaveLength(1);
-    await tick(1);
-    expect(calls).toHaveLength(2);
-    expect(bodyOf(1).intro).toBe("A new intro.");
   });
 
   test("C5432: while a request is in flight it says Updating preview… and keeps the last PDF", async () => {
@@ -214,33 +198,6 @@ describe("the preview frame", () => {
     expect(text()).not.toContain("Updating preview…");
   });
 
-  test("C5433: in the editor the fields the preview cannot draw show their messages as soon as they are typed, without the save banner", async () => {
-    await act(async () => root.render(createElement(TemplateEditor, { templateId: null, initial: INVALID, types: [], save: vi.fn() })));
-    expect(container.querySelector("#line-0-price")!.getAttribute("aria-invalid")).toBe("true");
-    expect(text()).toContain("Enter a price per visit like $450.00");
-    expect(text()).toContain("Fix the highlighted fields to refresh the preview.");
-    expect(container.querySelector('[role="alert"]')).toBeNull();
-    expect(calls).toHaveLength(0);
-  });
-
-  test("C5434: an editor opened on a saved template requests a PDF once on mount, with no edit", async () => {
-    await act(async () => root.render(createElement(TemplateEditor, { templateId: "88888888-8888-4888-8888-888888888888", initial: SAVED, types: [], save: vi.fn() })));
-    expect(calls).toHaveLength(1);
-    expect(bodyOf(0)).toEqual(SAVED);
-    await tick(5000);
-    expect(calls).toHaveLength(1);
-  });
-
-  test("C5434: an editor opened on a new template requests a PDF once on mount too, before a name is typed", async () => {
-    await act(async () => root.render(createElement(TemplateEditor, { templateId: null, initial: EMPTY_TEMPLATE_FORM, types: [], save: vi.fn() })));
-    expect(calls).toHaveLength(1);
-    expect(bodyOf(0)).toEqual(EMPTY_TEMPLATE_FORM);
-    await answer(0);
-    expect(frameSrc()).toBe("blob:preview-1#toolbar=0&view=FitH");
-    await tick(5000);
-    expect(calls).toHaveLength(1);
-  });
-
   test.each([
     ["the request fails", () => calls[0].reject(new TypeError("Failed to fetch"))],
     ["the route answers 503", () => calls[0].resolve(pdfResponse(503, "text/plain"))],
@@ -269,16 +226,6 @@ describe("the preview frame", () => {
     await answer(2);
     expect(text()).not.toContain("Preview unavailable.");
     expect(frameSrc()).toBe("blob:preview-2#toolbar=0&view=FitH");
-  });
-
-  test("C5438: with the preview unavailable the form's fields stay editable", async () => {
-    await act(async () => root.render(createElement(TemplateEditor, { templateId: null, initial: SAVED, types: [], save: vi.fn() })));
-    await act(async () => calls[0].reject(new TypeError("Failed to fetch")));
-    expect(text()).toContain("Preview unavailable.");
-    for (const id of ["template-name", "template-intro", "template-footer", "template-term", "line-0-price"]) {
-      expect(container.querySelector<HTMLInputElement>(`#${id}`)!.disabled, id).toBe(false);
-    }
-    expect([...container.querySelectorAll("button")].find((button) => button.type === "submit")!.disabled).toBe(false);
   });
 
   test("C5439: once a PDF has been shown it offers Open the preview in a new tab, linking to its object URL", async () => {

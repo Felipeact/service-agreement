@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { CurrentMember, DocumentRenderer, MemberRole } from "@/application/ports";
 import type { AgreementDocument } from "@/domain/agreement";
-import { EMPTY_TEMPLATE_FORM, type TemplateFormInput } from "@/domain/agreement/template-form";
+import { EMPTY_LAYOUT_FORM, EMPTY_TEMPLATE_FORM, type TemplateFormInput } from "@/domain/agreement/template-form";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { TenantLogo } from "@/domain/org-settings/logo";
 
@@ -103,6 +103,22 @@ describe("POST /templates/preview, the document", () => {
     expect(document.terms.find((term) => term.label === "Repair discount")?.value).toBe("10%");
     expect(getOrgSettings).toHaveBeenCalledWith(ORG);
     expect(tenantLogo).toHaveBeenCalledWith(ORG);
+  });
+
+  test("C5549: the block editor's values are drawn with their layout and options, a nameless one too, and a bad row answers 422 under layout.<row>", async () => {
+    const posted = { ...EMPTY_LAYOUT_FORM, doc: { ...EMPTY_LAYOUT_FORM.doc, title: "Maintenance schedule", pageHeader: "every" } };
+    const ok = await post(posted);
+    expect(ok.status).toBe(200);
+    expect(renderAgreement).toHaveBeenCalledTimes(1);
+    const document: AgreementDocument = renderAgreement.mock.calls[0][0];
+    expect(document.layout?.map((item) => (item.kind === "section" ? item.key : item.type))).toEqual(["price", "schedule", "included", "equipment", "terms"]);
+    expect(document.doc).toMatchObject({ title: "Maintenance schedule", pageHeader: "every" });
+    renderAgreement.mockClear();
+    const bad = await post({ ...posted, layout: [...posted.layout.slice(0, 1), { kind: "block", type: "paragraph", text: "{{nope}}", level: 2, indent: 0, pageBreakBefore: false }] });
+    expect(bad.status).toBe(422);
+    expect(((await bad.json()) as { errors: { field: string }[] }).errors[0].field).toBe("layout.1.text");
+    expect(renderAgreement).not.toHaveBeenCalled();
+    noWrites();
   });
 
   test("C5435: the org's logo goes on the letterhead when it has one", async () => {

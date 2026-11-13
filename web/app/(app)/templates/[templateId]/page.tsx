@@ -4,7 +4,7 @@ import { canWriteTemplates } from "@/components/templates/state";
 import { TemplateEditor } from "@/components/templates/template-editor";
 import { PageHeader } from "@/components/shell/page-header";
 import { getContainer } from "@/composition";
-import { templateFormFromBody } from "@/domain/agreement/template-form";
+import { layoutFormFromBody } from "@/domain/agreement/template-form";
 import { isUuid } from "@/domain/imports";
 import { saveAgreementTemplateAction } from "../template-actions";
 
@@ -31,7 +31,7 @@ export async function EditTemplateForRequest({ templateId }: { templateId: strin
       <PageHeader title="Edit template" subtitle={`Saving writes version ${template.versionNo + 1}. Agreements already sent keep the version they used.`} />
       <TemplateEditor
         templateId={template.id}
-        initial={templateFormFromBody(template.body)}
+        initial={layoutFormFromBody(template.body)}
         types={types.map(({ code, name }) => ({ code, name }))}
         save={saveAgreementTemplateAction}
       />

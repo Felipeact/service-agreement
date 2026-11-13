@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { isUuid } from "@/domain/imports";
-import { bodyFromTemplateForm, type TemplateFormInput } from "@/domain/agreement/template-form";
+import { bodyFromLayoutForm, bodyFromTemplateForm, isLayoutFormInput, type AgreementLayoutForm, type TemplateFormInput } from "@/domain/agreement/template-form";
 import {
   canWriteTemplates,
   NAME_TAKEN_FIELD_MESSAGE,
@@ -26,12 +26,13 @@ async function writer() {
  * Saves the editor's fields as the next version of the template (a new template when `templateId` is null), then returns to the
  * list with it selected. An invalid body answers each field's message and keeps what was typed (agreement-templates AC 18).
  */
-export async function saveAgreementTemplateAction(templateId: string | null, input: TemplateFormInput): Promise<SaveTemplateState> {
+export async function saveAgreementTemplateAction(templateId: string | null, input: TemplateFormInput | AgreementLayoutForm): Promise<SaveTemplateState> {
   const container = await writer();
   if (!container) return { status: "forbidden" };
   if (templateId !== null && !isUuid(templateId)) return { status: "not_found" };
 
-  const checked = bodyFromTemplateForm(input);
+  // The block editor's form writes schema 2; the older text form still writes schema 1 (block-editor Landing row 8).
+  const checked = isLayoutFormInput(input) ? bodyFromLayoutForm(input) : bodyFromTemplateForm(input);
   if (!checked.ok) return { status: "invalid", errors: checked.errors, values: input };
 
   const saved = await container.saveAgreementTemplate(templateId, checked.body);

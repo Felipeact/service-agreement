@@ -69,12 +69,15 @@ describe("/templates/[templateId]", () => {
     await expect(EditTemplateForRequest({ templateId: SYSTEM })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
-  test.each(["owner", "admin"] as const)("C5349: a %s gets the editor filled with the latest version and told which version saving writes", async (role) => {
+  test.each(["owner", "admin"] as const)("C5547: a %s gets the block editor filled with the latest version's rows and told which version saving writes", async (role) => {
     currentMember.mockResolvedValue(member(role));
     const html = renderToStaticMarkup((await EditTemplateForRequest({ templateId: OWN })) as ReactElement);
     expect(html).toContain("Edit template");
     expect(html).toContain("Saving writes version 5.");
     expect(html).toMatch(/id="template-name"[^>]*value="Quarterly HVAC"/);
-    expect(html).toContain("- Thank you.");
+    // A schema 1 body opens as its layoutOf rows: the closing clause is the sixth row, after the terms.
+    expect(html).toMatch(/<textarea[^>]*id="layout-5-text"[^>]*>Thank you\.<\/textarea>/);
+    expect(html).toContain('id="doc-title"');
+    expect(html).toContain("Preventive maintenance service agreement");
   });
 });

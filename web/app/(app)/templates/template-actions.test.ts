@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementTemplateReader, AgreementTemplateStore, AgreementTemplateSummary } from "@/application/ports";
 import { makeDuplicateAgreementTemplate } from "@/application/use-cases/templates";
 import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
-import { EMPTY_TEMPLATE_FORM } from "@/domain/agreement/template-form";
+import { EMPTY_LAYOUT_FORM, EMPTY_TEMPLATE_FORM } from "@/domain/agreement/template-form";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -60,6 +60,33 @@ describe("saveAgreementTemplateAction", () => {
       sections: { schedule: true, scope: true },
       preset: { termMonths: null, lines: [{ description: "Visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 }] },
     });
+  });
+
+  test("C5547: the block editor's form is saved as a schema 2 body with its layout and options, and its invalid rows answer under layout.<row>", async () => {
+    saveAgreementTemplate.mockResolvedValue({ ok: true, templateId: TEMPLATE, versionNo: 2 });
+    const { saveAgreementTemplateAction } = await import("./template-actions");
+    const form = { ...EMPTY_LAYOUT_FORM, name: "Proposal", doc: { ...EMPTY_LAYOUT_FORM.doc, pageHeader: "every" as const } };
+    await expect(saveAgreementTemplateAction(TEMPLATE, form)).rejects.toThrow("NEXT_REDIRECT");
+    expect(saveAgreementTemplate).toHaveBeenCalledWith(TEMPLATE, {
+      schema: 2,
+      name: "Proposal",
+      description: "",
+      doc: { title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "every", pageFooter: "number" },
+      layout: [
+        { kind: "section", key: "price" },
+        { kind: "section", key: "schedule" },
+        { kind: "section", key: "included" },
+        { kind: "section", key: "equipment" },
+        { kind: "section", key: "terms" },
+      ],
+      preset: { termMonths: null, lines: [] },
+    });
+    saveAgreementTemplate.mockClear();
+    const bad = { ...form, layout: [...form.layout, { kind: "block" as const, type: "paragraph" as const, text: "", level: 2 as const, indent: 0 as const, pageBreakBefore: false }] };
+    const state = await saveAgreementTemplateAction(TEMPLATE, bad);
+    expect(state).toMatchObject({ status: "invalid", values: bad });
+    expect(Object.keys((state as { errors: object }).errors)).toEqual(["layout.5.text"]);
+    expect(saveAgreementTemplate).not.toHaveBeenCalled();
   });
 
   test("C5351: a new template is saved with a null id", async () => {
