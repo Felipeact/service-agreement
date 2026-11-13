@@ -113,6 +113,32 @@ describe("/templates", () => {
   });
 });
 
+describe("/templates, Use template and Customize wiring", () => {
+  type Wired = ReactElement<{ dialog?: { templates: unknown }; actions?: { customize?: unknown; duplicate?: unknown } }>;
+
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", true],
+    ["viewer", false],
+  ] as const)("C5410: for role %s the page mounts the Use template dialog: %s", async (role, shown) => {
+    currentMember.mockResolvedValue(member(role));
+    const element = (await TemplatesForRequest({ params: {} })) as Wired;
+    expect(element.props.dialog !== undefined).toBe(shown);
+  });
+
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", false],
+    ["viewer", false],
+  ] as const)("C5410: for role %s the page passes the customize action: %s", async (role, shown) => {
+    currentMember.mockResolvedValue(member(role));
+    const element = (await TemplatesForRequest({ params: {} })) as Wired;
+    expect(typeof element.props.actions?.customize === "function").toBe(shown);
+  });
+});
+
 describe("/templates/new", () => {
   test("C5354: signed out goes to /login", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });

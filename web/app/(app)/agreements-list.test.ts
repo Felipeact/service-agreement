@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({ redirect, notFound: vi.fn(), useRouter: () =
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { AgreementsForRequest } = await import("./agreements/page");
+const { NewAgreementLauncher } = await import("./new-agreement-launcher");
 
 const SITE = "00000000-0000-4000-8000-0000000000aa";
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role });
@@ -52,5 +53,19 @@ describe("/agreements", () => {
     await expect(render({})).rejects.toThrow("NEXT_REDIRECT /login");
     expect(listAgreements).not.toHaveBeenCalled();
     expect(listActiveSites).not.toHaveBeenCalled();
+  });
+});
+
+describe("/agreements, the New agreement launcher", () => {
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", true],
+    ["viewer", false],
+  ] as const)("C5415: for role %s the list gets the New agreement launcher slot: %s", async (role, shown) => {
+    currentMember.mockResolvedValue(member(role));
+    const view = (await AgreementsForRequest({ params: {} })) as ReactElement<{ newAgreement?: ReactElement }>;
+    expect(view.props.newAgreement !== undefined).toBe(shown);
+    if (shown) expect(view.props.newAgreement!.type).toBe(NewAgreementLauncher);
   });
 });
