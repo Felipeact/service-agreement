@@ -297,6 +297,44 @@ describe("the section options", () => {
     expect(body()[1]).toEqual({ kind: "block", type: "paragraph", text: "Welcome.", indent: 2, pageBreakBefore: true });
   });
 
+  test("C5546: every indent value (0, 1, 2, 3) and both heading levels reach the agreement's layout, and indent 0 and level 2 are not stored", async () => {
+    await mount();
+    for (const indent of [1, 2, 3, 0]) {
+      await setField(field("layout-1-indent"), String(indent));
+      expect(body()[1]).toEqual({ kind: "block", type: "paragraph", text: "Welcome.", ...(indent > 0 ? { indent } : {}) });
+    }
+    for (const level of [1, 2]) {
+      await setField(field("layout-0-level"), String(level));
+      expect(body()[0]).toEqual({ kind: "block", type: "heading", text: "About this agreement", ...(level === 1 ? { level } : {}) });
+    }
+  });
+
+  test("C5546: every indent value (0, 1, 2, 3) and both heading levels reach the contract wording's saved body", async () => {
+    const form: LayoutFormState = {
+      ...CONTRACT,
+      layout: rowsFromLayout([
+        { kind: "block", type: "heading", text: "Payment" },
+        { kind: "block", type: "clause", text: "Pay in {{terms.paymentDays}} days." },
+        { kind: "section", key: "price" },
+        { kind: "section", key: "signatures" },
+      ]),
+    };
+    await mount(form, "contract");
+    const saved = () => {
+      const checked = bodyFromContractForm(seen.value);
+      if (!checked.ok) throw new Error(JSON.stringify(checked.errors));
+      return checked.body.schema === 2 ? checked.body.layout : [];
+    };
+    for (const indent of [1, 2, 3, 0]) {
+      await setField(field("layout-1-indent"), String(indent));
+      expect(saved()[1]).toEqual({ kind: "block", type: "clause", text: "Pay in {{terms.paymentDays}} days.", ...(indent > 0 ? { indent } : {}) });
+    }
+    for (const level of [1, 2]) {
+      await setField(field("layout-0-level"), String(level));
+      expect(saved()[0]).toEqual({ kind: "block", type: "heading", text: "Payment", ...(level === 1 ? { level } : {}) });
+    }
+  });
+
   test("C5546: the document options are changed with the options panel", async () => {
     await mount();
     await setField(field("doc-title"), "Maintenance schedule");
