@@ -344,7 +344,7 @@ describe("the contract PDF, layout and options (block-editor)", () => {
   });
 
   test("C5522: the page header and footer options apply to the contract: the letterhead on every page and the company name, address and phone at the foot", async () => {
-    const all = await draw([price, { kind: "section", key: "included" }, { kind: "section", key: "equipment" }, signatures()], { pageHeader: "every", pageFooter: "letterhead" }, long());
+    const all = await draw([price, { kind: "section", key: "included" }, { kind: "section", key: "equipment" }, heading("Last page", { pageBreakBefore: true }), signatures()], { pageHeader: "every", pageFooter: "letterhead" }, long());
     expect(all.length).toBeGreaterThanOrEqual(3);
     for (const page of all) {
       expect(page.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);

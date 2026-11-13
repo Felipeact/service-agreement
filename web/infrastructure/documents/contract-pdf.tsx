@@ -114,7 +114,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
       case "signatures": {
         const options: SignatureOptions = item.options ?? {};
         return (
-          <View key={index} wrap={false} minPresenceAhead={160}>
+          <View key={index} wrap={false}>
             {options.heading && <Text style={[styles.h2, accent]}>{options.heading}</Text>}
             <SignatureBlock
               heading={options.customerLabel ?? (signer ? `For the Customer: ${signer.name}` : "For the Customer")}
