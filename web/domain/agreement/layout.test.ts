@@ -179,6 +179,14 @@ describe("validateAgreementTemplate, schema 2", () => {
     expect(new Set(inputs.map(reasonOf)).size).toBe(14);
   });
 
+  test("C5512: a column label of 41 characters is refused with its own message and one of 40 is accepted", () => {
+    const columns = (label: string) => ({ description: label, visits: "B", perVisit: "C", perYear: "D", total: "E" });
+    const price = (label: string) => body({ layout: [{ kind: "section", key: "price", options: { columns: columns(label) } }] });
+    expect(reasonOf(price("x".repeat(41)))).toContain("The description column label of item 1 is too long (41 characters, at most 40)");
+    expect(validateAgreementTemplate(price("x".repeat(40))).ok).toBe(true);
+    expect(reasonOf(price("x".repeat(41)))).not.toBe(reasonOf(body({ doc: { ...DOC, title: "x".repeat(121) } })));
+  });
+
   test("C5512: a refusal names the field and the item it belongs to", () => {
     const result = validateAgreementTemplate(body({ layout: [section("price"), { kind: "block", type: "paragraph", text: "x", indent: 4 }] }));
     expect(!result.ok && result.errors.map((error) => error.field)).toEqual(["layout.1.indent"]);
@@ -197,5 +205,22 @@ describe("validateAgreementTemplate, schema 2", () => {
     expect(reasonOf(body({ layout: [{ kind: "section", key: "price", options: { visitsFormat: "daily" } }] }))).toContain("visits format");
     expect(reasonOf(withOptions("equipment", { title: "List for {{nope}}" }))).toContain("unknown variable: nope");
     expect(reasonOf(withOptions("equipment", { title: "x".repeat(121) }))).toContain("too long");
+  });
+});
+
+describe("a section title that fills to nothing", () => {
+  test("C5517: a title whose variables fill to nothing falls back to the default title, and a title that fills to text is kept", () => {
+    const template = (title: string): AgreementTemplateBody => ({
+      schema: 2,
+      name: "Proposal",
+      description: "",
+      doc: { ...DOC },
+      layout: [{ kind: "section", key: "price", options: { title } }, { kind: "section", key: "equipment", options: { title: "  {{signer.name}} " } }, { kind: "section", key: "schedule", options: { title: "Visits for {{site.name}}" } }],
+      preset: { termMonths: null, lines: [] },
+    });
+    const layout = buildAgreementDocument(SOURCE, SETTINGS, template("{{signer.name}}")).layout;
+    expect(layout?.[0]).toEqual({ kind: "section", key: "price", options: {} });
+    expect(layout?.[1]).toEqual({ kind: "section", key: "equipment", options: {} });
+    expect(layout?.[2]).toMatchObject({ options: { title: expect.stringMatching(/^Visits for .+/) } });
   });
 });

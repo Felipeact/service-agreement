@@ -106,6 +106,21 @@ describe("validateContractWording", () => {
     expect(reasonOf(input)).toContain(expected);
   });
 
+  test("C5525: a signature customer label, contractor label or caption of 121 characters is refused with its own message and one of 120 is accepted", () => {
+    const signatures = (options: Record<string, string>) => body({ layout: [section("price"), section("signatures", options)] });
+    const names = ["customerLabel", "contractorLabel", "caption"];
+    for (const name of names) expect(validateContractWording(signatures({ [name]: "x".repeat(120) })).ok, `${name} of 120`).toBe(true);
+    const reasons = names.map((name) => reasonOf(signatures({ [name]: "x".repeat(121) })));
+    expect(reasons.every((reason) => reason?.includes("is too long (121 characters, at most 120)"))).toBe(true);
+    expect(new Set(reasons).size).toBe(3);
+  });
+
+  test("C5525: a price column label of 41 characters is refused with its own message and one of 40 is accepted", () => {
+    const price = (label: string) => body({ layout: [section("price", { columns: { description: label, visits: "B", perVisit: "C", perYear: "D", total: "E" } }), section("signatures")] });
+    expect(reasonOf(price("x".repeat(41)))).toContain("The description column label of item 1 is too long (41 characters, at most 40)");
+    expect(validateContractWording(price("x".repeat(40))).ok).toBe(true);
+  });
+
   test("C5525: exactly 61 items is refused as 61", () => {
     expect(reasonOf(body({ layout: [...many(59, para("x")), section("price"), section("signatures")] }))).toContain("too many items (61, at most 60)");
   });
