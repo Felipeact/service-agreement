@@ -75,3 +75,36 @@ describe("startAgreementAction, the template choice", () => {
     expect(create).not.toHaveBeenCalled();
   });
 });
+
+describe("startAgreementAction, the other answers", () => {
+  test("C1364: a site that already has a live agreement answers open_exists with that agreement's id and number", async () => {
+    create.mockResolvedValue({ ok: false, code: "open_exists", agreementId: "ag-live", number: "AG-0042" });
+    const state = await startAgreementAction(input());
+    expect(state).toEqual({ status: "open_exists", agreementId: "ag-live", number: "AG-0042" });
+  });
+
+  test("C5404: a site that is not the chosen customer's answers not_found and creates nothing", async () => {
+    siteRegister.mockResolvedValue({ customerId: "99999999-9999-4999-8999-999999999999" });
+    expect(await startAgreementAction(input())).toEqual({ status: "not_found" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  test("C5404: a site that does not exist answers not_found", async () => {
+    siteRegister.mockResolvedValue(null);
+    expect(await startAgreementAction(input())).toEqual({ status: "not_found" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  test("C5404: a store that cannot create the draft answers unavailable, carrying the ids this call made", async () => {
+    createCustomer.mockResolvedValue({ ok: true, id: CUSTOMER });
+    createSite.mockResolvedValue({ ok: true, id: SITE });
+    create.mockResolvedValue({ ok: false, code: "unavailable" });
+    const state = await startAgreementAction({ customer: "__new", customerName: "Kestrel Logistics", site: "__new", siteName: "Dock 4", address: "" });
+    expect(state).toEqual({ status: "unavailable", customerId: CUSTOMER, siteId: SITE });
+  });
+
+  test("C5404: a store that refuses the member answers forbidden", async () => {
+    create.mockResolvedValue({ ok: false, code: "forbidden" });
+    expect(await startAgreementAction(input())).toEqual({ status: "forbidden", customerId: CUSTOMER, siteId: SITE });
+  });
+});
