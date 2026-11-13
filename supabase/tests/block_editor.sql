@@ -1,6 +1,6 @@
 -- block-editor, database side: C5513, C5514, C5528, C5529 (.specs/features/block-editor/checks.md).
--- Run after fixture.sql and the migration 20261113100000_block_editor.sql (npm run test:db block_editor): the migration is
--- not yet applied to the hosted project, so this recipe replays it inside the rolled-back transaction and tests those objects.
+-- Run after fixture.sql (npm run test:db block_editor). The migration 20261113100000_block_editor.sql was applied to the hosted
+-- project by the owner, so this file no longer replays it and tests the hosted objects.
 -- Fixture: org A owner uA, estimator uE, viewer uV, admin uAd (added here); org B owner uB; uX has no membership. Expected values
 -- come from the checks, never read back from the migration.
 
