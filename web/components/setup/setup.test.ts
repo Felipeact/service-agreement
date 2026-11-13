@@ -6,6 +6,7 @@ import { itemWords } from "@/domain/org-settings";
 import { groupSetupCatalog } from "@/domain/org-settings/setup";
 import { DraftPanel } from "./draft-panel";
 import { CatalogReview, SetupView } from "./setup-view";
+import { toSetupInput } from "./state";
 
 const settings: OrgSettings = {
   legalName: "Flow Plumbing Ltd.",
@@ -168,5 +169,33 @@ describe("the catalog draft on the setup screen", () => {
     const markup = html(createElement(CatalogReview, { groups: [], words }));
     expect(markup).toContain("No types yet");
     expect(markup).not.toMatch(/<button|<a |<input|draft|generate/i);
+  });
+});
+
+describe("starter templates section", () => {
+  const at = (markup: string, needle: string) => markup.indexOf(needle);
+
+  test("C5500: Your starter templates sits after the profile card and before the catalog review", () => {
+    const markup = view(groupSetupCatalog([{ pack: "hvac", name: "Rooftop unit" }], words));
+    const [profile, starter, catalog] = [at(markup, 'id="profile-title"'), at(markup, "Your starter templates"), at(markup, 'id="catalog-title"')];
+    expect(profile).toBeGreaterThan(-1);
+    expect(starter).toBeGreaterThan(profile);
+    expect(catalog).toBeGreaterThan(starter);
+  });
+
+  test("C5501: with an empty catalog the section is still shown, before the empty-catalog notice", () => {
+    const markup = view(groupSetupCatalog([], words));
+    const [profile, starter, notice] = [at(markup, 'id="profile-title"'), at(markup, "Your starter templates"), at(markup, "No types yet")];
+    expect(starter).toBeGreaterThan(profile);
+    expect(notice).toBeGreaterThan(starter);
+  });
+
+  test("C5506: it says the details are the saved ones, and an unsaved province in the form does not reach the contract half", () => {
+    const saved = { ...settings, governingProvince: "BC", paymentDays: 30 };
+    const typed = { ...toSetupInput(saved), governingProvince: "ON" };
+    const markup = html(createElement(SetupView, { settings: saved, groups: groupSetupCatalog([], words), words, action: noop, initialState: { status: "invalid", errors: {}, values: typed } }));
+    expect(markup).toContain("Shown with the details you have saved so far.");
+    expect(markup).toContain("governed by the laws of British Columbia.");
+    expect(markup).not.toContain("governed by the laws of Ontario");
   });
 });

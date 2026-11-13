@@ -11,6 +11,7 @@ import { TextInput } from "@/components/ui/text-input";
 import { PROVINCES, PROVINCE_NAMES, type ItemWords } from "@/domain/org-settings";
 import type { SetupCatalogGroup } from "@/domain/org-settings/setup";
 import { DraftPanel, type DraftPanelProps } from "./draft-panel";
+import { StarterTemplates } from "./starter-templates";
 import { toSetupInput, type SetupFormState } from "./state";
 
 type SetupViewProps = {
@@ -130,6 +131,8 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
             </p>
           </div>
         </section>
+
+        <StarterTemplates settings={settings} />
 
         <CatalogReview groups={groups} words={words} />
 

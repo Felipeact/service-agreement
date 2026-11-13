@@ -10,7 +10,21 @@ const getItemWords = vi.fn();
 const logoCurrent = vi.fn();
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords, logo: { current: logoCurrent } }) }));
+const strayCalls = vi.fn();
+/** Every container member the page does not read is a spy that throws, so a write cannot happen unseen (setup-template-preview AC 10). */
+const reads = { currentMember, setupPending, getOrgSettings, setupCatalog, getItemWords, logo: { current: logoCurrent } };
+vi.mock("@/composition", () => ({
+  getContainer: async () =>
+    new Proxy(reads as Record<string, unknown>, {
+      get: (target, key) =>
+        key in target || key === "then"
+          ? target[key as string]
+          : (...args: unknown[]) => {
+              strayCalls(String(key), ...args);
+              throw new Error(`unexpected container call ${String(key)}`);
+            },
+    }),
+}));
 // Next's redirect() throws to stop the render; the double does the same.
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -20,6 +34,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { SetupForRequest } = await import("./page");
+const { renderToStaticMarkup } = await import("react-dom/server");
 
 const member = (role: "owner" | "admin" | "estimator" | "viewer"): CurrentMember => ({
   status: "member", userId: "u1", email: "o@example.com", orgId: "org-1", orgName: "Org", role,
@@ -73,5 +88,25 @@ describe("the setup page's entry decision", () => {
     currentMember.mockResolvedValue(member("owner"));
     getOrgSettings.mockResolvedValue(null);
     await expect(SetupForRequest()).rejects.toThrow("NEXT_REDIRECT /pipeline");
+  });
+});
+
+describe("setup-template-preview on the page", () => {
+  test("C5511: an owner gets the starter templates section with every other container member refusing to be called", async () => {
+    currentMember.mockResolvedValue(member("owner"));
+    getOrgSettings.mockResolvedValue({ legalName: "Flow", address: null, phone: null, accentColor: null, repairDiscountPct: 0, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: null, defaultTermMonths: 12, renewalNoticeDays: 30, cpiRenegotiationThresholdPct: 5, renewalCpiPct: null, renewalCpiAsOf: null, proposalValidityDays: 30, itemSingular: "equipment", itemPlural: "equipment" });
+    const markup = renderToStaticMarkup(await SetupForRequest());
+    expect(markup).toContain("Your starter templates");
+    expect(strayCalls).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["an estimator", () => currentMember.mockResolvedValue(member("estimator")), "/pipeline"],
+    ["a signed-out visitor", () => currentMember.mockResolvedValue({ status: "signed_out" }), "/login"],
+  ] as const)("C5515: %s is redirected and no settings are read", async (_who, arrange, to) => {
+    arrange();
+    await expect(SetupForRequest()).rejects.toThrow(`NEXT_REDIRECT ${to}`);
+    expect(getOrgSettings).not.toHaveBeenCalled();
+    expect(strayCalls).not.toHaveBeenCalled();
   });
 });
