@@ -58,4 +58,28 @@ describe("the contract wording editor", () => {
     expect(JSON.parse(String(calls[0][1].body))).toEqual(JSON.parse(JSON.stringify(INITIAL)));
     done();
   });
+
+  test("C5550: the container is a column below 1280 px and two equal tracks from xl, the same as the agreement editor", async () => {
+    const { container, done } = await submitWith({ status: "idle" });
+    const classes = (container.firstElementChild as HTMLElement).className;
+    expect(classes).toMatch(/\bflex-col\b/);
+    expect(classes).toMatch(/\bxl:grid\b/);
+    expect(classes).toMatch(/\bxl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
+    expect(classes).not.toMatch(/\b(?:lg|md|sm):grid\b/);
+    const children = [...container.firstElementChild!.children];
+    expect(children[0].getAttribute("aria-label")).toBe("Contract wording form");
+    expect(children[1].getAttribute("aria-label")).toBe("Preview");
+    done();
+  });
+
+  test("C5550: every row button carries min-h-11, and every field in a row is 44px tall below lg", async () => {
+    const { container, done } = await submitWith({ status: "idle" });
+    const items = [...container.querySelectorAll('section[aria-label="Layout"] > ol > li')];
+    expect(items.length).toBe(INITIAL.layout.length);
+    for (const li of items) {
+      for (const button of li.querySelectorAll("button")) expect(button.className, button.textContent ?? "").toContain("min-h-11");
+      for (const input of li.querySelectorAll<HTMLElement>('input:not([type="checkbox"]), select')) expect(input.className, input.id).toMatch(/\bh-11\b/);
+    }
+    done();
+  });
 });
