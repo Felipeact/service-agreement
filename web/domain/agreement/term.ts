@@ -1,4 +1,4 @@
-import { MONTH_SHORT } from "./cadence";
+import { MONTH_NAMES, MONTH_SHORT } from "./cadence";
 
 /**
  * A version's term (term-dates door 1): its start date, its length in months, and the end the database derives from
@@ -50,6 +50,12 @@ export function validateAgreementTerm(input: AgreementTermInput): AgreementTermV
 export function formatTermDate(iso: string): string {
   const [year, month, day] = iso.split("-").map(Number);
   return `${MONTH_SHORT[month - 1]} ${day}, ${year}`;
+}
+
+/** `2026-11-13` as `November 13, 2026`: the date as the contract's wording says it, from the text itself and never a clock. */
+export function formatLongDate(iso: string): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
 }
 
 export const termMonthsLabel = (months: number) => `${months} ${months === 1 ? "month" : "months"}`;

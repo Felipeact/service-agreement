@@ -1,5 +1,5 @@
 import type { AgreementTerms } from "../agreement";
-import { termMonthsLabel } from "../agreement/term";
+import { formatLongDate, termMonthsLabel } from "../agreement/term";
 import { formatSettingNumber, PROVINCE_NAMES } from "../org-settings";
 import type { ContractParties } from "./parties";
 
@@ -19,6 +19,11 @@ export const TEMPLATE_VARIABLES = [
   "tenant.legalName",
   "customer.name",
   "site.name",
+  "term.start",
+  "tenant.address",
+  "tenant.phone",
+  "signer.name",
+  "terms.taxNote",
 ] as const;
 
 export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number];
@@ -69,8 +74,11 @@ const percent = (value: number) => `${formatSettingNumber(value)}%`;
 const provinceName = (code: string) => (code in PROVINCE_NAMES ? PROVINCE_NAMES[code as keyof typeof PROVINCE_NAMES] : code);
 const orNull = <T>(value: T | null | undefined, format: (value: T) => string): string | null => (value === null || value === undefined ? null : format(value));
 
-/** The text of every variable for a contract: the frozen terms, the term's length and the contract's parties. */
-export function templateValues(terms: AgreementTerms | null, termMonths: number, parties: ContractParties | null): TemplateValues {
+/**
+ * The text of every variable for a contract or an agreement: the frozen terms, the term's length, the term's start (`YYYY-MM-DD`,
+ * read as `November 13, 2026`) and the parties. A value the source does not have is `null`.
+ */
+export function templateValues(terms: AgreementTerms | null, termMonths: number, parties: ContractParties | null, termStart: string | null = null): TemplateValues {
   return {
     "terms.paymentDays": orNull(terms?.paymentDays, days),
     "terms.cancellationNoticeDays": orNull(terms?.cancellationNoticeDays, possessiveDays),
@@ -83,7 +91,36 @@ export function templateValues(terms: AgreementTerms | null, termMonths: number,
     "tenant.legalName": parties?.contractor.legalName ?? null,
     "customer.name": parties?.customer.name ?? null,
     "site.name": parties?.site.name ?? null,
+    "term.start": orNull(termStart, formatLongDate),
+    "tenant.address": parties?.contractor.address ?? null,
+    "tenant.phone": parties?.contractor.phone ?? null,
+    "signer.name": parties?.signer?.name ?? null,
+    "terms.taxNote": terms?.taxNote ?? null,
   };
+}
+
+/** The first `{{name}}` in `text` that is not on the whitelist, or `null`. */
+export function unknownVariable(text: string): string | null {
+  for (const match of text.matchAll(VARIABLE)) {
+    const name = match[1].trim();
+    if (!isVariable(name)) return name;
+  }
+  return null;
+}
+
+/** `text` with every variable filled; `missing` is true when one had no value (an unknown name counts as no value). */
+export function fillVariables(text: string, values: TemplateValues): { text: string; missing: boolean } {
+  let missing = false;
+  const filled = text.replace(VARIABLE, (_whole, raw: string) => {
+    const name = String(raw).trim();
+    const value = isVariable(name) ? values[name] : null;
+    if (value === null) {
+      missing = true;
+      return "";
+    }
+    return value;
+  });
+  return { text: filled, missing };
 }
 
 export type BlocksValidation = { ok: true; body: TemplateBody } | { ok: false; reason: string };
@@ -118,16 +155,7 @@ export function validateBlocks(input: unknown): BlocksValidation {
 export function renderBlocks(body: TemplateBody, values: TemplateValues): RenderedBlock[] {
   const rendered: RenderedBlock[] = [];
   for (const block of body.blocks) {
-    let missing = false;
-    const text = block.text.replace(VARIABLE, (_whole, raw: string) => {
-      const name = String(raw).trim();
-      const value = isVariable(name) ? values[name] : null;
-      if (value === null) {
-        missing = true;
-        return "";
-      }
-      return value;
-    });
+    const { text, missing } = fillVariables(block.text, values);
     if (block.type === "clause" && missing) continue;
     rendered.push({ type: block.type, text });
   }

@@ -1,4 +1,5 @@
 import {
+  fillVariables,
   MAX_TEXT,
   renderBlocks,
   templateValues,
@@ -8,6 +9,17 @@ import {
   type TemplateValues,
 } from "../contract/template";
 import type { AgreementTerms } from "./index";
+import {
+  AGREEMENT_SECTION_KEYS,
+  DEFAULT_AGREEMENT_DOC,
+  introAndFooter,
+  legacyLayout,
+  renderLayout,
+  sectionFlags,
+  validateLayout,
+  type DocOptions,
+  type LayoutItem,
+} from "./layout";
 
 /** A preset service line: copied into version 1 of a new agreement (agreement-templates door 2). */
 export type AgreementTemplateLine = {
@@ -20,8 +32,8 @@ export type AgreementTemplateLine = {
   costPerVisitCents: number | null;
 };
 
-/** What a stored agreement template version holds (door 2). Equal in shape to the `document_template_versions.body` of kind `agreement`. */
-export type AgreementTemplateBody = {
+/** What a stored agreement template version of schema 1 holds (agreement-templates door 2). */
+export type AgreementTemplateBodyV1 = {
   schema: 1;
   name: string;
   description: string;
@@ -33,6 +45,19 @@ export type AgreementTemplateBody = {
   sections: { schedule: boolean; scope: boolean };
   preset: { termMonths: number | null; lines: AgreementTemplateLine[] };
 };
+
+/** Schema 2 (block-editor door 1): the document options and the layout replace the intro, the closing text and the section flags. */
+export type AgreementTemplateBodyV2 = {
+  schema: 2;
+  name: string;
+  description: string;
+  doc: DocOptions;
+  layout: LayoutItem[];
+  preset: { termMonths: number | null; lines: AgreementTemplateLine[] };
+};
+
+/** What a stored agreement template version holds. Equal in shape to the `document_template_versions.body` of kind `agreement`. */
+export type AgreementTemplateBody = AgreementTemplateBodyV1 | AgreementTemplateBodyV2;
 
 export const MAX_NAME = 80;
 export const MAX_DESCRIPTION = 300;
@@ -46,7 +71,7 @@ export const MAX_PRICE_CENTS = 1_000_000_000_000;
 export const MAX_BODY_JSON_LENGTH = 60_000;
 
 /** The system agreement template's version 1: no text, every optional section shown, no preset. Equal to the stored row (parity test). */
-export const SYSTEM_AGREEMENT_BODY: AgreementTemplateBody = {
+export const SYSTEM_AGREEMENT_BODY: AgreementTemplateBodyV1 = {
   schema: 1,
   name: "Standard agreement",
   description: "",
@@ -135,17 +160,26 @@ function checkLine(line: unknown, index: number, errors: AgreementTemplateError[
 }
 
 /**
- * Whether `input` is an agreement template body this product can store and draw (door 2): schema 1, exactly the known keys,
- * the text limits and the variable whitelist of the contract template, and the preset's bounds. Every problem is returned with
- * the field it belongs to; `reason` is the first.
+ * Whether `input` is an agreement template body this product can store and draw (door 2): schema 1 (exactly the known keys, the
+ * text limits and the variable whitelist of the contract template) or schema 2 (the document options and the layout of
+ * block-editor door 1), and the preset's bounds. Every problem is returned with the field it belongs to; `reason` is the first.
  */
 export function validateAgreementTemplate(input: unknown): AgreementTemplateValidation {
   const errors: AgreementTemplateError[] = [];
   if (!isRecord(input)) return { ok: false, reason: "The template is not an object.", errors: [{ field: "body", message: "The template is not an object." }] };
 
-  if (input.schema !== 1) errors.push({ field: "body", message: `Unknown schema ${String(input.schema)}; this product reads schema 1.` });
-  const extra = unknownKeys(input, ["schema", "name", "description", "intro", "footer", "sections", "preset"]);
-  if (extra.length > 0) errors.push({ field: "body", message: `The template has an unknown key: ${extra[0]}.` });
+  const schema2 = input.schema === 2;
+  if (input.schema !== 1 && !schema2) errors.push({ field: "body", message: `Unknown schema ${String(input.schema)}; this product reads schemas 1 and 2.` });
+  const keys2 = ["schema", "name", "description", "doc", "layout", "preset"];
+  if (schema2) {
+    const off = [...unknownKeys(input, keys2), ...keys2.filter((key) => !(key in input))];
+    if (off.length > 0) {
+      errors.push({ field: "body", message: `A schema 2 template has exactly the keys ${keys2.join(", ")}; check ${off[0]}.` });
+    }
+  } else {
+    const extra = unknownKeys(input, ["schema", "name", "description", "intro", "footer", "sections", "preset"]);
+    if (extra.length > 0) errors.push({ field: "body", message: `The template has an unknown key: ${extra[0]}.` });
+  }
 
   if (typeof input.name !== "string" || input.name.trim() === "") errors.push({ field: "name", message: "Name is required." });
   else if (input.name.length > MAX_NAME) errors.push({ field: "name", message: `Name is too long (${input.name.length} characters, at most ${MAX_NAME}).` });
@@ -155,12 +189,16 @@ export function validateAgreementTemplate(input: unknown): AgreementTemplateVali
     errors.push({ field: "description", message: `Description is too long (${input.description.length} characters, at most ${MAX_DESCRIPTION}).` });
   }
 
-  checkBlocks("intro", "intro", input.intro, errors);
-  checkBlocks("footer", "closing text", input.footer, errors);
+  if (schema2) {
+    errors.push(...validateLayout({ doc: input.doc, layout: input.layout }, { sections: AGREEMENT_SECTION_KEYS, required: ["price"], noun: "agreement" }));
+  } else {
+    checkBlocks("intro", "intro", input.intro, errors);
+    checkBlocks("footer", "closing text", input.footer, errors);
 
-  const { sections } = input;
-  if (!isRecord(sections) || typeof sections.schedule !== "boolean" || typeof sections.scope !== "boolean" || unknownKeys(sections, ["schedule", "scope"]).length > 0) {
-    errors.push({ field: "sections", message: "Sections must say whether the schedule and the scope show." });
+    const { sections } = input;
+    if (!isRecord(sections) || typeof sections.schedule !== "boolean" || typeof sections.scope !== "boolean" || unknownKeys(sections, ["schedule", "scope"]).length > 0) {
+      errors.push({ field: "sections", message: "Sections must say whether the schedule and the scope show." });
+    }
   }
 
   const { preset } = input;
@@ -241,11 +279,15 @@ export type PreviewSummary = {
 
 /** What the preview panel counts, from the body and the org's types (`typeNames` maps a code to the org's name for it). */
 export function previewSummary(body: AgreementTemplateBody, typeNames: Record<string, string>): PreviewSummary {
-  const clauses = [...body.intro, ...body.footer].filter((block) => block.type === "clause").length;
+  const clauses =
+    body.schema === 2
+      ? body.layout.filter((item) => item.kind === "block" && item.type === "clause").length
+      : [...body.intro, ...body.footer].filter((block) => block.type === "clause").length;
+  const optional = body.schema === 2 ? body.layout.filter((item) => item.kind === "section" && item.key !== "price").length : Number(body.sections.schedule) + Number(body.sections.scope);
   const codes = [...new Set(body.preset.lines.flatMap((line) => line.assetTypeCodes))];
   const { lines, termMonths } = body.preset;
   return {
-    sections: plural(Number(body.sections.schedule) + Number(body.sections.scope), "section", "sections"),
+    sections: plural(optional, "section", "sections"),
     clauses: plural(clauses, "clause", "clauses"),
     equipmentTypes: codes.map((code) => typeNames[code] ?? code),
     preset: presetLabel(lines.length, termMonths),
@@ -265,14 +307,19 @@ export function skippedCodes(body: AgreementTemplateBody, orgCodes: string[]): s
 export function agreementTemplateValues(
   terms: AgreementTerms | null,
   termMonths: number,
-  names: { tenant: string; customer: string; site: string },
+  names: { tenant: string; customer: string; site: string; tenantAddress?: string | null; tenantPhone?: string | null; termStart?: string | null },
 ): TemplateValues {
-  return templateValues(terms, termMonths, {
-    contractor: { legalName: names.tenant, address: null, phone: null },
-    customer: { name: names.customer },
-    site: { name: names.site, address: null },
-    signer: null,
-  });
+  return templateValues(
+    terms,
+    termMonths,
+    {
+      contractor: { legalName: names.tenant, address: names.tenantAddress ?? null, phone: names.tenantPhone ?? null },
+      customer: { name: names.customer },
+      site: { name: names.site, address: null },
+      signer: null,
+    },
+    names.termStart ?? null,
+  );
 }
 
 export type RenderedAgreementTemplate = {
@@ -282,7 +329,7 @@ export type RenderedAgreementTemplate = {
 };
 
 /** The body's texts with their variables filled (a clause with a missing value is omitted, a paragraph prints it empty) and its section flags. */
-export function renderAgreementTemplate(body: AgreementTemplateBody, values: TemplateValues): RenderedAgreementTemplate {
+export function renderAgreementTemplate(body: AgreementTemplateBodyV1, values: TemplateValues): RenderedAgreementTemplate {
   return {
     intro: renderBlocks({ schema: 1, blocks: body.intro }, values),
     footer: renderBlocks({ schema: 1, blocks: body.footer }, values),
@@ -301,4 +348,20 @@ export function copyName(name: string, taken: readonly string[]): string {
     const candidate = `${name.trim().slice(0, MAX_NAME - suffix.length).trimEnd()}${suffix}`;
     if (!used.has(candidate.toLowerCase())) return candidate;
   }
+}
+
+export type RenderedAgreementLayout = RenderedAgreementTemplate & { doc: DocOptions; layout: LayoutItem[] };
+
+/**
+ * What a body's document draws, variables filled: the options and the layout items in order. A schema 1 body goes through
+ * `renderAgreementTemplate` and the layout the code drew before, so it prints exactly what it printed; a schema 2 body is read as
+ * stored. `intro`, `footer` and `sections` are the schema 1 reading of either, which older callers still read.
+ */
+export function renderAgreementLayout(body: AgreementTemplateBody, values: TemplateValues): RenderedAgreementLayout {
+  if (body.schema === 1) {
+    const rendered = renderAgreementTemplate(body, values);
+    return { ...rendered, doc: { ...DEFAULT_AGREEMENT_DOC }, layout: legacyLayout(rendered.intro, rendered.footer, rendered.sections) };
+  }
+  const layout = renderLayout(body.layout, values);
+  return { ...introAndFooter(layout), sections: sectionFlags(layout), doc: { ...body.doc, title: fillVariables(body.doc.title, values).text }, layout };
 }

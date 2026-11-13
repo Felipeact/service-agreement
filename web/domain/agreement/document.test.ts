@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { OrgSettingsValue } from "../org-settings";
-import { buildAgreementDocument, DRAFT_MARK, NEUTRAL_ACCENT, type DocumentSource } from "./document";
+import { buildAgreementDocument, DRAFT_MARK, frequencyLabel, NEUTRAL_ACCENT, typeFrequencies, type DocumentSource } from "./document";
 import type { AgreementTemplateBody } from "./template";
 
 const SETTINGS: OrgSettingsValue = {
@@ -251,5 +251,70 @@ describe("buildAgreementDocument with a template", () => {
       ],
     };
     expect(buildAgreementDocument({ ...SOURCE, terms: null }, SETTINGS, template).intro).toEqual([{ type: "paragraph", text: "Within ." }]);
+  });
+});
+
+
+describe("buildAgreementDocument, the layout and options (block-editor)", () => {
+  const type = (code: string, name: string) => ({ code, name, tasks: [], assets: [{ unitNo: "1", typeModel: null, location: null }] });
+  const line = (description: string, visitsPerYear: number, codes: string[]) => ({
+    id: description,
+    description,
+    visitsPerYear,
+    costPerVisitCents: 10000,
+    annualCents: visitsPerYear * 10000,
+    visitMonths: [],
+    equipment: codes.map((code) => ({ code, name: code })),
+  });
+  const V2 = (over: Partial<Extract<AgreementTemplateBody, { schema: 2 }>> = {}): AgreementTemplateBody => ({
+    schema: 2,
+    name: "Proposal",
+    description: "",
+    doc: { title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "first", pageFooter: "number" },
+    layout: [{ kind: "section", key: "price" }],
+    preset: { termMonths: null, lines: [] },
+    ...over,
+  });
+
+  test("C5506: the title's merge variables are filled, and an empty title stays empty", () => {
+    const titled = buildAgreementDocument(SOURCE, SETTINGS, V2({ doc: { title: "Maintenance schedule for {{site.name}}", showMeta: true, pageHeader: "first", pageFooter: "number" } }));
+    expect(titled.doc?.title).toBe("Maintenance schedule for Fernwood Dental, Main");
+    const empty = buildAgreementDocument(SOURCE, SETTINGS, V2({ doc: { title: "", showMeta: true, pageHeader: "first", pageFooter: "number" } }));
+    expect(empty.doc?.title).toBe("");
+  });
+
+  test("C5511: a sent version takes its layout and options only from its frozen pin: other settings and a newer template change nothing", () => {
+    const pinned = V2({ layout: [{ kind: "block", type: "paragraph", text: "Terms are {{terms.paymentDays}}." }, { kind: "section", key: "price" }] });
+    const before = buildAgreementDocument(SOURCE, SETTINGS, pinned);
+    const after = buildAgreementDocument(SOURCE, { ...SETTINGS, paymentDays: 90, legalName: "Someone Else Ltd.", defaultTermMonths: 60 }, pinned);
+    expect(after.layout).toEqual(before.layout);
+    expect(after.doc).toEqual(before.doc);
+    expect(before.layout).toEqual([{ kind: "block", type: "paragraph", text: "Terms are 30 days." }, { kind: "section", key: "price" }]);
+  });
+
+  test("C5515: the frequency label is MONTHLY for 12, QUARTERLY for 4, BI-ANNUAL for 2, ANNUAL for 1 and N TIMES PER YEAR otherwise", () => {
+    expect([12, 4, 2, 1, 3, 6].map(frequencyLabel)).toEqual(["MONTHLY", "QUARTERLY", "BI-ANNUAL", "ANNUAL", "3 TIMES PER YEAR", "6 TIMES PER YEAR"]);
+  });
+
+  test("C5515: each equipment type takes the frequency of the line that covers it, and a type no line covers has none", () => {
+    const types = [type("BOILER", "Boiler"), type("AHU", "AHU"), type("FD", "Fire damper"), type("CH", "Chiller"), type("PUMP", "Pump"), type("WYE", "Wye strainer")];
+    const lines = [line("Boilers", 2, ["BOILER"]), line("Air handlers", 4, ["AHU"]), line("Dampers", 1, ["FD"]), line("Chillers", 12, ["CH"]), line("Pumps", 3, ["PUMP"])];
+    expect(typeFrequencies(lines, types)).toEqual({ BOILER: "BI-ANNUAL", AHU: "QUARTERLY", FD: "ANNUAL", CH: "MONTHLY", PUMP: "3 TIMES PER YEAR" });
+  });
+
+  test("C5515: a line that records only a type name covers the type of that name", () => {
+    const lines = [{ ...line("Units", 4, []), equipment: [{ name: "AHU" }] }];
+    expect(typeFrequencies(lines, [type("AHU-1", "AHU")])).toEqual({ "AHU-1": "QUARTERLY" });
+  });
+
+  test("C5515: the document carries the frequencies only when the included section asks for them", () => {
+    const source: DocumentSource = {
+      ...SOURCE,
+      shown: { versionNo: 1, lines: [line("Air handlers", 4, ["AHU"])], annualCents: 40000 },
+      serviceScope: { source: "live", takenAt: null, types: [type("AHU", "AHU")] },
+    };
+    const asked = V2({ layout: [{ kind: "section", key: "included", options: { showFrequency: true } }, { kind: "section", key: "price" }] });
+    expect(buildAgreementDocument(source, SETTINGS, asked).frequencies).toEqual({ AHU: "QUARTERLY" });
+    expect(buildAgreementDocument(source, SETTINGS).frequencies).toBeUndefined();
   });
 });

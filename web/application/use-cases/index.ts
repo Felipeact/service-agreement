@@ -65,6 +65,7 @@ export {
   portalDocument,
   portalScope,
   portalTemplate,
+  portalLayout,
   portalTemplateText,
   portalViewState,
   type DecidePortalResult,

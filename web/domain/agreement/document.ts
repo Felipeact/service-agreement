@@ -3,7 +3,8 @@ import type { TenantLogo } from "../org-settings/logo";
 import { formatSettingNumber, itemWords } from "../org-settings";
 import { visitSchedule, type ScheduleRow } from "./cadence";
 import type { AgreementTerms, ScopeType } from "./index";
-import { agreementTemplateValues, renderAgreementTemplate, SYSTEM_AGREEMENT_BODY, type AgreementTemplateBody } from "./template";
+import { sectionOptions, type DocOptions, type IncludedOptions, type LayoutItem } from "./layout";
+import { agreementTemplateValues, renderAgreementLayout, SYSTEM_AGREEMENT_BODY, type AgreementTemplateBody } from "./template";
 import { formatTermDate, termLine, termMonthsLabel, type AgreementTerm } from "./term";
 import type { RenderedBlock } from "../contract/template";
 
@@ -54,6 +55,15 @@ export type AgreementDocument = {
   footer?: RenderedBlock[];
   /** Which optional sections the template shows; the price table, the terms and the page footer are always drawn. */
   sections?: { schedule: boolean; scope: boolean };
+  /**
+   * The items the document draws after its title block, in order, variables filled (block-editor AC 3). A document built before
+   * layouts existed has none and draws as the system layout does.
+   */
+  layout?: LayoutItem[];
+  /** The document options, with the title's variables filled; absent means today's options. */
+  doc?: DocOptions;
+  /** The frequency of each equipment type by code (`QUARTERLY`), only for a document whose `included` section shows it (AC 15). */
+  frequencies?: Record<string, string>;
 };
 
 /** The parts of an agreement page's view the document reads. */
@@ -71,6 +81,25 @@ export type DocumentSource = {
   /** The shown version's last day for a decision, `YYYY-MM-DD`, or `null` (proposal-expiry door 1). */
   validUntil: string | null;
 };
+
+/** `QUARTERLY` for 4 visits a year: 12 `MONTHLY`, 4 `QUARTERLY`, 2 `BI-ANNUAL`, 1 `ANNUAL`, any other count `N TIMES PER YEAR`. */
+export function frequencyLabel(visitsPerYear: number): string {
+  const named: Record<number, string> = { 12: "MONTHLY", 4: "QUARTERLY", 2: "BI-ANNUAL", 1: "ANNUAL" };
+  return named[visitsPerYear] ?? `${visitsPerYear} TIMES PER YEAR`;
+}
+
+/**
+ * The frequency of each equipment type, by type code, from the visits per year of the first service line that covers it (a line
+ * covers a type by its code, or by its name when the line records no code). A type no line covers has no entry.
+ */
+export function typeFrequencies(lines: readonly DocumentSourceLine[], types: readonly ScopeType[]): Record<string, string> {
+  const frequencies: Record<string, string> = {};
+  for (const type of types) {
+    const line = lines.find((candidate) => candidate.equipment.some((item) => (item.code !== undefined ? item.code === type.code : item.name === type.name)));
+    if (line) frequencies[type.code] = frequencyLabel(line.visitsPerYear);
+  }
+  return frequencies;
+}
 
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 
@@ -130,8 +159,12 @@ export function buildAgreementDocument(
     tenant: settings.legalName,
     customer: source.customer.name,
     site: source.site.name,
+    tenantAddress: settings.address,
+    tenantPhone: settings.phone,
+    termStart: source.term.start,
   });
-  const { intro, footer, sections } = renderAgreementTemplate(template, values);
+  const { intro, footer, sections, doc, layout } = renderAgreementLayout(template, values);
+  const included = sectionOptions(layout, "included") as IncludedOptions | undefined;
   return {
     tenant: { name: settings.legalName, address: settings.address, phone: settings.phone, accent: settings.accentColor ?? NEUTRAL_ACCENT },
     words: itemWords(settings.itemSingular, settings.itemPlural),
@@ -150,5 +183,8 @@ export function buildAgreementDocument(
     intro,
     footer,
     sections,
+    layout,
+    doc,
+    ...(included?.showFrequency ? { frequencies: typeFrequencies(source.shown.lines, body.scope.kind === "listed" ? body.scope.types : []) } : {}),
   };
 }

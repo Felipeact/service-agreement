@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { AgreementTerms } from "@/domain/agreement";
+import { agreementTemplateValues, SYSTEM_AGREEMENT_BODY, validateAgreementTemplate } from "@/domain/agreement";
+import { validateContractWording } from "./layout";
 import type { ContractParties } from "./parties";
 import { renderBlocks, SYSTEM_CONTRACT_BODY, templateValues, TEMPLATE_VARIABLES, validateBlocks, type TemplateBody } from "./template";
 
@@ -148,7 +150,7 @@ describe("values", () => {
     expect(render(SYSTEM_CONTRACT_BODY, null)).toEqual([]);
   });
 
-  test("C5219: the whitelist is exactly these eleven names", () => {
+  test("C5219: the whitelist is exactly these sixteen names (the eleven of contract-templates and the five of block-editor door 3)", () => {
     expect([...TEMPLATE_VARIABLES].sort()).toEqual(
       [
         "customer.name",
@@ -162,12 +164,23 @@ describe("values", () => {
         "terms.paymentDays",
         "terms.renewalNoticeDays",
         "terms.repairDiscountPct",
+        "signer.name",
+        "tenant.address",
+        "tenant.phone",
+        "term.start",
+        "terms.taxNote",
       ].sort(),
     );
   });
 
   test.each(TEMPLATE_VARIABLES.map((name) => [name]))("C5219: %s resolves for a full context, and is usable in a clause", (name) => {
-    const values = templateValues(TERMS, 12, PARTIES);
+    // A full context now also has the term's start, the contractor's address and phone, the signer and the frozen tax note.
+    const values = templateValues(
+      { ...TERMS, taxNote: "GST extra" },
+      12,
+      { ...PARTIES, contractor: { ...PARTIES.contractor, address: "100 Sample Street", phone: "604-555-0100" }, signer: { name: "Pat Lee", email: "pat@example.com" } },
+      "2026-11-13",
+    );
     expect(values[name]).toEqual(expect.any(String));
     expect(values[name]).not.toBe("");
     const out = renderBlocks(body({ type: "clause", text: `[{{${name}}}]` }), values);
@@ -181,5 +194,80 @@ describe("values", () => {
     expect(value("site.name")).toBe("Fernwood Dental, Main");
     expect(value("term.label", TERMS, 24)).toBe("24 months");
     expect(value("province")).toBe("British Columbia");
+  });
+});
+
+describe("the variables of block-editor door 3", () => {
+  const FULL_PARTIES: ContractParties = {
+    contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+    customer: { name: "Fernwood Dental" },
+    site: { name: "Fernwood Dental, Main", address: null },
+    signer: { name: "Pat Lee", email: "pat@example.com" },
+  };
+  const WITH_TAX = { ...TERMS, taxNote: "GST extra" };
+  const value = (name: (typeof TEMPLATE_VARIABLES)[number], terms: AgreementTerms | null, parties: ContractParties | null, start: string | null) =>
+    templateValues(terms, 12, parties, start)[name];
+
+  test("C5527: the whitelist is exactly the sixteen names", () => {
+    expect(TEMPLATE_VARIABLES).toHaveLength(16);
+    for (const added of ["term.start", "tenant.address", "tenant.phone", "signer.name", "terms.taxNote"]) expect(TEMPLATE_VARIABLES, added).toContain(added);
+  });
+
+  test("C5527: term.start reads November 13, 2026 for a term starting 2026-11-13, and is no value without a start", () => {
+    expect(value("term.start", WITH_TAX, FULL_PARTIES, "2026-11-13")).toBe("November 13, 2026");
+    expect(value("term.start", WITH_TAX, FULL_PARTIES, "2027-01-01")).toBe("January 1, 2027");
+    expect(value("term.start", WITH_TAX, FULL_PARTIES, null)).toBeNull();
+    expect(templateValues(WITH_TAX, 12, FULL_PARTIES)["term.start"]).toBeNull();
+  });
+
+  test("C5527: tenant.address and tenant.phone are the contractor's, and no value when the contractor has none", () => {
+    expect(value("tenant.address", WITH_TAX, FULL_PARTIES, null)).toBe("100 Sample Street, Burnaby, BC");
+    expect(value("tenant.phone", WITH_TAX, FULL_PARTIES, null)).toBe("604-555-0100");
+    expect(value("tenant.address", WITH_TAX, PARTIES, null)).toBeNull();
+    expect(value("tenant.phone", WITH_TAX, PARTIES, null)).toBeNull();
+    expect(value("tenant.address", WITH_TAX, null, null)).toBeNull();
+  });
+
+  test("C5527: signer.name is the signer's name, and no value with no signer", () => {
+    expect(value("signer.name", WITH_TAX, FULL_PARTIES, null)).toBe("Pat Lee");
+    expect(value("signer.name", WITH_TAX, PARTIES, null)).toBeNull();
+    expect(value("signer.name", WITH_TAX, null, null)).toBeNull();
+  });
+
+  test("C5527: terms.taxNote is the frozen tax note, and no value when the terms have none or there are no terms", () => {
+    expect(value("terms.taxNote", WITH_TAX, FULL_PARTIES, null)).toBe("GST extra");
+    expect(value("terms.taxNote", TERMS, FULL_PARTIES, null)).toBeNull();
+    expect(value("terms.taxNote", null, FULL_PARTIES, null)).toBeNull();
+  });
+
+  test("C5527: an agreement's text resolves them too: the terms, the tenant's address and phone and the start; the signer is no value", () => {
+    const values = agreementTemplateValues(WITH_TAX, 12, {
+      tenant: "Kettle Ridge Mechanical Ltd.",
+      customer: "Fernwood Dental",
+      site: "Main",
+      tenantAddress: "100 Sample Street, Burnaby, BC",
+      tenantPhone: "604-555-0100",
+      termStart: "2026-11-13",
+    });
+    expect(values["term.start"]).toBe("November 13, 2026");
+    expect(values["tenant.address"]).toBe("100 Sample Street, Burnaby, BC");
+    expect(values["tenant.phone"]).toBe("604-555-0100");
+    expect(values["terms.taxNote"]).toBe("GST extra");
+    expect(values["signer.name"]).toBeNull();
+    const bare = agreementTemplateValues(null, 12, { tenant: "K", customer: "F", site: "M" });
+    for (const name of ["term.start", "tenant.address", "tenant.phone", "signer.name", "terms.taxNote"] as const) expect(bare[name], name).toBeNull();
+  });
+
+  test("C5527: the validators accept them: the contract blocks, an agreement's intro and a schema 2 wording", () => {
+    const text = "{{term.start}} {{tenant.address}} {{tenant.phone}} {{signer.name}} {{terms.taxNote}}";
+    expect(validateBlocks(body({ type: "paragraph", text })).ok).toBe(true);
+    expect(validateAgreementTemplate({ ...SYSTEM_AGREEMENT_BODY, intro: [{ type: "paragraph", text }] }).ok).toBe(true);
+    const wording = { schema: 2, doc: { title: text, showMeta: true, pageHeader: "first", pageFooter: "number" }, layout: [{ kind: "block", type: "paragraph", text }, { kind: "section", key: "price" }, { kind: "section", key: "signatures" }] };
+    expect(validateContractWording(wording).ok).toBe(true);
+  });
+
+  test("C5527: a clause that uses one with no value is left out, and a paragraph prints it as nothing", () => {
+    const out = renderBlocks(body({ type: "clause", text: "Tax: {{terms.taxNote}}." }, { type: "paragraph", text: "Signed by {{signer.name}}." }), templateValues(TERMS, 12, PARTIES));
+    expect(out).toEqual([{ type: "paragraph", text: "Signed by ." }]);
   });
 });

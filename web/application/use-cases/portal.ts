@@ -3,11 +3,12 @@ import {
   applyAgreementCommand,
   buildAgreementDocument,
   parseServiceScope,
-  renderAgreementTemplate,
+  renderAgreementLayout,
   SYSTEM_AGREEMENT_BODY,
   validateAgreementTemplate,
   type AgreementDocument,
   type AgreementTemplateBody,
+  type RenderedAgreementLayout,
   type RenderedAgreementTemplate,
 } from "@/domain/agreement";
 import { isPortalToken, portalState, type PortalState } from "@/domain/portal";
@@ -74,12 +75,25 @@ export function portalTemplate(view: PortalView): AgreementTemplateBody {
   return checked.body;
 }
 
+/** The options, the layout items in order and the schema 1 reading of them for the link's version, filled from its frozen terms: what the PDF of the same view prints (block-editor AC 10). */
+export function portalLayout(view: PortalView): RenderedAgreementLayout {
+  return renderAgreementLayout(
+    portalTemplate(view),
+    agreementTemplateValues(view.terms, view.term.months, {
+      tenant: view.tenant?.name ?? "",
+      customer: view.customer.name,
+      site: view.site.name,
+      tenantAddress: view.tenant?.address ?? null,
+      tenantPhone: view.tenant?.phone ?? null,
+      termStart: view.term.start,
+    }),
+  );
+}
+
 /** The intro, closing text and shown sections of the link's version, filled from its frozen terms: what the PDF of the same view prints (AC 15). */
 export function portalTemplateText(view: PortalView): RenderedAgreementTemplate {
-  return renderAgreementTemplate(
-    portalTemplate(view),
-    agreementTemplateValues(view.terms, view.term.months, { tenant: view.tenant?.name ?? "", customer: view.customer.name, site: view.site.name }),
-  );
+  const { intro, footer, sections } = portalLayout(view);
+  return { intro, footer, sections };
 }
 
 /** The PDF content of a link: its tenant's paper, the version's lines, scope and frozen terms. `null` when the tenant has no settings row. */

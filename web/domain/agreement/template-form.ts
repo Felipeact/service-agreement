@@ -1,4 +1,5 @@
 import { parseCents } from "./index";
+import { introAndFooter, sectionFlags } from "./layout";
 import { blocksToText, MAX_PRESET_LINES, textToBlocks, validateAgreementTemplate, type AgreementTemplateBody } from "./template";
 
 /** One preset line as the editor holds it: the price is the dollars as typed, the months and codes are the checked boxes. */
@@ -27,13 +28,16 @@ const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 /** The editor's starting values for a stored body. */
 export function templateFormFromBody(body: AgreementTemplateBody): TemplateFormInput {
+  // A schema 2 body is read as a schema 1 form until the block editor replaces this form (block-editor S4).
+  const { intro, footer } = body.schema === 2 ? introAndFooter(body.layout) : body;
+  const { schedule, scope } = body.schema === 2 ? sectionFlags(body.layout) : body.sections;
   return {
     name: body.name,
     description: body.description,
-    intro: blocksToText(body.intro),
-    footer: blocksToText(body.footer),
-    schedule: body.sections.schedule,
-    scope: body.sections.scope,
+    intro: blocksToText(intro),
+    footer: blocksToText(footer),
+    schedule,
+    scope,
     termMonths: body.preset.termMonths === null ? "" : String(body.preset.termMonths),
     lines: body.preset.lines.map((line) => ({
       description: line.description,
