@@ -101,6 +101,17 @@ describe("portal reader", () => {
     expect(await supabasePortalReader(typed).view(HASH)).toMatchObject({ validUntil: null, today: "2026-11-02" });
   });
 
+  test("C5330: the document's template body comes through as it is, null when the database found none, and absent for an older document", async () => {
+    const { client, typed } = stubClient({});
+    const body = { schema: 1, name: "Welcome" };
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, template: body }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.template).toEqual(body);
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, template: null }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.template).toBeNull();
+    client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });
+    expect(await supabasePortalReader(typed).view(HASH)).not.toHaveProperty("template");
+  });
+
   test("C925: view calls only portal_view with the hash", async () => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue({ data: DOCUMENT, error: null });
@@ -208,3 +219,16 @@ describe("portal reader, item words", () => {
     expect((await supabasePortalReader(typed).view(HASH))?.tenant?.words).toEqual({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
   });
 });
+
+describe("portal reader, logo", () => {
+  test("C3336: tenant.logoPath becomes the view's tenant.logoPath, and a reply with no logoPath key gives null", async () => {
+    const { client, typed } = stubClient({});
+    const tenant = (DOCUMENT as { tenant: object }).tenant;
+    const path = "11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.jpg";
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, tenant: { ...tenant, logoPath: path } }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.tenant?.logoPath).toBe(path);
+    client.rpc.mockResolvedValue({ data: { ...DOCUMENT, tenant }, error: null });
+    expect((await supabasePortalReader(typed).view(HASH))?.tenant?.logoPath).toBeNull();
+  });
+});
+

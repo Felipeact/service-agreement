@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { buildContractDocument, signingLinkUrl, signingState, type SigningState } from "@/domain/contract";
 import { itemWords } from "@/domain/org-settings";
+import { withLogo, type TenantLogo } from "@/domain/org-settings/logo";
 import type {
   AgreementReader,
   ContractDocuments,
@@ -114,6 +115,8 @@ export function makeContractDocuments(
   contracts: ContractReader,
   agreements: AgreementReader,
   getSettings: (orgId: string) => Promise<{ accentColor: string | null; itemSingular?: string; itemPlural?: string } | null>,
+  /** The org's logo for the letterhead; one that cannot be had is `null` and the contract still goes (tenant-logo AC 19). */
+  loadLogo: (orgId: string) => Promise<TenantLogo | null> = async () => null,
 ): ContractDocuments {
   return {
     async load(contractId, orgId) {
@@ -123,10 +126,13 @@ export function makeContractDocuments(
       if (!agreement) return null;
       const settings = await getSettings(orgId);
       if (!settings) throw new Error(`org ${orgId} has no settings row`);
-      return { number: contract.number, document: settings.itemSingular && settings.itemPlural
-          ? buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural))
-          : buildContractDocument(agreement, contract.parties, settings.accentColor),
-      };
+      // The contract's own template version is passed only when the reader set one (it always does); older fixtures mean the system wording.
+      const document = settings.itemSingular && settings.itemPlural
+        ? buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural), ...(contract.template ? [contract.template] : []))
+        : contract.template
+          ? buildContractDocument(agreement, contract.parties, settings.accentColor, undefined, contract.template)
+          : buildContractDocument(agreement, contract.parties, settings.accentColor);
+      return { number: contract.number, document: withLogo(document, "contractor", await loadLogo(orgId)) };
     },
   };
 }

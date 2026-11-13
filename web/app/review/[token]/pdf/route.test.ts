@@ -3,8 +3,9 @@ import type { DocumentRenderer, PortalReader, PortalView } from "@/application/p
 import { makeViewPortal } from "@/application/use-cases";
 import { portalView, TOKEN, testTokens } from "@/application/portal-view.testing";
 
-const { rpc, currentMember, renderAgreement } = vi.hoisted(() => ({
+const { rpc, currentMember, renderAgreement, loadLogo } = vi.hoisted(() => ({
   rpc: vi.fn(),
+  loadLogo: vi.fn(),
   currentMember: vi.fn(),
   renderAgreement: vi.fn<DocumentRenderer["renderAgreement"]>(),
 }));
@@ -20,6 +21,7 @@ vi.mock("@/composition", async () => {
       currentMember,
       viewPortal: makeViewPortal(supabasePortalReader({ rpc }), tokens),
       documentRenderer: { renderAgreement },
+      logo: { load: loadLogo },
     }),
   };
 });
@@ -49,6 +51,7 @@ const revoked = { versionNo: 1, current: true, revoked: true, revokedAt: new Dat
 beforeEach(() => {
   vi.clearAllMocks();
   renderAgreement.mockResolvedValue(bytes);
+  loadLogo.mockReset().mockResolvedValue(null);
 });
 
 describe("the portal PDF route", () => {
@@ -159,3 +162,25 @@ describe("the portal PDF route", () => {
     expect(maxDuration).toBe(60);
   });
 });
+
+describe("the logo on the portal PDF", () => {
+  const logo = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), format: "png" as const };
+  const PATH = "22222222-2222-4222-8222-222222222222/33333333-3333-4333-8333-333333333333.png";
+
+  test("C3332: a sent version's PDF loads the logo of the path portal_view returns now, and carries it", async () => {
+    loadLogo.mockResolvedValue(logo);
+    const base = portalView();
+    answer({ ...base, tenant: { ...base.tenant!, logoPath: PATH } });
+    expect((await call()).status).toBe(200);
+    expect(loadLogo).toHaveBeenCalledWith(PATH);
+    expect(renderAgreement.mock.calls[0][0].tenant.logo).toEqual(logo);
+  });
+
+  test("C3332: a tenant with no logoPath asks the loader for null, and a loader that has nothing still gives 200 with no logo key", async () => {
+    answer(portalView());
+    expect((await call()).status).toBe(200);
+    expect(loadLogo).toHaveBeenCalledWith(null);
+    expect("logo" in renderAgreement.mock.calls[0][0].tenant).toBe(false);
+  });
+});
+

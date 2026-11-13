@@ -64,6 +64,9 @@ export {
   makeViewPortal,
   portalDocument,
   portalScope,
+  portalTemplate,
+  portalLayout,
+  portalTemplateText,
   portalViewState,
   type DecidePortalResult,
   type PortalDecision,
@@ -75,3 +78,5 @@ export { makeInviteMember, type InviteOutcome, type InviteState } from "./invite
 export { makeReceiveSignatureEvent } from "./signature-webhook";
 export { makeReceiveStripeEvent } from "./stripe-webhook";
 export { makeContractDocuments, makeSendForSignature, makeViewSigning, type SendForSignatureInput, type ViewSigningResult } from "./signing";
+export { makeGetContractWording, makeSaveContractWording, type SaveContractWordingResult } from "./contract-wording";
+export { makeDuplicateAgreementTemplate, makeListAgreementTemplates, type DuplicateTemplateResult, type TemplateListResult } from "./templates";

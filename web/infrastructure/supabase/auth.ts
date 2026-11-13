@@ -60,13 +60,18 @@ export function supabaseMemberDirectory(client: Client): MemberDirectory {
 
       const row = rows[0];
       if (!row) return { status: "no_membership", email };
+      // The plan ended: the member keeps signing in but holds the viewer's read-only rights. A failed read leaves the role as it is.
+      const { data: frozen } = await client.rpc("my_org_frozen");
+      const role = row.role as MemberRole;
       return {
         status: "member",
         userId: claims.sub,
         email,
         orgId: row.org_id,
         orgName: row.orgs.name,
-        role: row.role as MemberRole,
+        role: frozen === true ? "viewer" : role,
+        billingRole: role,
+        frozen: frozen === true,
       };
     },
   };

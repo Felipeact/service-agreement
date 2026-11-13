@@ -158,8 +158,8 @@ describe("cancel and resume", () => {
 describe("the plan list on the page", () => {
   test("C3202: it lists the three plans in price order, marks the current one with no switch control, and offers the other two", () => {
     const out = view(ready({ plan: "team" }));
-    expect(out.indexOf("$49/month")).toBeLessThan(out.indexOf("$99/month"));
-    expect(out.indexOf("$99/month")).toBeLessThan(out.indexOf("$199/month"));
+    expect(out.indexOf("$79/month")).toBeLessThan(out.indexOf("$149/month"));
+    expect(out.indexOf("$149/month")).toBeLessThan(out.indexOf("$299/month"));
     expect(out).toContain("2 seats included");
     expect(out).toContain("5 seats included");
     expect(out).toContain("10 seats included");
@@ -172,13 +172,13 @@ describe("the plan list on the page", () => {
   test("C3203: a subscription set to end lists the plans with no switch control and says to resume first", () => {
     const out = view(ready({ status: "active", endsAt: noon(2026, 12, 10), trialEnd: null, periodEnd: noon(2026, 12, 10) }));
     expect(out).toContain("Resume your subscription to change plan");
-    expect(out).toContain("$99/month");
+    expect(out).toContain("$149/month");
     expect(out).not.toContain("Switch to");
   });
 
   test("C3203: a canceled subscription has no plan list", () => {
     const out = view(ready({ status: "canceled" }));
-    expect(out).not.toContain("$49/month");
+    expect(out).not.toContain("$79/month");
     expect(out).not.toContain("Current plan");
     expect(out).not.toContain("Switch to");
   });
@@ -186,12 +186,12 @@ describe("the plan list on the page", () => {
   test("C3203: an unknown plan lists the plans with no switch control and says it can't be changed here", () => {
     const out = view(ready({ plan: null }));
     expect(out).toContain("This plan can&#x27;t be changed here".replace("&#x27;", "'"));
-    expect(out).toContain("$99/month");
+    expect(out).toContain("$149/month");
     expect(out).not.toContain("Current plan");
     expect(out).not.toContain("Switch to");
   });
 
   test.each([{ kind: "no_subscription" } as const, { kind: "not_configured" } as const, { kind: "error" } as const])("C3202: the %j state shows no plan list", (state) => {
-    expect(view(state)).not.toContain("$49/month");
+    expect(view(state)).not.toContain("$79/month");
   });
 });

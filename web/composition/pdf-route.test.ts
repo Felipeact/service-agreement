@@ -59,6 +59,7 @@ const container = {
   agreementReader: { get: async () => detail },
   getOrgSettings: async () => SETTINGS,
   documentRenderer: reactPdfDocumentRenderer,
+  tenantLogo: async () => null,
 };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));

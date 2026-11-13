@@ -135,7 +135,7 @@ end $$;
 
 -- C708: the number is read under the org's advisory lock.
 do $$
-declare d text := pg_get_functiondef('public.create_agreement(uuid)'::regprocedure);
+declare d text := pg_get_functiondef('public.create_agreement(uuid, uuid)'::regprocedure);
 begin
   perform tests.ok('C708 lock', position('pg_advisory_xact_lock(hashtextextended(''agreement_number:'' ||' in d) > 0,
     'create_agreement takes no advisory lock on the org''s numbers');
@@ -343,9 +343,9 @@ end $$;
 reset role;
 select set_config('request.jwt.claims', '', true);
 do $$
-declare f oid := 'public.create_agreement(uuid)'::regprocedure;
+declare f oid := 'public.create_agreement(uuid, uuid)'::regprocedure;
 begin
-  perform tests.ok('C751 authenticated create', has_function_privilege('authenticated', 'public.create_agreement(uuid)', 'execute'),
+  perform tests.ok('C751 authenticated create', has_function_privilege('authenticated', 'public.create_agreement(uuid, uuid)', 'execute'),
     'authenticated cannot execute create_agreement');
   perform tests.ok('C751 authenticated revise',
     has_function_privilege('authenticated', 'public.apply_agreement_transition(uuid, text, text, text, jsonb)', 'execute'),

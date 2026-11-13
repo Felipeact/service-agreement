@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getContainer } from "@/composition";
 import { buildAgreementDocument } from "@/domain/agreement";
+import { withLogo } from "@/domain/org-settings/logo";
 import { isUuid } from "@/domain/imports";
 
 /** Seconds. Rendering 2,000 assets measured about 22 s (C870); this is more than twice that. */
@@ -13,12 +14,12 @@ function versionOf(value: string | null): number | undefined {
   return value !== null && /^[1-9]\d*$/.test(value) ? Number(value) : undefined;
 }
 
-/** Any member of the org downloads the agreement as a PDF, for one version (door 3). */
+/** Any member of the org downloads the agreement as a PDF, for one version (door 3). `?inline=1` asks for the page's own preview instead of a download. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ agreementId: string }> }) {
   const { agreementId } = await params;
   if (!isUuid(agreementId)) return empty(404);
 
-  const { currentMember, agreementReader, getOrgSettings, documentRenderer } = await getContainer();
+  const { currentMember, agreementReader, getOrgSettings, documentRenderer, tenantLogo } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") return NextResponse.redirect(new URL("/login", request.url));
 
@@ -28,11 +29,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const settings = await getOrgSettings(member.orgId);
     if (!settings) throw new Error(`org ${member.orgId} has no settings row`);
-    const bytes = await documentRenderer.renderAgreement(buildAgreementDocument(agreement, settings));
+    const bytes = await documentRenderer.renderAgreement(withLogo(buildAgreementDocument(agreement, settings, agreement.template), "tenant", await tenantLogo(member.orgId)));
     return new Response(bytes as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${agreement.number}-v${agreement.shown.versionNo}.pdf"`,
+        "Content-Disposition": `${request.nextUrl.searchParams.get("inline") === "1" ? "inline" : "attachment"}; filename="${agreement.number}-v${agreement.shown.versionNo}.pdf"`,
         "Cache-Control": "private, no-store",
       },
     });

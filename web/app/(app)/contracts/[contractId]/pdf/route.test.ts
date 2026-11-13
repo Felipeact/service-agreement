@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, ContractDetail, ContractRenderer, CurrentMember, MemberRole } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { TenantLogo } from "@/domain/org-settings/logo";
 
 const CON = "66666666-6666-4666-8666-666666666666";
 const AGR = "11111111-1111-4111-8111-111111111111";
@@ -66,7 +67,8 @@ const contractGet = vi.fn<(id: string) => Promise<ContractDetail | null>>();
 const agreementGet = vi.fn<(id: string, versionNo?: number) => Promise<AgreementDetail | null>>();
 const getOrgSettings = vi.fn<(orgId: string) => Promise<OrgSettingsValue | null>>();
 const renderContract = vi.fn<ContractRenderer["renderContract"]>();
-const container = { currentMember, contractReader: { get: contractGet }, agreementReader: { get: agreementGet }, getOrgSettings, contractRenderer: { renderContract } };
+const tenantLogo = vi.fn<(orgId: string) => Promise<TenantLogo | null>>();
+const container = { currentMember, contractReader: { get: contractGet }, agreementReader: { get: agreementGet }, getOrgSettings, contractRenderer: { renderContract }, tenantLogo };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 
@@ -82,6 +84,7 @@ beforeEach(() => {
   agreementGet.mockReset().mockResolvedValue(agreement());
   getOrgSettings.mockReset().mockResolvedValue(SETTINGS);
   renderContract.mockReset().mockResolvedValue(bytes);
+  tenantLogo.mockReset().mockResolvedValue(null);
 });
 
 describe("GET /contracts/[contractId]/pdf", () => {
@@ -104,7 +107,19 @@ describe("GET /contracts/[contractId]/pdf", () => {
     const document = renderContract.mock.calls[0][0];
     expect(document.contractor).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.customerName).toBe("Fernwood Dental");
-    expect(document.clauses).toContain("Repair work is discounted by 10%.");
+    expect(document.body.map((block: { text: string }) => block.text)).toContain("Repair work is discounted by 10%.");
+  });
+
+  test("C5224: the template the reader returned is the wording drawn", async () => {
+    contractGet.mockResolvedValue(contract({ template: { schema: 1, blocks: [{ type: "paragraph", text: "Org wording for {{customer.name}}." }] } }));
+    await call();
+    expect(renderContract.mock.calls[0][0].body).toEqual([{ type: "paragraph", text: "Org wording for Fernwood Dental." }]);
+  });
+
+  test("C5224: a failed read of the contract fails the request, as any read failure does, and draws nothing", async () => {
+    contractGet.mockRejectedValue(new Error("Contract c has no readable template version"));
+    await expect(call()).rejects.toThrow("no readable template version");
+    expect(renderContract).not.toHaveBeenCalled();
   });
 
   test("C1636: the route allows at least twice the measured render time of a long document", () => {
@@ -173,3 +188,26 @@ describe("GET /contracts/[contractId]/pdf, item words", () => {
     expect(renderContract.mock.calls[0][0].words?.Plural).toBe("Equipment");
   });
 });
+
+describe("the logo on the contract PDF", () => {
+  const first: TenantLogo = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), format: "png" as const };
+  const second: TenantLogo = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 2]), format: "jpg" };
+
+  test("C3331: the document carries the logo of the org's current logo_path, and a replaced one gives the new one", async () => {
+    tenantLogo.mockResolvedValue(first);
+    expect((await call()).status).toBe(200);
+    expect(tenantLogo).toHaveBeenCalledWith(ORG);
+    expect(renderContract.mock.calls[0][0].contractor.logo).toEqual(first);
+
+    tenantLogo.mockResolvedValue(second);
+    await call();
+    expect(renderContract.mock.calls[1][0].contractor.logo).toEqual(second);
+  });
+
+  test("C3331: when the loader has no logo the route still answers 200 and the document has no logo key", async () => {
+    const response = await call();
+    expect(response.status).toBe(200);
+    expect("logo" in renderContract.mock.calls[0][0].contractor).toBe(false);
+  });
+});
+

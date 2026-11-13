@@ -103,7 +103,7 @@ function toView(json: unknown): PortalView | null {
     },
     agreement: { number: agreement.number as string, status: agreement.status as AgreementStatus },
     tenant: tenant
-      ? { name: tenant.name as string, address: (tenant.address as string | null) ?? null, phone: (tenant.phone as string | null) ?? null, accent: (tenant.accent as string | null) ?? null,
+      ? { name: tenant.name as string, address: (tenant.address as string | null) ?? null, phone: (tenant.phone as string | null) ?? null, accent: (tenant.accent as string | null) ?? null, logoPath: (tenant.logoPath as string | null | undefined) ?? null,
           words: itemWords((tenant.itemSingular as string | undefined) ?? DEFAULT_ITEM_WORD, (tenant.itemPlural as string | undefined) ?? DEFAULT_ITEM_WORD) }
       : null,
     customer: { name: customer.name as string },
@@ -114,6 +114,8 @@ function toView(json: unknown): PortalView | null {
     terms: parseTerms({ terms: json.terms }),
     term: toTerm(json.term),
     validUntil: isRecord(json.version) && typeof json.version.validUntil === "string" ? json.version.validUntil : null,
+    // The key is the frozen version's pinned template body, `null` when the database found none; a document without it is an older one.
+    ...("template" in json ? { template: json.template } : {}),
     today: typeof json.today === "string" ? json.today : null,
     decision: decision
       ? {

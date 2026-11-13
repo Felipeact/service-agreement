@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { OrgSettingsValue } from "../org-settings";
-import { buildAgreementDocument, DRAFT_MARK, NEUTRAL_ACCENT, type DocumentSource } from "./document";
+import { buildAgreementDocument, DRAFT_MARK, frequencyLabel, NEUTRAL_ACCENT, typeFrequencies, type DocumentSource } from "./document";
+import type { AgreementTemplateBody } from "./template";
 
 const SETTINGS: OrgSettingsValue = {
   legalName: "Kettle Ridge Mechanical Ltd.",
@@ -179,5 +180,154 @@ describe("which terms the document prints", () => {
     const { terms } = buildAgreementDocument({ ...SOURCE, editable: false, terms: null }, { ...SETTINGS, repairDiscountPct: 99 });
     expect(terms).toEqual([]);
     expect(JSON.stringify(buildAgreementDocument({ ...SOURCE, editable: false, terms: null }, { ...SETTINGS, repairDiscountPct: 99 }))).not.toContain("99%");
+  });
+});
+
+const TEMPLATE: AgreementTemplateBody = {
+  schema: 1,
+  name: "Welcome",
+  description: "",
+  intro: [{ type: "paragraph", text: "Welcome {{customer.name}}." }],
+  footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+  sections: { schedule: true, scope: true },
+  preset: { termMonths: null, lines: [] },
+};
+
+describe("buildAgreementDocument with a template", () => {
+  test("C5320: a pinned body's intro and closing text come back rendered with the names filled in", () => {
+    const doc = buildAgreementDocument(SOURCE, SETTINGS, TEMPLATE);
+    expect(doc.intro).toEqual([{ type: "paragraph", text: "Welcome Fernwood Dental." }]);
+    expect(doc.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+  });
+
+  test("C5320: with no template argument the intro and the closing text are empty", () => {
+    const doc = buildAgreementDocument(SOURCE, SETTINGS);
+    expect(doc.intro).toEqual([]);
+    expect(doc.footer).toEqual([]);
+    expect(doc.sections).toEqual({ schedule: true, scope: true });
+  });
+
+  test.each<[string, { schedule: boolean; scope: boolean }]>([
+    ["both shown", { schedule: true, scope: true }],
+    ["schedule hidden", { schedule: false, scope: true }],
+    ["scope hidden", { schedule: true, scope: false }],
+    ["both hidden", { schedule: false, scope: false }],
+  ])("C5321: %s", (_label, sections) => {
+    const shown = buildAgreementDocument(SOURCE, SETTINGS);
+    const doc = buildAgreementDocument(SOURCE, SETTINGS, { ...TEMPLATE, sections });
+    expect(doc.sections).toEqual(sections);
+    expect(doc.schedule).toEqual(sections.schedule ? shown.schedule : []);
+    expect(doc.scope).toEqual(sections.scope ? shown.scope : { kind: "hidden" });
+    // The price table, the terms and the totals are always built.
+    expect(doc.lines).toEqual(shown.lines);
+    expect(doc.totalCents).toBe(387000);
+    expect(doc.terms).toEqual(shown.terms);
+    expect(shown.schedule.length).toBeGreaterThan(0);
+  });
+
+  const TERMS_TEMPLATE: AgreementTemplateBody = {
+    ...TEMPLATE,
+    intro: [{ type: "paragraph", text: "Payment {{terms.paymentDays}}; {{term.label}}." }],
+    footer: [],
+  };
+
+  test("C5322: an editable draft fills the variables from today's settings", () => {
+    const doc = buildAgreementDocument(DRAFT_SOURCE, { ...SETTINGS, paymentDays: 45, defaultTermMonths: 12 }, TERMS_TEMPLATE);
+    expect(doc.intro).toEqual([{ type: "paragraph", text: "Payment 45 days; 12 months." }]);
+  });
+
+  test("C5322: a sent version fills them from its frozen terms, whatever the settings say now", () => {
+    const sent = { ...SOURCE, term: { start: "2027-01-01", months: 24, end: "2028-12-31" } };
+    const doc = buildAgreementDocument(sent, { ...SETTINGS, paymentDays: 45 }, TERMS_TEMPLATE);
+    expect(doc.intro).toEqual([{ type: "paragraph", text: "Payment 30 days; 24 months." }]);
+  });
+
+  test("C5322: a sent version that recorded no terms prints a clause that needs one as nothing, and a paragraph with an empty replacement", () => {
+    const template: AgreementTemplateBody = {
+      ...TEMPLATE,
+      intro: [
+        { type: "clause", text: "Payment {{terms.paymentDays}}." },
+        { type: "paragraph", text: "Within {{terms.paymentDays}}." },
+      ],
+    };
+    expect(buildAgreementDocument({ ...SOURCE, terms: null }, SETTINGS, template).intro).toEqual([{ type: "paragraph", text: "Within ." }]);
+  });
+});
+
+
+describe("buildAgreementDocument, the layout and options (block-editor)", () => {
+  const type = (code: string, name: string) => ({ code, name, tasks: [], assets: [{ unitNo: "1", typeModel: null, location: null }] });
+  const line = (description: string, visitsPerYear: number, codes: string[]) => ({
+    id: description,
+    description,
+    visitsPerYear,
+    costPerVisitCents: 10000,
+    annualCents: visitsPerYear * 10000,
+    visitMonths: [],
+    equipment: codes.map((code) => ({ code, name: code })),
+  });
+  const V2 = (over: Partial<Extract<AgreementTemplateBody, { schema: 2 }>> = {}): AgreementTemplateBody => ({
+    schema: 2,
+    name: "Proposal",
+    description: "",
+    doc: { title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "first", pageFooter: "number" },
+    layout: [{ kind: "section", key: "price" }],
+    preset: { termMonths: null, lines: [] },
+    ...over,
+  });
+
+  test("C5506: the title's merge variables are filled, and an empty title stays empty", () => {
+    const titled = buildAgreementDocument(SOURCE, SETTINGS, V2({ doc: { title: "Maintenance schedule for {{site.name}}", showMeta: true, pageHeader: "first", pageFooter: "number" } }));
+    expect(titled.doc?.title).toBe("Maintenance schedule for Fernwood Dental, Main");
+    const empty = buildAgreementDocument(SOURCE, SETTINGS, V2({ doc: { title: "", showMeta: true, pageHeader: "first", pageFooter: "number" } }));
+    expect(empty.doc?.title).toBe("");
+  });
+
+  test("C5527: the document's layout text resolves tenant.address, tenant.phone, term.start and terms.taxNote for an agreement", () => {
+    const template = V2({
+      layout: [
+        { kind: "block", type: "paragraph", text: "{{tenant.address}} | {{tenant.phone}} | {{term.start}} | {{terms.taxNote}}" },
+        { kind: "section", key: "price" },
+      ],
+    });
+    const source: DocumentSource = { ...SOURCE, term: { start: "2026-11-13", months: 12, end: "2027-11-12" } };
+    const text = (built: ReturnType<typeof buildAgreementDocument>) => (built.layout?.[0] as { text: string }).text;
+    expect(text(buildAgreementDocument(source, SETTINGS, template))).toBe("100 Sample Street, Burnaby, BC | 604-555-0100 | November 13, 2026 | GST extra");
+    expect(text(buildAgreementDocument({ ...source, editable: true, terms: null }, SETTINGS, template))).toBe("100 Sample Street, Burnaby, BC | 604-555-0100 | November 13, 2026 | GST extra");
+  });
+
+  test("C5511: a sent version takes its layout and options only from its frozen pin: other settings and a newer template change nothing", () => {
+    const pinned = V2({ layout: [{ kind: "block", type: "paragraph", text: "Terms are {{terms.paymentDays}}." }, { kind: "section", key: "price" }] });
+    const before = buildAgreementDocument(SOURCE, SETTINGS, pinned);
+    const after = buildAgreementDocument(SOURCE, { ...SETTINGS, paymentDays: 90, legalName: "Someone Else Ltd.", defaultTermMonths: 60 }, pinned);
+    expect(after.layout).toEqual(before.layout);
+    expect(after.doc).toEqual(before.doc);
+    expect(before.layout).toEqual([{ kind: "block", type: "paragraph", text: "Terms are 30 days." }, { kind: "section", key: "price" }]);
+  });
+
+  test("C5515: the frequency label is MONTHLY for 12, QUARTERLY for 4, BI-ANNUAL for 2, ANNUAL for 1 and N TIMES PER YEAR otherwise", () => {
+    expect([12, 4, 2, 1, 3, 6].map(frequencyLabel)).toEqual(["MONTHLY", "QUARTERLY", "BI-ANNUAL", "ANNUAL", "3 TIMES PER YEAR", "6 TIMES PER YEAR"]);
+  });
+
+  test("C5515: each equipment type takes the frequency of the line that covers it, and a type no line covers has none", () => {
+    const types = [type("BOILER", "Boiler"), type("AHU", "AHU"), type("FD", "Fire damper"), type("CH", "Chiller"), type("PUMP", "Pump"), type("WYE", "Wye strainer")];
+    const lines = [line("Boilers", 2, ["BOILER"]), line("Air handlers", 4, ["AHU"]), line("Dampers", 1, ["FD"]), line("Chillers", 12, ["CH"]), line("Pumps", 3, ["PUMP"])];
+    expect(typeFrequencies(lines, types)).toEqual({ BOILER: "BI-ANNUAL", AHU: "QUARTERLY", FD: "ANNUAL", CH: "MONTHLY", PUMP: "3 TIMES PER YEAR" });
+  });
+
+  test("C5515: a line that records only a type name covers the type of that name", () => {
+    const lines = [{ ...line("Units", 4, []), equipment: [{ name: "AHU" }] }];
+    expect(typeFrequencies(lines, [type("AHU-1", "AHU")])).toEqual({ "AHU-1": "QUARTERLY" });
+  });
+
+  test("C5515: the document carries the frequencies only when the included section asks for them", () => {
+    const source: DocumentSource = {
+      ...SOURCE,
+      shown: { versionNo: 1, lines: [line("Air handlers", 4, ["AHU"])], annualCents: 40000 },
+      serviceScope: { source: "live", takenAt: null, types: [type("AHU", "AHU")] },
+    };
+    const asked = V2({ layout: [{ kind: "section", key: "included", options: { showFrequency: true } }, { kind: "section", key: "price" }] });
+    expect(buildAgreementDocument(source, SETTINGS, asked).frequencies).toEqual({ AHU: "QUARTERLY" });
+    expect(buildAgreementDocument(source, SETTINGS).frequencies).toBeUndefined();
   });
 });

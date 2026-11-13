@@ -499,6 +499,7 @@ export type Database = {
           created_at: string
           id: string
           org_id: string
+          template_version_id: string
           parties: Json
           status: string
         }
@@ -507,6 +508,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id: string
+          template_version_id?: string
           parties?: Json
           status?: string
         }
@@ -515,6 +517,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id?: string
+          template_version_id?: string
           parties?: Json
           status?: string
         }
@@ -580,6 +583,65 @@ export type Database = {
           },
         ]
       }
+      document_template_versions: {
+        Row: {
+          body: Json
+          created_at: string
+          id: string
+          org_id: string | null
+          template_id: string
+          version_no: number
+        }
+        Insert: {
+          body: Json
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          template_id: string
+          version_no: number
+        }
+        Update: {
+          body?: Json
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          template_id?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          org_id: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          org_id?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          org_id?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           actor_id: string | null
@@ -634,6 +696,7 @@ export type Database = {
           created_by: string | null
           created_by_email: string | null
           extract_cursor: number | null
+          extract_started_at: string | null
           extract_total: number | null
           extracted_at: string | null
           id: string
@@ -657,6 +720,7 @@ export type Database = {
           created_by?: string | null
           created_by_email?: string | null
           extract_cursor?: number | null
+          extract_started_at?: string | null
           extract_total?: number | null
           extracted_at?: string | null
           id?: string
@@ -680,6 +744,7 @@ export type Database = {
           created_by?: string | null
           created_by_email?: string | null
           extract_cursor?: number | null
+          extract_started_at?: string | null
           extract_total?: number | null
           extracted_at?: string | null
           id?: string
@@ -1374,6 +1439,7 @@ export type Database = {
       }
     }
     Functions: {
+      add_catalog_draft: { Args: { p_org_id: string; p_trade: string; p_types: Json }; Returns: number }
       accept_invitations: { Args: never; Returns: number }
       apply_agreement_transition: {
         Args: {
@@ -1432,7 +1498,7 @@ export type Database = {
         Args: { p_contract_id: string }
         Returns: string
       }
-      create_agreement: { Args: { p_site_id: string }; Returns: string }
+      create_agreement: { Args: { p_site_id: string; p_template_version_id?: string }; Returns: string }
       create_contract: { Args: { p_agreement_id: string }; Returns: string }
       create_task_library_type: { Args: { p_name: string; p_org_id: string }; Returns: string }
       rename_task_library_type: { Args: { p_name: string; p_type_code: string }; Returns: undefined }
@@ -1457,6 +1523,13 @@ export type Database = {
           role: string
         }[]
       }
+      checkout_workspace_status: { Args: { p_session_id: string }; Returns: string }
+      email_has_workspace: { Args: { p_email: string }; Returns: boolean }
+      company_has_workspace: { Args: { p_name: string }; Returns: boolean }
+      agreement_recipient: { Args: { p_agreement_id: string }; Returns: string | null }
+      set_agreement_recipient: { Args: { p_agreement_id: string; p_email: string }; Returns: boolean }
+      my_workspace_state: { Args: never; Returns: string }
+      my_org_frozen: { Args: never; Returns: boolean }
       list_members: {
         Args: never
         Returns: {
@@ -1499,8 +1572,13 @@ export type Database = {
             }
             Returns: string
           }
+      archive_agreement_template: { Args: { p_template_id: string }; Returns: undefined }
       remove_member: { Args: { p_user_id: string }; Returns: undefined }
       revoke_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
+      save_agreement_template: {
+        Args: { p_body: Json; p_template_id: string | null }
+        Returns: { template_id: string; version_no: number }[]
+      }
       save_agreement_term: {
         Args: {
           p_agreement_id: string
@@ -1508,6 +1586,10 @@ export type Database = {
           p_term_start: string
         }
         Returns: string
+      }
+      save_contract_template: {
+        Args: { p_body: Json }
+        Returns: { template_id: string; version_no: number }[]
       }
       save_service_line: {
         Args: {
@@ -1573,6 +1655,8 @@ export type Database = {
         Args: { p_active: boolean; p_customer_id: string }
         Returns: string[]
       }
+      import_allowance: { Args: { p_job_id: string }; Returns: Json }
+      org_usage: { Args: Record<PropertyKey, never>; Returns: Json }
       set_member_role: { Args: { p_role: string; p_user_id: string }; Returns: undefined }
       set_org_plan: { Args: { p_plan: string; p_seats: number }; Returns: undefined }
       set_site_active: {

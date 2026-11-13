@@ -16,6 +16,7 @@ vi.mock("@/composition", () => ({ getContainer: async () => container }));
 vi.mock("next/navigation", () => ({ redirect, notFound: vi.fn(), usePathname: () => "/imports" }));
 
 const { ImportsForRequest } = await import("./imports/page");
+const { ImportBannerLauncher } = await import("./new-agreement-launcher");
 
 const SITE = "00000000-0000-4000-8000-0000000000a1";
 const member: CurrentMember = { status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role: "viewer" };
@@ -48,5 +49,19 @@ describe("/imports", () => {
     await expect(render({})).rejects.toThrow("NEXT_REDIRECT /login");
     expect(listImportHistory).not.toHaveBeenCalled();
     expect(listSites).not.toHaveBeenCalled();
+  });
+});
+
+describe("/imports, the drop banner", () => {
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", true],
+    ["viewer", false],
+  ] as const)("C5415: for role %s the history gets the New agreement banner: %s", async (role, shown) => {
+    currentMember.mockResolvedValue({ ...member, role });
+    const view = (await ImportsForRequest({ params: {} })) as ReactElement<{ banner?: ReactElement }>;
+    expect(view.props.banner !== undefined).toBe(shown);
+    if (shown) expect(view.props.banner!.type).toBe(ImportBannerLauncher);
   });
 });

@@ -3,6 +3,7 @@ import { getContainer } from "@/composition";
 import { buildContractDocument } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
 import { itemWords } from "@/domain/org-settings";
+import { withLogo } from "@/domain/org-settings/logo";
 
 /** Seconds. The agreement PDF measured about 22 s for 2,000 assets (C870); this is more than twice that. */
 export const maxDuration = 60;
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { contractId } = await params;
   if (!isUuid(contractId)) return empty(404);
 
-  const { currentMember, contractReader, agreementReader, getOrgSettings, contractRenderer } = await getContainer();
+  const { currentMember, contractReader, agreementReader, getOrgSettings, contractRenderer, tenantLogo } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") return NextResponse.redirect(new URL("/login", request.url));
 
@@ -27,7 +28,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const settings = await getOrgSettings(member.orgId);
     if (!settings) throw new Error(`org ${member.orgId} has no settings row`);
-    const bytes = await contractRenderer.renderContract(buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural)));
+    const document = buildContractDocument(agreement, contract.parties, settings.accentColor, itemWords(settings.itemSingular, settings.itemPlural), contract.template);
+    const bytes = await contractRenderer.renderContract(withLogo(document, "contractor", await tenantLogo(member.orgId)));
     return new Response(bytes as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",

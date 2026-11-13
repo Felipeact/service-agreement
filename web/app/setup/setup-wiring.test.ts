@@ -42,3 +42,14 @@ describe("the setup screen's failure states", () => {
     expect(page).toMatch(/setupCatalog\(\)/);
   });
 });
+
+describe("the catalog draft stores nothing of its own", () => {
+  test("C4125: no migration of this feature creates a table, and the draft actions write only through the use cases", () => {
+    const migration = readFileSync(path.join(webRoot, "..", "supabase", "migrations", "20261112100000_add_catalog_draft.sql"), "utf8");
+    expect(migration).not.toMatch(/create\s+table/i);
+    const actions = read("app/setup/draft-actions.ts");
+    expect(actions).not.toMatch(/\.from\(|\.insert\(|\.rpc\(|storage/i);
+    const useCase = read("application/use-cases/draft-catalog.ts");
+    expect(useCase).not.toMatch(/storage|\.insert\(|\.upload\(/i);
+  });
+});

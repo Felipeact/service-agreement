@@ -4,8 +4,11 @@ import { validateCustomer, validateSite, type CustomerValue, type SiteValue } fr
 /** The value a customer or site choice holds while the member is adding a new one instead of picking an existing one. */
 export const NEW_CHOICE = "__new";
 
-/** What the New agreement dialog sends: a customer choice and a site choice, each an id or `NEW_CHOICE`, plus the new records' fields. */
-export type NewAgreementInput = { customer: string; customerName: string; site: string; siteName: string; address: string };
+/**
+ * What the New agreement dialog sends: a customer choice and a site choice, each an id or `NEW_CHOICE`, plus the new records' fields,
+ * and the template version chosen (absent or empty for Standard agreement, which pins nothing).
+ */
+export type NewAgreementInput = { customer: string; customerName: string; site: string; siteName: string; address: string; templateVersionId?: string };
 
 export type NewAgreementField = keyof NewAgreementInput;
 
@@ -13,6 +16,8 @@ export type NewAgreementField = keyof NewAgreementInput;
 export type NewAgreementPlan = {
   customer: { kind: "existing"; id: string } | { kind: "new"; value: CustomerValue };
   site: { kind: "existing"; id: string } | { kind: "new"; value: SiteValue };
+  /** The template version the agreement is pinned to; absent for Standard agreement. */
+  templateVersionId?: string;
 };
 
 export type NewAgreementValidation = { ok: true; value: NewAgreementPlan } | { ok: false; errors: Partial<Record<NewAgreementField, string>> };
@@ -49,6 +54,9 @@ export function validateNewAgreement(input: NewAgreementInput): NewAgreementVali
     errors.site = "Choose a site, or add a new one";
   }
 
+  const version = input.templateVersionId ?? "";
+  if (version !== "" && !isUuid(version)) errors.templateVersionId = "Choose a template from the list";
+
   if (!customer || !site || Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { customer, site } };
+  return { ok: true, value: version === "" ? { customer, site } : { customer, site, templateVersionId: version } };
 }

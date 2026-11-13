@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { messageFor, type CreateAgreementState } from "@/components/agreements/state";
+import { PlanLimitAlert } from "@/components/billing/plan-limit-alert";
 import { Button } from "@/components/ui/button";
 
 type PromptProps = {
@@ -14,7 +15,7 @@ type PromptProps = {
 
 /** "New agreement" needs no field: the site is the input. A live agreement found meanwhile is named with a link. */
 export function NewAgreementPrompt({ state, pending, action }: PromptProps) {
-  const message = state.status === "open_exists" ? null : messageFor(state.status);
+  const message = state.status === "open_exists" || state.status === "plan_limit" ? null : messageFor(state.status);
   return (
     <div className="flex flex-col gap-2">
       <form action={action}>
@@ -30,6 +31,7 @@ export function NewAgreementPrompt({ state, pending, action }: PromptProps) {
           </Link>
         </p>
       )}
+      {state.status === "plan_limit" && <PlanLimitAlert message={state.message} billingHref={state.billingHref} />}
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {message}

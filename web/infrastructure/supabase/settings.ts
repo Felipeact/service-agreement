@@ -56,6 +56,7 @@ export function supabaseOrgSettingsStore(client: Client): OrgSettingsStore {
             proposal_validity_days: value.proposalValidityDays,
             item_singular: value.itemSingular,
             item_plural: value.itemPlural,
+            ...(value.logoPath !== undefined && { logo_path: value.logoPath }),
             updated_at: at.toISOString(),
           })
           .eq("org_id", orgId)

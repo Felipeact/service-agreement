@@ -7,10 +7,9 @@ const SESSIONS_URL = "https://api.stripe.com/v1/checkout/sessions";
 export { STRIPE_VERSION };
 
 const TIMEOUT_MS = STRIPE_TIMEOUT_MS;
-const TRIAL_DAYS = 14;
 
 /**
- * Opens a Stripe Checkout session for a 14-day, card-required trial with `fetch`, no SDK (billing-checkout door 1). The plan's
+ * Opens a Stripe Checkout session for a card-required subscription that bills at once (no trial) with `fetch`, no SDK (billing-checkout door 1). The plan's
  * price is sent inline from `PLANS` (door 2), so the catalog stays the one source. A failure is `unavailable` and is logged once
  * with the HTTP status and Stripe's error code only.
  */
@@ -46,12 +45,11 @@ export function stripeCheckoutStarter(options: { secretKey: string; appBaseUrl: 
         customer_email: email,
         payment_method_collection: "always",
         subscription_data: {
-          trial_period_days: TRIAL_DAYS,
-          trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
           metadata,
         },
         metadata,
-        success_url: `${base}/register/success`,
+        // Stripe fills the braces in with the session id when it redirects (workspace-pending-state door 1).
+        success_url: `${base}/register/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}/register?plan=${plan}`,
       }).join("&");
 

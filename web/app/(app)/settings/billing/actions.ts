@@ -10,7 +10,8 @@ async function memberOrLogin() {
   const { currentMember } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
-  return { orgId: member.orgId, role: member.role };
+  // The role the member holds, not the read-only one a frozen workspace gives: renewing is exactly what a frozen owner does.
+  return { orgId: member.orgId, role: member.billingRole ?? member.role };
 }
 
 /** A SetupIntent id as Stripe writes it; anything else never reaches the use case (billing-page AC 18). */
@@ -65,4 +66,14 @@ export async function changePlanAction(planKey: string): Promise<PlanChangeResul
   if (changed.ok) return { status: "done" };
   if (changed.code === "forbidden") return { status: "forbidden" };
   return { status: changed.code === "same_plan" ? "same_plan" : "failed" };
+}
+
+/** Starts a new subscription for an ended plan and sends the owner to Stripe Checkout. */
+export async function renewSubscriptionAction(): Promise<void> {
+  const member = await memberOrLogin();
+  const { renewSubscription } = await getContainer();
+  const started = await renewSubscription(member);
+  // `redirect` throws, so it stays outside any try block.
+  if (started.ok) redirect(started.url);
+  redirect("/settings/billing?renew=failed");
 }

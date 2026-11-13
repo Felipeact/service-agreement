@@ -1,3 +1,4 @@
+import type { PlanLimitNotice } from "@/domain/billing/plan-limits";
 import type { ImportContentType, ReadError } from "@/domain/imports";
 import type { AssetInput, FieldErrors } from "@/domain/records";
 
@@ -48,7 +49,8 @@ export const REVIEW_MESSAGES = {
 export type ExtractState =
   | { status: "extracting"; done: number; total: number }
   | { status: "extracted"; rows: number; unmatched: number }
-  | { status: "not_ready" | "too_large" | Failure };
+  | { status: "not_ready" | "too_large" | Failure }
+  | ({ status: "plan_limit" } & PlanLimitNotice);
 
 export const EXTRACT_MESSAGES = {
   unavailable: "We couldn't read this list. Try again.",

@@ -1,5 +1,5 @@
 import { PageLoading } from "@/components/shell/page-loading";
 
 export default function Loading() {
-  return <PageLoading title="New agreement" />;
+  return <PageLoading title="Agreement templates" />;
 }

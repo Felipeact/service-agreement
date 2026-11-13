@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
@@ -19,6 +20,9 @@ export const FIELD_REFUSALS = {
   phone: "Enter a phone number with area code.",
   seats: (included: number) => `Choose between ${included} and ${MAX_SEATS} team members.`,
 } as const;
+
+/** The refusal for an email that already belongs to an org (checkout-email-in-use). It names no role, org or count. */
+export const EMAIL_IN_USE = "This email already has a workspace.";
 
 const TRADES_ERROR_ID = "register-trades-error";
 
@@ -93,7 +97,17 @@ export function RegisterFields({ state, pending, initialPlan = "team", action }:
           aria-invalid={fields.email ? true : undefined}
           aria-describedby={describedBy("email", "register-email-message")}
         />
-        {fields.email && <FieldMessage id="register-email-message">{FIELD_REFUSALS.email}</FieldMessage>}
+        {fields.email &&
+          (refused?.status === "email_in_use" ? (
+            <p id="register-email-message" role="alert" className="-mt-2 text-[12px] font-medium text-danger">
+              {EMAIL_IN_USE}{" "}
+              <Link href="/login" className="underline">
+                Sign in
+              </Link>
+            </p>
+          ) : (
+            <FieldMessage id="register-email-message">{FIELD_REFUSALS.email}</FieldMessage>
+          ))}
         <TextInput
           id="register-company"
           name="company"
@@ -103,7 +117,9 @@ export function RegisterFields({ state, pending, initialPlan = "team", action }:
           aria-invalid={fields.company ? true : undefined}
           aria-describedby={describedBy("company", "register-company-message")}
         />
-        {fields.company && <FieldMessage id="register-company-message">{FIELD_REFUSALS.company}</FieldMessage>}
+        {fields.company && (
+          <FieldMessage id="register-company-message">{refused?.status === "company_in_use" ? "A workspace with this company name already exists. Sign in, or ask its owner to invite you." : FIELD_REFUSALS.company}</FieldMessage>
+        )}
         <TextInput
           id="register-phone"
           name="phone"
@@ -182,7 +198,7 @@ export function RegisterFields({ state, pending, initialPlan = "team", action }:
           {pending ? "Starting…" : "Continue to secure checkout"}
         </Button>
         <p className="max-w-[60ch] text-[12px] text-ink-2">
-          Next you enter your card with our payment provider. You are not charged for 14 days. Prices are in Canadian dollars.
+          Next you enter your card with our payment provider. You are charged the plan price today, then monthly. Prices are in Canadian dollars.
         </p>
       </div>
     </form>

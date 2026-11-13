@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ViewSigningResult } from "@/application/use-cases";
+import { TenantLogoImage } from "@/components/ui/tenant-logo";
 import { NEUTRAL_ACCENT } from "@/domain/agreement";
 import { isAccent } from "@/domain/portal";
 import { SigningForm } from "./signing-form";
@@ -11,6 +12,8 @@ export const UNAVAILABLE_MESSAGE = "This link is not working right now.";
 type SigningViewProps = {
   /** Anything but `null`: an unknown link is the not-found page, not this view. */
   result: NonNullable<ViewSigningResult>;
+  /** The public address of the contractor's logo, `null` when it has none. */
+  logoUrl?: string | null;
 };
 
 function Message({ children }: { children: ReactNode }) {
@@ -25,7 +28,7 @@ function Message({ children }: { children: ReactNode }) {
  * What the customer's signer sees at `/sign/<token>`: the tenant's name and colour, the contract's number and the signer's
  * name, then the embedded form, a thank-you, or the end of the road. It names no product (signature-provider S3).
  */
-export function SigningView({ result }: SigningViewProps) {
+export function SigningView({ result, logoUrl = null }: SigningViewProps) {
   if (result.state === "unavailable") {
     return (
       <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col justify-center gap-2 px-4 py-10">
@@ -42,6 +45,7 @@ export function SigningView({ result }: SigningViewProps) {
     <div className="min-h-dvh bg-ground">
       <header className="border-b border-hairline bg-surface">
         <div className="mx-auto flex max-w-[760px] flex-col gap-0.5 px-4 py-4">
+          {logoUrl && <TenantLogoImage src={logoUrl} name={tenantName} />}
           <p className="text-[18px] font-bold break-words">{tenantName}</p>
           {tenant?.address && <p className="text-[13px] text-ink-2">{tenant.address}</p>}
           {tenant?.phone && <p className="text-[13px] text-ink-2">{tenant.phone}</p>}

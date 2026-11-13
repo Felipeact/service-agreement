@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
 import { supabaseAgreementReader, supabaseAgreementStore, supabaseServiceLineStore } from "./agreements";
 import { stubClient, type Reply } from "./stub-client";
 
@@ -15,7 +16,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const agreementRow = (versions: { id: string; version_no: number; created_at?: string }[], status = "draft") => ({
+const agreementRow = (versions: ({ id: string; version_no: number; created_at?: string } & Record<string, unknown>)[], status = "draft") => ({
   id: AGR,
   number: "AG-1052",
   status,
@@ -160,6 +161,39 @@ describe("agreement store", () => {
       expect(calls).toContainEqual({ table: "agreements", method: "eq", args: ["site_id", SITE] });
       expect(calls).toContainEqual({ table: "agreements", method: "in", args: ["status", ["draft", "sent", "changes_requested"]] });
     }
+  });
+
+  test("C5110: a plan-limit refusal carries the plan, the limit and the count; a site_inactive refusal is still unavailable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const limited = storeWith({ data: null, error: { code: "55000", message: "the starter plan allows 15 live agreements", hint: "plan_limit_agreements", details: "starter|15|15" } });
+    expect(await limited.store.create(SITE)).toEqual({ ok: false, code: "plan_limit", plan: "starter", limit: 15, used: 15 });
+    const over = storeWith({ data: null, error: { code: "55000", message: "x", hint: "plan_limit_agreements", details: "starter|15|17" } });
+    expect(await over.store.create(SITE)).toEqual({ ok: false, code: "plan_limit", plan: "starter", limit: 15, used: 17 });
+    const inactive = storeWith({ data: null, error: { code: "55000", message: "site is inactive", hint: "site_inactive", details: null } });
+    expect(await inactive.store.create(SITE)).toEqual({ ok: false, code: "unavailable" });
+  });
+
+  test("C5356: create sends p_template_version_id when a version is given, and only then", async () => {
+    const VERSION = "77777777-7777-4777-8777-777777777777";
+    const withVersion = storeWith(ok(AGR));
+    expect(await withVersion.store.create(SITE, VERSION)).toEqual({ ok: true, id: AGR });
+    expect(withVersion.client.rpc).toHaveBeenCalledWith("create_agreement", { p_site_id: SITE, p_template_version_id: VERSION });
+    const without = storeWith(ok(AGR));
+    await without.store.create(SITE);
+    expect(without.client.rpc).toHaveBeenCalledWith("create_agreement", { p_site_id: SITE });
+    expect(Object.keys(without.client.rpc.mock.calls[0][1] as object)).toEqual(["p_site_id"]);
+  });
+
+  test("C5356: 22023 is invalid_template, creating nothing and logging nothing", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { store } = storeWith(fail("22023"));
+    expect(await store.create(SITE, "77777777-7777-4777-8777-777777777777")).toEqual({ ok: false, code: "invalid_template" });
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("C5356: the plan-limit refusal is mapped as before when a version is given", async () => {
+    const limited = storeWith({ data: null, error: { code: "55000", message: "x", hint: "plan_limit_agreements", details: "starter|15|15" } });
+    expect(await limited.store.create(SITE, "77777777-7777-4777-8777-777777777777")).toEqual({ ok: false, code: "plan_limit", plan: "starter", limit: 15, used: 15 });
   });
 
   test.each<[string, () => ReturnType<typeof storeWith>]>([
@@ -801,5 +835,64 @@ describe("agreement reader: contract and signer", () => {
     const detail = await supabaseAgreementReader(typed).get(AGR);
     expect(client.rpc).not.toHaveBeenCalledWith("contract_signer", expect.anything());
     expect(detail?.signer).toBeNull();
+  });
+});
+
+describe("the agreement reader's template", () => {
+  const TEMPLATE_VERSION = "66666666-6666-4666-8666-666666666666";
+  const BODY = {
+    schema: 1,
+    name: "Quarterly HVAC",
+    description: "",
+    intro: [{ type: "paragraph", text: "Welcome {{customer.name}}." }],
+    footer: [],
+    sections: { schedule: false, scope: true },
+    preset: { termMonths: null, lines: [] },
+  };
+  const read = (version: Record<string, unknown>, status = "sent") => {
+    const { typed } = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1, ...version }], status)), service_lines: ok([]) });
+    return supabaseAgreementReader(typed).get(AGR);
+  };
+
+  test("C5328: the reader asks for the pin and the body of the version it points at", async () => {
+    const { typed, calls } = stubClient({ agreements: ok(agreementRow([{ id: "v1", version_no: 1 }])), service_lines: ok([]) });
+    await supabaseAgreementReader(typed).get(AGR);
+    expect(JSON.stringify(calls)).toContain("template_version_id, document_template_versions(body)");
+  });
+
+  test("C5328: a version pinned to a template version returns that version's body", async () => {
+    const detail = await read({ template_version_id: TEMPLATE_VERSION, document_template_versions: { body: BODY } });
+    expect(detail?.template).toEqual(BODY);
+  });
+
+  test("C5328: a sent version whose pin is null returns the system body", async () => {
+    expect((await read({ template_version_id: null, document_template_versions: null }))?.template).toEqual(SYSTEM_AGREEMENT_BODY);
+  });
+
+  test("C5328: a draft with no pin is drawn with the system body too", async () => {
+    expect((await read({ template_version_id: null }, "draft"))?.template).toEqual(SYSTEM_AGREEMENT_BODY);
+  });
+
+  test("C5328: a pin whose version cannot be read throws and answers no other wording", async () => {
+    await expect(read({ template_version_id: TEMPLATE_VERSION, document_template_versions: null })).rejects.toThrow(TEMPLATE_VERSION);
+    await expect(read({ template_version_id: TEMPLATE_VERSION, document_template_versions: { body: { schema: 2 } } })).rejects.toThrow(/schema 2/);
+    await expect(read({ template_version_id: TEMPLATE_VERSION, document_template_versions: { body: "x" } })).rejects.toThrow(TEMPLATE_VERSION);
+  });
+
+  test("C5328: a row that never asked for the pin (an older fixture) has no template", async () => {
+    expect((await read({}))?.template).toBeUndefined();
+  });
+
+  test("C5328: the template is the shown version's, not the latest's", async () => {
+    const rows = agreementRow(
+      [
+        { id: "v1", version_no: 1, template_version_id: TEMPLATE_VERSION, document_template_versions: { body: BODY } },
+        { id: "v2", version_no: 2, template_version_id: null },
+      ],
+      "draft",
+    );
+    const reader = supabaseAgreementReader(stubClient({ agreements: ok(rows), service_lines: ok([]) }).typed);
+    expect((await reader.get(AGR, 1))?.template).toEqual(BODY);
+    expect((await reader.get(AGR, 2))?.template).toEqual(SYSTEM_AGREEMENT_BODY);
   });
 });

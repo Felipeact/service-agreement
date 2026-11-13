@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
+import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { validateNewAgreement, type NewAgreementInput } from "@/domain/agreement/new-agreement";
 import type { StartAgreementState } from "@/components/agreements/new-agreement-state";
 import { canWriteRecords } from "@/components/records/state";
@@ -19,7 +20,7 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
 
   const checked = validateNewAgreement(input);
   if (!checked.ok) return { status: "invalid", errors: checked.errors };
-  const { customer, site } = checked.value;
+  const { customer, site, templateVersionId } = checked.value;
 
   let customerId: string;
   if (customer.kind === "new") {
@@ -43,8 +44,14 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
     siteId = site.id;
   }
 
-  const agreement = await container.agreementStore.create(siteId);
+  // Standard agreement pins nothing, so the store is called as it always was.
+  const agreement = templateVersionId ? await container.agreementStore.create(siteId, templateVersionId) : await container.agreementStore.create(siteId);
   if (agreement.ok) return { status: "started", agreementId: agreement.id, siteId };
+  if (agreement.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", agreement, audienceOf(member.role)) };
   if (agreement.code === "open_exists") return { status: "open_exists", agreementId: agreement.agreementId, number: agreement.number };
+  if (agreement.code === "invalid_template") {
+    // What this call created is carried back so choosing another template does not create it twice.
+    return { status: "invalid_template", ...(customer.kind === "new" && { customerId }), ...(site.kind === "new" && { siteId }) };
+  }
   return { status: agreement.code, customerId, siteId };
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
+import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
@@ -16,10 +17,15 @@ const NOT_FOUND = { status: "not_found" } as const;
 
 /** The container, or `null` when the member may not write agreements. Signed out goes to /login. */
 async function writer() {
+  return (await writerWithRole())?.container ?? null;
+}
+
+/** The same, with the member's role, for an answer that depends on who is asking. */
+async function writerWithRole() {
   const container = await getContainer();
   const member = await container.currentMember();
   if (member.status !== "member") redirect("/login");
-  return canWriteRecords(member.role) ? container : null;
+  return canWriteRecords(member.role) ? { container, role: member.role } : null;
 }
 
 /**
@@ -32,13 +38,18 @@ function lineFields(formData: FormData): ServiceLineInput {
   return { description: text("description"), visitMonths: all("visitMonths"), costPerVisit: text("costPerVisit"), assetTypeIds: all("assetTypeIds") };
 }
 
-/** Creates a draft with version 1 on the site, then opens it; a site with a live agreement names that one. */
-export async function createAgreementAction(siteId: string): Promise<CreateAgreementState> {
-  const container = await writer();
-  if (!container) return FORBIDDEN;
+/**
+ * Creates a draft with version 1 on the site, then opens it; a site with a live agreement names that one. With a template
+ * version (Use template, agreement-templates AC 24) the draft is pinned to it and starts with its preset lines.
+ */
+export async function createAgreementAction(siteId: string, templateVersionId?: string): Promise<CreateAgreementState> {
+  const ctx = await writerWithRole();
+  if (!ctx) return FORBIDDEN;
   if (!isUuid(siteId)) return NOT_FOUND;
-  const created = await container.agreementStore.create(siteId);
+  if (templateVersionId !== undefined && !isUuid(templateVersionId)) return { status: "invalid_template" };
+  const created = await ctx.container.agreementStore.create(siteId, ...(templateVersionId === undefined ? [] : [templateVersionId]));
   if (created.ok) redirect(`/agreements/${created.id}`);
+  if (created.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", created, audienceOf(ctx.role)) };
   if (created.code === "open_exists") return { status: "open_exists", agreementId: created.agreementId, number: created.number };
   return { status: created.code };
 }
@@ -167,8 +178,22 @@ async function issueLink(
 }
 
 /** Sends a draft to the customer: `sent`, frozen, and a link shown once. */
-export async function sendAgreementAction(agreementId: string): Promise<LinkState> {
-  return issueLink(agreementId, "sent", (container) => container.sendAgreement(agreementId));
+export async function sendAgreementAction(agreementId: string, email?: string): Promise<LinkState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  // The customer's contact email is where the agreement goes; without one on file the sender gives it first.
+  try {
+    if (!(await container.agreementRecipient.get(agreementId))) {
+      const typed = (email ?? "").trim().toLowerCase();
+      if (!typed) return { status: "needs_email" };
+      if (!(await container.agreementRecipient.set(agreementId, typed))) return { status: "invalid_email" };
+    }
+  } catch (cause) {
+    console.error(`Agreement send failed: the contact email step threw ${cause instanceof Error ? cause.message : String(cause)}`);
+    return { status: "unavailable" };
+  }
+  return issueLink(agreementId, "sent", (ready) => ready.sendAgreement(agreementId));
 }
 
 /** Replaces the live link of a sent agreement; the old address stops working. */

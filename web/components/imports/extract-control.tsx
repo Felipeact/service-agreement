@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useItemWords } from "@/components/shell/item-words";
+import { PlanLimitAlert } from "@/components/billing/plan-limit-alert";
 import { Button } from "@/components/ui/button";
 import { itemText } from "@/domain/org-settings";
 import { EXTRACT_MESSAGES, runExtraction, type ExtractState } from "./state";
@@ -33,6 +34,7 @@ export function ExtractPrompt({ pending, progress, state, resume = false, action
           {label}
         </Button>
       </div>
+      {state.status === "plan_limit" && <PlanLimitAlert message={state.message} billingHref={state.billingHref} />}
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {message}

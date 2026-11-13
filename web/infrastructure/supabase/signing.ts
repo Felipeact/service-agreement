@@ -127,7 +127,7 @@ export function supabaseSigningReader(client: Client): SigningReader {
       if (!contractStatus || !requestStatus || agreementNumber === null || signerName === null || !("embedSealed" in row)) return null;
       const tenant = row.tenant as Record<string, unknown> | null;
       const view: SigningView = {
-        tenant: tenant && text(tenant.name) !== null ? { name: text(tenant.name)!, address: text(tenant.address), phone: text(tenant.phone), accent: text(tenant.accent) } : null,
+        tenant: tenant && text(tenant.name) !== null ? { name: text(tenant.name)!, address: text(tenant.address), phone: text(tenant.phone), accent: text(tenant.accent), logoPath: text(tenant.logoPath) } : null,
         agreementNumber,
         signerName,
         contractStatus,

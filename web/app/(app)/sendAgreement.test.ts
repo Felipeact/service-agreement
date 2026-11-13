@@ -23,10 +23,13 @@ const findById = vi.fn<AgreementRepository["findById"]>();
 const send = vi.fn<AgreementSender["send"]>();
 const commitTransition = vi.fn();
 const requestHeaders = new Headers({ host: "localhost:3000" });
+const recipientGet = vi.fn<(id: string) => Promise<string | null>>();
+const recipientSet = vi.fn<(id: string, email: string) => Promise<boolean>>();
 
 vi.mock("@/composition", () => ({
   getContainer: async () => ({
     currentMember,
+    agreementRecipient: { get: recipientGet, set: recipientSet },
     sendAgreement: makeSendAgreement({ findById, commitTransition } as unknown as AgreementRepository, { send }, portalTokens),
   }),
 }));
@@ -50,6 +53,8 @@ beforeEach(() => {
   currentMember.mockResolvedValue(member("estimator"));
   findById.mockResolvedValue(record("draft"));
   send.mockResolvedValue({ ok: true });
+  recipientGet.mockResolvedValue("customer@shop.ca");
+  recipientSet.mockResolvedValue(true);
 });
 
 describe("sendAgreementAction", () => {
@@ -80,6 +85,35 @@ describe("sendAgreementAction", () => {
       requestHeaders.delete("x-forwarded-host");
       requestHeaders.delete("x-forwarded-proto");
     }
+  });
+
+  test("a customer contact with no email asks for one before anything is sent", async () => {
+    recipientGet.mockResolvedValue(null);
+    expect(await sendAgreementAction(AGR)).toEqual({ status: "needs_email" });
+    expect(await sendAgreementAction(AGR, "   ")).toEqual({ status: "needs_email" });
+    expect(recipientSet).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  test("an email the sender types is saved on the contact, lower-cased, and then the agreement is sent", async () => {
+    recipientGet.mockResolvedValue(null);
+    const state = await sendAgreementAction(AGR, "  Buyer@Shop.CA ");
+    expect(recipientSet).toHaveBeenCalledWith(AGR, "buyer@shop.ca");
+    expect(state.status).toBe("sent");
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  test("an address the database refuses is invalid_email and nothing is sent", async () => {
+    recipientGet.mockResolvedValue(null);
+    recipientSet.mockResolvedValue(false);
+    expect(await sendAgreementAction(AGR, "not-an-email")).toEqual({ status: "invalid_email" });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  test("an email already on file is used as it is: the typed one is never written", async () => {
+    await sendAgreementAction(AGR, "someone@else.ca");
+    expect(recipientSet).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   test("C902: no service lines answers no_lines and no link is shown", async () => {

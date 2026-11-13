@@ -1,5 +1,6 @@
 import { getContainer } from "@/composition";
 import { portalDocument, portalViewState } from "@/application/use-cases";
+import { withLogo } from "@/domain/org-settings/logo";
 
 /** Seconds. Rendering 2,000 assets measured about 22 s (C870); this is more than twice that. */
 export const maxDuration = 60;
@@ -10,7 +11,7 @@ const empty = (status: number) => new Response(null, { status, headers: { "Cache
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   try {
-    const { viewPortal, documentRenderer } = await getContainer();
+    const { viewPortal, documentRenderer, logo } = await getContainer();
     const view = await viewPortal(token);
     if (!view) return empty(404);
     const state = portalViewState(view);
@@ -18,7 +19,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
 
     const document = portalDocument(view);
     if (!document) throw new Error("the tenant has no settings row");
-    const bytes = await documentRenderer.renderAgreement(document);
+    const bytes = await documentRenderer.renderAgreement(withLogo(document, "tenant", await logo.load(view.tenant?.logoPath ?? null)));
     return new Response(bytes as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",

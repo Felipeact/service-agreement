@@ -8,7 +8,7 @@ import { pdfPages } from "@/infrastructure/documents/pdf-text.testing";
 // The composition root is where the route and the real PDF adapter meet, so this is the one place a test may hold both.
 let current: PortalView | null = portalView();
 const reader: PortalReader = { view: async () => current };
-const container = { viewPortal: makeViewPortal(reader, testTokens), documentRenderer: reactPdfDocumentRenderer };
+const container = { viewPortal: makeViewPortal(reader, testTokens), documentRenderer: reactPdfDocumentRenderer, logo: { load: async () => null } };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 

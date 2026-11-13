@@ -5,9 +5,10 @@ import type { CurrentMember } from "@/application/ports";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const loadBilling = vi.fn();
+const loadBillingUsage = vi.fn<(member: { orgId: string; role: string }) => Promise<unknown>>(async () => null);
 const redirect = vi.fn();
 
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, loadBilling, stripePublishableKey: "pk_test_x" }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, loadBilling, loadBillingUsage, stripePublishableKey: "pk_test_x" }) }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     redirect(to);
@@ -53,6 +54,13 @@ describe("the billing page", () => {
     expect(element.type).toBe(BillingView);
     expect(element.props.state).toEqual({ kind: "ready", plan: "Team", overview: { status: "active" } });
     expect(element.props.publishableKey).toBe("pk_test_x");
+  });
+
+  test("C5145: the usage read for the member's org and role reaches the view as its own prop, beside the unchanged state", async () => {
+    loadBillingUsage.mockResolvedValue({ plan: "team", liveAgreements: { used: 7, limit: 60 }, aiImports: { used: 3, limit: 40 }, resetsOn: "2026-12-01" });
+    const element = (await BillingPage()) as { props: Record<string, unknown> };
+    expect(loadBillingUsage).toHaveBeenCalledWith({ orgId: "org-1", role: "owner" });
+    expect(element.props.usage).toEqual({ plan: "team", liveAgreements: { used: 7, limit: 60 }, aiImports: { used: 3, limit: 40 }, resetsOn: "2026-12-01" });
   });
 
   test.each([

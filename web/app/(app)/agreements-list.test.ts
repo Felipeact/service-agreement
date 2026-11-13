@@ -6,8 +6,9 @@ import type { CurrentMember, MemberRole } from "@/application/ports";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listAgreements = vi.fn();
 const listActiveSites = vi.fn();
+const listAgreementTemplates = vi.fn();
 // 2027-12-02 03:00 UTC is still Dec 1 in Vancouver.
-const container = { currentMember, listAgreements, listActiveSites, clock: { now: () => new Date("2027-12-02T03:00:00Z") } };
+const container = { currentMember, listAgreements, listActiveSites, listAgreementTemplates, clock: { now: () => new Date("2027-12-02T03:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);
@@ -18,7 +19,7 @@ vi.mock("next/navigation", () => ({ redirect, notFound: vi.fn(), useRouter: () =
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { AgreementsForRequest } = await import("./agreements/page");
-const { default: NewAgreementPage } = await import("./agreements/new/page");
+const { NewAgreementLauncher } = await import("./new-agreement-launcher");
 
 const SITE = "00000000-0000-4000-8000-0000000000aa";
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role });
@@ -50,25 +51,21 @@ describe("/agreements", () => {
   test("C1357: signed out goes to /login and nothing is read", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(render({})).rejects.toThrow("NEXT_REDIRECT /login");
-    await expect(NewAgreementPage()).rejects.toThrow("NEXT_REDIRECT /login");
     expect(listAgreements).not.toHaveBeenCalled();
     expect(listActiveSites).not.toHaveBeenCalled();
   });
 });
 
-describe("/agreements/new", () => {
-  test("C1363: a viewer gets a forbidden panel, no form and no site read", async () => {
-    currentMember.mockResolvedValue(member("viewer"));
-    const out = renderToStaticMarkup((await NewAgreementPage()) as ReactElement);
-    expect(out).toContain("don&#x27;t have permission to create agreements");
-    expect(out).not.toContain("<form");
-    expect(listActiveSites).not.toHaveBeenCalled();
-  });
-
-  test("C1363: a writer gets the site picker", async () => {
-    listActiveSites.mockResolvedValue([{ id: SITE, name: "Tower A", customer: "Harbourview", liveAgreement: null }]);
-    const out = renderToStaticMarkup((await NewAgreementPage()) as ReactElement);
-    expect(out).toContain("<form");
-    expect(out).toContain("Tower A");
+describe("/agreements, the New agreement launcher", () => {
+  test.each([
+    ["owner", true],
+    ["admin", true],
+    ["estimator", true],
+    ["viewer", false],
+  ] as const)("C5415: for role %s the list gets the New agreement launcher slot: %s", async (role, shown) => {
+    currentMember.mockResolvedValue(member(role));
+    const view = (await AgreementsForRequest({ params: {} })) as ReactElement<{ newAgreement?: ReactElement }>;
+    expect(view.props.newAgreement !== undefined).toBe(shown);
+    if (shown) expect(view.props.newAgreement!.type).toBe(NewAgreementLauncher);
   });
 });

@@ -26,6 +26,8 @@ type AppShellProps = {
   todayLabel?: string;
   /** The org's item words, for the Sites link; the default when absent. */
   words?: ItemWords;
+  /** The company's plan has ended: a banner says the workspace is read-only. `canRenew` is true for an owner or admin, who gets the link to Billing. */
+  frozen?: { canRenew: boolean };
 };
 
 /** The bell: a link to the Pipeline filtered to the agreements that need follow-up, with their count when there are any. */
@@ -63,7 +65,7 @@ function Brand({ orgName, markClass }: { orgName: string; markClass: string }) {
 }
 
 /** Fixed Night sidebar on desktop (the app's one search lives in it); a Night top bar with a navigation drawer below 1024px. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words }: AppShellProps) {
+export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -188,6 +190,19 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
             </div>
           </div>
         </header>
+        {frozen && (
+          <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-hairline bg-board px-4 py-3 text-[13px] text-ink md:px-6 lg:px-8">
+            <p className="font-medium">
+              Your plan has ended, so this workspace is read-only. Everything is still here.
+              {!frozen.canRenew && " Ask your owner to renew."}
+            </p>
+            {frozen.canRenew && (
+              <Link href="/settings/billing" className="inline-flex min-h-11 items-center font-semibold text-action hover:underline lg:min-h-0">
+                Renew subscription
+              </Link>
+            )}
+          </div>
+        )}
         <main className="px-4 py-6 md:px-6 lg:px-8 lg:py-7">{words ? <ItemWordsProvider words={words}>{children}</ItemWordsProvider> : children}</main>
       </div>
     </div>

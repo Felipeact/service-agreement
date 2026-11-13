@@ -5,6 +5,7 @@ import type { AgreementDetail, CurrentMember, MemberRole, SiteView } from "@/app
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const container = {
+  agreementRecipient: { get: vi.fn(async () => "customer@shop.ca"), set: vi.fn(async () => true) },
   currentMember,
   siteRegister: vi.fn(),
   agreementReader: { get: vi.fn() },

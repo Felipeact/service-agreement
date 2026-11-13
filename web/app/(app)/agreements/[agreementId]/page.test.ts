@@ -9,7 +9,8 @@ const CON = "66666666-6666-4666-8666-666666666666";
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const create = vi.fn();
 const get = vi.fn();
-const container = { currentMember, agreementReader: { get }, contractStore: { create }, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }) };
+const listAssetTypes = vi.fn();
+const container = { currentMember, agreementReader: { get }, contractStore: { create }, listAssetTypes, getItemWords: async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }) };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 vi.mock("next/navigation", () => ({
@@ -30,6 +31,7 @@ beforeEach(() => {
   currentMember.mockReset();
   create.mockReset();
   get.mockReset().mockResolvedValue({ id: AGR } as AgreementDetail);
+  listAssetTypes.mockReset().mockResolvedValue([]);
 });
 
 const render = async () => (await AgreementForRequest({ agreementId: AGR, searchParams: Promise.resolve({}) } as never)) as ReactElement<{ actions?: AgreementActions }>;
@@ -53,5 +55,34 @@ describe("the agreement page binds generateContractAction", () => {
     currentMember.mockResolvedValue(member("owner"));
     create.mockResolvedValue({ ok: true, id: CON });
     await expect((await render()).props.actions?.generate?.()).rejects.toThrow(`NEXT_REDIRECT /contracts/${CON}`);
+  });
+});
+
+describe("the agreement page and the codes a template preset skipped", () => {
+  const body = (codes: string[][]) => ({
+    schema: 1,
+    name: "Quarterly",
+    description: "",
+    intro: [],
+    footer: [],
+    sections: { schedule: true, scope: true },
+    preset: { termMonths: null, lines: codes.map((assetTypeCodes) => ({ description: "Visit", visitMonths: [3], assetTypeCodes, costPerVisitCents: null })) },
+  });
+  const renderSkipped = async () => ((await AgreementForRequest({ agreementId: AGR, searchParams: Promise.resolve({}) } as never)) as ReactElement<{ skippedCodes?: string[] }>).props.skippedCodes;
+
+  test("C5358: the preset codes with no type in the org reach the view", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    get.mockResolvedValue({ id: AGR, template: body([["RTU", "NOPE"], ["RTU"]]) } as unknown as AgreementDetail);
+    listAssetTypes.mockResolvedValue([{ id: "t1", code: "RTU", name: "Rooftop unit" }]);
+    expect(await renderSkipped()).toEqual(["NOPE"]);
+  });
+
+  test("C5358: a template with no preset lines, or no template, reads no types and skips nothing", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    get.mockResolvedValue({ id: AGR, template: body([]) } as unknown as AgreementDetail);
+    expect(await renderSkipped()).toEqual([]);
+    get.mockResolvedValue({ id: AGR } as AgreementDetail);
+    expect(await renderSkipped()).toEqual([]);
+    expect(listAssetTypes).not.toHaveBeenCalled();
   });
 });

@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import type { LogoUploadAnswer } from "@/app/logo-upload";
+import { LogoField } from "@/components/settings/logo-field";
 import type { OrgSettings } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { PROVINCES, PROVINCE_NAMES, type ItemWords } from "@/domain/org-settings";
 import type { SetupCatalogGroup } from "@/domain/org-settings/setup";
+import { DraftPanel, type DraftPanelProps } from "./draft-panel";
+import { StarterTemplates } from "./starter-templates";
 import { toSetupInput, type SetupFormState } from "./state";
 
 type SetupViewProps = {
@@ -17,6 +21,14 @@ type SetupViewProps = {
   action: (state: SetupFormState, formData: FormData) => Promise<SetupFormState>;
   /** Where the form starts; only a test passes it. */
   initialState?: SetupFormState;
+  /** The org's stored logo key, empty for none. */
+  logoPath?: string;
+  /** `prepareLogoUpload`: the server half of a logo upload (tenant-logo). */
+  prepareLogo?: (file: { type: string; size: number }) => Promise<LogoUploadAnswer>;
+  /** Where the form starts with an upload under way; only a test passes it. */
+  initialUploading?: boolean;
+  /** The "Other" trade's catalog draft (other-trade-draft); the page passes it only for an org with no types. */
+  draft?: Pick<DraftPanelProps, "draftAction" | "acceptAction"> & Partial<DraftPanelProps>;
 };
 
 const IDLE: SetupFormState = { status: "idle" };
@@ -70,9 +82,10 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
 }
 
 /** The first-login setup page body: confirm the company profile, see the catalog, continue or skip. */
-export function SetupView({ settings, groups, words, action, initialState = IDLE }: SetupViewProps) {
+export function SetupView({ settings, groups, words, action, initialState = IDLE, logoPath = "", prepareLogo, initialUploading = false, draft }: SetupViewProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
-  const values = state.status === "idle" ? toSetupInput(settings) : state.values;
+  const [uploading, setUploading] = useState(initialUploading);
+  const values = state.status === "idle" ? { ...toSetupInput(settings), logoPath } : state.values;
   const errors = state.status === "invalid" ? state.errors : {};
 
   return (
@@ -88,11 +101,14 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
         </p>
       </header>
 
+      {draft && groups.length === 0 && <DraftPanel {...draft} />}
+
       <form action={formAction} noValidate className="flex flex-col gap-6">
         <section aria-labelledby="profile-title" className={CARD}>
           <h2 id="profile-title" className="font-display text-[18px] font-semibold tracking-tight">
             Company
           </h2>
+          <LogoField key={values.logoPath ?? ""} storedPath={values.logoPath ?? ""} readOnly={false} prepare={prepareLogo} onUploadingChange={setUploading} serverError={errors.logoPath} />
           <div className="grid gap-4 sm:grid-cols-2">
             <TextInput id="legalName" name="legalName" label="Legal name" defaultValue={values.legalName} error={errors.legalName} />
             <TextInput id="phone" name="phone" label="Phone" inputMode="tel" defaultValue={values.phone} error={errors.phone} />
@@ -116,13 +132,15 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
           </div>
         </section>
 
+        <StarterTemplates settings={settings} />
+
         <CatalogReview groups={groups} words={words} />
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" name="intent" value="save" variant="primary" disabled={pending}>
-            {pending ? "Saving…" : "Continue"}
+          <Button type="submit" name="intent" value="save" variant="primary" disabled={pending || uploading}>
+            {pending ? "Saving…" : uploading ? "Uploading logo" : "Continue"}
           </Button>
-          <Button type="submit" name="intent" value="skip" variant="secondary" disabled={pending}>
+          <Button type="submit" name="intent" value="skip" variant="secondary" disabled={pending || uploading}>
             Skip for now
           </Button>
           {(state.status === "forbidden" || state.status === "unavailable") && (

@@ -105,6 +105,30 @@ describe("what sending does before it begins", () => {
   });
 });
 
+describe("the document the contract is sent as, template", () => {
+  const body = { schema: 1 as const, blocks: [{ type: "paragraph" as const, text: "Org wording." }] };
+  const load = () => makeContractDocuments({ get }, { get: agreementGet } as never, settings).load("c1", "org-1");
+
+  test("C5225: the contract's own template version is what the document is built from", async () => {
+    get.mockResolvedValue({ ...contract, template: body });
+    await load();
+    expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, "#1f6f8b", undefined, body);
+  });
+
+  test("C5225: with the org's words the template follows them", async () => {
+    settings.mockResolvedValue({ accentColor: null, itemSingular: "station", itemPlural: "stations" } as never);
+    get.mockResolvedValue({ ...contract, template: body });
+    await load();
+    expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, null, { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" }, body);
+  });
+
+  test("C5225: a read of the contract that throws propagates and nothing is built", async () => {
+    get.mockRejectedValue(new Error("Contract c1 has no readable template version"));
+    await expect(load()).rejects.toThrow("no readable template version");
+    expect(buildContractDocument).not.toHaveBeenCalled();
+  });
+});
+
 describe("the document the contract is sent as, item words", () => {
   test("C2023: the org's stored words reach the document that goes to the signature provider", async () => {
     settings.mockResolvedValue({ accentColor: null, itemSingular: "station", itemPlural: "stations" } as never);
@@ -112,3 +136,21 @@ describe("the document the contract is sent as, item words", () => {
     expect(buildContractDocument).toHaveBeenCalledWith(agreement, PARTIES, null, { singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" });
   });
 });
+
+describe("the document the contract is sent as, logo", () => {
+  const logo = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), format: "png" as const };
+
+  test("C3333: the org's current logo is loaded for the member's org and put on the contractor's letterhead", async () => {
+    const loadLogo = vi.fn(async () => logo);
+    const loaded = await makeContractDocuments({ get }, { get: agreementGet } as never, settings, loadLogo).load("c1", "org-1");
+    expect(loadLogo).toHaveBeenCalledWith("org-1");
+    expect((loaded?.document as unknown as { contractor: { logo: unknown } }).contractor.logo).toEqual(logo);
+  });
+
+  test("C3333: when the loader has no logo the document is the one built, untouched, and loads as before", async () => {
+    const loaded = await makeContractDocuments({ get }, { get: agreementGet } as never, settings, async () => null).load("c1", "org-1");
+    expect(loaded).toEqual({ number: "AG-1052", document: built });
+    expect(loaded?.document).toBe(built);
+  });
+});
+

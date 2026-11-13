@@ -34,7 +34,7 @@ describe("the register page", () => {
     expect(metadata.title).toBe("Register");
     const text = textOf(renderToStaticMarkup(createElement(RegisterPage, { searchParams: Promise.resolve({}) } as never)));
     expect(text).toContain("What does your business do?");
-    expect(text).toContain("Start your free trial.");
+    expect(text).toContain("Create your workspace.");
   });
 });
 
@@ -162,9 +162,9 @@ describe("the contact fields (register-seats)", () => {
   });
 
   test.each([
-    { plan: "team", seats: "8", total: "$99 + 3 extra seats x $15 = $144" },
-    { plan: "starter", seats: "3", total: "$49 + 1 extra seat x $15 = $64" },
-    { plan: "business", seats: "50", total: "$199 + 40 extra seats x $15 = $799" },
+    { plan: "team", seats: "8", total: "$149 + 3 extra seats x $19 = $206" },
+    { plan: "starter", seats: "3", total: "$79 + 1 extra seat x $19 = $98" },
+    { plan: "business", seats: "50", total: "$299 + 40 extra seats x $19 = $1,059" },
   ])("C2611: $plan with $seats seats shows $total", ({ plan, seats, total }) => {
     const html = renderFields({ status: "invalid_details", trades: ["hvac"], values: { ...TYPED, plan, seats }, fields: { phone: true } });
     expect(textOf(html)).toContain(total);
@@ -193,5 +193,29 @@ describe("the contact fields (register-seats)", () => {
     expect(code).not.toMatch(/\bw-\[\d+px\]|\bwidth:\s*\d+px/);
     const input = readFileSync(path.join(__dirname, "..", "..", "components", "ui", "text-input.tsx"), "utf8");
     expect(input).toMatch(/\bh-11\b/);
+  });
+
+  test("C4308: email_in_use says the email has a workspace, links Sign in, marks the email field and keeps every value", () => {
+    const html = renderFields({ status: "email_in_use", trades: ["hvac", "other"], values: { ...TYPED, plan: "starter", seats: "4" }, fields: { email: true } });
+    expect(textOf(html)).toContain("This email already has a workspace.");
+    expect(html).toMatch(/<a [^>]*href="\/login"[^>]*>Sign in<\/a>/);
+    expect(attrsOf(html, "email")).toContain('aria-invalid="true"');
+    const describedBy = attrsOf(html, "email").match(/aria-describedby="([^"]+)"/)?.[1];
+    expect(describedBy).toBeTruthy();
+    expect(html).toContain(`id="${describedBy}"`);
+    expect(attrsOf(html, "email")).toContain('value="owner@shop.ca"');
+    expect(attrsOf(html, "company")).toContain('value="Shop Ltd"');
+    expect(attrsOf(html, "phone")).toContain('value="604-555-0199"');
+    expect(attrsOf(html, "seats")).toContain('value="4"');
+    expect(inputs(html, "radio").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["starter"]);
+    expect(inputs(html, "checkbox").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["hvac", "other"]);
+    expect(attrsOf(html, "company")).not.toContain("aria-invalid");
+  });
+
+  test("C4309: the rendered email_in_use message names no role, org, invitation or count", () => {
+    const html = renderFields({ status: "email_in_use", trades: ["hvac"], values: { ...TYPED, plan: "team", seats: "8" }, fields: { email: true } });
+    const message = textOf(html.match(/<p id="register-email-message"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? "");
+    expect(message).toBe("This email already has a workspace. Sign in");
+    expect(message).not.toMatch(/owner|admin|member|invit|org|\d/i);
   });
 });

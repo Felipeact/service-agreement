@@ -48,7 +48,7 @@ export function SiteShell({ tone = "light", children }: { tone?: Tone; children:
             Sign in
           </Link>
           <LinkButton href="/register" variant="primary" className={`max-sm:hidden ${onLight ? "" : "bg-surface text-ink hover:bg-surface/90"}`}>
-            Start free trial
+            Get started
           </LinkButton>
 
           <details className="group relative lg:hidden">
@@ -68,7 +68,7 @@ export function SiteShell({ tone = "light", children }: { tone?: Tone; children:
                 </Link>
               ))}
               <LinkButton href="/register" variant="primary" className="mt-1">
-                Start free trial
+                Get started
               </LinkButton>
             </nav>
           </details>
@@ -96,9 +96,9 @@ export function SiteShell({ tone = "light", children }: { tone?: Tone; children:
           </nav>
           <div className="flex flex-col gap-2">
             <p className="font-display text-[15px] font-semibold text-surface">Ready to try it?</p>
-            <p>14 days free. A card is required to start.</p>
+            <p>Monthly plans from $79. Cancel any time.</p>
             <LinkButton href="/register" variant="primary" className="self-start">
-              Start free trial
+              Get started
             </LinkButton>
           </div>
         </div>

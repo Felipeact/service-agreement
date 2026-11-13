@@ -1,9 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { contractClauses, type ContractDocument } from "@/domain/contract";
-import type { AgreementTerms } from "@/domain/agreement";
+import { buildContractDocument, contractClauses, SYSTEM_CONTRACT_BODY, type ContractDocument, type RenderedBlock } from "@/domain/contract";
+import type { AgreementTerms, DocumentSource } from "@/domain/agreement";
 import { itemWords } from "@/domain/org-settings";
 import { reactPdfContractRenderer } from "./index";
+import { customerNameTag, signerTags, TermsBlocks } from "./contract-pdf";
+import { styles } from "./pdf-sections";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
+import { pngBytes } from "./logo.testing";
 
 const TERMS: AgreementTerms = {
   repairDiscountPct: 10,
@@ -17,6 +20,10 @@ const TERMS: AgreementTerms = {
 };
 
 const asset = (unitNo: string) => ({ unitNo, typeModel: "Model X", location: "Roof" });
+
+/** The Terms heading and one clause block per sentence, or nothing for no sentences: what the system wording renders to. */
+const termsBody = (clauses: string[]): RenderedBlock[] =>
+  clauses.length === 0 ? [] : [{ type: "heading", text: "Terms" }, ...clauses.map((text): RenderedBlock => ({ type: "clause", text }))];
 
 const base: ContractDocument = {
   number: "AG-1052",
@@ -41,7 +48,7 @@ const base: ContractDocument = {
   },
   term: "Term: Jan 1, 2027 – Dec 31, 2027 (12 months)",
   taxNote: "GST extra",
-  clauses: contractClauses(TERMS, 12),
+  body: termsBody(contractClauses(TERMS, 12)),
   mark: null,
 };
 
@@ -147,7 +154,7 @@ describe("the contract PDF, rendered", () => {
 
   test("C1643: a null payment, cancellation, governing province and renewal print none of those four clauses", async () => {
     const terms = { ...TERMS, paymentDays: null, cancellationNoticeDays: null, governingProvince: null, renewalNoticeDays: null };
-    const all = unwrapped(await pages({ clauses: contractClauses(terms, 12) }));
+    const all = unwrapped(await pages({ body: termsBody(contractClauses(terms, 12)) }));
     for (const absent of ["Invoices are payable", "Either party may cancel", "governed by the laws", "renews for successive"]) expect(all, absent).not.toContain(absent);
     expect(all).toContain("Repair work is discounted by 10%.");
     expect(all).toContain("capped at 3%.");
@@ -213,7 +220,7 @@ describe("the DocuSeal tags in the signature blocks", () => {
 
   test("C1714: with 40 clauses the last page holds both headings and all four tags", async () => {
     const clauses = Array.from({ length: 40 }, (_, i) => `Clause ${i + 1}: Invoices are payable within 30 days of receipt by the customer.`);
-    const all = await pages({ clauses });
+    const all = await pages({ body: termsBody(clauses) });
     expect(all.length).toBeGreaterThan(1);
     const last = compact([all[all.length - 1]]);
     expect(last).toContain("FortheCustomer:PatLee");
@@ -229,5 +236,248 @@ describe("the contract PDF, item words", () => {
     expect(set).toContain("Stations");
     expect(set).not.toMatch(/Equipment/i);
     expect(text(await pages({ scope }))).toContain("Equipment");
+  });
+});
+
+describe("the contract PDF, with a logo", () => {
+  const withLogo: ContractDocument = { ...base, contractor: { ...base.contractor, logo: { bytes: pngBytes(320, 96), format: "png" } } };
+
+  test("C3327: with a logo the PDF holds an image object; with none it holds none and says what it said before", async () => {
+    const drawn = await reactPdfContractRenderer.renderContract(withLogo);
+    const plain = await reactPdfContractRenderer.renderContract(base);
+    expect(Buffer.from(drawn).toString("latin1")).toContain("/Subtype /Image");
+    expect(Buffer.from(plain).toString("latin1")).not.toContain("/Subtype /Image");
+    // The logo makes room above the name, so a line may move to the next page: the same words appear, in a different place.
+    const words = (bytes: Uint8Array) => pdfPages(bytes).join(" ").replace(/Page \d+ of \d+/g, "").split(/\s+/).filter(Boolean).sort();
+    expect(words(drawn)).toEqual(words(plain));
+  });
+});
+
+describe("the template's blocks on the contract", () => {
+  const custom: RenderedBlock[] = [
+    { type: "heading", text: "Our agreement" },
+    { type: "paragraph", text: "Paragraph words here." },
+    { type: "clause", text: "Clause words here." },
+  ];
+
+  test("C5221: the blocks come after the scope and before the signatures, in their own order", async () => {
+    const all = winAnsi(text(await pages({ body: custom })));
+    expect(inOrder(indexOfIn(all, "Equipment", "Our agreement", "Paragraph words here.", "Clause words here.", "For the Customer: Pat Lee"))).toBe(true);
+    expect(all).not.toContain("Invoices are payable");
+  });
+
+  test("C5221: a heading is drawn in the second-level heading style with the accent, a paragraph and a clause in body text with 4 points below", () => {
+    const accent = { color: "#1f6f8b" };
+    // The element tree is read as plain objects: an adapter test imports no UI library.
+    type Node = { props: { style: unknown; children: string } };
+    const fragment = TermsBlocks({ body: custom, accent }) as unknown as { props: { children: unknown } };
+    const nodes = ([] as unknown[]).concat(fragment.props.children).flat() as Node[];
+    expect(nodes.map((node) => node.props.children)).toEqual(["Our agreement", "Paragraph words here.", "Clause words here."]);
+    expect(nodes[0].props.style).toEqual([styles.h2, accent]);
+    expect(nodes[1].props.style).toEqual({ marginBottom: 4 });
+    expect(nodes[2].props.style).toEqual({ marginBottom: 4 });
+  });
+
+  test("C5222: an empty body draws no Terms section and still ends with the signatures", async () => {
+    const all = winAnsi(text(await pages({ body: [] })));
+    expect(all).not.toContain("Terms");
+    expect(all).toContain("For the Customer: Pat Lee");
+  });
+});
+
+describe("the contract PDF, layout and options (block-editor)", () => {
+  type Item = NonNullable<ContractDocument["layout"]>[number];
+  const price: Item = { kind: "section", key: "price" };
+  const signatures = (options?: Extract<Item, { key: "signatures" }>["options"]): Item => ({ kind: "section", key: "signatures", ...(options ? { options } : {}) });
+  const heading = (value: string, extra: Partial<Extract<Item, { kind: "block" }>> = {}): Item => ({ kind: "block", type: "heading", text: value, ...extra });
+  const para = (value: string, extra: Partial<Extract<Item, { kind: "block" }>> = {}): Item => ({ kind: "block", type: "paragraph", text: value, ...extra });
+  const DOC = { title: "PREVENTIVE MAINTENANCE SERVICE AGREEMENT", showMeta: false, pageHeader: "first", pageFooter: "number" } as const;
+  const draw = async (layout: Item[], doc: Partial<NonNullable<ContractDocument["doc"]>> = {}, over: Partial<ContractDocument> = {}) =>
+    pages({ doc: { ...DOC, ...doc }, layout, ...over });
+  const flat = (all: string[]) => unwrapped(all).replace(/\s+/g, "");
+
+  test("C5522: the title, then the meta lines when showMeta, then the layout items in order, the schedules after the signatures each on a new page", async () => {
+    const all = await draw([
+      heading("1. Service provided"),
+      para("The Contractor will maintain the equipment."),
+      heading("2. Price & payment"),
+      price,
+      para("By signing, the Customer accepts this agreement."),
+      signatures(),
+      heading("SCHEDULE A - List of Equipment", { pageBreakBefore: true }),
+      { kind: "section", key: "equipment" },
+      heading("SCHEDULE B - Maintenance Task List", { pageBreakBefore: true }),
+      { kind: "section", key: "included" },
+    ]);
+    const joined = text(all);
+    expect(
+      inOrder(
+        indexOfIn(
+          joined,
+          "PREVENTIVE MAINTENANCE SERVICE AGREEMENT",
+          "1. Service provided",
+          "2. Price & payment",
+          "Service and price",
+          "By signing, the Customer accepts this agreement.",
+          "For the Customer: Pat Lee",
+          "SCHEDULE A - List of Equipment",
+          "Equipment\n",
+          "SCHEDULE B - Maintenance Task List",
+          "Service included",
+        ),
+      ),
+    ).toBe(true);
+    const at = (needle: string) => all.findIndex((page) => page.includes(needle));
+    expect(at("For the Customer: Pat Lee")).toBeGreaterThanOrEqual(0);
+    expect(at("For the Customer: Pat Lee")).toBeLessThan(at("SCHEDULE A - List of Equipment"));
+    expect(at("SCHEDULE A - List of Equipment")).toBeLessThan(at("SCHEDULE B - Maintenance Task List"));
+    expect(all[at("SCHEDULE A - List of Equipment")].split("\n")[0]).toBe("SCHEDULE A - List of Equipment");
+    expect(all[at("SCHEDULE B - Maintenance Task List")].split("\n")[0]).toBe("SCHEDULE B - Maintenance Task List");
+  });
+
+  test("C5522: the meta lines print with showMeta and are gone without, and the title stays", async () => {
+    const off = text(await draw([price, signatures()], { showMeta: false }));
+    for (const absent of ["Fernwood Dental", "12 Oak Ave", "pat@example.com", "Term: Jan 1, 2027"]) expect(off, absent).not.toContain(absent);
+    expect(off).toContain("PREVENTIVE MAINTENANCE SERVICE AGREEMENT");
+    const on = text(await draw([price, signatures()], { showMeta: true }));
+    for (const present of ["Fernwood Dental", "12 Oak Ave", "pat@example.com", "Term: Jan 1, 2027"]) expect(on, present).toContain(present);
+  });
+
+  test("C5522: the page header and footer options apply to the contract: the letterhead on every page and the company name, address and phone at the foot", async () => {
+    const all = await draw([price, { kind: "section", key: "included" }, { kind: "section", key: "equipment" }, heading("Last page", { pageBreakBefore: true }), signatures()], { pageHeader: "every", pageFooter: "letterhead" }, long());
+    expect(all.length).toBeGreaterThanOrEqual(3);
+    for (const page of all) {
+      expect(page.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
+      expect(page.split("\n").slice(-3)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100"]);
+    }
+  });
+
+  test("C5522: a price option title and the price table inside the numbered wording", async () => {
+    const joined = text(await draw([heading("2. Price & payment"), { kind: "section", key: "price", options: { title: "Service charge" } }, signatures()]));
+    expect(joined).toContain("Service charge");
+    expect(joined).not.toContain("Service and price");
+    expect(joined.indexOf("2. Price & payment")).toBeLessThan(joined.indexOf("Service charge"));
+  });
+
+  test("C5522: the included options change the contract PDF as they do the agreement's: showFrequency, uppercase and the title", async () => {
+    const included = (options?: Extract<Item, { key: "included" }>["options"]): Item => ({ kind: "section", key: "included", ...(options ? { options } : {}) });
+    const frequencies = { frequencies: { RTU: "QUARTERLY" } };
+    const plain = text(await draw([included(), signatures()], {}, frequencies)).split("\n");
+    expect(plain.some((row) => row.startsWith("Rooftop unit, "))).toBe(true);
+    expect(plain.some((row) => row.includes("QUARTERLY"))).toBe(false);
+    const asked = text(await draw([included({ showFrequency: true }), signatures()], {}, frequencies)).split("\n");
+    expect(asked).toContain("Rooftop unit (QUARTERLY)");
+    expect(asked.some((row) => row.startsWith("Rooftop unit, "))).toBe(false);
+    const upper = text(await draw([included({ showFrequency: true, uppercase: true }), signatures()], {}, frequencies)).split("\n");
+    expect(upper).toContain("ROOFTOP UNIT (QUARTERLY)");
+    expect(upper).not.toContain("Rooftop unit (QUARTERLY)");
+    const titled = text(await draw([included({ title: "Service included:" }), signatures()])).split("\n");
+    expect(titled).toContain("Service included:");
+    expect(titled).not.toContain("Service included");
+  });
+
+  test("C5522: an equipment title option replaces the default Equipment heading of the contract PDF", async () => {
+    const titled = text(await draw([{ kind: "section", key: "equipment", options: { title: "EQUIPMENT LIST" } }, signatures()])).split("\n");
+    expect(titled).toContain("EQUIPMENT LIST");
+    expect(titled).not.toContain("Equipment");
+    const defaults = text(await draw([{ kind: "section", key: "equipment" }, signatures()])).split("\n");
+    expect(defaults).toContain("Equipment");
+  });
+
+  test("C5522: price columns replace the header and total labels of the contract PDF, and times_per_year prints 4 times per year and 2 times per year", async () => {
+    const columns = { description: "PREVENTATIVE MAINTENANCE", visits: "NUMBER OF TIMES PER YEAR", perVisit: "COST PER VISIT", perYear: "TOTAL COST PER YEAR", total: "TOTAL" };
+    const rows = text(await draw([{ kind: "section", key: "price", options: { columns, visitsFormat: "times_per_year" } }, signatures()])).split("\n");
+    for (const label of Object.values(columns).slice(0, 4)) expect(rows, label).toContain(label);
+    expect(rows).toContain("TOTAL $3,690.00");
+    expect(rows).toContain("4 times per year");
+    expect(rows).toContain("2 times per year");
+    for (const gone of ["Description", "Visits per year", "Per visit", "Per year"]) expect(rows, gone).not.toContain(gone);
+    const defaults = text(await draw([price, signatures()])).split("\n");
+    for (const label of ["Description", "Visits per year", "Per visit", "Per year"]) expect(defaults, label).toContain(label);
+  });
+
+  test("C5523: the default customer block is headed For the Customer and the signer, the contractor block For the company, each with one Signature and one Date line and its tags", async () => {
+    const all = await draw([price, signatures()]);
+    const joined = text(all);
+    expect(joined).toContain("For the Customer: Pat Lee");
+    expect(joined).toContain("For Kettle Ridge Mechanical Ltd.");
+    expect(joined.split("Signature\n").length - 1).toBe(2);
+    expect(joined.split("Date\n").length - 1).toBe(2);
+    const squeezed = flat(all);
+    for (const tag of ["{{Sig;role=Customer;type=signature}}", "{{Date;role=Customer;type=date}}", "{{Sig;role=Contractor;type=signature}}", "{{Date;role=Contractor;type=date}}"]) {
+      expect(squeezed.split(tag).length - 1, tag).toBe(1);
+    }
+    expect(joined).not.toContain("Name & title");
+    expect(squeezed).not.toContain("{{Name;");
+    expect(joined).not.toContain("Signed electronically");
+    // A schema 2 signatures section has no title of its own.
+    expect(joined).not.toContain("Signatures\n");
+  });
+
+  test("C5523: the labels and the caption replace the defaults, the caption under each heading", async () => {
+    const joined = text(await draw([price, signatures({ customerLabel: "Client", contractorLabel: "For and on behalf of Kettle Ridge Mechanical Ltd.", caption: "Signed electronically" })]));
+    const rows = joined.split("\n");
+    const client = rows.indexOf("Client");
+    expect(client).toBeGreaterThan(-1);
+    expect(rows[client + 1]).toBe("Signed electronically");
+    const contractor = rows.indexOf("For and on behalf of Kettle Ridge Mechanical Ltd.");
+    expect(contractor).toBeGreaterThan(client);
+    expect(rows[contractor + 1]).toBe("Signed electronically");
+    expect(joined).not.toContain("For the Customer");
+  });
+
+  test("C5523: a schema 1 layout (no layout on the document) still prints the Signatures title before the blocks", async () => {
+    const joined = text(await pages());
+    expect(joined).toContain("Signatures\n");
+    expect(joined.indexOf("Signatures\n")).toBeLessThan(joined.indexOf("For the Customer: Pat Lee"));
+  });
+
+  test("C5524: with nameField the customer block gains a Name & title (print) line carrying the Name tag, and the contractor block gains none", async () => {
+    const all = await draw([price, signatures({ nameField: true })]);
+    const joined = text(all);
+    expect(joined.split("Name & title (print)").length - 1).toBe(1);
+    const squeezed = flat(all);
+    const tag = "{{Name;role=Customer;type=text}}";
+    expect(squeezed.split(tag).length - 1).toBe(1);
+    expect(squeezed.split("{{Name;").length - 1).toBe(1);
+    const customer = squeezed.indexOf("FortheCustomer:PatLee");
+    const contractor = squeezed.indexOf("ForKettleRidgeMechanicalLtd.");
+    expect(squeezed.indexOf(tag)).toBeGreaterThan(customer);
+    expect(squeezed.indexOf(tag)).toBeLessThan(contractor);
+    // The existing four tags are still there.
+    for (const kept of ["{{Sig;role=Customer;type=signature}}", "{{Date;role=Customer;type=date}}", "{{Sig;role=Contractor;type=signature}}", "{{Date;role=Contractor;type=date}}"]) expect(squeezed).toContain(kept);
+  });
+
+  test("C5524: the signature tags are exported with the new Name tag text", () => {
+    expect(customerNameTag).toBe("{{Name;role=Customer;type=text}}");
+    expect(signerTags("Customer")).toEqual({ signature: "{{Sig;role=Customer;type=signature}}", date: "{{Date;role=Customer;type=date}}" });
+  });
+
+  test("C5526: a contract built from a schema 1 body or the system wording prints the same text as the document without a layout", async () => {
+    const SOURCE: DocumentSource = {
+      number: "AG-1052",
+      customer: { name: "Fernwood Dental" },
+      site: { name: "Fernwood Dental, Main" },
+      editable: false,
+      shown: { versionNo: 1, lines: [{ id: "l", description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000, visitMonths: [3, 6, 9, 12], equipment: [{ code: "RTU", name: "Rooftop unit" }] }], annualCents: 180000 },
+      serviceScope: { source: "live", takenAt: null, types: base.scope.kind === "listed" ? base.scope.types : [] },
+      terms: TERMS,
+      term: { start: "2027-01-01", months: 12, end: "2027-12-31" },
+      validUntil: null,
+    };
+    const parties = { contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" }, customer: { name: "Fernwood Dental" }, site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" }, signer: { name: "Pat Lee", email: "pat@example.com" } };
+    for (const template of [SYSTEM_CONTRACT_BODY, { schema: 1 as const, blocks: [{ type: "paragraph" as const, text: "Org wording for {{customer.name}}." }] }]) {
+      const built = buildContractDocument(SOURCE, parties, "#1f6f8b", undefined, template);
+      const before: Partial<ContractDocument> = { ...built };
+      delete before.layout;
+      delete before.doc;
+      const withLayout = pdfPages(await reactPdfContractRenderer.renderContract(built));
+      const without = pdfPages(await reactPdfContractRenderer.renderContract(before as ContractDocument));
+      expect(withLayout).toEqual(without);
+      expect(text(withLayout)).toContain("Service Contract");
+      expect(text(withLayout)).toContain("Signatures\n");
+    }
+    // A document built with no template is the system wording.
+    expect(buildContractDocument(SOURCE, parties, "#1f6f8b").layout).toEqual(buildContractDocument(SOURCE, parties, "#1f6f8b", undefined, SYSTEM_CONTRACT_BODY).layout);
   });
 });

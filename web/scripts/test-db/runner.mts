@@ -58,6 +58,14 @@ export const RECIPES: Recipe[] = [
   plain("workspace_provisioning"),
   plain("first_login_setup"),
   plain("set_org_plan"),
+  plain("tenant_logo"),
+  { name: "other_trade_draft", parts: ["fixture.sql", "../migrations/20261112100000_add_catalog_draft.sql", "other_trade_draft.sql"] },
+  plain("workspace_pending_state"),
+  plain("checkout_email_in_use"),
+  plain("plan_limits"),
+  plain("contract_templates"),
+  plain("agreement_templates"),
+  plain("block_editor"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;

@@ -3,12 +3,16 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { BillingGateway, CheckoutStarter } from "@/application/ports";
+import type { BillingGateway, CheckoutStarter, WorkspaceEmailCheck } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
   makeDecidePortal,
+  makeDuplicateAgreementTemplate,
+  makeGetContractWording,
   makeInviteMember,
+  makeListAgreementTemplates,
+  makeSaveContractWording,
   makeContractDocuments,
   makeExtractImport,
   makeNotify,
@@ -32,9 +36,14 @@ import {
 import { systemClock } from "@/infrastructure/clock";
 import { stripeCheckoutStarter } from "@/infrastructure/stripe/checkout";
 import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
+import { supabaseImportAllowance } from "@/infrastructure/supabase/import-allowance";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
+import { supabaseOrgUsage } from "@/infrastructure/supabase/org-usage";
 import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
+import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
+import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
+import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
 import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
@@ -53,6 +62,8 @@ import {
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
+import { supabaseAgreementTemplateReader, supabaseAgreementTemplateStore } from "@/infrastructure/supabase/templates";
+import { supabaseContractWordingReader, supabaseContractWordingStore } from "@/infrastructure/supabase/contract-wording";
 import { supabaseSignatureWebhooks } from "@/infrastructure/supabase/signature-webhook";
 import { supabaseStripeEvents } from "@/infrastructure/supabase/stripe-events";
 import { supabaseSignedCopyReader } from "@/infrastructure/supabase/signed-copy";
@@ -81,7 +92,11 @@ import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supaba
 import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
 import { itemWordsReader } from "@/application/use-cases/item-words";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
+import { makeTenantLogo } from "@/application/use-cases/tenant-logo";
+import { supabaseOrgLogo } from "@/infrastructure/supabase/org-logo";
 import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
+import { supabaseMemberWorkspace, supabaseWorkspaceStatus } from "@/infrastructure/supabase/workspace-state";
+import { supabaseWorkspaceEmailCheck } from "@/infrastructure/supabase/workspace-email";
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}`);
@@ -130,6 +145,9 @@ export async function getContainer() {
   const sites = supabaseSiteRegister(supabase);
   const settings = supabaseOrgSettingsStore(supabase);
   const setup = supabaseOrgSetup(supabase);
+  // The org's logo: the stored path, a signed upload, and the bytes a document draws (tenant-logo). The bucket is public, so reading needs no session.
+  const logo = supabaseOrgLogo(supabase, { baseUrl: url });
+  const tenantLogo = makeTenantLogo(logo);
   // The billing page needs both values (billing-page AC 8); `STRIPE_SECRET_KEY` is read only in this file. Without them the page
   // says billing is not available and every action answers `not_configured` with no request. The publishable key is safe for the
   // browser: it is read here at request time and handed to the card field as a prop, so no rebuild is needed per environment.
@@ -140,7 +158,7 @@ export async function getContainer() {
   const notConfigured = { ok: false, code: "not_configured" } as const;
   const billingGateway: BillingGateway =
     stripeKey && stripeBase
-      ? stripeBillingGateway({ secretKey: stripeKey })
+      ? stripeBillingGateway({ secretKey: stripeKey, appBaseUrl: stripeBase })
       : {
           overview: async () => notConfigured,
           startCardUpdate: async () => notConfigured,
@@ -148,8 +166,9 @@ export async function getContainer() {
           cancel: async () => notConfigured,
           resume: async () => notConfigured,
           changePlan: async () => notConfigured,
+          startRenewal: async () => notConfigured,
         };
-  const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase));
+  const billing = makeBilling(orgBilling, billingGateway, supabaseOrgPlanRecorder(supabase), supabaseOrgUsage(supabase));
   const customerStore = supabaseCustomerStore(supabase);
   const contactStore = supabaseContactStore(supabase);
   const siteStore = supabaseSiteStore(supabase);
@@ -169,6 +188,8 @@ export async function getContainer() {
     verifyEmailLink: auth.verifyEmailLink,
     signOut: auth.signOut,
     currentMember: members.currentMember,
+    // What a signed-in person with no membership is told about their own paid checkout (workspace-pending-state door 3).
+    workspaceState: supabaseMemberWorkspace(supabase).mine,
     transitionAgreement: makeTransitionAgreement(agreementRepository),
     transitionContract: makeTransitionContract(supabaseContractRepository(supabase)),
     pipelineBoard: pipeline.board,
@@ -181,17 +202,24 @@ export async function getContainer() {
     customerDetail: customers.detail,
     siteRegister: sites.get,
     getOrgSettings: settings.get,
+    logo,
+    tenantLogo,
     getItemWords: itemWordsReader(settings.get),
     billingLink: makeBillingEntry(orgBilling),
     loadBilling: billing.load,
+    loadBillingUsage: billing.usage,
     startCardUpdate: billing.startCardUpdate,
     finishCardUpdate: billing.finishCardUpdate,
+    renewSubscription: billing.renew,
     cancelSubscription: billing.cancel,
     resumeSubscription: billing.resume,
     changePlan: billing.changePlan,
     stripePublishableKey,
     setupPending: setup.isPending,
     setupCatalog: setup.catalog,
+    // The "Other" trade's catalog draft (other-trade-draft): the Claude call and the one atomic write, both behind the setup screen.
+    draftCatalog: makeDraftCatalog(async () => (await setup.catalog()).length, importParser, claudeCatalogDrafter({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    acceptCatalogDraft: makeAcceptCatalogDraft(supabaseCatalogWriter(supabase)),
     saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),
     skipSetup: (orgId: string) => setup.skip(orgId, systemClock.now()),
     saveOrgSettings: (orgId: string, value: OrgSettingsValue) => settings.save(orgId, value, systemClock.now()),
@@ -230,7 +258,7 @@ export async function getContainer() {
     discardImport: importJobs.discard,
     // The same member-scoped store: the file is downloaded under RLS, never with a service-role key.
     readImport: makeReadImport(importJobs, importParser),
-    extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase)),
+    extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase), supabaseImportAllowance(supabase)),
     reviewImport: supabaseImportReviewReader(supabase).forJob,
     updateImportRow: importRows.update,
     skipImportRow: importRows.setSkipped,
@@ -239,6 +267,27 @@ export async function getContainer() {
     // Agreements and their lines are read and written as the member, from the same client (AC 29).
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
+    // The site contact's email, which a send writes to (the database checks the member's org and role).
+    agreementRecipient: {
+      async get(agreementId: string): Promise<string | null> {
+        const { data, error } = await supabase.rpc("agreement_recipient", { p_agreement_id: agreementId });
+        if (error) throw new Error(`agreement_recipient failed: ${error.code}`);
+        return data;
+      },
+      async set(agreementId: string, email: string): Promise<boolean> {
+        const { data, error } = await supabase.rpc("set_agreement_recipient", { p_agreement_id: agreementId, p_email: email });
+        if (error) throw new Error(`set_agreement_recipient failed: ${error.code}`);
+        return data === true;
+      },
+    },
+    // Agreement templates are read and written as the member: the definer functions check owner or admin themselves.
+    listAgreementTemplates: makeListAgreementTemplates(supabaseAgreementTemplateReader(supabase)),
+    saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,
+    archiveAgreementTemplate: supabaseAgreementTemplateStore(supabase).archive,
+    duplicateAgreementTemplate: makeDuplicateAgreementTemplate(supabaseAgreementTemplateReader(supabase), supabaseAgreementTemplateStore(supabase)),
+    // The contract wording is read and saved as the member too: `save_contract_template` checks owner or admin itself.
+    getContractWording: makeGetContractWording(supabaseContractWordingReader(supabase)),
+    saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),
@@ -257,7 +306,7 @@ export async function getContainer() {
     // Sending a contract for signature (signature-provider): the member's client claims and stores, the provider gets the PDF.
     sendForSignature: makeSendForSignature({
       // The same stateless readers, built over the same member client.
-      documents: makeContractDocuments(supabaseContractReader(supabase), supabaseAgreementReader(supabase), settings.get),
+      documents: makeContractDocuments(supabaseContractReader(supabase), supabaseAgreementReader(supabase), settings.get, tenantLogo),
       store: supabaseSignatureStore(supabase),
       renderer: reactPdfContractRenderer,
       provider: docusealSignatureProvider({ apiKey: process.env.DOCUSEAL_API_KEY, apiUrl: process.env.DOCUSEAL_API_URL }),
@@ -327,7 +376,20 @@ export async function getWebhookContainer() {
 export type WebhookContainer = Awaited<ReturnType<typeof getWebhookContainer>>;
 
 /**
- * Wires the register page's start-trial (pricing-page door 3, billing-checkout door 1). It reads no cookie and no database.
+ * Wires the success page's workspace status (workspace-pending-state door 2). No user session: the client is `anon` with the
+ * publishable key and keeps no cookie, and the database answers from the stored Checkout event by session id.
+ */
+export async function getWorkspaceStatusContainer() {
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const supabase = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return { workspaceStatus: supabaseWorkspaceStatus(supabase) };
+}
+
+export type WorkspaceStatusContainer = Awaited<ReturnType<typeof getWorkspaceStatusContainer>>;
+
+/**
+ * Wires the register page's start-trial (pricing-page door 3, billing-checkout door 1). It reads no cookie; with Stripe configured it asks the database (anon) whether the email is taken.
  * With `STRIPE_SECRET_KEY` and `APP_BASE_URL` both set it starts a Stripe Checkout session; with either missing every
  * selection answers `not_configured` and no request is made. `STRIPE_SECRET_KEY` is read only here.
  */
@@ -336,7 +398,22 @@ export async function getBillingContainer() {
   const appBaseUrl = process.env.APP_BASE_URL;
   const checkout: CheckoutStarter =
     secretKey && appBaseUrl ? stripeCheckoutStarter({ secretKey, appBaseUrl }) : { start: async () => ({ ok: false, code: "not_configured" }) };
-  return { startTrial: makeStartTrial(checkout) };
+  // Only a configured Stripe asks the database; with none, every selection is `not_configured` and no client is made. The anon
+  // client is built on the first question, so missing Supabase variables are an `unavailable` answer, not a failed page.
+  const emailCheck: WorkspaceEmailCheck | undefined =
+    secretKey && appBaseUrl
+      ? (() => {
+          // One anon client, made on the first question, answers both the email and the company name.
+          let check: WorkspaceEmailCheck | undefined;
+          const made = () => {
+            const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+            const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+            return (check ??= supabaseWorkspaceEmailCheck(createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } })));
+          };
+          return { inUse: (email: string) => made().inUse(email), companyInUse: (name: string) => made().companyInUse(name) };
+        })()
+      : undefined;
+  return { startTrial: makeStartTrial(checkout, emailCheck) };
 }
 
 export type BillingContainer = Awaited<ReturnType<typeof getBillingContainer>>;

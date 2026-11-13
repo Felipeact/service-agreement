@@ -63,4 +63,4 @@ Everytime a roadmap item is completed mark it as done in the ROADMAP.md
 
 ## tlc-spec-lean
 
-profile: standard
+profile: ui

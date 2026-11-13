@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, CurrentMember, DocumentRenderer, MemberRole } from "@/application/ports";
+import type { AgreementTemplateBody } from "@/domain/agreement";
 import type { OrgSettingsValue } from "@/domain/org-settings";
+import type { TenantLogo } from "@/domain/org-settings/logo";
 
 const AGR = "11111111-1111-4111-8111-111111111111";
 const ORG = "22222222-2222-4222-8222-222222222222";
@@ -60,7 +62,8 @@ const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const get = vi.fn<(id: string, versionNo?: number) => Promise<AgreementDetail | null>>();
 const getOrgSettings = vi.fn<(orgId: string) => Promise<OrgSettingsValue | null>>();
 const renderAgreement = vi.fn<DocumentRenderer["renderAgreement"]>();
-const container = { currentMember, agreementReader: { get }, getOrgSettings, documentRenderer: { renderAgreement } };
+const tenantLogo = vi.fn<(orgId: string) => Promise<TenantLogo | null>>();
+const container = { currentMember, agreementReader: { get }, getOrgSettings, documentRenderer: { renderAgreement }, tenantLogo };
 
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 
@@ -77,6 +80,7 @@ beforeEach(() => {
   get.mockReset().mockResolvedValue(detail());
   getOrgSettings.mockReset().mockResolvedValue(SETTINGS);
   renderAgreement.mockReset().mockResolvedValue(bytes);
+  tenantLogo.mockReset().mockResolvedValue(null);
 });
 
 describe("GET /agreements/[agreementId]/pdf", () => {
@@ -107,6 +111,8 @@ describe("GET /agreements/[agreementId]/pdf", () => {
     expect((await call()).headers.get("Content-Disposition")).toBe('attachment; filename="AG-1052-v1.pdf"');
 
     get.mockResolvedValue(detail({}, 2));
+    expect((await call(AGR, "?inline=1")).headers.get("Content-Disposition")).toBe('inline; filename="AG-1052-v2.pdf"');
+    expect((await call(AGR, "?inline=yes")).headers.get("Content-Disposition")).toBe('attachment; filename="AG-1052-v2.pdf"');
     expect((await call(AGR, "?version=9")).headers.get("Content-Disposition")).toBe('attachment; filename="AG-1052-v2.pdf"');
   });
 
@@ -194,5 +200,71 @@ describe("GET /agreements/[agreementId]/pdf", () => {
   test("C870: the route allows at least twice the measured 22 s render of 2,000 assets", async () => {
     const { maxDuration } = await import("./route");
     expect(maxDuration).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe("the logo on the agreement PDF", () => {
+  const first: TenantLogo = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), format: "png" as const };
+  const second: TenantLogo = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 2]), format: "jpg" };
+
+  test("C3330: the document carries the logo of the org's current logo_path, and a replaced one gives the new one", async () => {
+    tenantLogo.mockResolvedValue(first);
+    expect((await call()).status).toBe(200);
+    expect(tenantLogo).toHaveBeenCalledWith(ORG);
+    expect(renderAgreement.mock.calls[0][0].tenant.logo).toEqual(first);
+
+    tenantLogo.mockResolvedValue(second);
+    await call();
+    expect(renderAgreement.mock.calls[1][0].tenant.logo).toEqual(second);
+  });
+
+  test("C3330: when the loader has no logo the route still answers 200 and the document has no logo key", async () => {
+    const response = await call();
+    expect(response.status).toBe(200);
+    expect("logo" in renderAgreement.mock.calls[0][0].tenant).toBe(false);
+  });
+});
+
+
+describe("the agreement PDF route and the template", () => {
+  const TEMPLATE: AgreementTemplateBody = {
+    schema: 1,
+    name: "Welcome",
+    description: "",
+    intro: [{ type: "paragraph", text: "Payment within {{terms.paymentDays}} for {{customer.name}}." }],
+    footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+    sections: { schedule: true, scope: false },
+    preset: { termMonths: null, lines: [] },
+  };
+
+  test("C5329: when the reader throws because a pin cannot be read, the request fails and nothing is drawn", async () => {
+    get.mockRejectedValue(new Error("Agreement version v1 has no readable template version t1: it was not found"));
+    await expect(call()).rejects.toThrow("no readable template version");
+    expect(getOrgSettings).not.toHaveBeenCalled();
+    expect(renderAgreement).not.toHaveBeenCalled();
+  });
+
+  test("C5334: an editable draft draws the pinned body with today's settings", async () => {
+    getOrgSettings.mockResolvedValue({ ...SETTINGS, paymentDays: 45 });
+    get.mockResolvedValue(detail({ status: "draft", stage: "in_progress", editable: true, terms: null, template: TEMPLATE }));
+    await call();
+    const document = renderAgreement.mock.calls[0][0];
+    expect(document.intro).toEqual([{ type: "paragraph", text: "Payment within 45 days for Fernwood Dental." }]);
+    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document.sections).toEqual({ schedule: true, scope: false });
+    expect(document.scope).toEqual({ kind: "hidden" });
+  });
+
+  test("C5334: a sent version draws its frozen pin and frozen terms, whatever the settings say now", async () => {
+    getOrgSettings.mockResolvedValue({ ...SETTINGS, paymentDays: 45 });
+    get.mockResolvedValue(detail({ template: TEMPLATE }));
+    await call();
+    expect(renderAgreement.mock.calls[0][0].intro).toEqual([{ type: "paragraph", text: "Payment within 30 days for Fernwood Dental." }]);
+  });
+
+  test("C5334: a version the reader gives no template (an older fixture) draws the system layout", async () => {
+    await call();
+    const document = renderAgreement.mock.calls[0][0];
+    expect([document.intro, document.footer, document.sections]).toEqual([[], [], { schedule: true, scope: true }]);
   });
 });

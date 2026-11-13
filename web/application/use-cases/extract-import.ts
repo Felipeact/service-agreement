@@ -4,6 +4,7 @@ import type {
   AssetTypeCatalog,
   ExtractChunk,
   ExtractedRow,
+  ImportAllowance,
   ImportJobStore,
   ImportParser,
   ImportRowInput,
@@ -13,7 +14,8 @@ import type {
 export type ExtractImportResult =
   | { ok: true; state: "extracting"; done: number; total: number }
   | { ok: true; state: "extracted"; rows: number; unmatched: number }
-  | { ok: false; code: WriteFailure | "not_ready" | "too_large" };
+  | { ok: false; code: WriteFailure | "not_ready" | "too_large" }
+  | { ok: false; code: "plan_limit"; plan: string; limit: number; used: number; resetsOn: string };
 
 const UNAVAILABLE = { ok: false, code: "unavailable" } as const;
 
@@ -39,8 +41,10 @@ function rowFor(row: ExtractedRow, chunk: ExtractChunk, refs: Set<string>, types
 /**
  * Takes the next chunk of a read file, has Claude extract its rows, matches each to the org's types and records them.
  * One call does one chunk: the browser calls again until the job is `extracted`, and a stored cursor makes a retry resume.
+ * The first chunk of a job asks the plan's AI-import allowance before Claude is called; a job already started never does, so
+ * it can finish (plan-limits S2). Without an allowance every job is let through.
  */
-export function makeExtractImport(store: ImportJobStore, parser: ImportParser, extractor: AssetExtractor, catalog: AssetTypeCatalog) {
+export function makeExtractImport(store: ImportJobStore, parser: ImportParser, extractor: AssetExtractor, catalog: AssetTypeCatalog, allowance?: ImportAllowance) {
   return async function extractImport(jobId: string): Promise<ExtractImportResult> {
     const source = await store.sourceOf(jobId);
     if (!source.ok) return source;
@@ -69,6 +73,18 @@ export function makeExtractImport(store: ImportJobStore, parser: ImportParser, e
     if (!chunk || total < 1) {
       console.error(`Extracting import ${jobId} failed: no chunk ${cursor ?? 0} of ${total}`);
       return UNAVAILABLE;
+    }
+
+    if (cursor === null && allowance) {
+      let allowed: Awaited<ReturnType<ImportAllowance["check"]>>;
+      try {
+        allowed = await allowance.check(jobId);
+      } catch (cause) {
+        console.error(`Reading the allowance for import ${jobId} failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+        return UNAVAILABLE;
+      }
+      if (!allowed.ok) return allowed.code === "unavailable" ? UNAVAILABLE : allowed;
+      if (!allowed.allowed) return { ok: false, code: "plan_limit", plan: allowed.plan, limit: allowed.limit, used: allowed.used, resetsOn: allowed.resetsOn };
     }
 
     const answered = await extractor.extract(chunk, tradeContext);

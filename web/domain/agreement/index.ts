@@ -96,7 +96,7 @@ const MAX_COST_CENTS = 99_999_999;
 const DOLLARS = /^(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?$/;
 
 /** Dollars as typed (`$1,234.5`) to integer cents, or `null` when it is not an amount. */
-function parseCents(raw: string): number | null {
+export function parseCents(raw: string): number | null {
   const match = DOLLARS.exec(raw.trim().replace(/^\$/, ""));
   if (!match) return null;
   return Number(match[1].replaceAll(",", "")) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
@@ -250,3 +250,6 @@ export * from "./version-note";
 export * from "./timeline";
 export * from "./list-filter";
 export * from "./new-agreement";
+export * from "./template";
+export * from "./layout";
+export * from "./template-preview";

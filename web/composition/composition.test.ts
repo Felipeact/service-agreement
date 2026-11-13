@@ -238,7 +238,7 @@ describe("composition root", () => {
   test("C537: extractImport is built on the request's import job store and catalog, from the one Supabase client", () => {
     const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
     expect(source).toMatch(/const importJobs = supabaseImportJobStore\(supabase, /);
-    expect(source).toMatch(/extractImport: makeExtractImport\(importJobs, importParser, .*supabaseAssetTypeCatalog\(supabase\)\)/);
+    expect(source).toMatch(/extractImport: makeExtractImport\(importJobs, importParser, .*supabaseAssetTypeCatalog\(supabase\)(, supabaseImportAllowance\(supabase\))?\)/);
     expect(source.match(/createServerClient</g)).toHaveLength(1);
   });
 
@@ -380,7 +380,7 @@ describe("composition root", () => {
     const ports = readFileSync(path.join(import.meta.dirname, "../application/ports/index.ts"), "utf8");
     const body = (name: string) => ports.match(new RegExp(String.raw`export interface ${name} \{([\s\S]*?)\n\}`))?.[1] ?? "";
     expect(body("AgreementReader")).toContain("get(id: string, versionNo?: number, compareNo?: number): Promise<AgreementDetail | null>");
-    expect(body("AgreementStore")).toContain("create(siteId: string): Promise<CreateAgreementResult>");
+    expect(body("AgreementStore")).toContain("create(siteId: string, templateVersionId?: string): Promise<CreateAgreementResult>");
     for (const method of ["add(agreementId: string, value: ServiceLineValue)", "update(lineId: string, value: ServiceLineValue)", "remove(lineId: string)"]) {
       expect(body("ServiceLineStore")).toContain(method);
     }

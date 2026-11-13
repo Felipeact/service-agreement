@@ -43,3 +43,29 @@ describe("validateNewAgreement", () => {
     expect(!checked.ok && Object.keys(checked.errors).sort()).toEqual(["customerName", "siteName"]);
   });
 });
+
+describe("validateNewAgreement, the template version", () => {
+  const VERSION = "77777777-7777-4777-8777-777777777777";
+
+  test("C5407: a UUID version is carried into the plan", () => {
+    const checked = validateNewAgreement(input({ templateVersionId: VERSION }));
+    expect(checked).toEqual({ ok: true, value: { customer: { kind: "existing", id: CUSTOMER }, site: { kind: "existing", id: SITE }, templateVersionId: VERSION } });
+  });
+
+  test.each([[undefined], [""]])("C5407: %j means no template, and the plan carries no version", (templateVersionId) => {
+    const checked = validateNewAgreement(input({ templateVersionId }));
+    expect(checked.ok).toBe(true);
+    expect(checked.ok && "templateVersionId" in checked.value).toBe(false);
+  });
+
+  test.each([["not-a-uuid"], ["77777777-7777-4777-8777"], [` ${VERSION}`], ["__new"]])("C5407: %j is refused with the field named", (templateVersionId) => {
+    const checked = validateNewAgreement(input({ templateVersionId }));
+    expect(checked.ok).toBe(false);
+    expect(!checked.ok && checked.errors.templateVersionId).toBe("Choose a template from the list");
+  });
+
+  test("C5407: a bad version is reported with the other field errors", () => {
+    const checked = validateNewAgreement(input({ customer: "", templateVersionId: "nope" }));
+    expect(!checked.ok && Object.keys(checked.errors).sort()).toEqual(["customer", "templateVersionId"]);
+  });
+});

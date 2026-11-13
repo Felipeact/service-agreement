@@ -7,13 +7,14 @@ import { labelFor, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
 import { formatTermDate } from "@/domain/agreement/term";
 import { notEmailedWords } from "@/domain/notifications";
-import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
 import { ServiceScopeSections } from "./service-scope";
+import { AgreementPdfPreview } from "./agreement-pdf-preview";
 import { LinkControls } from "./link-controls";
 import { NoteSection } from "./note-section";
 import { TermSection } from "./term-section";
@@ -31,8 +32,9 @@ export type AgreementActions = {
   remove: (lineId: string) => () => Promise<LineState>;
   revise: () => Promise<MoveState>;
   withdraw: () => Promise<MoveState>;
-  send: () => Promise<LinkState>;
-  reissue: () => Promise<LinkState>;
+  send: (email?: string) => Promise<LinkState>;
+  /** No longer offered on the page (the customer gets the link by email); kept so older callers still type-check. */
+  reissue?: () => Promise<LinkState>;
   saveTerm: (formData: FormData) => Promise<TermState>;
   saveNote: (formData: FormData) => Promise<NoteState>;
   /** Optional so a page without contracts (and older fixtures) still compiles; the agreement page always binds it. */
@@ -46,7 +48,18 @@ type AgreementViewProps = {
   actions?: AgreementActions;
   /** The org's item words (item-vocabulary AC 5); the default when absent. */
   words?: ItemWords;
+  /** The pinned template's preset equipment codes that match no type of the org, which the preset left off its lines (agreement-templates AC 25). */
+  skippedCodes?: string[];
+  /** The customer contact email the agreement is sent to, or `null` when there is none yet. */
+  recipient?: string | null;
 };
+
+/** A short fingerprint of what the PDF would say, so an open preview knows when to redraw. */
+function revisionOf(value: unknown): string {
+  let hash = 5381;
+  for (const char of JSON.stringify(value)) hash = ((hash * 33) ^ char.charCodeAt(0)) >>> 0;
+  return hash.toString(36);
+}
 
 /** The empty add form suggests the usual first line; a stored $0 line would look like a real price. */
 const FIRST_LINE = { description: "Preventive maintenance visit", visitMonths: [], costPerVisit: "", assetTypeIds: [] };
@@ -64,7 +77,7 @@ function deliveryLine(email: LinkEmailView | null): string {
 }
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
-export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS }: AgreementViewProps) {
+export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
   const latest = agreement.versions[0]?.versionNo ?? shown.versionNo;
@@ -73,7 +86,6 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
   const canRevise = writer && agreement.status === "changes_requested";
   const canWithdraw = writer && (agreement.status === "draft" || agreement.status === "sent");
   const canSend = writer !== undefined && agreement.editable;
-  const canReissue = writer !== undefined && agreement.status === "sent" && shown.current;
   const firstViewed = agreement.portalLink?.firstViewedAt ?? null;
   const canGenerate = writer?.generate !== undefined && agreement.status === "accepted" && !agreement.contract;
 
@@ -142,15 +154,21 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         <GenerateContractControl signer={agreement.signer ?? null} term={agreement.term} annualCents={shown.annualCents} action={writer.generate} />
       )}
 
-      {writer && (canSend || canReissue) && (
-        <LinkControls number={agreement.number} canSend={canSend} canReissue={canReissue} send={writer.send} reissue={writer.reissue} />
-      )}
+      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} />}
+
+      <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status])} />
 
       {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
 
       <TermSection term={agreement.term} action={lineActions?.saveTerm} />
 
       {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
+
+      {skippedCodes.length > 0 && (
+        <p role="status" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
+          {itemText("These equipment types are not in your catalog and were left off: ", words) + skippedCodes.join(", ")}
+        </p>
+      )}
 
       <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
         <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>

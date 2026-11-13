@@ -24,7 +24,7 @@ vi.mock("@/composition", async () => {
   };
   const { testTokens: tokens } = (await vi.importActual("@/application/portal-view.testing")) as { testTokens: typeof testTokens };
   const reader = supabasePortalReader({ rpc });
-  return { getContainer: async () => ({ currentMember, viewPortal: makeViewPortal(reader, tokens) }) };
+  return { getContainer: async () => ({ currentMember, viewPortal: makeViewPortal(reader, tokens), logo: { url: (path: string | null) => path } }) };
 });
 
 const { ReviewForRequest } = await import("./page");
@@ -307,5 +307,15 @@ describe("the validity date", () => {
     expect(text(html)).toContain("This agreement has expired.");
     expect(html).not.toMatch(/<button[^>]*>[^<]*Accept/);
     expect(text(html)).not.toContain("Accept");
+  });
+});
+
+describe("the logo on the open page", () => {
+  test("C3334: a tenant with a logoPath gets an <img> of its public address in the page, and one without gets none", async () => {
+    const base = portalView();
+    answer({ ...base, tenant: { ...base.tenant!, logoPath: "org/logo.png" } });
+    expect(await render()).toMatch(/<img[^>]*src="org\/logo\.png"/);
+    answer(base);
+    expect(await render()).not.toContain("<img");
   });
 });

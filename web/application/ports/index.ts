@@ -2,6 +2,7 @@ import type {
   AgreementDocument,
   AgreementFilter,
   AgreementStatus,
+  AgreementTemplateBody,
   AgreementTerm,
   AgreementTerms,
   EquipmentChoice,
@@ -9,9 +10,11 @@ import type {
   ServiceLineValue,
   TimelineEntry,
 } from "@/domain/agreement";
-import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind } from "@/domain/contract";
+import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind, ContractWordingBody } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
+import type { DraftType } from "@/domain/catalog-draft";
+import type { TenantLogo } from "@/domain/org-settings/logo";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
 import type { PipelineStage } from "@/domain/pipeline";
@@ -70,7 +73,19 @@ export type MemberRole = "owner" | "admin" | "estimator" | "viewer";
 export type CurrentMember =
   | { status: "signed_out" }
   | { status: "no_membership"; email: string }
-  | { status: "member"; userId: string; email: string; orgId: string; orgName: string; role: MemberRole };
+  | {
+      status: "member";
+      userId: string;
+      email: string;
+      orgId: string;
+      orgName: string;
+      /** What the member may do now: `viewer` while the company's plan has ended, so every write check refuses. */
+      role: MemberRole;
+      /** The role the member holds, kept for the billing page and renewal. Same as `role` unless the workspace is frozen. */
+      billingRole?: MemberRole;
+      /** The company's subscription has ended: read-only until it renews. */
+      frozen?: boolean;
+    };
 
 export interface MemberDirectory {
   currentMember(): Promise<CurrentMember>;
@@ -306,6 +321,20 @@ export interface OrgSettingsStore {
   save(orgId: string, value: OrgSettingsValue, at: Date): Promise<SaveSettingsResult>;
 }
 
+/** The org's logo (tenant-logo doors 1 and 2): which one is stored, a signed upload for a new one, its removal, and its bytes for a document. */
+export interface OrgLogo {
+  /** The org's `logo_path`, `null` for none. Throws on a database error. */
+  current(orgId: string): Promise<string | null>;
+  /** A signed upload URL for a new key `<orgId>/<uuid>.<ext>`; the browser PUTs the bytes there (the imports pattern). */
+  prepareUpload(orgId: string, ext: "png" | "jpg"): Promise<{ ok: true; path: string; signedUrl: string } | { ok: false }>;
+  /** Deletes a stored logo. Never throws: a failure is logged once. */
+  remove(path: string): Promise<void>;
+  /** The bytes of a stored logo for a document, or `null` for no path or any failure (timeout, status, not an image, too big), logged once. */
+  load(path: string | null): Promise<TenantLogo | null>;
+  /** Where anyone can read a stored logo, for the customer pages and the settings preview. */
+  url(path: string | null): string | null;
+}
+
 /** First-login setup (first-login-setup door 1): whether an org still has it to do, what its catalog holds, and the two ways to finish. */
 export interface OrgSetup {
   /** `true` while `org_settings.setup_completed_at` is null; an org with no settings row has nothing to set up. Throws on a database error. */
@@ -438,6 +467,22 @@ export interface ImportJobStore {
 
 export type DiscardImportResult = { ok: true } | { ok: false; code: WriteFailure | "locked" };
 
+/** What an org has started this month against its plan's AI-import allowance (plan-limits door 2). */
+export type ImportAllowanceResult =
+  | { ok: true; allowed: true }
+  | { ok: true; allowed: false; plan: string; limit: number; used: number; resetsOn: string }
+  | { ok: false; code: WriteFailure };
+
+export interface ImportAllowance {
+  /** Whether the org of this job may start another AI import this month. An org with no plan is always allowed. */
+  check(jobId: string): Promise<ImportAllowanceResult>;
+}
+
+/** The plan and usage of the member's own org for the billing page; `null` when it cannot be read. */
+export interface OrgUsageReader {
+  read(): Promise<import("@/domain/billing/plan-limits").OrgUsage | null>;
+}
+
 export type CommitImportResult = ({ ok: true } & CommitView) | { ok: false; code: WriteFailure | "not_ready" | "incomplete" };
 
 /** One extracted row as the review grid shows it (import-review door 6). */
@@ -531,6 +576,23 @@ export interface AssetExtractor {
   extract(chunk: ExtractChunk, tradeContext?: string | null): Promise<ExtractResult>;
 }
 
+/** What a catalog draft is made from besides the trade name and notes: a read file's text, or a whole PDF (other-trade-draft door 1). */
+export type DraftSource = { kind: "text"; text: string } | { kind: "pdf"; bytes: Uint8Array };
+
+export type DraftResult = { ok: true; types: DraftType[] } | { ok: false; code: "unavailable" | "too_large" };
+
+/** Drafts a catalog of types, checklists and months for a trade. Knows nothing about orgs: it receives the trade, the notes and the file only. */
+export interface CatalogDrafter {
+  draft(input: { trade: string; notes: string; file?: DraftSource }): Promise<DraftResult>;
+}
+
+export type AddDraftResult = { ok: true; added: number } | { ok: false; code: "forbidden" | "not_empty" | "invalid" | "unavailable" };
+
+/** Writes an accepted draft in one transaction (`add_catalog_draft`, door 2). */
+export interface CatalogWriter {
+  add(orgId: string, trade: string, types: DraftType[]): Promise<AddDraftResult>;
+}
+
 export type ImportFileResult =
   | { ok: true; status: ImportJobStatus; contentType: ImportContentType; outcome: ReadOutcome | null; bytes: Uint8Array | null }
   | { ok: false; code: WriteFailure };
@@ -618,6 +680,11 @@ export type AgreementDetail = {
   /** The last day the shown version can be decided, `YYYY-MM-DD`, or `null` when it was never sent (proposal-expiry door 1). */
   validUntil: string | null;
   /**
+   * The body of the template version the shown version is pinned to; the system body when it has no pin (agreement-templates door 3).
+   * Optional in the type so older fixtures compile (absent draws as the system template); the reader sets it and throws when a pin cannot be read.
+   */
+  template?: AgreementTemplateBody;
+  /**
    * The live customer link of the shown version, when the agreement is `sent` and the version is the current one:
    * when the customer first opened it, or `null` for not yet. `null` too when there is no live link. The link itself
    * is never readable (customer-portal door 1).
@@ -665,11 +732,58 @@ export interface AgreementReader {
 export type CreateAgreementResult =
   | { ok: true; id: string }
   | { ok: false; code: WriteFailure }
-  | { ok: false; code: "open_exists"; agreementId: string; number: string };
+  | { ok: false; code: "open_exists"; agreementId: string; number: string }
+  | { ok: false; code: "plan_limit"; plan: string; limit: number; used: number }
+  /** `create_agreement` raised `22023`: the version is not an agreement template of the org or the system (agreement-templates AC 5). */
+  | { ok: false; code: "invalid_template" };
 
 export interface AgreementStore {
-  /** Numbers the agreement and creates version 1 in one transaction (`create_agreement`, door 3). */
-  create(siteId: string): Promise<CreateAgreementResult>;
+  /**
+   * Numbers the agreement and creates version 1 in one transaction (`create_agreement`, door 3). `templateVersionId` pins the
+   * new version to that template version and copies its preset lines (agreement-templates AC 24); without it nothing is sent.
+   */
+  create(siteId: string, templateVersionId?: string): Promise<CreateAgreementResult>;
+}
+
+/** An agreement template as the Templates screen lists it: the template and its latest version (agreement-templates S3). */
+export type AgreementTemplateSummary = {
+  id: string;
+  /** The latest version's id: what Use template pins a new agreement to. */
+  versionId: string;
+  versionNo: number;
+  /** When the latest version was written. */
+  updatedAt: Date;
+  /** The system template (no org): readable by everyone, editable by no one. */
+  system: boolean;
+  body: AgreementTemplateBody;
+};
+
+export type TemplateFailure = "forbidden" | "invalid" | "name_taken" | "not_found" | "unavailable";
+
+export interface AgreementTemplateReader {
+  /** The non-archived agreement templates RLS shows the member (the org's own and the system one), by name. */
+  list(): Promise<{ ok: true; templates: AgreementTemplateSummary[] } | { ok: false; code: "unavailable" }>;
+}
+
+export interface AgreementTemplateStore {
+  /** `save_agreement_template`: a new template when `templateId` is null, else the next version of that one. */
+  save(templateId: string | null, body: AgreementTemplateBody): Promise<{ ok: true; templateId: string; versionNo: number } | { ok: false; code: TemplateFailure }>;
+  /** `archive_agreement_template`: the template leaves the list, its versions stay. */
+  archive(templateId: string): Promise<{ ok: true } | { ok: false; code: TemplateFailure }>;
+}
+
+export type ContractWordingFailure = "forbidden" | "invalid" | "unavailable";
+
+/** What the contract wording editor opens on: the org's own latest wording, or the system wording while it has none (block-editor AC 41). */
+export type ContractWordingRead = { ok: true; body: ContractWordingBody; own: boolean } | { ok: false; code: "unavailable" };
+
+export interface ContractWordingReader {
+  read(): Promise<ContractWordingRead>;
+}
+
+export interface ContractWordingStore {
+  /** `save_contract_template`: the org's contract template on the first call, its next version after. */
+  save(body: ContractWordingBody): Promise<{ ok: true; templateId: string; versionNo: number } | { ok: false; code: ContractWordingFailure }>;
 }
 
 export type AddServiceLineResult = { ok: true; id: string } | { ok: false; code: WriteFailure | "locked" | "too_many" };
@@ -717,6 +831,11 @@ export type ContractDetail = {
   createdAt: Date;
   /** `null` when the contract recorded no parties (stored `{}`). */
   parties: ContractParties | null;
+  /**
+   * The wording of the template version this contract was made from (contract-templates door 2). Optional in the type so older
+   * fixtures compile (they mean the system wording); the reader always sets it, and throws rather than leave it out.
+   */
+  template?: ContractWordingBody;
   /**
    * The newest signature request of the contract, or `null` when none was ever begun (signature-provider AC 7, AC 11).
    * Optional in the type so older fixtures compile; the reader always sets it.
@@ -786,7 +905,7 @@ export interface PortalTokens {
 export type PortalView = {
   link: { versionNo: number; current: boolean; revoked: boolean; revokedAt: Date | null; firstViewedAt: Date | null };
   agreement: { number: string; status: AgreementStatus };
-  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; words: ItemWords } | null;
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; words: ItemWords; logoPath?: string | null } | null;
   customer: { name: string };
   site: { name: string };
   lines: {
@@ -804,6 +923,11 @@ export type PortalView = {
   term: AgreementTerm;
   /** The last day the version can be decided, `YYYY-MM-DD`, or `null` for no bound (proposal-expiry door 7). */
   validUntil: string | null;
+  /**
+   * `template` of `portal_view`: the frozen version's pinned template body, as the database holds it. Absent in an older fixture (the system
+   * template); `portalDocument` validates it and fails when it is missing or invalid (agreement-templates AC 14).
+   */
+  template?: unknown;
   /** Today in America/Vancouver as the database read it, `YYYY-MM-DD`; `null` when the document carries none. */
   today: string | null;
   decision: { status: "accepted" | "refused" | "changes_requested"; decidedAt: Date; reason: string | null } | null;
@@ -1142,7 +1266,7 @@ export interface SigningSecrets {
 
 /** What `/sign/<token>` reads, as `public.signature_view` returns it. `embedSealed` is `null` unless the form may be shown. */
 export type SigningView = {
-  tenant: { name: string; address: string | null; phone: string | null; accent: string | null } | null;
+  tenant: { name: string; address: string | null; phone: string | null; accent: string | null; logoPath?: string | null } | null;
   agreementNumber: string;
   signerName: string;
   contractStatus: ContractStatus;
@@ -1166,6 +1290,29 @@ export type CheckoutResult = { ok: true; url: string } | { ok: false; code: "not
 /** Begins a trial for a validated selection. The Stripe adapter (billing-checkout) is its first real implementation. */
 export interface CheckoutStarter {
   start(selection: CheckoutSelection): Promise<CheckoutResult>;
+}
+
+/**
+ * Whether an email already belongs to an org: a membership, or a live invitation, anywhere (checkout-email-in-use door 1).
+ * The email is already lower-cased and trimmed. Throws on a database error or an answer it does not know.
+ */
+export interface WorkspaceEmailCheck {
+  inUse(email: string): Promise<boolean>;
+  /** Whether a workspace already carries this company name (names compare without case or extra spaces). */
+  companyInUse(name: string): Promise<boolean>;
+}
+
+/**
+ * Whether a paid workspace is built, as the page Stripe returns the visitor to reads it (workspace-pending-state door 2).
+ * Anonymous, by Checkout session id; an unknown id is `pending`. Throws on a database error or an answer it does not know.
+ */
+export interface WorkspaceStatusReader {
+  forSession(sessionId: string): Promise<"pending" | "ready" | "refused">;
+}
+
+/** What a signed-in person with no membership is told about their own paid checkout (door 3). Throws like the reader above. */
+export interface MemberWorkspaceReader {
+  mine(): Promise<"none" | "pending" | "refused">;
 }
 
 /** What an org bought, as its managers read it (billing-portal door 1, extended by billing-page with the subscription id). */
@@ -1197,6 +1344,8 @@ export interface BillingGateway {
    * Stripe already holds exactly that. `unsupported`: no item is tagged as the plan item, so none is guessed.
    */
   changePlan(ids: StripeIds, change: { plan: PlanKey; extraSeats: number }): Promise<{ ok: true; changed: boolean } | { ok: false; code: GatewayFailure | "unsupported" }>;
+  /** A Checkout for the org's existing customer that starts a new subscription; its metadata names the org so the webhook thaws it. */
+  startRenewal(renewal: { orgId: string; customerId: string; plan: PlanKey; seats: number }): Promise<{ ok: true; url: string } | { ok: false; code: GatewayFailure }>;
 }
 
 /** Records the plan and seat count on `org_billing` as the signed-in member, through `set_org_plan` (plan-change door 2). */

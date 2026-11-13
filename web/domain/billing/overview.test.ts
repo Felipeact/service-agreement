@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cardLine, canChangeBilling, dateLine, invoiceRows, statusLabel, type BillingOverview, type InvoiceSummary } from "./overview";
+import { cardLine, canChangeBilling, isEnded, dateLine, invoiceRows, statusLabel, type BillingOverview, type InvoiceSummary } from "./overview";
 
 /** Noon in Vancouver on the given day, as unix seconds (UTC-8 in winter, so 20:00 UTC). */
 const noon = (year: number, month: number, day: number) => Date.UTC(year, month - 1, day, 20) / 1000;
@@ -98,13 +98,27 @@ describe("the actions gate", () => {
     ["trialing", true],
     ["active", true],
     ["past_due", true],
-    ["unpaid", true],
+    ["unpaid", false],
     ["canceled", false],
     ["incomplete", true],
-    ["incomplete_expired", true],
+    ["incomplete_expired", false],
     ["paused", true],
     ["something_new", true],
   ])("C3104: %s allows actions: %s", (status, allowed) => {
     expect(canChangeBilling(status)).toBe(allowed);
+  });
+});
+
+describe("an ended plan freezes the workspace", () => {
+  test.each([
+    ["canceled", true],
+    ["unpaid", true],
+    ["incomplete_expired", true],
+    ["active", false],
+    ["trialing", false],
+    ["past_due", false],
+  ])("%s is ended: %s, and billing changes are allowed only when it is not", (status, ended) => {
+    expect(isEnded(status)).toBe(ended);
+    expect(canChangeBilling(status)).toBe(!ended);
   });
 });

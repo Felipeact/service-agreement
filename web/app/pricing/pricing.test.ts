@@ -11,9 +11,9 @@ const textOf = (html: string) => decode(html.replace(/<[^>]+>/g, " ")).replace(/
 const renderPage = () => renderToStaticMarkup(createElement(PricingPage));
 
 const PLAN_FIGURES = [
-  { key: "starter", name: "Starter", price: "$49", live: "15", imports: "10", seats: "2" },
-  { key: "team", name: "Team", price: "$99", live: "60", imports: "40", seats: "5" },
-  { key: "business", name: "Business", price: "$199", live: "200", imports: "120", seats: "10" },
+  { key: "starter", name: "Starter", price: "$79", live: "15", imports: "10", seats: "2" },
+  { key: "team", name: "Team", price: "$149", live: "60", imports: "40", seats: "5" },
+  { key: "business", name: "Business", price: "$299", live: "200", imports: "120", seats: "10" },
 ] as const;
 
 function planBlock(html: string, key: string) {
@@ -42,14 +42,14 @@ describe("the plans", () => {
     const html = renderPage();
     const link = planBlock(html, key).match(/<a\b([^>]*)>([^<]*)<\/a>/)!;
     expect(link[1]).toContain(`href="/register?plan=${key}"`);
-    expect(link[1]).toContain(`aria-label="Start 14-day trial, ${name} plan"`);
-    expect(link[2]).toBe("Start 14-day trial");
+    expect(link[1]).toContain(`aria-label="Get started, ${name} plan"`);
+    expect(link[2]).toBe("Get started");
     expect(html).not.toContain('type="checkbox"');
     expect(textOf(html)).not.toContain("Tick every trade");
   });
 });
 
-const TRIAL_LINE = "14-day free trial. A card is required to start, and billing is monthly after the trial.";
+const TRIAL_LINE = "Simple monthly plans. Billing starts at checkout. Cancel any time.";
 
 describe("the page copy", () => {
   test("C2406: the trial line appears once, before the first plan's name", () => {
@@ -95,7 +95,7 @@ describe("seats are charged beyond the included ones (register-seats)", () => {
     const at = ["2 seats included", "5 seats included", "10 seats included"].map((phrase) => text.indexOf(phrase));
     expect(at.every((index) => index >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
-    expect(text).toContain("Extra seats $15 a month");
+    expect(text).toContain("Extra seats $19 a month");
     expect(text.toLowerCase()).not.toContain("unlimited seats");
     expect(text.toLowerCase()).not.toContain("seats are never charged");
   });

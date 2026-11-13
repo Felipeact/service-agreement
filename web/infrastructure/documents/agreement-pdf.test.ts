@@ -1,8 +1,11 @@
 import { DEFAULT_ITEM_WORDS, itemWords } from "@/domain/org-settings";
 import { describe, expect, test } from "vitest";
-import { DRAFT_MARK, type AgreementDocument } from "@/domain/agreement";
+import { buildAgreementDocument, buildTemplatePreviewDocument, DRAFT_MARK, SYSTEM_AGREEMENT_BODY, type AgreementDocument, type AgreementTemplateBody, type DocumentSource } from "@/domain/agreement";
+import type { OrgSettingsValue } from "@/domain/org-settings";
 import { reactPdfDocumentRenderer } from "./index";
+import { LayoutBlock, styles } from "./pdf-sections";
 import { pdfColours, pdfPages, winAnsi } from "./pdf-text.testing";
+import { pngBytes } from "./logo.testing";
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
@@ -258,5 +261,432 @@ describe("the agreement PDF, item words", () => {
     expect(set).not.toMatch(/equipment/i);
     const fallback = text(await render({ scope: { kind: "not_recorded" } }));
     expect(fallback).toContain("The equipment covered by this version was not recorded");
+  });
+});
+
+describe("the agreement PDF, with a logo", () => {
+  const withLogo = { ...base, tenant: { ...base.tenant, logo: { bytes: pngBytes(320, 96), format: "png" as const } } };
+
+  test("C3326: with a logo the PDF holds an image object; with none it holds none and says what it said before", async () => {
+    const drawn = await reactPdfDocumentRenderer.renderAgreement(withLogo);
+    const plain = await reactPdfDocumentRenderer.renderAgreement(base);
+    expect(Buffer.from(drawn).toString("latin1")).toContain("/Subtype /Image");
+    expect(Buffer.from(plain).toString("latin1")).not.toContain("/Subtype /Image");
+    // The logo makes room above the name, so a line may move to the next page: the same words appear, in a different place.
+    const words = (bytes: Uint8Array) => pdfPages(bytes).join(" ").replace(/Page \d+ of \d+/g, "").split(/\s+/).filter(Boolean).sort();
+    expect(words(drawn)).toEqual(words(plain));
+  });
+});
+
+const TEMPLATE: AgreementTemplateBody = {
+  schema: 1,
+  name: "Welcome",
+  description: "",
+  intro: [
+    { type: "heading", text: "About this agreement" },
+    { type: "paragraph", text: "Welcome {{customer.name}}." },
+  ],
+  footer: [{ type: "paragraph", text: "Thank you, {{tenant.legalName}}." }],
+  sections: { schedule: true, scope: true },
+  preset: { termMonths: null, lines: [] },
+};
+
+const SETTINGS: OrgSettingsValue = {
+  legalName: "Kettle Ridge Mechanical Ltd.",
+  address: "100 Sample Street, Burnaby, BC",
+  phone: "604-555-0100",
+  accentColor: "#1f6f8b",
+  repairDiscountPct: 10,
+  cpiCapPct: 5,
+  cancellationNoticeDays: 30,
+  paymentDays: 30,
+  governingProvince: "BC",
+  taxNote: "GST extra",
+  defaultTermMonths: 12,
+  renewalNoticeDays: 30,
+  cpiRenegotiationThresholdPct: 5,
+  renewalCpiPct: null,
+  renewalCpiAsOf: null,
+  proposalValidityDays: 30,
+  itemSingular: "equipment",
+  itemPlural: "equipment",
+};
+
+const SOURCE: DocumentSource = {
+  number: "AG-1052",
+  customer: { name: "Fernwood Dental" },
+  site: { name: "Fernwood Dental, Main" },
+  editable: false,
+  shown: {
+    versionNo: 1,
+    lines: [{ id: "l1", description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000, visitMonths: [3, 6, 9, 12], equipment: [{ name: "Rooftop unit" }] }],
+    annualCents: 180000,
+  },
+  serviceScope: { source: "live", takenAt: null, types: [] },
+  terms: { repairDiscountPct: 10, cpiCapPct: 5, cancellationNoticeDays: 30, paymentDays: 30, governingProvince: "BC", taxNote: "GST extra", renewalNoticeDays: null, cpiRenegotiationThresholdPct: null },
+  term: { start: null, months: 12, end: null },
+  validUntil: null,
+};
+
+const renderBuilt = async (template?: AgreementTemplateBody) =>
+  pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildAgreementDocument(SOURCE, SETTINGS, template)));
+
+describe("the agreement PDF with a template", () => {
+  test("C5320: the page shows the title block, the intro, the price table, the terms, the closing text and the page footer, in this order", async () => {
+    const all = text(await renderBuilt(TEMPLATE));
+    const positions = indexOfIn(
+      all,
+      "Preventive maintenance service agreement",
+      "About this agreement",
+      "Welcome Fernwood Dental.",
+      "Service and price",
+      "Terms",
+      "Thank you, Kettle Ridge Mechanical Ltd..",
+      "Page 1 of 1",
+    );
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(inOrder(positions)).toBe(true);
+  });
+
+  test.each<[string, boolean, boolean]>([
+    ["both shown", true, true],
+    ["schedule hidden", false, true],
+    ["scope hidden", true, false],
+    ["both hidden", false, false],
+  ])("C5321: %s", async (_label, schedule, scope) => {
+    const all = text(await renderBuilt({ ...TEMPLATE, sections: { schedule, scope } }));
+    expect(all.includes("Visit schedule")).toBe(schedule);
+    expect(all.includes("Service included")).toBe(scope);
+    // Always drawn.
+    for (const always of ["Service and price", "Quarterly visit", "Terms", "Repair discount", "Page 1 of 1"]) expect(all).toContain(always);
+  });
+
+  test("C5332: a document built with the system body prints the same page text as one built with no body, and as the document of before templates", async () => {
+    const withSystem = await renderBuilt(SYSTEM_AGREEMENT_BODY);
+    const without = await renderBuilt();
+    expect(withSystem).toEqual(without);
+    const legacy = buildAgreementDocument(SOURCE, SETTINGS);
+    const before: Partial<AgreementDocument> = { ...legacy };
+    delete before.intro;
+    delete before.footer;
+    delete before.sections;
+    expect(pdfPages(await reactPdfDocumentRenderer.renderAgreement(before as AgreementDocument))).toEqual(without);
+    const all = text(without);
+    expect(all).toContain("Visit schedule");
+    expect(all).toContain("Service included");
+  });
+});
+
+describe("the template preview PDF", () => {
+  const PREVIEW_BODY: AgreementTemplateBody = {
+    ...TEMPLATE,
+    preset: {
+      termMonths: 12,
+      lines: [
+        { description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 },
+        { description: "Filter check", visitMonths: [6], assetTypeCodes: [], costPerVisitCents: null },
+      ],
+    },
+  };
+  const renderPreview = async (body: AgreementTemplateBody) =>
+    text(pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildTemplatePreviewDocument(body, SETTINGS, null, DEFAULT_ITEM_WORDS))));
+
+  test("C5436: the text shows the intro before the price table, a $450.00 row and a $0.00 row, the schedule, the service included, the terms, then the closing text", async () => {
+    const all = await renderPreview(PREVIEW_BODY);
+    const positions = indexOfIn(all, "Welcome Sample Customer Ltd..", "Service and price", "Quarterly visit", "$450.00", "Filter check", "$0.00", "Visit schedule", "Service included", "Terms", "Thank you, Kettle Ridge Mechanical Ltd..");
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(inOrder(positions)).toBe(true);
+  });
+
+  test("C5436: the page carries the sample number, customer and site and the mark TEMPLATE PREVIEW", async () => {
+    const all = await renderPreview(PREVIEW_BODY);
+    for (const expected of ["AG-0000", "Sample Customer Ltd.", "Sample Site", "TEMPLATE PREVIEW"]) expect(all).toContain(expected);
+  });
+
+  test.each<[string, boolean, boolean]>([
+    ["both switches on", true, true],
+    ["the schedule off", false, true],
+    ["the scope off", true, false],
+    ["both off", false, false],
+  ])("C5436: with %s the Visit schedule and Service included sections are drawn only when on, and Terms always", async (_label, schedule, scope) => {
+    const all = await renderPreview({ ...PREVIEW_BODY, sections: { schedule, scope } });
+    expect(all.includes("Visit schedule")).toBe(schedule);
+    expect(all.includes("Service included")).toBe(scope);
+    expect(all).toContain("Terms");
+    expect(all).toContain("Repair discount");
+  });
+});
+
+
+describe("the agreement PDF, layout and options (block-editor)", () => {
+  type V2Body = Extract<AgreementTemplateBody, { schema: 2 }>;
+  type Item = V2Body["layout"][number];
+  const DOC = { title: "Maintenance schedule", showMeta: true, pageHeader: "first", pageFooter: "number" } as const;
+  const price: Item = { kind: "section", key: "price" };
+  const section = (key: "schedule" | "included" | "equipment" | "terms"): Item => ({ kind: "section", key });
+  const para = (text: string, extra: Partial<Extract<Item, { kind: "block" }>> = {}): Item => ({ kind: "block", type: "paragraph", text, ...extra });
+  const v2 = (layout: Item[], doc: Partial<V2Body["doc"]> = {}): V2Body => ({
+    schema: 2,
+    name: "Layout",
+    description: "",
+    doc: { ...DOC, ...doc },
+    layout,
+    preset: { termMonths: null, lines: [] },
+  });
+
+  const types = ["AHU", "Boiler", "Fire damper", "Chiller", "Pump", "Wye strainer"].map((name) => ({
+    code: name.toUpperCase(),
+    name,
+    tasks: [{ description: `Inspect ${name}`, visitMonths: null }],
+    assets: [{ unitNo: "U-1", typeModel: null, location: null }],
+  }));
+  const line = (description: string, visitsPerYear: number, code: string) => ({
+    id: description,
+    description,
+    visitsPerYear,
+    costPerVisitCents: 10000,
+    annualCents: visitsPerYear * 10000,
+    visitMonths: [],
+    equipment: [{ code, name: code }],
+  });
+  const LAYOUT_SOURCE: DocumentSource = {
+    ...SOURCE,
+    shown: {
+      versionNo: 1,
+      lines: [line("Air handlers", 4, "AHU"), line("Boilers", 2, "BOILER"), line("Dampers", 1, "FIRE DAMPER"), line("Chillers", 12, "CHILLER"), line("Pumps", 3, "PUMP")],
+      annualCents: 220000,
+    },
+    serviceScope: { source: "live", takenAt: null, types },
+    term: { start: "2027-01-01", months: 12, end: "2027-12-31" },
+    validUntil: "2026-12-01",
+  };
+  const draw = async (template: AgreementTemplateBody, source: DocumentSource = LAYOUT_SOURCE) =>
+    pdfPages(await reactPdfDocumentRenderer.renderAgreement(buildAgreementDocument(source, SETTINGS, template)));
+  const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
+
+  /** Enough lines for three pages. */
+  const longSource = (): DocumentSource => {
+    const lines = Array.from({ length: 110 }, (_, i) => line(`Line ${i + 1}`, 1, "AHU"));
+    return { ...LAYOUT_SOURCE, shown: { versionNo: 1, lines, annualCents: 1100000 } };
+  };
+
+  test("C5502: after the title block the items are drawn in order, and a block with pageBreakBefore starts a new page", async () => {
+    const pages = await draw(
+      v2([
+        { kind: "block", type: "heading", text: "A level one heading", level: 1 },
+        { kind: "block", type: "heading", text: "A level two heading", level: 2 },
+        para("A paragraph of text."),
+        { kind: "block", type: "clause", text: "A clause of text." },
+        price,
+        para("Starts the next page.", { pageBreakBefore: true }),
+        section("terms"),
+      ]),
+    );
+    const all = text(pages);
+    expect(inOrder(indexOfIn(all, "Maintenance schedule", "A level one heading", "A level two heading", "A paragraph of text.", "A clause of text.", "Service and price", "Starts the next page.", "Terms"))).toBe(true);
+    expect(pages.length).toBeGreaterThanOrEqual(2);
+    expect(pages[0]).not.toContain("Starts the next page.");
+    expect(pages[1].split("\n")[0]).toBe("Starts the next page.");
+  });
+
+  test("C5503: a layout with none of schedule, included, equipment or terms draws none of them", async () => {
+    const all = text(await draw(v2([para("Only this."), price])));
+    for (const absent of ["Visit schedule", "Service included", "Equipment", "Terms", "Repair discount"]) expect(all, absent).not.toContain(absent);
+    expect(count(all, "Service and price")).toBe(1);
+  });
+
+  test("C5503: a layout of price alone draws the price table once", async () => {
+    const all = text(await draw(v2([price])));
+    expect(count(all, "Service and price")).toBe(1);
+    expect(count(all, "Total per year")).toBe(1);
+    expect(all).toContain("Air handlers");
+  });
+
+  test.each<[string, Item[]]>([
+    ["price first", [price, section("schedule"), section("included"), section("equipment"), section("terms")]],
+    ["price last", [section("terms"), section("equipment"), section("included"), section("schedule"), price]],
+    ["price between text", [para("Before."), price, para("After.")]],
+  ])("C5503: the price table is drawn exactly once with %s", async (_label, layout) => {
+    const all = text(await draw(v2(layout)));
+    expect(count(all, "Service and price")).toBe(1);
+    expect(count(all, "Total per year")).toBe(1);
+    expect(count(all, "before tax")).toBe(1);
+  });
+
+  test("C5504: with included before price the service-included title comes first, and with price first it comes after", async () => {
+    const included = text(await draw(v2([section("included"), price])));
+    expect(included.indexOf("Service included")).toBeGreaterThanOrEqual(0);
+    expect(included.indexOf("Service included")).toBeLessThan(included.indexOf("Service and price"));
+    const reverse = text(await draw(v2([price, section("included")])));
+    expect(reverse.indexOf("Service and price")).toBeLessThan(reverse.indexOf("Service included"));
+  });
+
+  test("C5505: with showMeta false there is no version, customer, site, term or validity line, and the title stays; with true there are all", async () => {
+    const off = await draw(v2([price], { showMeta: false, pageFooter: "letterhead" }));
+    const all = text(off);
+    for (const absent of ["AG-1052", "Version 1", "Fernwood Dental", "Term: Jan 1, 2027", "Valid until"]) expect(all, absent).not.toContain(absent);
+    expect(all).toContain("Maintenance schedule");
+    const on = text(await draw(v2([price], { showMeta: true, pageFooter: "letterhead" })));
+    for (const present of ["AG-1052", "Version 1", "Fernwood Dental, Main", "Term: Jan 1, 2027", "Valid until Dec 1, 2026"]) expect(on, present).toContain(present);
+  });
+
+  test("C5506: the title is drawn with its merge variables filled, and an empty title draws no title", async () => {
+    const titled = text(await draw(v2([price], { title: "Maintenance schedule for {{site.name}}" })));
+    expect(titled).toContain("Maintenance schedule for Fernwood Dental, Main");
+    expect(titled).not.toContain("{{");
+    const [first] = await draw(v2([price], { title: "" }));
+    expect(first).not.toContain("Preventive maintenance service agreement");
+    expect(first.split("\n").slice(0, 5)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100", "AG-1052", "Version 1"]);
+  });
+
+  test("C5527: an agreement's block text resolves tenant.address, tenant.phone and term.start in the PDF", async () => {
+    const source: DocumentSource = { ...LAYOUT_SOURCE, term: { start: "2026-11-13", months: 12, end: "2027-11-12" } };
+    const all = text(
+      await draw(
+        v2([
+          para("Write to {{tenant.address}}."),
+          para("Call {{tenant.phone}} to reach us."),
+          para("Starting {{term.start}}."),
+          price,
+        ]),
+        source,
+      ),
+    );
+    expect(all).toContain("Write to 100 Sample Street, Burnaby, BC.");
+    expect(all).toContain("Call 604-555-0100 to reach us.");
+    expect(all).toContain("Starting November 13, 2026.");
+    expect(all).not.toContain("{{");
+  });
+
+  test("C5507: with pageHeader every the company name tops each page of a three-page agreement, and with first only the first", async () => {
+    const every = await draw(v2([price], { pageHeader: "every" }), longSource());
+    expect(every.length).toBeGreaterThanOrEqual(3);
+    for (const page of every) expect(page.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
+    const first = await draw(v2([price], { pageHeader: "first" }), longSource());
+    expect(first.length).toBeGreaterThanOrEqual(3);
+    expect(first[0].startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
+    for (const page of first.slice(1)) expect(page).not.toContain("Kettle Ridge Mechanical Ltd.");
+  });
+
+  test("C5508: with pageFooter letterhead each page ends with the company name, address and phone, and with number with the number and Page n of m", async () => {
+    const letterhead = await draw(v2([price], { pageFooter: "letterhead" }), longSource());
+    expect(letterhead.length).toBeGreaterThanOrEqual(3);
+    for (const page of letterhead) {
+      expect(page.split("\n").slice(-3)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100"]);
+      expect(page).not.toMatch(/Page \d+ of \d+/);
+    }
+    const number = await draw(v2([price], { pageFooter: "number" }), longSource());
+    number.forEach((page, i) => expect(page.split("\n").slice(-2)).toEqual(["AG-1052", `Page ${i + 1} of ${number.length}`]));
+  });
+
+  test("C5510: a schema 1 template and the system template print the same text as the document built with no layout at all", async () => {
+    const TEMPLATE_V1: AgreementTemplateBody = {
+      schema: 1,
+      name: "Welcome",
+      description: "",
+      intro: [
+        { type: "heading", text: "About this agreement" },
+        { type: "paragraph", text: "Welcome {{customer.name}}." },
+      ],
+      footer: [{ type: "clause", text: "Thank you, {{tenant.legalName}}." }],
+      sections: { schedule: true, scope: false },
+      preset: { termMonths: null, lines: [] },
+    };
+    for (const template of [TEMPLATE_V1, SYSTEM_AGREEMENT_BODY, undefined]) {
+      const built = buildAgreementDocument(LAYOUT_SOURCE, SETTINGS, template);
+      const before: Partial<AgreementDocument> = { ...built };
+      delete before.layout;
+      delete before.doc;
+      expect(pdfPages(await reactPdfDocumentRenderer.renderAgreement(built))).toEqual(pdfPages(await reactPdfDocumentRenderer.renderAgreement(before as AgreementDocument)));
+    }
+  });
+
+  test("C5515: with showFrequency each type heading reads name and frequency, and a type no line covers reads as its name", async () => {
+    const all = text(await draw(v2([{ kind: "section", key: "included", options: { showFrequency: true } }, price])));
+    for (const heading of ["AHU (QUARTERLY)", "Boiler (BI-ANNUAL)", "Fire damper (ANNUAL)", "Chiller (MONTHLY)", "Pump (3 TIMES PER YEAR)"]) {
+      expect(all.split("\n"), heading).toContain(heading);
+    }
+    expect(all.split("\n")).toContain("Wye strainer");
+    expect(all).not.toContain("Wye strainer (");
+  });
+
+  test("C5516: with uppercase the type headings are in capitals, and without as typed", async () => {
+    const upper = text(await draw(v2([{ kind: "section", key: "included", options: { showFrequency: true, uppercase: true } }, price]))).split("\n");
+    expect(upper).toContain("AHU (QUARTERLY)");
+    expect(upper).toContain("BOILER (BI-ANNUAL)");
+    expect(upper).not.toContain("Boiler (BI-ANNUAL)");
+    const plain = text(await draw(v2([{ kind: "section", key: "included", options: { showFrequency: true } }, price]))).split("\n");
+    expect(plain).toContain("Boiler (BI-ANNUAL)");
+    expect(plain).not.toContain("BOILER (BI-ANNUAL)");
+  });
+
+  test("C5517: a title option replaces the default title of price, schedule, included and equipment, and no option draws the defaults", async () => {
+    const titled = text(
+      await draw(
+        v2([
+          { kind: "section", key: "price", options: { title: "PREVENTIVE MAINTENANCE SERVICE CHARGE" } },
+          { kind: "section", key: "schedule", options: { title: "WHEN WE VISIT" } },
+          { kind: "section", key: "included", options: { title: "Service included:" } },
+          { kind: "section", key: "equipment", options: { title: "EQUIPMENT LIST" } },
+        ]),
+      ),
+    );
+    const rows = titled.split("\n");
+    for (const title of ["PREVENTIVE MAINTENANCE SERVICE CHARGE", "WHEN WE VISIT", "Service included:", "EQUIPMENT LIST"]) expect(rows, title).toContain(title);
+    for (const gone of ["Service and price", "Visit schedule", "Service included", "Equipment"]) expect(rows, gone).not.toContain(gone);
+    const defaults = text(await draw(v2([price, section("schedule"), section("included"), section("equipment")]))).split("\n");
+    for (const title of ["Service and price", "Visit schedule", "Service included", "Equipment"]) expect(defaults, title).toContain(title);
+  });
+
+  test("C5518: price columns replace the header and total labels, and times_per_year prints 4 times per year and 1 time per year", async () => {
+    const columns = { description: "PREVENTATIVE MAINTENANCE", visits: "NUMBER OF TIMES PER YEAR", perVisit: "COST PER VISIT", perYear: "TOTAL COST PER YEAR", total: "TOTAL" };
+    const source = { ...LAYOUT_SOURCE, shown: { versionNo: 1, lines: [line("Quarterly", 4, "AHU"), line("Annual", 1, "BOILER")], annualCents: 50000 } };
+    const rows = text(await draw(v2([{ kind: "section", key: "price", options: { columns, visitsFormat: "times_per_year" } }]), source)).split("\n");
+    for (const label of Object.values(columns).slice(0, 4)) expect(rows, label).toContain(label);
+    expect(rows).toContain("TOTAL $500.00");
+    expect(rows).toContain("4 times per year");
+    expect(rows).toContain("1 time per year");
+    for (const gone of ["Description", "Visits per year", "Per visit", "Per year"]) expect(rows, gone).not.toContain(gone);
+    const defaults = text(await draw(v2([price]), source)).split("\n");
+    expect(defaults).toContain("Visits per year");
+    expect(defaults).toContain("Total per year $500.00");
+    expect(defaults).toContain("4");
+    expect(defaults).not.toContain("4 times per year");
+  });
+
+  test("C5519: a block indented two levels is drawn 32 points further in than one with none, a level 1 heading in the title style and a level 2 in the section style", () => {
+    const accent = "#1f6f8b";
+    type Node = { props: { style: unknown[] | Record<string, unknown> } };
+    const styleOf = (item: Parameters<typeof LayoutBlock>[0]["item"]) => (LayoutBlock({ item, accent }) as unknown as Node).props.style;
+    const flat = (style: unknown) => Object.assign({}, ...([] as unknown[]).concat(style).flat().filter(Boolean)) as Record<string, number>;
+    const plain = flat(styleOf({ kind: "block", type: "paragraph", text: "x", indent: 0 }));
+    const indented = flat(styleOf({ kind: "block", type: "paragraph", text: "x", indent: 2 }));
+    expect(plain.marginLeft).toBe(0);
+    expect(indented.marginLeft).toBe(32);
+    expect(flat(styleOf({ kind: "block", type: "paragraph", text: "x" })).marginLeft).toBe(0);
+    expect(styleOf({ kind: "block", type: "heading", text: "x", level: 1 })).toEqual([styles.title, { marginLeft: 0 }]);
+    expect(styleOf({ kind: "block", type: "heading", text: "x", level: 2 })).toEqual([styles.h2, { color: accent }, { marginLeft: 0 }]);
+    expect(styleOf({ kind: "block", type: "heading", text: "x" })).toEqual([styles.h2, { color: accent }, { marginLeft: 0 }]);
+    expect(styleOf({ kind: "block", type: "clause", text: "x" })).toEqual([{ marginBottom: 4 }, { marginLeft: 0 }]);
+  });
+
+  test("C5519: indented blocks render in order in the PDF", async () => {
+    const all = text(await draw(v2([para("1. First", { indent: 0 }), para("a. Nested", { indent: 1 }), para("i. Deeper", { indent: 2 }), price])));
+    expect(inOrder(indexOfIn(all, "1. First", "a. Nested", "i. Deeper", "Service and price"))).toBe(true);
+  });
+
+  test("C5520: a layout carrying empty option objects draws the same text as one with none", async () => {
+    const bare = await draw(v2([price, section("schedule"), section("included"), section("equipment"), section("terms")]));
+    const empty = await draw(
+      v2([
+        { kind: "section", key: "price", options: {} },
+        { kind: "section", key: "schedule", options: {} },
+        { kind: "section", key: "included", options: {} },
+        { kind: "section", key: "equipment", options: {} },
+        section("terms"),
+      ]),
+    );
+    expect(empty).toEqual(bare);
+    expect(text(bare)).toContain("AHU, 1 unit");
   });
 });

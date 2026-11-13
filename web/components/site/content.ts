@@ -141,7 +141,7 @@ export const FAQS: readonly Faq[] = [
   { q: "Will my customer see your brand?", a: "No. The review page, PDFs, emails and signing page carry your company name, logo and accent colour." },
   { q: "Are e-signatures legally valid?", a: "At launch the product targets Canada outside Quebec, where e-signature law follows the UECA model. You own your contract wording and confirm its validity under your province. Starter wording is reviewed by a lawyer before launch." },
   { q: "What about Quebec?", a: "Quebec has its own e-signature framework and language rules. It is a later, separate item." },
-  { q: "How does the free trial work?", a: "14 days free. A card is required to start, and billing is monthly after the trial. Stripe handles payment." },
+  { q: "How does billing work?", a: "Pick a plan and pay by card at checkout. Billing is monthly and you can cancel any time. Stripe handles payment." },
   { q: "What is a live agreement?", a: "One that is in progress, or sent and waiting for the customer. Plans limit volume only: features, templates and reports are the same on every plan." },
   { q: "Do you charge per seat?", a: `Each plan includes some seats (${PLANS.map((plan) => `${plan.name} ${plan.includedSeats}`).join(", ")}). Every extra seat is ${formatPlanPrice(EXTRA_SEAT_CENTS)} a month.` },
   { q: "What does it not do?", a: "Dispatch, GPS, payroll, construction or project contracts, and a Word-style document editor." },

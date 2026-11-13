@@ -14,6 +14,8 @@ export type BillingActions = {
   cancel: () => Promise<SubscriptionResult>;
   resume: () => Promise<SubscriptionResult>;
   changePlan: (plan: PlanKey) => Promise<PlanChangeResult>;
+  /** Starts a new subscription for an ended plan; it redirects to Checkout, so it answers nothing. */
+  renew?: () => Promise<void>;
 };
 
 /** The notices the page shows (billing-page AC 13, 23, 24). */
