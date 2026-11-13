@@ -63,6 +63,19 @@ describe("the review page draws the layout of the version's template", () => {
     for (const gone of ["Service included", "Service lines", "Visit schedule"]) expect(headings(page)).not.toContain(gone);
   });
 
+  test("C5527: the review page resolves tenant.address, tenant.phone and term.start in a block's text, as the PDF does", () => {
+    const view = portalView({
+      template: body([para("Write to {{tenant.address}}."), para("Call {{tenant.phone}} to reach us."), para("Starting {{term.start}}."), price()]),
+      term: { start: "2026-11-13", months: 12, end: "2027-11-12" },
+    });
+    const shown = text(html(view));
+    expect(shown).toContain("Write to 100 Sample Street, Burnaby, BC.");
+    expect(shown).toContain("Call 604-555-0100 to reach us.");
+    expect(shown).toContain("Starting November 13, 2026.");
+    expect(shown).not.toContain("{{");
+    expect(portalDocument(view)?.layout?.map((item) => (item.kind === "block" ? item.text : item.key))).toContain("Starting November 13, 2026.");
+  });
+
   test("C5509: a section absent from the layout is not drawn on the page, as on the PDF", () => {
     const view = portalView({ template: body([price(), para("Only this.")]) });
     const shown = text(html(view));

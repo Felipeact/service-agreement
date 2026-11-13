@@ -539,6 +539,25 @@ describe("the agreement PDF, layout and options (block-editor)", () => {
     expect(first.split("\n").slice(0, 5)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100", "AG-1052", "Version 1"]);
   });
 
+  test("C5527: an agreement's block text resolves tenant.address, tenant.phone and term.start in the PDF", async () => {
+    const source: DocumentSource = { ...LAYOUT_SOURCE, term: { start: "2026-11-13", months: 12, end: "2027-11-12" } };
+    const all = text(
+      await draw(
+        v2([
+          para("Write to {{tenant.address}}."),
+          para("Call {{tenant.phone}} to reach us."),
+          para("Starting {{term.start}}."),
+          price,
+        ]),
+        source,
+      ),
+    );
+    expect(all).toContain("Write to 100 Sample Street, Burnaby, BC.");
+    expect(all).toContain("Call 604-555-0100 to reach us.");
+    expect(all).toContain("Starting November 13, 2026.");
+    expect(all).not.toContain("{{");
+  });
+
   test("C5507: with pageHeader every the company name tops each page of a three-page agreement, and with first only the first", async () => {
     const every = await draw(v2([price], { pageHeader: "every" }), longSource());
     expect(every.length).toBeGreaterThanOrEqual(3);

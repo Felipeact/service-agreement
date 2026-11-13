@@ -283,6 +283,19 @@ describe("buildAgreementDocument, the layout and options (block-editor)", () => 
     expect(empty.doc?.title).toBe("");
   });
 
+  test("C5527: the document's layout text resolves tenant.address, tenant.phone, term.start and terms.taxNote for an agreement", () => {
+    const template = V2({
+      layout: [
+        { kind: "block", type: "paragraph", text: "{{tenant.address}} | {{tenant.phone}} | {{term.start}} | {{terms.taxNote}}" },
+        { kind: "section", key: "price" },
+      ],
+    });
+    const source: DocumentSource = { ...SOURCE, term: { start: "2026-11-13", months: 12, end: "2027-11-12" } };
+    const text = (built: ReturnType<typeof buildAgreementDocument>) => (built.layout?.[0] as { text: string }).text;
+    expect(text(buildAgreementDocument(source, SETTINGS, template))).toBe("100 Sample Street, Burnaby, BC | 604-555-0100 | November 13, 2026 | GST extra");
+    expect(text(buildAgreementDocument({ ...source, editable: true, terms: null }, SETTINGS, template))).toBe("100 Sample Street, Burnaby, BC | 604-555-0100 | November 13, 2026 | GST extra");
+  });
+
   test("C5511: a sent version takes its layout and options only from its frozen pin: other settings and a newer template change nothing", () => {
     const pinned = V2({ layout: [{ kind: "block", type: "paragraph", text: "Terms are {{terms.paymentDays}}." }, { kind: "section", key: "price" }] });
     const before = buildAgreementDocument(SOURCE, SETTINGS, pinned);
