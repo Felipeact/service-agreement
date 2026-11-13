@@ -65,6 +65,7 @@ export const RECIPES: Recipe[] = [
   plain("plan_limits"),
   plain("contract_templates"),
   plain("agreement_templates"),
+  { name: "block_editor", parts: ["fixture.sql", "../migrations/20261113100000_block_editor.sql", "block_editor.sql"] },
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;
