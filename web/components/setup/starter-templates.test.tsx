@@ -112,6 +112,12 @@ describe("the starter templates on the setup screen", () => {
     expect([...half.matchAll(/href="([^"]*)"/g)].map((match) => match[1]).filter((href) => /pdf|sign/i.test(href))).toEqual([]);
   });
 
+  test("C5514: the agreement half comes before the contract half", () => {
+    const html = staticHtml();
+    expect(html.indexOf('data-half="agreement"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-half="contract"')).toBeGreaterThan(html.indexOf('data-half="agreement"'));
+  });
+
   test("C5514: each half has one Customize in Templates link to /templates with the inline-link tap area", () => {
     const html = staticHtml();
     for (const half of ["agreement", "contract"]) {

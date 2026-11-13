@@ -65,13 +65,15 @@ describe("starter contract preview", () => {
 describe("starter agreement preview document", () => {
   test("C5505: letterhead, logo, mark and saved terms come from the org", () => {
     const logo = { bytes: new Uint8Array([137, 80, 78, 71]), format: "png" as const };
-    const document = buildTemplatePreviewDocument(SYSTEM_AGREEMENT_BODY, settings, logo, words);
+    const own = { ...settings, paymentDays: 45, cancellationNoticeDays: 14 };
+    const document = buildTemplatePreviewDocument(SYSTEM_AGREEMENT_BODY, own, logo, words);
     expect(document.tenant.name).toBe("Flow Plumbing Ltd.");
     expect(document.tenant.address).toBe("12 Pipe St, Vancouver");
     expect(document.tenant.phone).toBe("604-555-0123");
     expect(document.tenant.logo).toEqual(logo);
     expect(document.mark).toBe("TEMPLATE PREVIEW");
-    expect(document.terms.map((term) => term.value).join(" ")).toContain("30");
-    expect(document.terms.length).toBeGreaterThan(0);
+    const printed = document.terms.map((term) => term.value).join(" ");
+    expect(printed).toContain("45");
+    expect(printed).toContain("14");
   });
 });
