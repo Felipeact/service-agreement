@@ -132,7 +132,7 @@ None - no stored-data shape change. The contract wording uses the existing `docu
 36. WHEN a template saved as schema 1 is opened THEN the editor SHALL show its `layoutOf` rows and options, and WHEN it is saved a schema 2 version SHALL be written
 37. WHEN a field fails validation THEN the editor SHALL stay open with the row's message beside it and keep every typed value
 38. WHEN the layout or an option changes THEN the live PDF SHALL refresh as for any change
-39. WHERE the screen is narrower than 1280 px THEN rows SHALL stack with the preview below, every control SHALL be at least 44 px high, and nothing SHALL depend on hover or drag
+39. WHERE the screen is narrower than 1280 px THEN rows SHALL stack with the preview below, WHERE it is narrower than 1024 px (the product's touch breakpoint, `lg`) every control SHALL be at least 44 px high, and nothing SHALL depend on hover or drag
 40. WHEN a template is duplicated THEN the copy SHALL carry the layout and options of its latest version and be named as today
 
 **Independent test:** open `/templates/new`, add a heading, move the equipment section above the price table, turn on letterhead on every page, and watch the PDF follow.
