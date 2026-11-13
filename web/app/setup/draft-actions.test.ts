@@ -59,7 +59,7 @@ describe("draftCatalogAction", () => {
   });
 
   test("C4106: a user with no membership reaches the use case without a role, and a signed-out visitor goes to /login", async () => {
-    currentMember.mockResolvedValue({ status: "no_membership", userId: "u2", email: "x@example.com" });
+    currentMember.mockResolvedValue({ status: "no_membership", email: "x@example.com" });
     draftCatalog.mockResolvedValue({ ok: false, code: "forbidden" });
     expect(await draftCatalogAction(idle, form({ trade: "pest control", notes: "" }))).toEqual({ status: "failed", code: "forbidden", trade: "pest control", notes: "" });
     expect(draftCatalog.mock.calls[0][0].role).toBeNull();
@@ -101,7 +101,7 @@ describe("acceptDraftAction", () => {
   test("C4119: a signed-out visitor goes to /login and a user with no membership reaches the use case without a role", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(acceptDraftAction(idle, form({ trade: "pest control", types: "[]" }))).rejects.toThrow("NEXT_REDIRECT /login");
-    currentMember.mockResolvedValue({ status: "no_membership", userId: "u2", email: "x@example.com" });
+    currentMember.mockResolvedValue({ status: "no_membership", email: "x@example.com" });
     acceptCatalogDraft.mockResolvedValue({ ok: false, code: "forbidden" });
     await acceptDraftAction(idle, form({ trade: "pest control", types: "[]" }));
     expect(acceptCatalogDraft.mock.calls[0][0].role).toBeNull();
