@@ -146,3 +146,38 @@ describe("the two regions, arranged", () => {
   });
 });
 
+
+describe("the Contract wording card", () => {
+  const link = (html: string) => html.match(/<a[^>]*href="\/templates\/contract"[^>]*>([^<]*)</);
+
+  test("C5557: the card comes below the agreement templates and says Standard contract wording while the org has none, with Customize for an owner", () => {
+    const html = render("owner", { contractWording: { own: false } });
+    expect(html.indexOf('aria-label="Contract wording"')).toBeGreaterThan(html.indexOf('aria-label="Templates"'));
+    expect(html.indexOf('aria-label="Contract wording"')).toBeGreaterThan(html.indexOf('aria-label="Template preview"'));
+    expect(html).toContain("Standard contract wording");
+    expect(html).not.toContain("Your contract wording");
+    expect(link(html)?.[1]).toBe("Customize");
+  });
+
+  test("C5557: after the org saved its own wording the card says Your contract wording with Edit, for an owner and an admin", () => {
+    for (const role of ["owner", "admin"] as const) {
+      const html = render(role, { contractWording: { own: true } });
+      expect(html).toContain("Your contract wording");
+      expect(html).not.toContain("Standard contract wording");
+      expect(link(html)?.[1], role).toBe("Edit");
+    }
+    expect(link(render("admin", { contractWording: { own: false } }))?.[1]).toBe("Customize");
+  });
+
+  test.each(["estimator", "viewer"] as const)("C5557: a %s sees the card and no link to the editor", (role) => {
+    const html = render(role, { contractWording: { own: true } });
+    expect(html).toContain("Your contract wording");
+    expect(html).not.toContain('href="/templates/contract"');
+  });
+
+  test("C5557: with no wording read there is no card, and the agreement templates are still drawn", () => {
+    const html = render("owner");
+    expect(html).not.toContain('aria-label="Contract wording"');
+    expect(html).toContain("Quarterly HVAC");
+  });
+});

@@ -6,14 +6,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementTemplateSummary, CurrentMember, MemberRole } from "@/application/ports";
 import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
+import { SYSTEM_CONTRACT_BODY } from "@/domain/contract";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listAgreementTemplates = vi.fn();
 const listAssetTypes = vi.fn();
 const getItemWords = vi.fn(async () => ({ singular: "station", plural: "stations", Singular: "Station", Plural: "Stations" }));
+const getContractWording = vi.fn(async () => ({ ok: true as const, body: SYSTEM_CONTRACT_BODY, own: false }));
 const listCustomers = vi.fn(async () => []);
 const listActiveSites = vi.fn(async () => []);
-const container = { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
+const container = { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);
@@ -88,6 +90,15 @@ describe("/templates", () => {
 
   test("C2021: the org's item words reach the view", async () => {
     expect(((await render({})) as unknown as ReactElement<{ words: { plural: string } }>).props.words.plural).toBe("stations");
+  });
+
+  test("C5557: the view is told whether the org has its own contract wording, and none when it cannot be read", async () => {
+    type Wording = ReactElement<{ contractWording?: { own: boolean } }>;
+    expect(((await TemplatesForRequest({ params: {} })) as Wording).props.contractWording).toEqual({ own: false });
+    getContractWording.mockResolvedValueOnce({ ok: true, body: SYSTEM_CONTRACT_BODY, own: true });
+    expect(((await TemplatesForRequest({ params: {} })) as Wording).props.contractWording).toEqual({ own: true });
+    getContractWording.mockResolvedValueOnce({ ok: false, code: "unavailable" } as never);
+    expect(((await TemplatesForRequest({ params: {} })) as Wording).props.contractWording).toBeUndefined();
   });
 
   test("C5346: the route has a loading screen that names the page and says it is loading", async () => {

@@ -760,6 +760,20 @@ export interface AgreementTemplateStore {
   archive(templateId: string): Promise<{ ok: true } | { ok: false; code: TemplateFailure }>;
 }
 
+export type ContractWordingFailure = "forbidden" | "invalid" | "unavailable";
+
+/** What the contract wording editor opens on: the org's own latest wording, or the system wording while it has none (block-editor AC 41). */
+export type ContractWordingRead = { ok: true; body: ContractWordingBody; own: boolean } | { ok: false; code: "unavailable" };
+
+export interface ContractWordingReader {
+  read(): Promise<ContractWordingRead>;
+}
+
+export interface ContractWordingStore {
+  /** `save_contract_template`: the org's contract template on the first call, its next version after. */
+  save(body: ContractWordingBody): Promise<{ ok: true; templateId: string; versionNo: number } | { ok: false; code: ContractWordingFailure }>;
+}
+
 export type AddServiceLineResult = { ok: true; id: string } | { ok: false; code: WriteFailure | "locked" | "too_many" };
 export type ServiceLineWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" };
 

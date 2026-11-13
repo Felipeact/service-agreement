@@ -1583,6 +1583,10 @@ export type Database = {
         }
         Returns: string
       }
+      save_contract_template: {
+        Args: { p_body: Json }
+        Returns: { template_id: string; version_no: number }[]
+      }
       save_service_line: {
         Args: {
           p_agreement_id: string

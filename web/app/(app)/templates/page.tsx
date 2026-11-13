@@ -14,10 +14,10 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 
 /** Every member sees the list and the preview; `?selected=<templateId>` picks the card, else the first (agreement-templates AC 16, 17, 21, 22). */
 export async function TemplatesForRequest({ params }: { params: Params }) {
-  const { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, clock } = await getContainer();
+  const { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, getContractWording, clock } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
-  const [list, types, words] = await Promise.all([listAgreementTemplates(), listAssetTypes(), getItemWords(member.orgId)]);
+  const [list, types, words, wording] = await Promise.all([listAgreementTemplates(), listAssetTypes(), getItemWords(member.orgId), getContractWording()]);
   const templates = list.ok ? list.templates : null;
   // Use template opens the New agreement dialog over this page, so the dialog's customers, sites and actions are read for those who can start one.
   const dialog = canUseTemplates(member.role) ? await dialogProps(list) : undefined;
@@ -32,6 +32,7 @@ export async function TemplatesForRequest({ params }: { params: Params }) {
       now={clock.now()}
       words={words}
       dialog={dialog}
+      contractWording={wording.ok ? { own: wording.own } : undefined}
       actions={canWriteTemplates(member.role) ? { duplicate: duplicateTemplateAction, archive: archiveTemplateAction, customize: customizeSystemTemplateAction } : undefined}
     />
   );

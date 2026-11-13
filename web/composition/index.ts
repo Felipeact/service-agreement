@@ -9,8 +9,10 @@ import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
   makeDecidePortal,
   makeDuplicateAgreementTemplate,
+  makeGetContractWording,
   makeInviteMember,
   makeListAgreementTemplates,
+  makeSaveContractWording,
   makeContractDocuments,
   makeExtractImport,
   makeNotify,
@@ -61,6 +63,7 @@ import {
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
 import { supabaseAgreementTemplateReader, supabaseAgreementTemplateStore } from "@/infrastructure/supabase/templates";
+import { supabaseContractWordingReader, supabaseContractWordingStore } from "@/infrastructure/supabase/contract-wording";
 import { supabaseSignatureWebhooks } from "@/infrastructure/supabase/signature-webhook";
 import { supabaseStripeEvents } from "@/infrastructure/supabase/stripe-events";
 import { supabaseSignedCopyReader } from "@/infrastructure/supabase/signed-copy";
@@ -267,6 +270,9 @@ export async function getContainer() {
     saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,
     archiveAgreementTemplate: supabaseAgreementTemplateStore(supabase).archive,
     duplicateAgreementTemplate: makeDuplicateAgreementTemplate(supabaseAgreementTemplateReader(supabase), supabaseAgreementTemplateStore(supabase)),
+    // The contract wording is read and saved as the member too: `save_contract_template` checks owner or admin itself.
+    getContractWording: makeGetContractWording(supabaseContractWordingReader(supabase)),
+    saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),

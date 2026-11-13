@@ -4,6 +4,7 @@ import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { Icon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
+import { ContractWordingCard } from "./contract-wording-card";
 import { canUseTemplates, canWriteTemplates, LOAD_ERROR } from "./state";
 import { TemplateCard, type TemplateCardActions } from "./template-card";
 import { TemplateUseDialog, type UseDialogProps } from "./template-use-dialog";
@@ -21,10 +22,12 @@ type Props = {
   words?: ItemWords;
   /** What the New agreement dialog needs, for a member who can use templates; Use template opens it over this page. */
   dialog?: UseDialogProps;
+  /** Whether the org has its own contract wording; absent when it could not be read, and then no card is drawn (block-editor AC 46). */
+  contractWording?: { own: boolean };
 };
 
 /** The Templates page body: the cards, then the preview of the selected one (agreement-templates S3). */
-export function TemplatesView({ templates, selectedId, role, typeNames, now, actions, words = DEFAULT_ITEM_WORDS, dialog }: Props) {
+export function TemplatesView({ templates, selectedId, role, typeNames, now, actions, words = DEFAULT_ITEM_WORDS, dialog, contractWording }: Props) {
   const canWrite = canWriteTemplates(role);
   const canUse = canUseTemplates(role);
   const selected = templates?.find((template) => template.id === selectedId) ?? templates?.[0];
@@ -63,6 +66,8 @@ export function TemplatesView({ templates, selectedId, role, typeNames, now, act
           <TemplateUseDialog preview={{ template: selected, typeNames, canUse, canWrite, actions, words }} dialog={dialog} />
         </div>
       )}
+
+      {contractWording && <ContractWordingCard own={contractWording.own} canWrite={canWrite} />}
     </div>
   );
 }

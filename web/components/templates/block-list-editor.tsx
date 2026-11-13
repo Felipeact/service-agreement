@@ -281,10 +281,9 @@ function SectionOptions({
           <Switch id={`${id}-uppercase`} label="Capital letters in each heading" checked={row.uppercase} onChange={(uppercase) => onChange({ uppercase })} />
         </div>
       );
-    case "equipment":
-      return title(itemText("Equipment", words));
     case "schedule":
-      return title("Visit schedule");
+    case "equipment":
+      return title(row.key === "schedule" ? "Visit schedule" : itemText("Equipment", words));
     case "signatures":
       return (
         <div className="flex flex-col gap-3">

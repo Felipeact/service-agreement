@@ -14,8 +14,8 @@ function directories(dir: string): string[] {
 describe("the loading screens of the Templates routes", () => {
   test("C5423: every route directory under templates that has a page also has a loading screen", () => {
     const withPage = directories(ROOT).filter((dir) => existsSync(path.join(dir, "page.tsx")));
-    // /templates, /templates/new and /templates/[templateId].
-    expect(withPage.map((dir) => path.relative(ROOT, dir).replace(/\\/g, "/") || ".").sort()).toEqual([".", "[templateId]", "new"]);
+    // /templates, /templates/new, /templates/[templateId] and /templates/contract.
+    expect(withPage.map((dir) => path.relative(ROOT, dir).replace(/\\/g, "/") || ".").sort()).toEqual([".", "[templateId]", "contract", "new"]);
     const missing = withPage.filter((dir) => !existsSync(path.join(dir, "loading.tsx"))).map((dir) => path.relative(ROOT, dir) || ".");
     expect(missing).toEqual([]);
   });
