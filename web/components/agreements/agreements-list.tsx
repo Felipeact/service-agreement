@@ -118,7 +118,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
         <Stat label="Open value" icon="trend" value={formatCad(openCents)} note={`${formatCad(wonCents)}/yr accepted`} />
       </div>
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <nav aria-label="Filter by status" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0">
           <div className="inline-flex gap-1 rounded-control bg-board p-1">
             {segments.map((segment) => (
@@ -165,7 +165,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
             <LinkButton href="/agreements">Clear filters</LinkButton>
           </EmptyPanel>
         ) : (
-          <EmptyPanel title="No agreements yet" text="Agreements you create appear here." art={<Spot kind="clipboard" />}>
+          <EmptyPanel title="No agreements yet" text="Start with the customer's equipment list: add the customer and site, import the list, review the rows, then send a priced agreement." art={<Spot kind="clipboard" />}>
             {newAgreement}
           </EmptyPanel>
         )
@@ -190,7 +190,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
                     {stage ? <StatusPill stage={stage} label={statusLabel(row.status)} filled /> : <StatusPill tone="neutral" label={statusLabel(row.status)} />}
                     {row.termEnd && <span className="text-[12px] text-ink-2">{`Ends ${row.termEnd}`}</span>}
                   </span>
-                  <span className="font-semibold text-ink">{row.annualCents === null ? "" : `${formatCad(row.annualCents)}/yr`}</span>
+                  <span className="font-semibold text-ink">{row.annualCents === null ? <span className="font-normal text-ink-2">Unpriced</span> : `${formatCad(row.annualCents)}/yr`}</span>
                   <span title={`Updated ${days} ${days === 1 ? "day" : "days"} ago`} className={`inline-flex items-center gap-1 text-[12px] ${stale ? "font-semibold text-danger" : "text-ink-2"}`}>
                     <Icon name="clock" className="size-3.5" />
                     {days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"}`}

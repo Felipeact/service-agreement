@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { RooftopScene } from "@/components/ui/illustrations";
 import { ProductMark } from "@/components/ui/product-mark";
@@ -24,10 +25,10 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="min-h-dvh lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <section className="flex flex-col bg-night px-5 pt-6 pb-8 text-surface sm:px-8 lg:px-14 lg:py-12">
-        <div className="flex items-center gap-2.5">
+        <Link href="/" aria-label={`${PRODUCT_NAME}, home`} className="flex min-h-11 w-fit items-center gap-2.5 rounded-control">
           <ProductMark className="size-9" />
-          <p className="font-display text-[18px] font-semibold tracking-tight">{PRODUCT_NAME}</p>
-        </div>
+          <span className="font-display text-[18px] font-semibold tracking-tight">{PRODUCT_NAME}</span>
+        </Link>
         <p className="pt-3 text-night-ink lg:hidden">Recurring service agreements for trade contractors, from the customer&apos;s list to signature.</p>
 
         <div className="my-auto hidden flex-col gap-10 py-14 lg:flex">
@@ -40,10 +41,18 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       </section>
 
       <section className="flex justify-center px-4 py-8 lg:items-center lg:px-10">
-        <div className="w-full max-w-[400px] self-start rounded-panel border border-hairline bg-surface px-6 py-7 shadow-panel sm:px-8 lg:self-center">
-          <Suspense fallback={<LoginForm linkInvalid={false} />}>
-            <LoginFormForRequest searchParams={searchParams} />
-          </Suspense>
+        <div className="flex w-full max-w-[400px] flex-col gap-4 self-start lg:self-center">
+          <div className="rounded-panel border border-hairline bg-surface px-6 py-7 shadow-panel sm:px-8">
+            <Suspense fallback={<LoginForm linkInvalid={false} />}>
+              <LoginFormForRequest searchParams={searchParams} />
+            </Suspense>
+          </div>
+          <p className="text-center text-ink-2">
+            New here?{" "}
+            <Link href="/register" className="inline-flex min-h-11 items-center font-semibold text-action hover:underline lg:min-h-0">
+              Create your workspace
+            </Link>
+          </p>
         </div>
       </section>
     </main>

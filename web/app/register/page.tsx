@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { PortalMock } from "@/components/site/mock-ui";
 import { Wrap } from "@/components/site/sections";
 import { SiteShell } from "@/components/site/site-shell";
 import { PLAN_KEYS, type PlanKey } from "@/domain/billing";
@@ -33,6 +34,9 @@ export default function RegisterPage({ searchParams }: PageProps<"/register">) {
               <li>2. Your card, with our payment provider.</li>
               <li>3. A sign-in link, then a short setup for your company.</li>
             </ol>
+            <div className="mt-4 hidden max-w-[480px] lg:block">
+              <PortalMock />
+            </div>
           </div>
           <div className="rounded-panel border border-hairline bg-surface p-5 shadow-panel sm:p-7">
             <Suspense fallback={<RegisterForm />}>

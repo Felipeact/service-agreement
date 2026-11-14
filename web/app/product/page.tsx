@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { NOT_IN_PRODUCT } from "@/components/site/content";
 import { AgreementMock, BoardMock, ScheduleMock } from "@/components/site/mock-ui";
-import { CtaBand, FeatureGrid, PageHero, SectionHead, StepsGrid, Wrap } from "@/components/site/sections";
+import { CtaBand, PageHero, SectionHead, StepsGrid, Wrap } from "@/components/site/sections";
 import { SiteShell } from "@/components/site/site-shell";
 
 export const metadata: Metadata = { title: "Product" };
@@ -35,12 +35,6 @@ export default function ProductPage() {
         <Wrap className="grid items-center gap-8 py-14 lg:grid-cols-2 lg:gap-14 lg:py-20">
           <SectionHead title="Visits by the month, per service line." text="Heating and cooling in March, June, September and December while the boiler is October only. Pick months on a 12-month grid with quarterly, spring and fall, and monthly presets." />
           <ScheduleMock />
-        </Wrap>
-      </section>
-      <section className="bg-surface">
-        <Wrap className="flex flex-col gap-8 py-14 lg:py-20">
-          <SectionHead title="Everything in the job." />
-          <FeatureGrid />
         </Wrap>
       </section>
       <section className="bg-ground">

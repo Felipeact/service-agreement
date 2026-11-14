@@ -59,7 +59,7 @@ describe("sites list view", () => {
     expect(out).toMatch(/<a[^>]*href="\/agreements\/ag1"[^>]*>AG-1001<\/a>/);
     expect(out).toContain("Sent to customer");
     // the segmented control also names "No live agreement", so look at the rows only
-    expect(out.slice(out.indexOf('<ul class="divide-y'))).not.toContain("No live agreement");
+    expect(out.slice(out.search(/<ul class="[^"]*divide-y/))).not.toContain("No live agreement");
   });
 
   test("C1372: the summary cards count the sites, their assets, the live agreements and the sites ready to quote", () => {
@@ -138,7 +138,7 @@ describe("sites list view", () => {
 
   test("C1372: a null address leaves out the address line, so only the asset count is secondary text", () => {
     const secondary = (out: string) => out.match(/text-\[12px\] text-ink-2/g)?.length ?? 0;
-    const rowOnly = (out: string) => out.slice(out.indexOf('<ul class="divide-y'));
+    const rowOnly = (out: string) => out.slice(out.search(/<ul class="[^"]*divide-y/));
     expect(secondary(rowOnly(html([row()])))).toBe(2);
     expect(secondary(rowOnly(html([row({ address: null })])))).toBe(1);
   });

@@ -75,7 +75,7 @@ describe("PipelineView", () => {
   test("C118: with no agreements it shows the empty panel and no disabled New agreement", () => {
     const html = render([]);
     expect(html).toContain("No agreements yet");
-    expect(html).toContain("Agreements you create appear here by stage.");
+    expect(html).toContain("Add the customer and site, import the equipment list, review the rows, then send a priced agreement. It appears here by stage, with its age.");
     expect(html).not.toContain("No agreements match");
     // The page hands a writer the dialog launcher; with none there is no link to stand in for it.
     const launcher = createElement("button", { type: "button" }, "New agreement");

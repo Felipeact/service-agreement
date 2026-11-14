@@ -153,17 +153,20 @@ export function RegisterFields({ state, pending, initialPlan = "team", action }:
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 font-display text-[20px] leading-tight font-semibold tracking-tight">Your plan</legend>
+        <p className="text-ink-2">Team is pre-selected for a small crew. Choose another plan if it fits better.</p>
         <div className="flex flex-col gap-2">
           {PLANS.map((option) => (
-            <label key={option.key} className={`${choice} justify-between py-2`}>
+            <label key={option.key} className={`${choice} min-h-16 justify-between py-2.5 lg:min-h-16`}>
               <span className="flex items-center gap-2.5">
                 <input type="radio" name="plan" value={option.key} checked={plan === option.key} onChange={() => pickPlan(option.key)} className="size-4 shrink-0 accent-action" />
-                <span className="font-semibold">{option.name}</span>
-                <span className="text-ink-2">
-                  {option.liveAgreements} live agreements, {option.aiImports} AI imports a month, {option.includedSeats} seats included
+                <span className="flex flex-col gap-0.5">
+                  <span className="font-semibold">{option.name}</span>
+                  <span className="text-[13px] font-normal text-ink-2">
+                    {option.liveAgreements} live agreements · {option.aiImports} AI imports a month · {option.includedSeats} seats included
+                  </span>
                 </span>
               </span>
-              <span className="font-semibold">{formatPlanPrice(option.monthlyCents)} a month</span>
+              <span className="shrink-0 font-semibold">{formatPlanPrice(option.monthlyCents)} a month</span>
             </label>
           ))}
         </div>

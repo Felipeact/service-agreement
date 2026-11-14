@@ -18,10 +18,12 @@ export async function decideAction(token: string, decision: string, reason: stri
     const result = await decidePortal(token, decision as (typeof DECISIONS)[number], reason);
     if (result.ok) {
       revalidatePath(`/review/${token}`);
+      revalidatePath("/pipeline");
       return { status: "ok" };
     }
     if (result.code === "not_open") {
       revalidatePath(`/review/${token}`);
+      revalidatePath("/pipeline");
       return { status: "not_open", state: portalViewState(result.view) };
     }
     return { status: result.code };

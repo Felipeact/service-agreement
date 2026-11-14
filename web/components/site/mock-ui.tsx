@@ -66,8 +66,8 @@ export function BoardMock({ className = "" }: { className?: string }) {
               </div>
               <span className="text-[12px] text-ink-2">{col.total}</span>
             </div>
-            {col.cards.map((card) => (
-              <div key={card.site} className="flex flex-col gap-1 rounded-control bg-surface px-3 py-2.5 shadow-card">
+            {col.cards.map((card, k) => (
+              <div key={card.site} style={{ animationDelay: `${650 + (i + k) * 90}ms` }} className="settle flex flex-col gap-1 rounded-control bg-surface px-3 py-2.5 shadow-card">
                 <p className="text-[13.5px] leading-snug font-semibold">{card.site}</p>
                 <p className="text-[12px] text-ink-2">{card.customer}</p>
                 <p className="text-[12px] text-ink-2">{card.age}</p>
@@ -79,7 +79,7 @@ export function BoardMock({ className = "" }: { className?: string }) {
         ))}
       </div>
       <figcaption className="flex items-center gap-2 text-[12px] text-ink-2">
-        <SampleLabel /> A fictitious contractor&apos;s pipeline.
+        <SampleLabel /> A fictitious contractor&apos;s pipeline.<span className="lg:hidden"> Two of four stages shown.</span>
       </figcaption>
     </figure>
   );
@@ -193,6 +193,91 @@ function Row({ name, months }: { name: string; months: number[] }) {
           className={`mx-auto h-6 w-full max-w-7 rounded-[4px] ${months.includes(i) ? "sa-pop bg-action" : "bg-board"}`}
           style={months.includes(i) ? { animationDelay: `${0.25 + i * 0.06}s` } : undefined}
         >
+          <span className="sr-only">{months.includes(i) ? `Visit in month ${i + 1}` : ""}</span>
+        </span>
+      ))}
+    </>
+  );
+}
+
+const SCOPE: { type: string; tasks: string[] }[] = [
+  { type: "Rooftop units", tasks: ["Replace filters", "Check belts and bearings", "Clean condensate drain"] },
+  { type: "Boilers", tasks: ["Inspect burner and flame", "Test safety controls"] },
+];
+
+/** "Service included", written from the item types on site, each with its own checklist. */
+export function ScopeMock({ className = "" }: { className?: string }) {
+  return (
+    <figure className={`flex flex-col gap-2 ${className}`}>
+      <div className="flex flex-col gap-4 rounded-panel bg-surface p-5 text-ink shadow-panel">
+        <p className="font-display text-[16px] font-semibold tracking-tight">Service included</p>
+        {SCOPE.map((group) => (
+          <div key={group.type} className="flex flex-col gap-1.5">
+            <p className="text-[13px] font-semibold">{group.type}</p>
+            <ul className="flex flex-col gap-1">
+              {group.tasks.map((task) => (
+                <li key={task} className="flex items-center gap-2 text-[13px] text-ink-2">
+                  <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4 shrink-0 fill-none stroke-stage-completed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m4 10 4 4 8-9" />
+                  </svg>
+                  {task}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <figcaption className="flex items-center gap-2 text-[12px]">
+        <SampleLabel /> Written from the types on site.
+      </figcaption>
+    </figure>
+  );
+}
+
+const SEASONS: { label: string; span: number }[] = [
+  { label: "Winter", span: 2 },
+  { label: "Spring start-up", span: 3 },
+  { label: "Summer cooling", span: 3 },
+  { label: "Fall shut-down", span: 3 },
+  { label: "Winter", span: 1 },
+];
+
+/** The whole service year on one wide panel: seasons over the twelve months, each line lighting its own visits. */
+export function YearBand({ className = "" }: { className?: string }) {
+  return (
+    <figure className={`flex min-w-0 max-w-full flex-col gap-2 ${className}`}>
+      <div className="relative flex w-full min-w-0 flex-col gap-3 overflow-x-auto rounded-panel bg-surface p-4 text-ink shadow-panel sm:p-6">
+        <div className="grid min-w-[640px] grid-cols-[minmax(9rem,1.3fr)_repeat(12,minmax(0,1fr))] items-center gap-x-1 gap-y-2.5">
+          <span aria-hidden="true" />
+          {SEASONS.map((season, i) => (
+            <span key={i} style={{ gridColumn: `span ${season.span}` }} className="truncate rounded-[4px] bg-board px-2 py-1 text-center text-[12px] font-semibold text-ink-2">
+              {season.label}
+            </span>
+          ))}
+          <span aria-hidden="true" />
+          {MONTHS.map((m, i) => (
+            <span key={i} className="text-center text-[11px] font-semibold text-ink-2">
+              {m}
+            </span>
+          ))}
+          {LINES.map((line) => (
+            <YearRow key={line.name} name={line.name} months={line.months} />
+          ))}
+        </div>
+      </div>
+      <figcaption className="flex items-center gap-2 text-[12px] text-night-ink">
+        <SampleLabel /> One contractor&apos;s invented service year. The customer signs once.
+      </figcaption>
+    </figure>
+  );
+}
+
+function YearRow({ name, months }: { name: string; months: number[] }) {
+  return (
+    <>
+      <span className="text-[13px] leading-tight font-medium">{name}</span>
+      {MONTHS.map((_, i) => (
+        <span key={i} className={`mx-auto h-8 w-full rounded-[4px] ${months.includes(i) ? "sa-pop bg-action" : "bg-board"}`} style={months.includes(i) ? { animationDelay: `${0.2 + i * 0.05}s` } : undefined}>
           <span className="sr-only">{months.includes(i) ? `Visit in month ${i + 1}` : ""}</span>
         </span>
       ))}

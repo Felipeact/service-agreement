@@ -80,7 +80,7 @@ export function DemoWalkthrough() {
       <div id="demo-panel" role="tabpanel" aria-labelledby={`demo-tab-${active}`} className="grid items-center gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
         <div className="flex flex-col gap-3">
           <p className="w-fit rounded-full bg-board px-2 py-0.5 text-[11px] font-semibold text-ink-2">{step.who}</p>
-          <h3 className="font-display text-[28px] leading-tight font-semibold tracking-tight">{step.summary}</h3>
+          <h2 className="font-display text-[28px] leading-tight font-semibold tracking-tight">{step.summary}</h2>
           <p className="text-[15px] leading-relaxed text-ink-2">{step.detail}</p>
           <div className="flex gap-2 pt-2">
             <button type="button" disabled={active === 0} onClick={() => setActive(active - 1)} className="h-11 rounded-control border border-hairline bg-surface px-4 text-[13px] font-semibold disabled:opacity-50">

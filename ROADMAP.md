@@ -343,17 +343,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [ ] CSV export and empty states
 - [ ] Role access: money for owner and admin, operational for estimators
 
-### Phase 6: Post-contract operations
-- [ ] Visit scheduling and deficiency reports after each visit
-- [ ] Per-visit invoicing (QuickBooks sync)
-- [ ] Annual CPI adjustment (W6) and renewal or cancellation tracking
-- [ ] Generate the year's visits from each line's cadence: visit list and calendar, mark done, workload forecast per month
-- [ ] Cancellation flow: notice period, effective date, final visit
-- [ ] Mid-term amendments: equipment added during the term, with a prorated price, without restarting the contract
-- [ ] Billing schedule: per visit, quarterly or annual
-- [ ] Recurring revenue from active contracts on the dashboard
-- [ ] Photos and attachments on sites and assets (nameplates, access notes)
-- [ ] Finer cadence: weekly and every-N-weeks visits, for trades that do not work by month. Wait for a first customer who needs it
+
 
 ## Decisions
 
