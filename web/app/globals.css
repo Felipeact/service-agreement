@@ -156,3 +156,108 @@
     }
   }
 }
+
+/* The app's quiet motion, all of it short and all of it off or reduced for a visitor who asks for less.
+   Every animation starts from the visible state, so a failed script or a skipped frame never hides content. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes bone {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@layer utilities {
+  /* Fill backwards only, so nothing keeps a transform (and a containing block) once the screen has arrived. */
+  .page-enter {
+    animation: page-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  /* Direct children arrive one after another: a list of rows, a row of summary cards. Capped at eight steps. */
+  .stagger > * {
+    animation: page-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .stagger > :nth-child(2) { animation-delay: 40ms; }
+  .stagger > :nth-child(3) { animation-delay: 80ms; }
+  .stagger > :nth-child(4) { animation-delay: 120ms; }
+  .stagger > :nth-child(5) { animation-delay: 160ms; }
+  .stagger > :nth-child(6) { animation-delay: 200ms; }
+  .stagger > :nth-child(7) { animation-delay: 240ms; }
+  .stagger > :nth-child(n + 8) { animation-delay: 280ms; }
+
+  /* The public site's first screen: each block of the hero rises in turn (set --i on the block). */
+  .hero-in {
+    animation: page-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+
+  .menu-pop {
+    transform-origin: top right;
+    animation: pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .badge-pop {
+    animation: badge-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s backwards;
+  }
+
+  .bone {
+    animation: bone 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-enter,
+    .stagger > *,
+    .hero-in,
+    .menu-pop {
+      animation-name: fade-in;
+      animation-duration: 0.2s;
+      animation-delay: 0s;
+    }
+    .badge-pop,
+    .bone {
+      animation: none;
+    }
+  }
+}
+
+/* Native dialogs (New agreement and friends) open with a small rise and a backdrop fade. */
+dialog[open] {
+  animation: pop-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+dialog[open]::backdrop {
+  animation: fade-in 0.22s ease-out backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog[open] {
+    animation-name: fade-in;
+  }
+}

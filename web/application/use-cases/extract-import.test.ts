@@ -59,7 +59,7 @@ function setup(options: Setup = {}) {
   let served = 0;
   const store = {
     sourceOf: vi.fn(async () => sources[Math.min(served++, sources.length - 1)]),
-    recordExtraction: vi.fn(async (...args: [string, number | null, number, unknown[]]): Promise<RecordExtractionResult> =>
+    recordExtraction: vi.fn(async (...args: [string, number | null, number, unknown[], unknown?]): Promise<RecordExtractionResult> =>
       options.record ?? { ok: true, progress: { cursor: 1, total: args[2] }, done: false },
     ),
   };
@@ -92,6 +92,16 @@ const recorded = (store: ReturnType<typeof setup>["store"]) => store.recordExtra
 afterEach(() => vi.restoreAllMocks());
 
 describe("extractImport", () => {
+  test("the tokens the extractor reports are recorded with the chunk, and none is recorded as nothing", async () => {
+    const used = setup({ answer: async () => ({ ok: true as const, rows: [row()], usage: { inputTokens: 6000, outputTokens: 8000 } }) });
+    await used.extractImport(JOB);
+    expect(recorded(used.store)[4]).toEqual({ inputTokens: 6000, outputTokens: 8000 });
+
+    const unknown = setup();
+    await unknown.extractImport(JOB);
+    expect(recorded(unknown.store)[4]).toBeUndefined();
+  });
+
   test("C504: the first chunk of a 340-row table is 100 rows, recorded with cursor null and total 4", async () => {
     const { store, extractor, extractImport } = setup({ parse: tableOf(340) });
 
@@ -110,7 +120,7 @@ describe("extractImport", () => {
 
     const none = setup({ answer: async () => ({ ok: true, rows: [] }) });
     expect(await none.extractImport(JOB)).toMatchObject({ ok: true, state: "extracting" });
-    expect(recorded(none.store)).toEqual([JOB, null, 1, []]);
+    expect(recorded(none.store)).toEqual([JOB, null, 1, [], undefined]);
   });
 
   test("C508: a file with no table is sent as one text chunk and recorded with total 1", async () => {

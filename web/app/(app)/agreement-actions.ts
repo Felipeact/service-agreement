@@ -64,6 +64,7 @@ export async function addServiceLineAction(agreementId: string, formData: FormDa
   const added = await container.serviceLineStore.add(agreementId, checked.value);
   if (!added.ok) return { status: added.code };
   revalidatePath(`/agreements/${agreementId}`);
+  revalidatePath("/pipeline");
   return { status: "saved" };
 }
 
@@ -77,6 +78,7 @@ export async function updateServiceLineAction(lineId: string, formData: FormData
   const saved = await container.serviceLineStore.update(lineId, checked.value);
   if (!saved.ok) return { status: saved.code };
   revalidatePath("/agreements/[agreementId]", "page");
+  revalidatePath("/pipeline");
   return { status: "saved" };
 }
 
@@ -87,6 +89,7 @@ export async function removeServiceLineAction(lineId: string): Promise<LineState
   const removed = await container.serviceLineStore.remove(lineId);
   if (!removed.ok) return { status: removed.code };
   revalidatePath("/agreements/[agreementId]", "page");
+  revalidatePath("/pipeline");
   return { status: "removed" };
 }
 
@@ -101,6 +104,7 @@ export async function saveTermAction(agreementId: string, formData: FormData): P
   const saved = await container.agreementTermStore.save(agreementId, checked.value);
   if (saved.ok) {
     revalidatePath(`/agreements/${agreementId}`);
+    revalidatePath("/pipeline");
     return { status: "saved" };
   }
   // The form checks the same bounds, so a database refusal of the values is unexpected here.
@@ -118,6 +122,7 @@ export async function saveVersionNoteAction(agreementId: string, formData: FormD
   const saved = await container.versionNoteStore.save(agreementId, checked.value);
   if (saved.ok) {
     revalidatePath(`/agreements/${agreementId}`);
+    revalidatePath("/pipeline");
     return { status: "saved" };
   }
   return { status: saved.code === "invalid" ? "unavailable" : saved.code };
@@ -153,6 +158,7 @@ export async function withdrawAgreementAction(agreementId: string): Promise<Move
   const moved = await move(agreementId, { type: "withdraw" });
   if (!("ok" in moved)) return moved;
   revalidatePath(`/agreements/${agreementId}`);
+  revalidatePath("/pipeline");
   return { status: "withdrawn" };
 }
 
@@ -170,6 +176,7 @@ async function issueLink(
     if (!result.ok) return { status: result.code };
     const url = portalLinkUrl(await linkBase(), result.token);
     revalidatePath(`/agreements/${agreementId}`);
+    revalidatePath("/pipeline");
     return { status: done, url };
   } catch (cause) {
     console.error(`Agreement ${done === "sent" ? "send" : "new link"} failed: ${cause instanceof Error ? cause.message : String(cause)}`);

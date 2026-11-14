@@ -55,4 +55,22 @@ export type UsageFigure = { used: number; limit: number | null };
 export const isFull = (figure: UsageFigure): boolean => figure.limit !== null && figure.used >= figure.limit;
 
 /** What `/settings/billing` shows under the plan name. */
-export type OrgUsage = { plan: string | null; liveAgreements: UsageFigure; aiImports: UsageFigure; resetsOn: string };
+export type OrgUsage = {
+  plan: string | null;
+  liveAgreements: UsageFigure;
+  aiImports: UsageFigure;
+  /** The tokens this month's imports used; absent when the database does not report them. Shown, never limited. */
+  aiTokens?: { input: number; output: number };
+  resetsOn: string;
+};
+
+/** What is left of a limit, never below zero; `null` when there is no limit. */
+export const remaining = (figure: UsageFigure): number | null => (figure.limit === null ? null : Math.max(0, figure.limit - figure.used));
+
+const tokenCount = new Intl.NumberFormat("en-CA");
+
+/** "184,200 tokens" for the owner: the AI's reading and writing added together. */
+export function formatTokens(tokens: { input: number; output: number }): string {
+  const total = tokens.input + tokens.output;
+  return `${tokenCount.format(total)} ${total === 1 ? "token" : "tokens"}`;
+}

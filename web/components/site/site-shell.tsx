@@ -61,8 +61,8 @@ export function SiteShell({ tone = "light", children }: { tone?: Tone; children:
                 <path d="m5 5 10 10M15 5 5 15" className="hidden group-open:block" />
               </svg>
             </summary>
-            <nav aria-label="Menu" className="absolute right-0 z-20 mt-2 flex w-60 flex-col rounded-panel border border-hairline bg-surface p-2 text-ink shadow-panel">
-              {NAV.map((link) => (
+            <nav aria-label="Menu" className="menu-pop absolute right-0 z-20 mt-2 flex w-60 flex-col rounded-panel border border-hairline bg-surface p-2 text-ink shadow-panel">
+              {FOOTER_LINKS.map((link) => (
                 <Link key={link.href} href={link.href} className="flex min-h-11 items-center rounded-control px-3 text-[14px] font-medium hover:bg-ground">
                   {link.label}
                 </Link>
@@ -78,13 +78,13 @@ export function SiteShell({ tone = "light", children }: { tone?: Tone; children:
       <main>{children}</main>
 
       <footer className="bg-night text-night-ink">
-        <div className="mx-auto grid max-w-[1180px] gap-8 px-4 py-10 md:px-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:px-8 lg:py-14">
+        <div className="mx-auto grid max-w-[1180px] gap-8 px-4 py-10 md:px-6 lg:grid-cols-[1.4fr_1fr] lg:px-8 lg:py-14">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2.5 text-surface">
               <ProductMark className="size-8" />
               <span className="font-display text-[16px] font-semibold tracking-tight">{SITE.name}</span>
             </div>
-            <p className="max-w-[36ch]">{SITE.description}</p>
+            <p className="max-w-[36ch] text-pretty">{SITE.description}</p>
             <p className="text-[12px]">Built for Canada outside Quebec. Prices in Canadian dollars.</p>
           </div>
           <nav aria-label="Footer" className="grid grid-cols-2 content-start gap-x-6">
@@ -94,13 +94,6 @@ export function SiteShell({ tone = "light", children }: { tone?: Tone; children:
               </Link>
             ))}
           </nav>
-          <div className="flex flex-col gap-2">
-            <p className="font-display text-[15px] font-semibold text-surface">Ready to try it?</p>
-            <p>Monthly plans from $79. Cancel any time.</p>
-            <LinkButton href="/register" variant="primary" className="self-start">
-              Get started
-            </LinkButton>
-          </div>
         </div>
       </footer>
     </div>

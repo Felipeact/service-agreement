@@ -35,7 +35,7 @@ describe("navigation", () => {
   ])("C5348: on %s the Templates item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/templates"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Templates<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/templates"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Templates<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -55,7 +55,7 @@ describe("navigation", () => {
   ])("C1358: on %s the Agreements item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/agreements"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Agreements<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/agreements"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Agreements<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -68,7 +68,7 @@ describe("navigation", () => {
   ])("C1376: on %s the Sites & equipment item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/sites"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Sites &amp; equipment<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/sites"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Sites &amp; equipment<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -81,7 +81,7 @@ describe("navigation", () => {
   ])("C1394: on %s the Imports item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/imports"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Imports<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/imports"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Imports<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -98,7 +98,7 @@ describe("navigation", () => {
   ])("C1504: on %s the Members item is current: %s", (path, current) => {
     pathname = path;
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/members"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Members<\/a>/.exec(html)?.[0] ?? "";
+    const link = /<a\b[^>]*href="\/members"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Members<\/a>/.exec(html)?.[0] ?? "";
     expect(link).not.toBe("");
     expect(link.includes('aria-current="page"')).toBe(current);
   });
@@ -108,7 +108,7 @@ describe("navigation, item words", () => {
   test("C2011: the Sites link is named after the org's plural, and still goes to /sites", () => {
     pathname = "/sites";
     const html = renderToStaticMarkup(createElement(SidebarNav, { words: itemWords("station", "stations") }));
-    expect(html).toMatch(/<a\b[^>]*href="\/sites"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Sites &amp; stations<\/a>/);
+    expect(html).toMatch(/<a\b[^>]*href="\/sites"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Sites &amp; stations<\/a>/);
     expect(html).not.toMatch(/equipment/i);
   });
 });

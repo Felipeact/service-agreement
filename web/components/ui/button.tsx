@@ -10,7 +10,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 
 /** The button look, shared with `LinkButton`. 44px tall below desktop for touch, 34px on desktop. */
 export function buttonClass(variant: ButtonVariant, className = "") {
-  return `inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-control px-4 text-[13px] font-semibold whitespace-nowrap transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 lg:h-[34px] ${VARIANT_CLASSES[variant]} ${className}`;
+  return `inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-control px-4 text-[13px] font-semibold whitespace-nowrap transition-[color,background-color,transform] duration-150 active:scale-[0.97] motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 lg:h-[34px] ${VARIANT_CLASSES[variant]} ${className}`;
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

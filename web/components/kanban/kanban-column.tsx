@@ -34,7 +34,7 @@ export function ColumnHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-0.5 pb-2">
-      <h2 id={id} {...{ [attr]: "" }} className="flex items-center gap-2 font-display text-[14px] font-semibold tracking-tight text-ink max-md:sr-only">
+      <h2 id={id} {...{ [attr]: "" }} className="flex items-center gap-2 font-display text-[14px] font-semibold tracking-tight whitespace-nowrap text-ink max-md:sr-only">
         <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${dotClass}`} />
         {title}
       </h2>
@@ -61,18 +61,22 @@ type KanbanColumnProps = {
  * stage's total says what the money was ("signed", "not won") so it is not read as pipeline.
  */
 export function KanbanColumn({ stage, cards, className = "" }: KanbanColumnProps) {
+  const meta = STAGE_META[stage];
   const totalCents = cards.reduce((sum, card) => sum + (card.annualCents ?? 0), 0);
   const followUps = cards.filter(needsFollowUp).length;
-  const meta = STAGE_META[stage];
+  const unpriced = cards.filter((card) => card.annualCents === undefined).length;
+  // A column of cards with no prices says so; a $0 total would read as a statement about money.
+  const allUnpriced = cards.length > 0 && unpriced === cards.length;
+  const note = [meta.totalNote, !allUnpriced && unpriced > 0 ? `${unpriced} unpriced` : undefined].filter(Boolean).join(" · ") || undefined;
   return (
-    <section data-column={stage} id={`panel-${stage}`} aria-labelledby={`column-${stage}`} className={`flex-col gap-2.5 rounded-panel p-3 ${meta.wellClass} ${className}`}>
+    <section data-column={stage} id={`panel-${stage}`} aria-labelledby={`column-${stage}`} className={`flex-col gap-2.5 rounded-panel p-3 xl:p-2.5 ${meta.wellClass} ${className}`}>
       <ColumnHeader
         id={`column-${stage}`}
         title={meta.shortLabel}
         dotClass={meta.dotClass}
         count={cards.length}
-        total={`${formatCad(totalCents)}/yr`}
-        note={meta.totalNote}
+        total={allUnpriced ? "Unpriced" : `${formatCad(totalCents)}/yr`}
+        note={allUnpriced ? undefined : note}
         pill={
           followUps > 0 ? (
             <span data-column-follow-up>

@@ -21,11 +21,9 @@ export const NAV: readonly NavLink[] = [
   { href: "/demo", label: "Demo" },
   { href: "/trades", label: "Trades" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/about", label: "About" },
-  { href: "/faq", label: "FAQ" },
 ];
 
-export const FOOTER_LINKS: readonly NavLink[] = [...NAV, { href: "/contact", label: "Contact" }];
+export const FOOTER_LINKS: readonly NavLink[] = [...NAV, { href: "/about", label: "About" }, { href: "/faq", label: "FAQ" }, { href: "/contact", label: "Contact" }];
 
 export type Step = { n: number; title: string; summary: string; detail: string; who: string };
 

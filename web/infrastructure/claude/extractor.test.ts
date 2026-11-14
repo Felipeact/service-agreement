@@ -38,6 +38,21 @@ const extractorFor = (answer: ClaudeMessage | Error, apiKey: string | null = "te
 afterEach(() => vi.restoreAllMocks());
 
 describe("claudeAssetExtractor", () => {
+  test("the call's tokens come back with the rows, cached input counted as input", async () => {
+    const message: ClaudeMessage = {
+      ...say({ rows: [goodRow] }),
+      usage: { input_tokens: 5000, output_tokens: 8000, cache_creation_input_tokens: 1000, cache_read_input_tokens: 500 },
+    };
+    const { extractor } = extractorFor(message);
+    expect(await extractor.extract(rowsChunk)).toMatchObject({ ok: true, usage: { inputTokens: 6500, outputTokens: 8000 } });
+  });
+
+  test("an answer with no usage block has no usage rather than zero", async () => {
+    const { extractor } = extractorFor(say({ rows: [goodRow] }));
+    const result = await extractor.extract(rowsChunk);
+    expect(result.ok && result.usage).toBeUndefined();
+  });
+
   test("C502: a rows chunk sends its header, refs and cells; a text chunk its text; a pdf chunk one document block", async () => {
     const rows = extractorFor(say({ rows: [] }));
     await rows.extractor.extract(rowsChunk);

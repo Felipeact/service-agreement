@@ -5,11 +5,11 @@ import { SiteShell } from "@/components/site/site-shell";
 export const metadata: Metadata = { title: "About" };
 
 const PRINCIPLES = [
-  ["Status is never in doubt.", "Every agreement and contract has one clear state, how long it has been there, and what happens next."],
-  ["The messy input is our problem.", "Accept lists the way customers send them. Flag doubts for review. Never make an estimator retype."],
-  ["The tenant's brand faces the customer.", "Anything your customer sees looks like it came from you."],
-  ["Built for one job.", "Depth in the path from list to signature beats breadth. Project contracts and field dispatch are out."],
-  ["Audit-ready by default.", "Approvals, signatures and automated actions leave evidence you can show."],
+  ["You always know where a deal stands.", "Every agreement and contract has one clear state, how long it has been there, and what happens next."],
+  ["Your customer's list can arrive messy.", "Send it as it came. Doubtful rows are flagged for you to review, and nobody retypes a spreadsheet."],
+  ["Your customer sees your name.", "Anything your customer sees looks like it came from you, not from us."],
+  ["One job, done thoroughly.", "From list to signature, in depth. Project contracts and field dispatch are out."],
+  ["Everything leaves a record.", "Approvals, signatures and automated actions leave evidence you can show."],
 ] as const;
 
 /** Honest about stage: no customers, results or team claims that do not exist (PRODUCT.md, Evidence on Hand). */

@@ -32,7 +32,9 @@ export function supabaseOrgUsage(client: Client): OrgUsageReader {
           console.error("Reading the usage failed: the answer was not a row");
           return null;
         }
-        return { plan: typeof row.plan === "string" ? row.plan : null, liveAgreements, aiImports, resetsOn: row.resets_on };
+        const imports = row.ai_imports as Record<string, unknown>;
+        const aiTokens = typeof imports.input_tokens === "number" && typeof imports.output_tokens === "number" ? { input: imports.input_tokens, output: imports.output_tokens } : undefined;
+        return { plan: typeof row.plan === "string" ? row.plan : null, liveAgreements, aiImports, ...(aiTokens && { aiTokens }), resetsOn: row.resets_on };
       } catch (cause) {
         console.error(`Reading the usage failed: ${cause instanceof Error ? cause.name : "a non-error"}`);
         return null;

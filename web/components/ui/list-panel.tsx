@@ -17,7 +17,7 @@ export function ListPanel({ columns, headings, children }: { columns: string; he
           <span key={index}>{heading}</span>
         ))}
       </div>
-      <ul className="divide-y divide-hairline">{children}</ul>
+      <ul className="stagger divide-y divide-hairline">{children}</ul>
     </div>
   );
 }

@@ -50,7 +50,7 @@ function ExpiringCard({ row, today, index }: { row: ExpiringAgreement; today: st
 export function ExpiringColumn({ rows, today, className = "" }: { rows: ExpiringAgreement[]; today: string; className?: string }) {
   const total = rows.reduce((sum, row) => sum + row.annualCents, 0);
   return (
-    <section data-column="expiring" id="panel-expiring" aria-labelledby="column-expiring" className={`flex-col gap-2.5 rounded-panel bg-board/60 p-3 ${className}`}>
+    <section data-column="expiring" id="panel-expiring" aria-labelledby="column-expiring" className={`flex-col gap-2.5 rounded-panel bg-board/60 p-3 xl:p-2.5 ${className}`}>
       <ColumnHeader
         id="column-expiring"
         title={

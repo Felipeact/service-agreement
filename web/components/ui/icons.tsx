@@ -90,6 +90,13 @@ const PATHS = {
   ),
   close: <path d="m5 5 10 10M15 5 5 15" />,
   menu: <path d="M3.5 6h13M3.5 10h13M3.5 14h13" />,
+  /** A window with a left rail: show or hide the sidebar. */
+  sidebar: (
+    <>
+      <rect x="3" y="3.5" width="14" height="13" rx="2" />
+      <path d="M8 3.5v13" />
+    </>
+  ),
   calendar: (
     <>
       <rect x="3" y="4.5" width="14" height="12.5" rx="2" />

@@ -20,6 +20,20 @@ describe("the usage adapter", () => {
     expect(client.rpc).toHaveBeenCalledWith("org_usage");
   });
 
+  test("the month's tokens come with the imports when the database reports them, and are left out when it does not", async () => {
+    const { reader } = readerWith({
+      data: { plan: "starter", live_agreements: { used: 7, limit: 15 }, ai_imports: { used: 3, limit: 10, input_tokens: 21000, output_tokens: 30000 }, resets_on: "2026-12-01" },
+      error: null,
+    });
+    expect(await reader.read()).toMatchObject({ aiTokens: { input: 21000, output: 30000 } });
+
+    const { reader: older } = readerWith({
+      data: { plan: "starter", live_agreements: { used: 7, limit: 15 }, ai_imports: { used: 3, limit: 10 }, resets_on: "2026-12-01" },
+      error: null,
+    });
+    expect(await older.read()).not.toHaveProperty("aiTokens");
+  });
+
   test("C5146: an org with no plan has null limits", async () => {
     const { reader } = readerWith({
       data: { plan: null, live_agreements: { used: 1, limit: null }, ai_imports: { used: 0, limit: null }, resets_on: "2026-12-01" },

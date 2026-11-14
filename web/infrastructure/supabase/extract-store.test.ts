@@ -130,8 +130,19 @@ describe("ImportJobStore.recordExtraction", () => {
       p_job_id: JOB,
       p_expected_cursor: null,
       p_total: 4,
+      p_input_tokens: 0,
+      p_output_tokens: 0,
       p_rows: [{ asset_type_raw: "RTU", unit_no: "1", type_model: null, location: null, confidence: "high", source_ref: "Units!2", asset_type_id: "t-1" }],
     });
+  });
+
+  test("the tokens one call used go to the rpc so the job's totals grow", async () => {
+    const { client, store } = setup({});
+    client.rpc.mockResolvedValue(ok(1));
+
+    await store.recordExtraction(JOB, null, 4, [row], { inputTokens: 7200, outputTokens: 9100 });
+
+    expect(client.rpc).toHaveBeenCalledWith("record_extraction_chunk", expect.objectContaining({ p_input_tokens: 7200, p_output_tokens: 9100 }));
   });
 
   test.each<[string, string, Record<string, unknown>, unknown]>([

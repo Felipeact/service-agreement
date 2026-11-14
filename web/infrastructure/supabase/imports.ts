@@ -196,13 +196,15 @@ export function supabaseImportJobStore(client: Client, clock: Clock): ImportJobS
       }
     },
 
-    async recordExtraction(jobId, expectedCursor, total, rows) {
+    async recordExtraction(jobId, expectedCursor, total, rows, usage) {
       try {
         const { data, error } = await client.rpc("record_extraction_chunk", {
           p_job_id: jobId,
           // SQL reads null as the first chunk; the generated argument types cannot say an argument may be null.
           p_expected_cursor: expectedCursor as number,
           p_total: total,
+          p_input_tokens: usage?.inputTokens ?? 0,
+          p_output_tokens: usage?.outputTokens ?? 0,
           p_rows: rows.map((row) => ({
             asset_type_raw: row.assetTypeRaw,
             unit_no: row.unitNo,

@@ -1553,7 +1553,9 @@ export type Database = {
       record_extraction_chunk: {
         Args: {
           p_expected_cursor: number
+          p_input_tokens?: number
           p_job_id: string
+          p_output_tokens?: number
           p_rows: Json
           p_total: number
         }

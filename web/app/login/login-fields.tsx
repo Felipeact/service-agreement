@@ -35,7 +35,7 @@ export function LoginFields({ state, pending, linkInvalid, action }: LoginFields
         <p className="text-ink-2">
           We sent a sign-in link to <span className="font-semibold text-ink">{state.email}</span>.
         </p>
-        <p className="text-ink-2">Open it on this device or any other to sign in.</p>
+        <p className="text-ink-2">Open it on this device or any other to sign in. If it has not arrived in a minute, check your spam folder.</p>
         <Link
           href="/login"
           className="mt-2 inline-flex h-11 items-center self-start rounded-control text-[13px] font-semibold text-action lg:h-[34px]"

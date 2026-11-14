@@ -15,6 +15,19 @@ const READY: BillingPageState = { kind: "ready", plan: "Starter", overview: OVER
 const view = (props: { usage?: OrgUsage | null }) => html(createElement(BillingView, { state: READY, publishableKey: null, ...props }));
 
 describe("usage on the billing page", () => {
+  test("it says how many imports are left and how many tokens the AI used, when the tokens are known", () => {
+    const out = view({ usage: { ...usage(7, 3), aiTokens: { input: 21000, output: 30200 } } });
+    expect(out).toMatch(/AI imports this month[\s\S]*?3 of 10[\s\S]*?7 left/);
+    expect(out).toMatch(/AI reading used this month[\s\S]*?51,200 tokens/);
+  });
+
+  test("a full allowance says Full and not '0 left', and with no token figure there is no token row", () => {
+    const out = view({ usage: usage(7, 10) });
+    expect(out).toContain("Full");
+    expect(out).not.toContain("0 left");
+    expect(out).not.toContain("AI reading used");
+  });
+
   test("C5143: it shows both figures against the plan and the reset date", () => {
     const out = view({ usage: usage(7, 3) });
     expect(out).toMatch(/Live agreements[\s\S]*?7 of 15/);

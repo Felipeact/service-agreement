@@ -15,7 +15,6 @@ import { ageLabel, ageShort } from "@/lib/age";
 export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: number }) {
   const closed = isClosedStage(card.stage);
   const followUp = followUpLabel(card);
-  const stale = Boolean(followUp || card.attention);
   // A site named after its customer ("Fernwood Dental" at "Fernwood Dental") needs saying once.
   const showCustomer = card.customer.trim().toLowerCase() !== card.site.trim().toLowerCase();
   return (
@@ -24,16 +23,14 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
       data-card
       data-amount-cents={card.annualCents ?? 0}
       style={{ "--i": index } as CSSProperties}
-      className="settle block rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
+      className="settle block rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card xl:max-[1600px]:p-3.5 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-medium text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</span>
-        <span
-          title={ageLabel(card.ageDays)}
-          className={`inline-flex items-center gap-1 text-[12px] ${stale && !closed ? "font-semibold text-danger" : "text-ink-2"}`}
-        >
-          <Icon name="clock" className="size-3.5" />
-          {ageShort(card.ageDays)}
+        <span className="text-[12px] font-medium whitespace-nowrap text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</span>
+        <span title={ageLabel(card.ageDays)} className="inline-flex items-center gap-1 text-[12px] text-ink-2">
+          <Icon name="clock" className="size-3.5 xl:max-[1600px]:hidden" />
+          <span aria-hidden="true">{ageShort(card.ageDays)}</span>
+          <span className="sr-only">{ageLabel(card.ageDays)}</span>
         </span>
       </div>
       <h3 className={`mt-2.5 font-display text-[15px] leading-snug tracking-tight ${closed ? "font-medium" : "font-semibold"}`}>{card.site}</h3>
