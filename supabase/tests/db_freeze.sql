@@ -91,8 +91,13 @@ begin
     perform tests.ok('C5602 insert ' || t, tests.fz_as('uA', v_sql) = 'err:42501', 'frozen insert gave ' || tests.fz_as('uA', v_sql));
   end loop;
   perform tests.fz_status('A', 'active');
-  perform tests.ok('C5602 control inserted', v_ok >= 8, 'only ' || v_ok || ' of 14 inserts ran unfrozen');
+  perform tests.ok('C5602 control inserted', v_ok >= 10, 'only ' || v_ok || ' of 14 inserts ran unfrozen');
 end $$;
+
+-- C5603 fixtures, as the table owner: an extracted job (its rows are editable) and one service-line coverage row.
+update public.import_jobs set status = 'extracted', extract_total = 1, extract_cursor = 1, extracted_at = now(), read_at = now(), table_count = 1, row_count = 1 where id = tests.id('jobA');
+insert into public.service_line_asset_types (org_id, service_line_id, asset_type_id)
+values (tests.id('orgA'), tests.id('lineA'), tests.id('typeA'));
 
 -- C5603: updates and deletes, as the owner, over the 16 tables with a has_org_role write policy.
 do $$
@@ -132,7 +137,7 @@ begin
       v_skipped := v_skipped || (t || '=' || v_ctl);
     end if;
   end loop;
-  perform tests.ok('C5603 control', v_exercised >= 11, 'only ' || v_exercised || ' of 16 tables exercised; skipped ' || v_skipped::text);
+  perform tests.ok('C5603 control', v_exercised >= 13, 'only ' || v_exercised || ' of 16 tables exercised; skipped ' || v_skipped::text);
   -- rows are unchanged: the fixture customer is still there
   perform tests.ok('C5603 rows kept', tests.count(format('select count(*) from public.customers where org_id = %L', v_a)) >= 2, 'rows gone');
 end $$;
@@ -196,7 +201,10 @@ begin
   perform tests.ok('C5605 unlisted', v_unlisted = '{}', 'unclassified: ' || v_unlisted::text);
 end $$;
 
--- C5606: storage writes, as the owner, in both buckets with a write policy.
+-- C5606: storage writes, as the owner, in both buckets with a write policy. The imports policy wants an uploading job of the org.
+insert into public.import_jobs (id, org_id, site_id, original_name, content_type, size_bytes)
+values (tests.id('fz_job'), tests.id('orgA'), tests.id('siteA'), 'fz.csv', 'text/csv', 100);
+
 do $$
 declare
   b text;
@@ -206,7 +214,7 @@ declare
 begin
   foreach b in array array['imports', 'logos'] loop
     -- the imports policy wants the object named after an uploading job of the org; the logos one wants <uuid>.png
-    v_key := tests.id('orgA')::text || '/' || case b when 'logos' then tests.id('fz_logos')::text || '.png' else tests.id('jobA')::text end;
+    v_key := tests.id('orgA')::text || '/' || case b when 'logos' then tests.id('fz_logos')::text || '.png' else tests.id('fz_job')::text end;
     v_ins := format('insert into storage.objects (bucket_id, name, owner) values (%L, %L, null)', b, v_key);
     v_del := format('delete from storage.objects where bucket_id = %L and name = %L', b, v_key);
     perform tests.fz_status('A', 'canceled');
