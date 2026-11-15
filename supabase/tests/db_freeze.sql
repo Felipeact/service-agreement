@@ -91,7 +91,7 @@ begin
     perform tests.ok('C5602 insert ' || t, tests.fz_as('uA', v_sql) = 'err:42501', 'frozen insert gave ' || tests.fz_as('uA', v_sql));
   end loop;
   perform tests.fz_status('A', 'active');
-  perform tests.ok('C5602 control inserted', v_ok >= 10, 'only ' || v_ok || ' of 14 inserts ran unfrozen');
+  perform tests.ok('C5602 control inserted', v_ok >= 10, 'only ' || v_ok || ' of 13 inserts ran unfrozen');
 end $$;
 
 -- C5603 fixtures, as the table owner: an extracted job (its rows are editable) and one service-line coverage row.
@@ -140,6 +140,17 @@ begin
   perform tests.ok('C5603 control', v_exercised >= 13, 'only ' || v_exercised || ' of 16 tables exercised; skipped ' || v_skipped::text);
   -- rows are unchanged: the fixture customer is still there
   perform tests.ok('C5603 rows kept', tests.count(format('select count(*) from public.customers where org_id = %L', v_a)) >= 2, 'rows gone');
+end $$;
+
+-- C5603, agreement_versions: members cannot update it (grant revoked) but a delete still reaches the policy (an unfrozen one stops at a foreign key, 23503).
+do $$
+declare v_del text := format('delete from public.agreement_versions where org_id = %L', tests.id('orgA'));
+begin
+  perform tests.fz_status('A', 'active');
+  perform tests.ok('C5603 control agreement_versions', tests.fz_as('uA', v_del) <> 'err:42501', 'unfrozen delete refused by the policy');
+  perform tests.fz_status('A', 'canceled');
+  perform tests.ok('C5603 delete agreement_versions', tests.fz_as('uA', v_del) = 'rows:0', 'got ' || tests.fz_as('uA', v_del));
+  perform tests.fz_status('A', 'active');
 end $$;
 
 -- C5604: write functions, as the owner. Frozen they raise 42501; active they pass the role check (any other outcome).
