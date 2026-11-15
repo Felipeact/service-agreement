@@ -479,6 +479,20 @@ export interface ImportAllowance {
   check(jobId: string): Promise<ImportAllowanceResult>;
 }
 
+/** Why a report could not be read: the role may not see it, or the database could not answer (reporting door 3). */
+export type ReportResult<T> = { ok: true; value: T } | { ok: false; code: "forbidden" | "unavailable" };
+
+/** The tenant reports of the signed-in member's own org, read under their role (reporting door 3). Money fields are null for an estimator. */
+export interface ReportReader {
+  headline(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").Headline>>;
+  funnel(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").FunnelRow[]>>;
+  aging(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").Aging>>;
+  losses(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").LossRow[]>>;
+  renewals(): Promise<ReportResult<import("@/domain/reports").RenewalRow[]>>;
+  revenueByCustomer(): Promise<ReportResult<import("@/domain/reports").CustomerRevenue[]>>;
+  revenueByType(): Promise<ReportResult<import("@/domain/reports").TypeRevenue[]>>;
+}
+
 /** The plan and usage of the member's own org for the billing page; `null` when it cannot be read. */
 export interface OrgUsageReader {
   read(): Promise<import("@/domain/billing/plan-limits").OrgUsage | null>;

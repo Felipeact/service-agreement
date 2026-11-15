@@ -39,6 +39,7 @@ import { stripeBillingGateway } from "@/infrastructure/stripe/billing-gateway";
 import { supabaseImportAllowance } from "@/infrastructure/supabase/import-allowance";
 import { supabaseOrgBilling } from "@/infrastructure/supabase/org-billing";
 import { supabaseOrgUsage } from "@/infrastructure/supabase/org-usage";
+import { supabaseReportReader } from "@/infrastructure/supabase/reports";
 import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
@@ -198,6 +199,8 @@ export async function getContainer() {
     listActiveSites: siteLister.listActive,
     listSites: siteDirectory.list,
     searchRecords: supabaseRecordSearch(supabase).search,
+    // The tenant reports (reporting door 3): one reader for the page and the CSV export, read under the member's own role.
+    reports: supabaseReportReader(supabase),
     listCustomers: customers.list,
     customerDetail: customers.detail,
     siteRegister: sites.get,
