@@ -84,7 +84,7 @@ Proof: `cd web && npx vitest run domain/reports -t "C5726"`
 **C5731** - The Supabase `ReportReader` calls the rpc named for each report with `p_from` and `p_to`, maps SQLSTATE 42501 to `forbidden` and any other error to `unavailable` (AC 19)
 Proof: `cd web && npx vitest run infrastructure/supabase/reports.test.ts -t "C5731"`
 
-**C5741** - `GET /reports/export` answers 400 for an unknown `report` and for a bad date, 401 when signed out, 403 for a viewer, 403 for an estimator asking `revenue_customer`, and 200 with `text/csv` for an owner asking `funnel` (Surface)
+**C5741** - `GET /reports/export` answers 503 when the report cannot be read, 400 for an unknown `report` and for a bad date, 401 when signed out, 403 for a viewer, 403 for an estimator asking `revenue_customer`, and 200 with `text/csv` for an owner asking `funnel` (Surface)
 Proof: `cd web && npx vitest run "app/(app)/reports/export" -t "C5741"`
 
 **C5742** - The reports page redirects a viewer to `/pipeline`, shows an estimator no dollar sign, shows an empty org one empty state, and shows the error line of a failed section while the others render (AC 13, 14, 16, 19)
@@ -103,7 +103,7 @@ Proof: Playwright MCP pass per AGENTS.md (`npm run dev` in `web/`), recorded in 
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
 | `GET /reports` statuses (3) | 200 C5742 · 307 to sign-in C5742 · 307 to `/pipeline` C5742 | - |
-| `GET /reports/export` statuses (4) | 200 C5741 · 400 C5741 · 401 C5741 · 403 C5741 | - |
+| `GET /reports/export` statuses (5) | 200 C5741 · 400 C5741 · 401 C5741 · 403 C5741 · 503 C5741 | - |
 | `public.report_*` statuses (2) | 200 C5701 · 403 C5711 | - |
 | report functions (7) | headline C5701 · funnel C5705 · aging C5706 · losses C5707 · renewals C5708 · revenue_by_customer C5709 · revenue_by_type C5710 | - |
 | functions refused to viewer (7) | headline C5711 · funnel C5711 · aging C5711 · losses C5711 · renewals C5711 · revenue_by_customer C5711 · revenue_by_type C5711 | - |
@@ -158,4 +158,4 @@ Per the plan: per-estimator performance, SaaS metrics, visit and invoicing repor
 
 - S1 = 8k (migration and recipe), S2 = 3k (domain), S3 = 7k (port, adapter, composition, two routes, nav), S4 = Playwright; about 20k in total across 14 files, under the 150k budget - one builder
 - Mechanism: one builder
-- **Settled mid-build:** the plan's AC 2, 11 and 13 and the `GET /reports` viewer status were amended before any code (pipeline value no longer double-counts an in-term agreement; the two revenue reports are as of today; a viewer on the page is redirected, the export answers 403)
+- **Settled mid-build:** the export route also answers 503 (added to Surface); `scripts/test-db/runner.test.ts` counts moved from 40 to 41 recipes and 42 to 43 SQL files for the new `reports` recipe; the domain avoids `new Date` because `domain/purity.test.ts` C33 forbids it; the plan's AC 2, 11 and 13 and the `GET /reports` viewer status were amended before any code (pipeline value no longer double-counts an in-term agreement; the two revenue reports are as of today; a viewer on the page is redirected, the export answers 403)

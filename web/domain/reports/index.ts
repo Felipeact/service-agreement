@@ -18,22 +18,26 @@ export type ReportRange = { from: string; to: string };
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** A real calendar date in `YYYY-MM-DD` form. */
+const isLeap = (year: number) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+const daysIn = (year: number, month: number) => [31, isLeap(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+const pad = (n: number, width = 2) => String(n).padStart(width, "0");
+
+/** A real calendar date in `YYYY-MM-DD` form. Plain arithmetic, so the domain reads no clock. */
 export function isIsoDate(value: string): boolean {
   const match = DATE.exec(value);
   if (!match) return false;
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysIn(year, month);
 }
 
 /** The 12 months ending on `today`: the same date a year earlier plus one day, so a leap day still lands on a real date. */
 function defaultRange(today: string): ReportRange {
   const [year, month, day] = today.split("-").map(Number);
-  const from = new Date(Date.UTC(year - 1, month - 1, day));
-  if (from.getUTCMonth() !== month - 1) from.setUTCDate(0);
-  from.setUTCDate(from.getUTCDate() + 1);
-  return { from: from.toISOString().slice(0, 10), to: today };
+  const from = { year: year - 1, month, day: Math.min(day, daysIn(year - 1, month)) };
+  if (from.day < daysIn(from.year, from.month)) from.day += 1;
+  else if (from.month === 12) Object.assign(from, { year: from.year + 1, month: 1, day: 1 });
+  else Object.assign(from, { month: from.month + 1, day: 1 });
+  return { from: `${pad(from.year, 4)}-${pad(from.month)}-${pad(from.day)}`, to: today };
 }
 
 type RangeParams = { from?: string | string[]; to?: string | string[] };

@@ -37,7 +37,7 @@ None - no stored-data shape change
 | Route | In | Out | Status |
 | --- | --- | --- | --- |
 | `GET /reports` | `from`, `to` (dates, default last 12 months) | HTML sections | `200`, `307` to sign-in, `307` to `/pipeline` for a viewer |
-| `GET /reports/export` | `report` (`funnel`, `aging`, `losses`, `renewals`, `revenue_customer`, `revenue_type`), `from`, `to` | `text/csv` with a header row | `200`, `400` unknown report or bad date, `401`, `403` for a viewer, or an estimator asking a money report |
+| `GET /reports/export` | `report` (`funnel`, `aging`, `losses`, `renewals`, `revenue_customer`, `revenue_type`), `from`, `to` | `text/csv` with a header row | `200`, `400` unknown report or bad date, `401`, `403` for a viewer, or an estimator asking a money report, `503` when the report could not be read |
 | `public.report_headline(p_from date, p_to date)` and one function per section (door 1) | dates | rows | `200`, `403` (SQL error `42501`) when the role may not see it |
 
 ## Landing

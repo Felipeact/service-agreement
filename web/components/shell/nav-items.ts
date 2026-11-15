@@ -17,9 +17,13 @@ export const MAIN_NAV: NavItem[] = [
   { label: "Imports", href: "/imports", icon: "upload" },
 ];
 
-/** The main nav with the Sites link named after the org's item ("Sites & stations"). */
-export const mainNav = (words: ItemWords): NavItem[] =>
-  MAIN_NAV.map((item) => (item.href === "/sites" ? { ...item, label: `Sites & ${words.plural}` } : item));
+export const REPORTS_NAV: NavItem = { label: "Reports", href: "/reports", icon: "trend" };
+
+/** The main nav with the Sites link named after the org's item ("Sites & stations"). Reports follows Imports for a member who may read them (reporting). */
+export const mainNav = (words: ItemWords, reports = false): NavItem[] => [
+  ...MAIN_NAV.map((item) => (item.href === "/sites" ? { ...item, label: `Sites & ${words.plural}` } : item)),
+  ...(reports ? [REPORTS_NAV] : []),
+];
 
 export const FOOTER_NAV: NavItem[] = [
   { label: "Settings", href: "/settings", icon: "gear" },

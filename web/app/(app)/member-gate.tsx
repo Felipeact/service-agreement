@@ -4,6 +4,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { NoWorkspace, type NoWorkspaceState } from "@/components/shell/no-workspace";
 import { getContainer } from "@/composition";
 import { needsFollowUp } from "@/domain/pipeline";
+import { reportAccess } from "@/domain/reports";
 import { signOutAction } from "./actions";
 
 const TODAY = new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Vancouver" });
@@ -33,7 +34,7 @@ export async function MemberGate({ children }: { children: ReactNode }) {
   const words = await getItemWords(member.orgId);
 
   return (
-    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} todayLabel={TODAY.format(clock.now())} words={words} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
+    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} todayLabel={TODAY.format(clock.now())} words={words} reports={reportAccess(member.billingRole ?? member.role) !== "none"} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
       {children}
     </AppShell>
   );

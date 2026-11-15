@@ -30,6 +30,8 @@ type AppShellProps = {
   words?: ItemWords;
   /** The company's plan has ended: a banner says the workspace is read-only. `canRenew` is true for an owner or admin, who gets the link to Billing. */
   frozen?: { canRenew: boolean };
+  /** The member may read Reports (owner, admin or estimator): the sidebar shows the link. */
+  reports?: boolean;
 };
 
 /** The bell: a link to the Pipeline filtered to the agreements that need follow-up, with their count when there are any. */
@@ -67,7 +69,7 @@ function Brand({ orgName, markClass }: { orgName: string; markClass: string }) {
 }
 
 /** Fixed Night sidebar on desktop (the app's one search lives in it); a Night top bar with a navigation drawer below 1024px. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen }: AppShellProps) {
+export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen, reports }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -149,7 +151,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               shortcut={SEARCH_SHORTCUT}
             />
           </form>
-          <SidebarNav words={words} footer={<SidebarAccount email={email} signOut={signOut} />} />
+          <SidebarNav words={words} reports={reports} footer={<SidebarAccount email={email} signOut={signOut} />} />
         </div>
       </aside>
 
@@ -214,7 +216,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
                   <Icon name="close" />
                 </button>
               </div>
-              <SidebarNav words={words} onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
+              <SidebarNav words={words} reports={reports} onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
             </motion.div>
           </motion.div>
         )}
