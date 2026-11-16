@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DRAG_TYPE } from "@/domain/templates/editor-model";
 import { ContractWordingEditor } from "./contract-wording-editor";
-import { AGREEMENT, CONTRACT, click, frameOf, pageItems, withText } from "./editor-test-kit";
+import { AGREEMENT, CONTRACT, click, frameOf, pageItems } from "./editor-test-kit";
 import { TemplateEditor } from "./template-editor";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -53,8 +53,7 @@ const fire = (target: Element | Document, type: string, init: { transfer?: Trans
 // jsdom lays nothing out, so every block's box is 0 high at 0: a pointer at -1 is in its upper half and at 1 in its lower half.
 const UPPER = -1;
 const LOWER = 1;
-const writing = (label: string) => [...container.querySelectorAll('[role="tabpanel"] > button')].find((b) => (b.textContent ?? "").includes(label)) as HTMLElement;
-const tab = (name: string) => [...container.querySelectorAll('[role="tab"]')].find((t) => t.textContent === name) as HTMLElement;
+const writing = (label: string) => [...container.querySelectorAll('[role="toolbar"][aria-label="Add element"] button')].find((b) => (b.textContent ?? "").includes(label)) as HTMLElement;
 const lines = () => [...container.querySelectorAll("[data-drop-line]")];
 const lineIn = (index: number) => pageItems(container)[index].querySelector("[data-drop-line]") !== null;
 const endZone = () => container.querySelector("[data-drop-end]") as HTMLElement;
@@ -127,7 +126,6 @@ describe("dropping an element from the panel", () => {
 
   test("[C44] a part dropped at the end of the page is added there with its options", async () => {
     await mountContract();
-    await click(tab("Document parts"));
     const part = writing("Visit schedule");
     const carried = await dragFromPanel(part);
     await fire(endZone(), "dragover", { transfer: carried });
@@ -142,7 +140,6 @@ describe("dropping an element from the panel", () => {
 describe("what cannot be dropped", () => {
   test("[C45] a part already on the page is not draggable, and the others are", async () => {
     await mountContract();
-    await click(tab("Document parts"));
     expect(writing("Price lines").getAttribute("draggable")).toBe("false");
     expect(writing("Signatures").getAttribute("draggable")).toBe("false");
     expect(writing("Visit schedule").getAttribute("draggable")).toBe("true");
@@ -252,7 +249,6 @@ describe("without dragging", () => {
     expect(pageItems(container)).toHaveLength(8);
     await click(container.querySelector('[aria-label="Move up"]'));
     expect(selectedAt()).toBe(6);
-    await click(withText(container, "button", "Add") ?? null);
     expect(lines()).toHaveLength(0);
   });
 

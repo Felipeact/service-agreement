@@ -7,7 +7,7 @@ import { messagesByRow, type BlockRow, type LayoutRow, type SectionRow } from "@
 import type { TemplateFormLine } from "@/domain/agreement/template-form";
 import { itemText, type ItemWords } from "@/domain/org-settings";
 import { canMove, DRAG_TYPE, dropPosition, isRequired, readDragPayload, variableLabel, type DragPayload, type EditorDocument } from "@/domain/templates/editor-model";
-import { partName } from "./add-element-panel";
+import { partName } from "./add-element-dock";
 
 const BLOCK_NAME = { heading: "Heading", paragraph: "Text", clause: "Clause" } as const;
 const DEFAULT_COLUMNS: PriceColumns = { description: "Description", visits: "Visits per year", perVisit: "Per visit", perYear: "Per year", total: "Total per year" };

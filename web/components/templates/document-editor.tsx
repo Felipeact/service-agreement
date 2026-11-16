@@ -7,7 +7,7 @@ import type { SectionKey } from "@/domain/agreement/layout";
 import { newBlockRow, newSectionRow, type BlockRow, type LayoutFormState, type LayoutRow, type SectionRow } from "@/domain/agreement/layout-form";
 import type { TemplateVariable } from "@/domain/contract/template";
 import { insertRow, insertRowAt, insertVariable, moveRow, moveRowTo, removeRow, restoreRow, type DragPayload, type EditorDocument, type RemovedRow } from "@/domain/templates/editor-model";
-import { AddElementPanel, type AddChoice } from "./add-element-panel";
+import { AddElementDock, type AddChoice } from "./add-element-dock";
 import { HeaderPopover, OptionsCard, PageSettingsFields, PartOptions } from "./block-options";
 import { EditorPage } from "./editor-page";
 import { PreviewDialog } from "./preview-dialog";
@@ -148,10 +148,7 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
       {errors.layout && <p role="alert" className="text-[13px] font-medium text-danger">{errors.layout}</p>}
       {errors.body && <p role="alert" className="text-[13px] font-medium text-danger">{errors.body}</p>}
 
-      <div className="flex min-w-0 flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <div className="lg:sticky lg:top-4">
-          <AddElementPanel document={kind} rows={rows} onAdd={add} onVariable={insertField} canInsertVariable={selectedRow?.kind === "block"} />
-        </div>
+      <div className="flex min-w-0 flex-col gap-4">
         <EditorPage
           document={kind}
           orgName={orgName}
@@ -183,6 +180,7 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
             </OptionsCard>
           )}
         />
+        <AddElementDock document={kind} rows={rows} onAdd={add} onVariable={insertField} canInsertVariable={selectedRow?.kind === "block"} />
       </div>
     </form>
   );

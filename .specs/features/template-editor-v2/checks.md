@@ -43,30 +43,30 @@ Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C9\]"`
 **C10** - A row with a validation error gets a danger outline and its message under its own block (AC 10)
 Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C10\]"`
 
-### S2 - Add Element panel · `add-element-panel.tsx`, `domain/templates/editor-model.ts` · ~20 KB · ~8k
+### S2 - Add Element dock · `add-element-dock.tsx`, `domain/templates/editor-model.ts` · ~20 KB · ~8k
 
-**C11** - The panel has two tabs, Writing (Heading, Text, Clause) and Document parts (AC 11)
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C11\]"`
+**C11** - The dock has a Writing group (Heading, Text, Clause), a Document parts group and a Field button (AC 11)
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C11\]"`
 
-**C12** - The Document parts tab lists exactly the parts of that document, the equipment part named with the org's item word (AC 12)
+**C12** - The Document parts group lists exactly the parts of that document, the equipment part named with the org's item word (AC 12)
 Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C12\]"`
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C12\]"`
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C12\]"`
 
-**C13** - A part already on the page reads "On page" and does nothing when chosen; after its Delete the item is addable again; with every part present the tab says "Every part is on the page" (AC 13)
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C13\]"`
+**C13** - A part already on the page is dimmed, reads "On page" and does nothing when chosen; after its Delete the item is addable again (AC 13)
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C13\]"`
 
 **C14** - Choosing an item inserts after the selected block; with nothing selected it inserts at the end, or before a final Signatures part; the new block becomes selected (AC 14)
 Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C14\]"`
 
 **C15** - A newly added text block's field takes focus (AC 15)
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C15\]"`
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C15\]"`
 
-**C16** - The Writing tab lists the 16 merge variables as chips, and choosing one inserts `{{name}}` at the caret, or at the end when the field was not focused (AC 16)
+**C16** - The Field button lists the 16 merge variables as chips, and choosing one inserts `{{name}}` at the caret, or at the end when the field was not focused, and closes the list (AC 16)
 Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C16\]"`
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C16\]"`
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C16\]"`
 
-**C17** - Below 1024 px the panel is a bottom sheet behind an "Add" button of at least 44 px, and choosing an item closes the sheet (AC 17)
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C17\]"`
+**C17** - The dock scrolls sideways inside itself when it is narrower than its items, never the page, and every dock control carries the 44 px class below 1024 px (AC 17)
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C17\]"`
 
 ### S3 - Options on the block · `block-options.tsx`, `template-editor.tsx` · ~25 KB · ~10k
 
@@ -145,20 +145,20 @@ Proof: author-run live pass in the Playwright browser at the three widths on `/t
 
 **C39** - Every editor control below 1024 px carries the 44 px class (`min-h-11`/`min-w-11` or `size-11`) (AC 39)
 Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C39\]"`
-Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C39\]"`
+Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C39\]"`
 
 **C40** - Every editor action is a focusable button or a link with an accessible name, and nothing needs hover or drag: whatever can be dragged is a button with a click path (AC 40)
 Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C40\]"`
 
-**C41** - At 1440 px with the sidebar open, the panel and the page are fully visible with no horizontal scroll (AC 41)
-Proof: author-run live pass at 1440 px with the sidebar open, comparing the panel's and the page's bounding boxes to the viewport
+**C41** - At 1440 px with the sidebar open, the dock and the page are fully visible with no horizontal scroll (AC 41)
+Proof: author-run live pass at 1440 px with the sidebar open, comparing the dock's and the page's bounding boxes to the viewport
 
 **C42** - The old editor files and their now-wrong tests are gone, and `npx tsc --noEmit`, `npx eslint components/templates "app/(app)/templates"` and the whole `npx vitest run` pass (all ACs, regression)
 Proof: `npx tsc --noEmit`
 Proof: `npx eslint components/templates "app/(app)/templates"`
 Proof: `npx vitest run`
 
-### S8 - Drag from the panel and drag to reorder · `editor-page.tsx`, `add-element-panel.tsx`, `domain/templates/editor-model.ts` · ~25 KB · ~10k
+### S8 - Drag from the dock and drag to reorder · `editor-page.tsx`, `add-element-dock.tsx`, `domain/templates/editor-model.ts` · ~25 KB · ~10k
 
 **C43** - Dragging an Add Element item over a block shows one drop line before it in the upper half and after it in the lower half, and at the end of the page below the last block (AC 42)
 Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C43\]"`
@@ -210,7 +210,7 @@ Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C48\]"`
 | Code | Required proofs | Coverage expectation |
 | --- | --- | --- |
 | Pure helpers that decide (move, insert position, required rows, parts available, delete and undo, variable insert) | one at its own layer, `domain/templates/editor-model.test.ts` | one asserted case per row of each decision table |
-| Components that decide (selection, toolbar rules, panel state, dialog states, save states) | one render test at their own layer | each state and each rejected input |
+| Components that decide (selection, toolbar rules, dock state, dialog states, save states) | one render test at their own layer | each state and each rejected input |
 | Markup that only lays out | none of its own | covered by the state test above and the live pass |
 | Page modules (redirects, 404, which editor) | one at the boundary | each role and each unknown-id case |
 
@@ -218,7 +218,7 @@ Evidence:
 
 - `domain/templates/editor-model.ts` (new): 6 helpers, about 14 branch points -> decides
 - `components/templates/editor-page.tsx` (new): selection, five toolbar rules, error outline -> decides
-- `components/templates/add-element-panel.tsx` (new): tab state, on-page state, insertion target -> decides
+- `components/templates/add-element-panel.tsx` (new): group layout, on-page state, field menu -> decides
 - `components/templates/preview-dialog.tsx` (new): five outcomes -> decides
 - closest analogue: `components/templates/block-editor.test.tsx`, same shape, already proven at this level with about 40 cases
 

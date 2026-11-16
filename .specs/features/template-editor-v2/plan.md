@@ -1,4 +1,4 @@
-# Templates editor v2: a page you click, with an Add Element panel
+# Templates editor v2: a page you click, with an Add Element dock
 
 ## Problem
 
@@ -13,7 +13,7 @@ When this ships the owner edits the document itself: they click a block on a pag
 This reuses the form state, the validation, the save actions and the two PDF preview routes unchanged; only the screen that edits the form changes.
 
 1. Request for `/templates/[templateId]`, `/templates/new` or `/templates/contract` -> the existing page modules read the template and build the form with `layoutFormFromBody` / `contractFormFromBody` (exist); the three pages render one editor.
-2. `components/templates/template-editor.tsx` (exists, rebuilt) holds the form state and draws the Add Element panel, the page and the header; `contract-wording-editor.tsx` (exists) becomes the same editor with `document="contract"`.
+2. `components/templates/template-editor.tsx` (exists, rebuilt) holds the form state and draws the page, the Add Element dock and the header; `contract-wording-editor.tsx` (exists) becomes the same editor with `document="contract"`.
 3. Each edit -> `domain/agreement/layout-form.ts` (exists) and `domain/agreement/layout.ts` (exists) rebuild the body and return errors live; errors are shown on the block they belong to.
 4. Preview PDF -> `POST /templates/preview` (exists) or `POST /templates/contract/preview` (exists), one request, shown in a dialog.
 5. Save -> `saveAgreementTemplateAction` (exists) or the contract save action (exists) -> the next `document_template_versions` row; the page stays open.
@@ -28,7 +28,7 @@ This reuses the form state, the validation, the save actions and the two PDF pre
 | existing behaviour | the live PDF pane goes away; whoever relied on seeing the PDF while typing now presses Preview PDF. The setup screen's template preview (`setup-template-preview`) uses the preview route, not the editor, and is unaffected |
 | tests | about ten component test files in `web/components/templates/` assert the old editor and are rewritten from the new criteria; the domain and action tests do not change |
 | stored data | nothing to migrate; saved versions, frozen agreement and contract versions and sent documents are read and written exactly as before |
-| docs | DESIGN.md gains the editor's components at finish (the panel, the page block, the dock-less selection toolbar); ROADMAP Phase 5.5 gets a line |
+| docs | DESIGN.md gains the editor's components at finish (the dock, the page block, the selection toolbar); ROADMAP Phase 5.5 gets a line |
 
 ## Relations
 
@@ -40,7 +40,7 @@ None - nothing consumed outside. The two preview routes, the save actions and th
 
 ## Landing
 
-None - nothing here is hard to reverse. No stored shape, contract, dependency or backfill changes: the editor keeps `LayoutFormState` as its state and adds no library. Drag and drop uses the browser's own drag events (added 2026-11-16 after the owner said the chosen layout meant dragging from the panel), and a UI component can be replaced again by another commit.
+None - nothing here is hard to reverse. No stored shape, contract, dependency or backfill changes: the editor keeps `LayoutFormState` as its state and adds no library. Drag and drop uses the browser's own drag events (added 2026-11-16 after the owner said the chosen layout meant dragging from the dock), and a UI component can be replaced again by another commit.
 
 ## Criteria
 
@@ -63,21 +63,21 @@ The owner sees the agreement or contract as a page, clicks a block and changes i
 
 **Independent test:** open an agreement template, click a paragraph, change a word, move it down, delete and undo it.
 
-### S2: Add things from one short panel (P1)
+### S2: Add things from a dock at the bottom (P1)
 
-The owner adds text and document parts from an Add Element panel, as in the reference.
+The owner adds text and document parts from a dark Add Element dock that floats at the bottom of the page, and the page has the whole width. (Changed 2026-11-16: the owner chose the dock layout over the left-hand panel.)
 
 **Acceptance Criteria**
 
-11. The system SHALL show an Add Element panel with two tabs, Writing (Heading, Text, Clause) and Document parts.
-12. WHEN the Document parts tab is open THEN it SHALL list the parts that document supports (agreement: Price lines, Visit schedule, Service included, Equipment, Terms; contract: Price lines, Visit schedule, Service included, Equipment, Signatures), the equipment part named with the org's item word.
-13. WHILE a part is already on the page its panel item SHALL read "On page" and SHALL do nothing when chosen; WHEN that part is deleted its item SHALL become addable again.
+11. The system SHALL show an Add Element dock at the bottom of the editor with two groups, Writing (Heading, Text, Clause) and Document parts, and a Field button.
+12. The system SHALL list in the Document parts group the parts that document supports (agreement: Price lines, Visit schedule, Service included, Equipment, Terms; contract: Price lines, Visit schedule, Service included, Equipment, Signatures), the equipment part named with the org's item word.
+13. WHILE a part is already on the page its dock item SHALL be dimmed, read "On page" to assistive technology and SHALL do nothing when chosen; WHEN that part is deleted its item SHALL become addable again.
 14. WHEN the member chooses an item THEN the system SHALL insert the new block after the selected block, and with nothing selected at the end of the layout but before a final Signatures part, and SHALL select the new block.
 15. WHEN a new text block is added THEN its text field SHALL take focus.
-16. WHILE the Writing tab is open the panel SHALL list the 16 merge variables as field chips, and WHEN a chip is chosen while a text block is selected THEN `{{name}}` SHALL be inserted at the caret, or at the end when the field has not been focused.
-17. WHILE the viewport is below 1024 px the panel SHALL be a bottom sheet opened by an "Add" button of at least 44 px, and WHEN an item is chosen THEN the sheet SHALL close.
+16. WHEN the member opens the Field button THEN the system SHALL list the 16 merge variables as chips above the dock, and WHEN a chip is chosen while a text block is selected THEN `{{name}}` SHALL be inserted at the caret, or at the end when the field has not been focused, and the list SHALL close.
+17. WHILE the viewport is narrower than the dock the system SHALL let the dock scroll sideways inside itself without making the page scroll, and every dock control SHALL be at least 44 px below 1024 px.
 
-**Independent test:** add a Heading and a Clause, insert Customer name into the clause, open the parts tab and add Visit schedule.
+**Independent test:** add a Heading and a Clause, insert Customer name into the clause with Field, and add Visit schedule from Document parts.
 
 ### S3: Options live on the block they belong to (P1)
 
@@ -138,25 +138,25 @@ The owner checks the true PDF with one click, instead of watching a live pane.
 38. WHERE the viewport is 375, 768 or 1440 px wide THEN the editor and the list SHALL have no horizontal scroll.
 39. WHILE the viewport is below 1024 px every control in the editor SHALL be at least 44 px tall and wide.
 40. The system SHALL make every editor action reachable by keyboard and SHALL need no hover and no drag.
-41. WHILE the viewport is 1440 px wide with the app's existing sidebar open THEN the Add Element panel and the page SHALL both be fully visible without horizontal scroll. (Amended before checks: the icon rail was dropped, the shell's existing collapse stays; see Assumptions.)
+41. WHILE the viewport is 1440 px wide with the app's existing sidebar open THEN the Add Element dock and the page SHALL both be fully visible without horizontal scroll. (Amended before checks: the icon rail was dropped, the shell's existing collapse stays; see Assumptions.)
 
 **Independent test:** run the editor at 375, 768 and 1440 px with the keyboard only.
 
-### S8: Drag from the panel and drag blocks to reorder (P1)
+### S8: Drag from the dock and drag blocks to reorder (P1)
 
-The owner drags an element from the Add Element panel onto the page, and drags a block to move it, as the chosen sketch showed ("Drop Heading here"). Click and the Up and Down controls stay, for the keyboard and for touch. (Added 2026-11-16 after the owner pointed out the build had no drag; it was wrongly listed out of scope.)
+The owner drags an element from the Add Element dock onto the page, and drags a block to move it, as the chosen sketch showed ("Drop Heading here"). Click and the Up and Down controls stay, for the keyboard and for touch. (Added 2026-11-16 after the owner pointed out the build had no drag; it was wrongly listed out of scope.)
 
 **Acceptance Criteria**
 
 42. WHEN a member drags an Add Element item over a block of the page THEN the system SHALL show one drop line at that block's top edge when the pointer is in its upper half and at its bottom edge when it is in its lower half, and a drop line at the end of the page when the pointer is below the last block.
 43. WHEN a dragged Add Element item is dropped THEN the system SHALL insert the new block at the drop line, select it and focus a new text block's field, exactly as choosing the item would.
-44. WHILE a part is already on the page its panel item SHALL NOT be draggable, and IF its payload is dropped anyway THEN the system SHALL change nothing.
+44. WHILE a part is already on the page its dock item SHALL NOT be draggable, and IF its payload is dropped anyway THEN the system SHALL change nothing.
 45. WHEN a block is dragged by its grip and dropped THEN the system SHALL move that row to the drop line, keep it selected, and leave the order of every other row as it was; a drop that leaves it where it was SHALL change nothing.
 46. WHEN a drag ends without a drop, or the pointer leaves the page THEN the system SHALL remove the drop line and change nothing.
 47. The system SHALL keep every drag outcome reachable without a drag: tap or click an item to add it, and Up and Down to move a block.
 48. The system SHALL give every block a grip with the accessible name "Drag to move" and a 44 px touch size below 1024 px.
 
-**Independent test:** drag Heading from the panel between two blocks, then drag that block to the end.
+**Independent test:** drag Heading from the dock between two blocks, then drag that block to the end.
 
 ## Out of scope
 
@@ -176,7 +176,7 @@ The owner drags an element from the Add Element panel onto the page, and drags a
 | Assumption | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
 | The slim icon rail while editing | dropped: the shell already has a desktop sidebar collapse remembered per browser (`app-shell.tsx`), so the editor uses it and fits beside the open sidebar (AC 41) | a new shell mode is larger than the editor and was the plan's stated fallback | n |
-| Page break | a toolbar toggle on a text block, not a panel item | the model stores it as a flag on a block, not a block | n |
+| Page break | a toolbar toggle on a text block, not a dock item | the model stores it as a flag on a block, not a block | n |
 | Where Fields chips live | on the Writing tab only | they only insert into text | n |
 | How text is edited on the page | a text field styled as page text, with chips shown when it is not focused | a contenteditable with inline chips is fragile on phones and screen readers | n |
 | Where the preset lines live | under the Price lines part's options | they are the price rows | n |
@@ -207,5 +207,5 @@ The owner drags an element from the Add Element panel onto the page, and drags a
 ## Sources
 
 - The owner's request, 2026-11-16, and the Jotform PDF editor reference image they sent - the interaction model
-- `.impeccable/mocks/decision/palette.html` - the layout chosen on 2026-11-16 (Add Element panel plus page)
+- `.impeccable/mocks/decision/dock.html` - the layout chosen on 2026-11-16 (page plus floating dock; first built from palette.html, changed at the owner's request)
 - `ROADMAP.md` Phase 5.5 and Decision 13 and 14 - what the templates are and who edits them

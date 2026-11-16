@@ -61,4 +61,4 @@ export const frameOf = (root: ParentNode, index: number) => pageItems(root)[inde
 export const selectItem = (root: ParentNode, index: number) => click(frameOf(root, index));
 
 /** Labels of the buttons inside the selected block's toolbar. */
-export const toolbar = (root: ParentNode) => [...root.querySelectorAll('[role="toolbar"] button')].map((button) => button.getAttribute("aria-label") ?? "");
+export const toolbar = (root: ParentNode) => [...root.querySelectorAll('[role="toolbar"][aria-label$="tools"] button')].map((button) => button.getAttribute("aria-label") ?? "");

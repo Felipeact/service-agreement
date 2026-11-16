@@ -32,8 +32,8 @@ const mountContract = () => act(async () => root.render(createElement(ContractWo
 const submit = () => act(async () => container.querySelector("form")!.requestSubmit());
 const items = () => pageItems(container).map((item) => item.textContent ?? "");
 const state = () => container.querySelector("[data-save-state]")?.getAttribute("data-save-state");
-const panelButton = (label: string) => [...container.querySelectorAll('[role="tabpanel"] > button')].find((b) => (b.textContent ?? "").includes(label)) as HTMLElement;
-const tab = (name: string) => [...container.querySelectorAll('[role="tab"]')].find((t) => t.textContent === name) as HTMLElement;
+const panelButton = (label: string) => [...container.querySelectorAll('[role="toolbar"][aria-label="Add element"] button')].find((b) => (b.textContent ?? "").includes(label)) as HTMLElement;
+const openFields = () => click(panelButton("Field"));
 
 beforeEach(() => {
   saveAgreement.mockClear();
@@ -65,7 +65,6 @@ describe("adding from the panel", () => {
 
   test("[C14] a part added from Document parts lands on the page with its sample and its options", async () => {
     await mountContract();
-    await click(tab("Document parts"));
     await click(panelButton("Visit schedule"));
     expect(items().some((text) => text.includes("Visit schedule"))).toBe(true);
     expect(container.querySelector('section[aria-label="Options"]')).not.toBeNull();
@@ -79,12 +78,13 @@ describe("adding from the panel", () => {
     expect(document.activeElement).toBe(field);
   });
 
-  test("[C16] a field chip puts {{name}} at the caret of the selected text block", async () => {
+  test("[C16] a field chosen from the Field list puts {{name}} at the caret of the selected text block", async () => {
     await mountAgreement();
     await selectItem(container, 1);
     const field = container.querySelector("textarea") as HTMLTextAreaElement;
     await setValue(field, "Hello , welcome");
     field.setSelectionRange(6, 6);
+    await openFields();
     await click([...container.querySelectorAll("button")].find((b) => b.textContent === VARIABLE_LABELS["customer.name"]));
     expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("Hello {{customer.name}}, welcome");
   });
@@ -92,6 +92,7 @@ describe("adding from the panel", () => {
   test("[C16] a chip does nothing while a part is selected", async () => {
     await mountAgreement();
     await selectItem(container, 3);
+    await openFields();
     const chip = [...container.querySelectorAll("button")].find((b) => b.textContent === VARIABLE_LABELS["customer.name"]) as HTMLButtonElement;
     expect(chip.disabled).toBe(true);
   });
@@ -177,20 +178,18 @@ describe("saving", () => {
 describe("one editor", () => {
   test("[C32] the agreement and the contract are the same editor: the same panel, page and header controls, with the parts of their own document", async () => {
     const shape = () => ({
-      panel: container.querySelector('aside[aria-label="Add element"]') !== null,
+      panel: container.querySelector('[role="toolbar"][aria-label="Add element"]') !== null,
       page: container.querySelector('article[aria-label="Document page"]') !== null,
       buttons: ["Preview PDF", "Page settings"].map((label) => withText(container, "button", label) !== undefined),
     });
     await mountAgreement();
     const agreement = shape();
     expect(container.querySelector("article")?.getAttribute("data-editor-document")).toBe("agreement");
-    await click(tab("Document parts"));
     expect(container.textContent).toContain("Terms");
     expect(container.textContent).not.toContain("Signatures");
     await mountContract();
     const contract = shape();
     expect(container.querySelector("article")?.getAttribute("data-editor-document")).toBe("contract");
-    await click(tab("Document parts"));
     expect(container.textContent).toContain("Signatures");
     expect(agreement).toEqual(contract);
     expect(agreement).toEqual({ panel: true, page: true, buttons: [true, true] });
