@@ -51,6 +51,18 @@ describe("updateSession", () => {
     expect(response.status).toBe(200);
   });
 
+  test.each([
+    ["/terms", false],
+    ["/privacy", false],
+    ["/security", false],
+    ["/terms/x", true],
+  ])("C6022: signed out, %s redirects to /login: %s", async (path, redirects) => {
+    scenario = { claims: null };
+    const response = await updateSession(request(path));
+    expect(response.headers.has("location")).toBe(redirects);
+    if (redirects) expect(locationPath(response)).toBe("/login");
+  });
+
   test("C13: signed in, /login redirects to /pipeline", async () => {
     scenario = { claims: { sub: "u1" } };
     const response = await updateSession(request("/login"));
