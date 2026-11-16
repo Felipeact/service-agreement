@@ -69,7 +69,7 @@ describe("matchAssetType", () => {
     ["a name without punctuation", "make up air unit", "id-MUA"],
     // QA report 2026-11-16: wording that adds a number or a qualifier still means the type (qa-p1-p2 C7001).
     ["wording that adds a number", "Rooftop Unit #2", "id-RTU"],
-    ["wording with a word the org has no type for", "Rooftop Unit Curb Adapter Kit Ultra", "id-RTU"],
+    ["wording that names a different kind of equipment", "Rooftop Unit Curb Adapter Kit Ultra", null],
     ["a different kind of unit", "Heat Pump Unit", null],
   ])("C515: %s matches", (_name, raw, expected) => {
     expect(matchAssetType(raw, [RTU, HWT, MUA])).toBe(expected);

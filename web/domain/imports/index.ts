@@ -145,6 +145,9 @@ const STOP_WORDS = new Set(["a", "an", "the", "of", "and", "for", "with"]);
  */
 const ALIASES: Record<string, string> = { dcva: "backflow", rpz: "backflow", rpza: "backflow", dcda: "backflow", pvb: "backflow", bf: "backflow" };
 
+/** Words that qualify a type without changing what it is. Short on purpose: a word is only here when it never names other equipment. */
+const QUALIFIERS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric"]);
+
 const tokensOf = (text: string): string[] => normalized(text).split(" ").filter((token) => token !== "" && !STOP_WORDS.has(token));
 
 /** A list's token is a type word when it is that word, its start ("exh" for exhaust), or its consonant skeleton ("chlr" for chiller). */
@@ -174,16 +177,21 @@ export function matchAssetType(raw: string | null, types: AssetTypeRef[]): strin
   );
   if (viaSynonym.size > 0) return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
 
-  // Sizes and counts ("2in", "4") say nothing about the type.
-  const spoken = tokensOf(wanted).filter((token) => !/^\d/.test(token));
+  // Words inside brackets are a qualifier ("Boiler (condensing)") and sizes and counts ("2in", "4") say nothing about the type.
+  const outside = (raw ?? "").replace(/\([^)]*\)/g, " ");
+  const dotted = new Set([...outside.matchAll(/(\p{L}+)\./gu)].map((found) => found[1].toLowerCase()));
+  const spoken = tokensOf(outside).filter((token) => !/^\d/.test(token));
   const heard = [...new Set([...spoken, ...spoken.flatMap((token) => (ALIASES[token] ? [ALIASES[token]] : []))])];
   if (heard.length === 0) return null;
+  // A word the text adds is harmless only when it is explained: an alias, an abbreviation marked with a period ("cond."), or a
+  // plain qualifier. Any other extra word ("feed pump", "coil", "sump") means a different kind of equipment than the type.
+  const unexplained = (words: string[]) => spoken.filter((token) => !words.some((word) => fitsWord(token, word)) && !ALIASES[token] && !dotted.has(token) && !QUALIFIERS.has(token));
   const named = types.map((t) => ({ id: t.id, words: tokensOf(t.name) })).filter((t) => t.words.length > 0);
-  const whole = named.filter((t) => t.words.every((word) => heard.some((token) => fitsWord(token, word))));
+  const whole = named.filter((t) => t.words.every((word) => heard.some((token) => fitsWord(token, word))) && unexplained(t.words).length === 0);
   const best = Math.max(0, ...whole.map((t) => t.words.length));
   const top = whole.filter((t) => t.words.length === best);
   if (top.length > 0) return top.length === 1 ? top[0].id : null;
-  const byHead = named.filter((t) => t.words[0].length >= 5 && heard.includes(t.words[0]));
+  const byHead = named.filter((t) => t.words[0].length >= 5 && heard.includes(t.words[0]) && unexplained(t.words).length === 0);
   return byHead.length === 1 ? byHead[0].id : null;
 }
 

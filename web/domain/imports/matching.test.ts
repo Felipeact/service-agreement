@@ -39,6 +39,36 @@ describe("matchAssetType: tokens, abbreviations and aliases", () => {
     expect(matchAssetType("Exhaust fan (roof)", types)).toBe("exfan");
   });
 
+  test.each([
+    ["Boiler feed pump", "boiler"],
+    ["Boiler room exhaust fan", "boiler"],
+    ["Boiler water treatment tank", "boiler"],
+  ])("C7002: %s is not typed as the shorter Boiler", (raw) => {
+    expect(matchAssetType(raw, TYPES)).toBeNull();
+  });
+
+  test.each(["Sump pump", "Condensate pump", "Backflow pump", "Fan coil unit"])("C7002: %s is not typed as a one-word type that it only contains", (raw) => {
+    const types = [type("pump", "PUMP", "Pump"), type("fan", "FAN", "Fan")];
+    expect(matchAssetType(raw, types)).toBeNull();
+  });
+
+  test("C7001: an alias alone types the row, with no help from the words of the type", () => {
+    expect(matchAssetType("DCVA 2in", TYPES)).toBe("backflow");
+    expect(matchAssetType("RPZ", TYPES)).toBe("backflow");
+    expect(matchAssetType("RPZ", TYPES.filter((t) => t.id !== "backflow"))).toBeNull();
+  });
+
+  test("C7001: a qualifier in brackets or marked with a period never blocks a match", () => {
+    expect(matchAssetType("Chiller (water cooled)", TYPES)).toBe("chiller");
+    expect(matchAssetType("Boiler cond.", TYPES)).toBe("boiler");
+    expect(matchAssetType("Boiler gas", TYPES)).toBe("boiler");
+  });
+
+  test("C7003: a short form that fits two whole types gives no guess", () => {
+    const types = [type("a", "XA", "Exhaust"), type("b", "XB", "Exhibit")];
+    expect(matchAssetType("Exh.", types)).toBeNull();
+  });
+
   test("C7003: two equally good types give no guess", () => {
     const types = [type("a", "BFP", "Boiler feed pump"), type("b", "BFT", "Boiler feed tank")];
     expect(matchAssetType("Boiler feed", types)).toBeNull();

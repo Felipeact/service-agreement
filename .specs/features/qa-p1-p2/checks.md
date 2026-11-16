@@ -77,6 +77,12 @@ Proof: `npx vitest run` (compared with the list in the p0 verification report)
 - state transitions: n/a - no status changes
 - observability: n/a - no logging requirement
 
+## Known limits
+
+- Two quantity rows of the same type ("VAV boxes (qty 24)" then "(qty 12)") both number their units from 1, so the second set starts skipped as repeats; the rows stay visible and one click unskips them (C7005 x C7006)
+- A one-word text that is the first word of exactly one type ("Exhaust" for "Exhaust fan") types to it
+- Round 2 (after verifier round 1): extra words in the text must be explained (in brackets, an abbreviation marked with a period, an alias, a size, or a short qualifier list), so "Boiler feed pump" and "Sump pump" no longer type as Boiler or Pump (C7002); an alias alone types a row (C7001); a short form fitting two whole types gives no guess (C7003)
+
 ## Handoff
 
 - one builder, about 12 files, about 40k, under the 150k budget
