@@ -148,6 +148,9 @@ const ALIASES: Record<string, string> = { dcva: "backflow", rpz: "backflow", rpz
 /** Words that qualify a type without changing what it is. Short on purpose: a word is only here when it never names other equipment. */
 const QUALIFIERS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric"]);
 
+/** Words that may stand in brackets after a type name without changing it: the qualifiers and a few plain descriptors. */
+const DESCRIPTORS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "water", "cooled", "air", "roof", "indoor", "outdoor", "new", "old", "spare", "standard"]);
+
 const tokensOf = (text: string): string[] => normalized(text).split(" ").filter((token) => token !== "" && !STOP_WORDS.has(token));
 
 /** A list's token is a type word when it is that word, its start ("exh" for exhaust), or its consonant skeleton ("chlr" for chiller). */
@@ -177,15 +180,26 @@ export function matchAssetType(raw: string | null, types: AssetTypeRef[]): strin
   );
   if (viaSynonym.size > 0) return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
 
-  // Words inside brackets are a qualifier ("Boiler (condensing)") and sizes and counts ("2in", "4") say nothing about the type.
+  // Sizes and counts ("2in", "4") say nothing about the type. Words inside brackets are a qualifier ("Boiler (condensing)") only when
+  // each is a plain descriptor: "Boiler (feed pump)" is a pump, so any other bracketed word leaves the row for the review.
   const outside = (raw ?? "").replace(/\([^)]*\)/g, " ");
+  const bracketed = [...(raw ?? "").matchAll(/\(([^)]*)\)/g)].flatMap((found) => tokensOf(found[1]));
+  if (bracketed.some((token) => !/^\d/.test(token) && !DESCRIPTORS.has(token))) return null;
   const dotted = new Set([...outside.matchAll(/(\p{L}+)\./gu)].map((found) => found[1].toLowerCase()));
   const spoken = tokensOf(outside).filter((token) => !/^\d/.test(token));
   const heard = [...new Set([...spoken, ...spoken.flatMap((token) => (ALIASES[token] ? [ALIASES[token]] : []))])];
   if (heard.length === 0) return null;
-  // A word the text adds is harmless only when it is explained: an alias, an abbreviation marked with a period ("cond."), or a
-  // plain qualifier. Any other extra word ("feed pump", "coil", "sump") means a different kind of equipment than the type.
-  const unexplained = (words: string[]) => spoken.filter((token) => !words.some((word) => fitsWord(token, word)) && !ALIASES[token] && !dotted.has(token) && !QUALIFIERS.has(token));
+  // A word the text adds is harmless only when it is explained for this type: an alias of a word the type has ("rpz" on a backflow
+  // type, never on a pump), a plain qualifier, or a period-marked short form of a qualifier ("cond."). Any other extra word
+  // ("feed pump", "coil", "sump", "pump.") means a different kind of equipment than the type.
+  const unexplained = (words: string[]) =>
+    spoken.filter(
+      (token) =>
+        !words.some((word) => fitsWord(token, word)) &&
+        !(ALIASES[token] && words.includes(ALIASES[token])) &&
+        !QUALIFIERS.has(token) &&
+        !(dotted.has(token) && [...QUALIFIERS].some((qualifier) => fitsWord(token, qualifier))),
+    );
   const named = types.map((t) => ({ id: t.id, words: tokensOf(t.name) })).filter((t) => t.words.length > 0);
   const whole = named.filter((t) => t.words.every((word) => heard.some((token) => fitsWord(token, word))) && unexplained(t.words).length === 0);
   const best = Math.max(0, ...whole.map((t) => t.words.length));

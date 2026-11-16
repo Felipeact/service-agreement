@@ -46,7 +46,7 @@ Proof: `npx vitest run next.config.test.ts -t "C7011:"`
 **C7012** - The signing page shows a visible "Open signing page" link to the same signing address, in addition to the embedded form
 Proof: `npx vitest run components/signing -t "C7012:"`
 
-**C7013** - A browser run of `/robots.txt`, `/sitemap.xml` and the signing fallback at 375, 768 and 1440 shows the expected body, no horizontal scroll and no console errors
+**C7013** - A browser run shows `/robots.txt` and `/sitemap.xml` answering 200 with the expected body and no console errors, and the response headers of a public page carry the four security headers while `/sign/` and `/review/` keep `no-referrer`. The raw XML of the sitemap is the browser's own XML viewer, so its width is not a page of ours; the signing fallback link (needs a live signing token) is proven by C7012
 Proof: live Playwright run
 
 **C7014** - The existing full test set is no worse: the failures that existed before this batch (kanban, shell, pricing, purity listing agreements-list and pipeline-view, vocabulary C2019) are the only failures
@@ -82,6 +82,8 @@ Proof: `npx vitest run` (compared with the list in the p0 verification report)
 - Two quantity rows of the same type ("VAV boxes (qty 24)" then "(qty 12)") both number their units from 1, so the second set starts skipped as repeats; the rows stay visible and one click unskips them (C7005 x C7006)
 - A one-word text that is the first word of exactly one type ("Exhaust" for "Exhaust fan") types to it
 - Round 2 (after verifier round 1): extra words in the text must be explained (in brackets, an abbreviation marked with a period, an alias, a size, or a short qualifier list), so "Boiler feed pump" and "Sump pump" no longer type as Boiler or Pump (C7002); an alias alone types a row (C7001); a short form fitting two whole types gives no guess (C7003)
+
+- Round 3: the waivers are scoped. A period only explains a short form of a qualifier ("cond."), an alias only explains its own family ("rpz" on a backflow type), and bracketed words must be plain descriptors, so "Boiler pump.", "RPZ pump" and "Boiler (feed pump)" stay untyped (C7002)
 
 ## Handoff
 

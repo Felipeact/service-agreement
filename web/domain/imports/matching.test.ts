@@ -64,6 +64,20 @@ describe("matchAssetType: tokens, abbreviations and aliases", () => {
     expect(matchAssetType("Boiler gas", TYPES)).toBe("boiler");
   });
 
+  test.each(["Boiler pump.", "Chiller pump.", "Boiler tank.", "Exhaust fan motor.", "Pump motor."])("C7002: %s is not explained by a period alone", (raw) => {
+    const types = [...TYPES, type("pump", "PUMP", "Pump")];
+    expect(matchAssetType(raw, types)).toBeNull();
+  });
+
+  test.each(["RPZ pump", "Pump RPZ", "Pump BF", "Boiler RPZ", "Boiler DCVA 2in", "Boiler PVB", "Chiller RPZ"])("C7002: an alias only explains its own family, so %s is not typed", (raw) => {
+    const types = [...TYPES, type("pump", "PUMP", "Pump")];
+    expect(matchAssetType(raw, types)).toBeNull();
+  });
+
+  test.each(["Boiler (feed pump)", "Boiler (sump pump)", "Boiler (water heater)", "Chiller (pump)"])("C7002: bracketed equipment words keep the row for the review: %s", (raw) => {
+    expect(matchAssetType(raw, TYPES)).toBeNull();
+  });
+
   test("C7003: a short form that fits two whole types gives no guess", () => {
     const types = [type("a", "XA", "Exhaust"), type("b", "XB", "Exhibit")];
     expect(matchAssetType("Exh.", types)).toBeNull();

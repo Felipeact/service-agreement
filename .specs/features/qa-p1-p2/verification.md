@@ -2,96 +2,105 @@
 
 **Verdict**: FAIL
 **Profile**: ui
-**Diff range**: 54837d1..HEAD (code in 1c11d96, e70a84b; 45de842 is docs only)
-**Round**: 1 - full
+**Diff range**: 54837d1..HEAD (HEAD 62c762c; matcher fix in 4b79d13)
+**Round**: 2 - scoped (proofs re-run in full at 62c762c; sections marked `verified at 62c762c` or `carried from round 1`)
 **Verifier**: independent sub-agent (author != verifier)
 
 ## Binding sources
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| none marked (bounded batch, no plan.md; the Intent section of checks.md is the only brief) | n/a - nothing marked binding | none | - |
+| none marked (bounded batch, no plan.md; the Intent section of checks.md is the only brief; bare `-` row) | n/a - nothing marked binding | none | - |
 
-No design or contract is binding for this batch. The screens touched are one link on the signing page (C7012) and two machine files, so the step 1 arrangement enumeration is: signing page, open state, one `<a>` (text "Open signing page", same href as the embedded form, `target=_blank`, `rel=noopener noreferrer`) beside the form; signed and closed states none. Each has a check (signing.test.ts:39, :46).
+Carried from round 1: the touched screen is one link on the signing page (C7012, `components/signing/signing.test.ts:39`, `:46`); the rest are two machine files. The fix commit 4b79d13 touched no interface, so step 1 is not re-run. Verified at 62c762c.
 
 ## Checks
 
-All 14 checks C7001-C7014 are in the set. Proofs were run by the Verifier at HEAD (322 passed in the batched run of the 13 target files, each C70xx test visible by name in verbose output).
+Proofs run at 62c762c in one batched invocation of 11 files (264 passed, 0 failed, every C70xx test visible by name in verbose output) plus the full `npx vitest run` and `npm run test:db import_duplicates`.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C7001 | six report spellings typed | `vitest run domain/imports/matching.test.ts` (6 named C7001 tests ran) | `domain/imports/matching.test.ts:21-22` - `expect(matchAssetType(raw, TYPES)).toBe(id)` over the six rows (:14-19) | PASS (see F2: the alias path is not exercised by these rows) |
-| C7002 | unrelated stays null, exact still wins | same file, C7002 tests ran | `matching.test.ts:26` `toBeNull()` over Water heater / Sump pump / Grease interceptor / "" / "  "; `:30-32` exact name, code, synonym; `:37-39` exact beats token | PASS |
-| C7003 | tie gives null | same file | `matching.test.ts:44` - `expect(matchAssetType("Boiler feed", types)).toBeNull()` | PASS as written, but a mutant survives (F1) |
-| C7004 | splitQuantity forms and limits | same file, 13 named tests | `matching.test.ts:57` `toEqual(expected)` over qty / qty: / x6 / x 6 / 24 x / (x 12); `:61` `toBeNull()` over "VAV boxes", "Boiler 2", "(qty 1)", "(qty 51)", "(qty 500)", "", "qty 4" | PASS |
-| C7005 | extraction expands qty rows | `vitest run application/use-cases/extract-import.test.ts` (4 C7005 tests ran) | `extract-import.test.ts:105` `toHaveLength(24)`; `:106` unit numbers "1".."24"; `:107` type text `Set(["VAV box"])`; `:108` `confidence === "medium"`; `:118` stays one row for unit present / above 50 / one | PASS (mutant killed) |
-| C7006 | repeats start skipped | `npm run test:db import_duplicates` - "PASS import_duplicates, 1 passed, 0 failed" (recipe replays migration 20261116140000 inside the rolled-back transaction; nothing applied) | `supabase/tests/import_duplicates.sql:25` skipped positions = `array[2]`; `:30` after chunk 2 = `array[2, 7]`; `:32` first of key kept; `:33` same unit under another type kept. Untyped repeat (row 4) and no-unit rows (5, 6) stay unskipped because only position 2 is skipped. Migration `20261116140000_import_duplicates_skipped.sql` is the only `record_extraction_chunk` definition after 20261113140000; it reproduces that function's guards plus the new `skipped` column expression | PASS (SQL mutants reasoned, see Faults); see F3 for an unchecked interaction |
-| C7007 | mapping remembers the spelling once, never fails the mapping | `vitest run infrastructure/supabase/import-review.test.ts` (3 C7007 tests ran) | `import-review.test.ts:153` `toEqual({ ok: true, rows: 1 })`; `:155` `updates` length 0 when held; `:160` update args `{ synonyms: ["roof top", "boiler cond"] }`; `:165` ok:true under `fail("42501")`; `:171` no `asset_types` call when no row typed | PASS (mutant killed) |
-| C7008 | PDF and "Ours never appears" claims gone | `vitest run components/site/site-pages.test.ts -t "C7008:"` ran | `components/site/site-pages.test.ts:52-55` - four `not.toContain(...)` over `content.ts` and `app/product/page.tsx` | PASS (source-substring proof, see F6) |
-| C7009 | robots and sitemap content | `vitest run app/robots.test.ts` (2 C7009 tests ran); live GET `http://localhost:3000/robots.txt` 200 with the same Allow/Disallow set | `app/robots.test.ts:13` `allow` toBe "/"; `:14` disallow contains /review/ /sign/ /api/ /pipeline /agreements /settings; `:15` sitemap URL; `:21-23` sitemap length and 5 named pages; `:25` no URL under any DISALLOWED prefix | PASS (see F5: only 6 of 20 disallowed prefixes named) |
-| C7010 | robots and sitemap reachable signed out | `vitest run infrastructure/supabase/session.test.ts` (2 C7010 tests ran) | `infrastructure/supabase/session.test.ts:57` `expect(response.headers.has("location")).toBe(false)` for both paths | PASS (mutant killed) |
-| C7011 | four security headers | `vitest run next.config.test.ts` (C7011 ran); live: `/robots.txt`, `/sitemap.xml` carry nosniff, strict-origin-when-cross-origin, DENY, HSTS; `/sign/x` and `/review/x` show Referrer-Policy no-referrer | `next.config.test.ts:39-45` exact `toEqual` of the four headers on rule `/:path*`; `:46-49` review and sign keep `no-referrer` and sit after rule 0 | PASS (mutant killed) |
-| C7012 | visible Open signing page link | `vitest run components/signing` (C7012 tests ran) | `components/signing/signing.test.ts:39` `toMatch(<a href="${EMBED}" ... target="_blank" ... rel="noopener noreferrer" ...>Open signing page</a>)`; `:46` absent when signed or closed | PASS |
-| C7013 | live browser run at 375/768/1440 | Verifier ran only a small HTTP check against the running dev server: robots.txt 200 body as above, sitemap.xml 200, headers as in C7011 | no browser run by the Verifier; the 375/768/1440 widths, no horizontal scroll, console errors and the signing fallback link were not observed | PASS (partial; the author's Playwright run is NOT observed by the Verifier) |
-| C7014 | no new failures | `npx vitest run` - Test Files 6 failed / 323 passed (329); Tests 33 failed / 5418 passed (5451) | failing files: `components/kanban/pipeline-view.test.ts` (28), `components/kanban/expiring-view.test.ts` (1), `components/shell/app-shell.test.ts` (1), `app/pricing/pricing-catalog.test.ts` (1), `components/vocabulary.test.ts` C2019 (1), `domain/purity.test.ts` C2021 (1, lists only `agreements-list.tsx` and `pipeline-view.tsx`, `domain/purity.test.ts:109`). All are on the known pre-existing list; no other file fails | PASS |
+| C7001 | six report spellings typed; alias alone types | `npx vitest run domain/imports/matching.test.ts ...` (6 C7001 row tests plus 2 more C7001 tests ran) | `matching.test.ts:21-22` `expect(matchAssetType(raw, TYPES)).toBe(id)` over `:15-20`; `:56-58` `matchAssetType("DCVA 2in", TYPES)` toBe "backflow", `matchAssetType("RPZ", TYPES)` toBe "backflow", and null without the backflow type; `:62-64` bracket, period, qualifier. Alias mutant M4 now killed (below) | PASS |
+| C7002 | unrelated stays null, exact wins, extra words must be explained | same file (C7002 tests ran) | `matching.test.ts:25-26` `toBeNull()` over Water heater / Sump pump / Grease interceptor / "" / "  "; `:30-32` exact name, code, synonym; `:37-39` exact beats token; `:43-47` "Boiler feed pump", "Boiler room exhaust fan", "Boiler water treatment tank" `toBeNull()`; `:50-52` "Sump pump", "Condensate pump", "Backflow pump", "Fan coil unit" `toBeNull()` with types Pump and Fan | PASS (see F1-F3: the extra-word rule is only partly bounded) |
+| C7003 | tie gives null | same file | `matching.test.ts:74` `expect(matchAssetType("Boiler feed", types)).toBeNull()` (byHead tie); `:69` `matchAssetType("Exh.", types)` `toBeNull()` with types "Exhaust" and "Exhibit" (whole-fit tie). Both tie paths now have a located assertion; M1 and M2 killed | PASS |
+| C7004 | splitQuantity forms and limits | same file (13 C7004 tests) | `matching.test.ts:87` `toEqual(expected)` over qty / qty: / x6 / x 6 / 24 x / (x 12); `:91` `toBeNull()` over "VAV boxes", "Boiler 2", "(qty 1)", "(qty 51)", "(qty 500)", "", "qty 4" | PASS |
+| C7005 | extraction expands qty rows | `application/use-cases/extract-import.test.ts` (4 C7005 tests ran) | carried from round 1: `extract-import.test.ts:105` `toHaveLength(24)`; `:106` units "1".."24"; `:107` `Set(["VAV box"])`; `:108` confidence medium; `:118` stays one row for unit present / above 50 / one | PASS |
+| C7006 | repeats start skipped | `npm run test:db import_duplicates` - "PASS import_duplicates, 1 passed, 0 failed" (rolled-back, hosted; nothing applied) | `supabase/tests/import_duplicates.sql:25` skipped positions `array[2]`; `:30` after chunk 2 `array[2, 7]`; `:32` first of key kept; `:33` same unit under another type kept | PASS |
+| C7007 | mapping remembers the spelling once, never fails | `infrastructure/supabase/import-review.test.ts` (3 C7007 tests ran) | carried from round 1: `import-review.test.ts:153` `toEqual({ ok: true, rows: 1 })`; `:155` no update when held; `:160` args `{ synonyms: ["roof top", "boiler cond"] }`; `:165` ok:true under refusal | PASS |
+| C7008 | PDF and "Ours never appears" gone | `components/site/site-pages.test.ts` (C7008 ran) | carried: `site-pages.test.ts:52-55` four `not.toContain(...)` over `content.ts` and `app/product/page.tsx`; negative-substring proof (precision note P2, not blocking on its own) | PASS |
+| C7009 | robots and sitemap content | `app/robots.test.ts` (2 C7009 tests ran); live `GET /robots.txt` 200 lists all 20 disallows and the sitemap line | `app/robots.test.ts:13` allow "/"; `:14` disallow contains /review/ /sign/ /api/ /pipeline /agreements /settings; `:15` sitemap URL; `:21` length against `SITEMAP_PATHS.length` (self-referential); `:22-23` 5 named pages; `:25` no URL under any disallowed prefix | PASS as run, but precision gap P1 stays and is an unproven member (below) |
+| C7010 | robots and sitemap reachable signed out | `infrastructure/supabase/session.test.ts` (2 C7010 tests ran) | `session.test.ts:57` `expect(response.headers.has("location")).toBe(false)` for both paths | PASS |
+| C7011 | four security headers | `next.config.test.ts` (C7011 ran) | `next.config.test.ts:39-45` exact `toEqual` of four headers on `/:path*`; `:46-49` review and sign keep `no-referrer` | PASS |
+| C7012 | visible Open signing page link | `components/signing` (3 C7012 tests ran) | `signing.test.ts:39` `toMatch(<a href="${EMBED}" ... >Open signing page</a>)`; `:46` absent when signed or closed | PASS |
+| C7013 | browser run at 375/768/1440: body, no horizontal scroll, no console errors | Verifier ran Playwright (one context) against the running dev server: `/robots.txt` and `/sitemap.xml` at 375, 768, 1440 | all six loads 200, console errors none; `document.documentElement.scrollWidth` equals the width in five loads, but `/sitemap.xml` at 375 gave scrollWidth 392 (horizontal scroll) - the browser's XML viewer rendering of a long `<loc>` line, not site markup. Signing fallback page not observed: it needs a live signing token the Verifier does not hold | FAIL (sitemap at 375 scrolls horizontally; signing fallback unobserved; either reword the check to exempt the raw XML view or have the author show the fallback run) |
+| C7014 | no new failures | `npx vitest run` at 62c762c - Test Files 6 failed / 328 passed (334); Tests 33 failed / 5465 passed (5498) | failures: `components/kanban/pipeline-view.test.ts` (28), `components/kanban/expiring-view.test.ts` (1), `components/shell/app-shell.test.ts` (1), `app/pricing/pricing-catalog.test.ts` (1), `components/vocabulary.test.ts` C2019 (1), `domain/purity.test.ts` C2021 (1; lists only `components/agreements/agreements-list.tsx` and `components/kanban/pipeline-view.tsx`). All on the known list; no other file fails. rls_isolation C35 and customer_portal are DB suites, not part of this run | PASS |
 
 ## Coverage
 
-Members recomputed from the code (matcher inputs, `next.config.ts`, `app/robots.ts`, `components/site/content.ts` SITEMAP_PATHS) and the claim text, not from the author's table.
+Verified at 62c762c for the matcher rows; other rows carried from round 1.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| report spellings matched (6) | checks.md C7001 | Boiler (condensing), Boiler cond., Chlr, Exh. fan, Backflow DCVA, Backflow RPZ -> C7001 each (`matching.test.ts:15-20`) | - (alias mapping in `ALIASES` is not what makes C7001's backflow rows pass, F2) |
-| must stay unmatched (4+1) | checks.md C7002 | Water heater, Sump pump, Grease interceptor, "" -> C7002 (plus "  ") | - |
-| quantity forms (6) | `splitQuantity` patterns, `domain/imports/index.ts` (4 regexes + range) | qty N, x N suffix, x N prefix, N x, none, out of range -> C7004; extraction side -> C7005 | - |
-| security headers (4) | `next.config.ts` rule 0 | nosniff, referrer, frame, HSTS -> C7011 exact `toEqual` | - |
-| secret rules keep no-referrer (2) | `next.config.ts` | /review/, /sign/ -> C7011 :46-49, live headers | - |
-| discovery files (2) | `app/robots.ts`, `app/sitemap.ts` | robots, sitemap -> C7009 | - |
-| public sitemap pages (12) | `SITEMAP_PATHS` in `components/site/content.ts` | length asserted against the same constant (`robots.test.ts:21`, self-referential); 5 named (:22-23) | 7 of 12 never named: /product /demo /trades /about /faq /contact and / only via `toContain(origin)`; precision gap (F5), not a behaviour gap |
-| disallowed prefixes (20) | `DISALLOWED` in `app/robots.ts` | 6 named at `robots.test.ts:14` | 14 of 20 not named (/auth/ /login /contracts /customers /sites /assets /contacts /imports /members /reports /search /templates /setup /billing); F5 |
-| startup config: public paths (1 place) | `infrastructure/supabase/session.ts` PUBLIC_PATHS (read directly) | `/robots.txt`, `/sitemap.xml` present in the array; C7010 runs `updateSession` over the real module | - |
-| startup config: headers (1 place) | `web/next.config.ts` (read directly) | rule `/:path*` first, then /review/, /sign/; the test imports the real config | - |
-| quantity-row interactions (not in the checks) | C7005 x C7006 | no proof | expansion numbers units 1..N from 1 for every row; a second quantity row of the same type collides with the first under C7006 (F3) |
+| report spellings matched (6) | checks.md C7001 | each -> C7001 `matching.test.ts:15-20`; also reproduced in a scratch copy over the real 40 hvac types: all six type correctly | - |
+| must stay unmatched (3+blank) | checks.md C7002 | Water heater, Sump pump, Grease interceptor, "" -> C7002 `:25`; scratch probe over the HVAC-only catalog: all null (they do type in an org that has the plumbing pack, as expected) | - |
+| round 1 over-reach examples (7) | round 1 F4 | Boiler feed pump, Boiler room exhaust fan, Boiler water treatment tank, Sump pump, Condensate pump, Backflow pump, Fan coil unit -> C7002 `:43-52`; "Rooftop Unit Curb Adapter Kit Ultra" -> `domain/imports/extract.test.ts` null (C515); "thermal expansion tank" -> null `starter-packs.test.ts:68` | - |
+| extra-word rule, the explaining paths (4: bracket, period, alias, qualifier) | `matchAssetType` in `domain/imports/index.ts` | each has a positive test (`:62-64`, `:56`); none has a negative test that the explaining path cannot waive a word naming other equipment | trailing or any period waives the word before it ("Boiler pump." -> Boiler); an alias waives the word for any type ("RPZ pump" -> Pump); a bracket is ignored whole ("Boiler (feed pump)" -> Boiler) - F1-F3 |
+| quantity forms (6) | `splitQuantity` | C7004; extraction C7005 | - |
+| security headers (4) and two no-referrer rules | `next.config.ts` | C7011 | - |
+| discovery files (2) | `app/robots.ts`, `app/sitemap.ts` | C7009 | - |
+| public sitemap pages (12) | `SITEMAP_PATHS` in `components/site/content.ts` | length against the same constant; 5 named (`robots.test.ts:22-23`) | 7 of 12 never named (P1) |
+| disallowed prefixes (20) | `DISALLOWED` in `app/robots.ts` | 6 named (`robots.test.ts:14`) | 14 of 20 never named (/auth/ /login /contracts /customers /sites /assets /contacts /imports /members /reports /search /templates /setup /billing) (P1) |
+| startup config: public paths (1 place) | `session.ts` PUBLIC_PATHS read directly | C7010 over the real module | - |
+| startup config: headers (1 place) | `next.config.ts` read directly | C7011 imports the real config | - |
+| quantity x duplicate interaction | C7005 x C7006 | no proof; documented in `## Known limits` (first bullet) | accepted limit, see Decisions |
 
 ## Test policy rows
 
-No `Test policy` section in checks.md. Nothing to judge; the repo's own convention decided the level (unit test per rule, a database recipe for the SQL, a header/route test over the real config).
+No `Test policy` section in checks.md. Nothing to judge; the repo's own convention decided the level.
 
 ## Faults injected
 
-Mutants were applied in place to the real tree with a restore by `git checkout -- <file>` after each run (no worktree, no stash); `git status --porcelain` before: `?? node_modules/`; after every run and at the end: `?? node_modules/` (identical, tree clean of my changes).
+Verified at 62c762c. Mutants applied in place and restored from the saved original text; `git status --porcelain` before and after: `?? node_modules/` only. Run against `matching.test.ts`, `extract.test.ts` and `starter-packs.test.ts`.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| tie among whole-word fits returns the first type instead of null (`return top[0].id`) | `domain/imports/index.ts` (whole-name tie, `top.length === 1 ? ... : null`) | no - `matching.test.ts` 27 passed; the C7003 test reaches only the later `byHead` tie, so the whole-fit tie path has no proof |
-| remove the `ALIASES` table (`= {}`) | `domain/imports/index.ts` ALIASES | partly - `matching.test.ts` (C7001) 27 passed, still green; killed only by `starter-packs.test.ts` C2222 (the "rpz" assertion changed in this batch) |
-| expansion keeps `high` confidence instead of capping at `medium` | `application/use-cases/extract-import.ts` rowsFor | yes - C7005 fails |
-| drop the "already held" guard before appending a synonym | `infrastructure/supabase/import-review.ts` rememberSpellingOf | yes - C7007 "appends it once" fails |
-| remove HSTS from the site-wide rule | `next.config.ts` rule 0 | yes - C7011 fails |
-| remove `/robots.txt` and `/sitemap.xml` from PUBLIC_PATHS | `infrastructure/supabase/session.ts` | yes - both C7010 tests fail |
-| SQL, reasoned not run: drop the `o.ord < i.ord` or the same-chunk branch; drop the cross-chunk branch; drop `i.type_id is not null`; drop `i.unit_key is not null`; compare raw instead of normalized unit | `20261116140000_import_duplicates_skipped.sql` | yes by reasoning - `import_duplicates.sql:25` (same-chunk row 2 and untyped row 4, no-unit rows 5-6), `:30` (row 7 cross-chunk), `:32-33` (first kept, other type kept) each fail under the corresponding mutant |
+| byHead tie returns first (`return byHead[0]?.id ?? null`) | `domain/imports/index.ts` end of `matchAssetType` | yes - C7003 "two equally good types give no guess" fails |
+| whole-fit tie returns first (`return top[0].id`) | `domain/imports/index.ts` `top.length === 1 ? ... : null` | yes - C7003 "a short form that fits two whole types gives no guess" fails (round 1's surviving mutant) |
+| drop the `unexplained(t.words)` condition from the whole-fit filter | `domain/imports/index.ts` `whole` | yes - 7 matching tests, C2222 and C515 fail |
+| drop alias expansion from `heard` | `domain/imports/index.ts` `heard` | yes - C7001 "an alias alone types the row" fails (round 1 F2 resolved) |
+| keep bracket text in the words (bracket strip made a no-op) | `domain/imports/index.ts` `outside` | yes - C7002 "exact name beats..." and C7001 "qualifier in brackets" fail |
 
-Six TypeScript mutants run (cap of five exceeded by one; the sixth and the SQL reasoning added no cost). Two survive or are only killed by a test outside the checks.
+Round 1's other mutants (C7005 confidence, C7007 guard, C7011 HSTS, C7010 public paths) carried from round 1, not re-run: the fix touched none of those files.
 
 ## Findings
 
-Ranked.
+Round 1 items re-judged against 62c762c:
 
-- **F1 (FAIL, surviving mutant, C7003)**: when two types both fit every word and have the same word count, the matcher must return `null`; replacing that with the first type passes every check. C7003's own example ("Boiler feed" vs "Boiler feed pump" / "Boiler feed tank") fits neither type whole, so it only exercises the first-word fallback tie. A tie of whole fits (for example two types named "Exhaust fan" and "Exhaust fan unit" for the text "exhaust fan unit", or two org types with the same name) has no check. `domain/imports/index.ts` whole-fit tie line.
-- **F2 (FAIL, precision gap and weak proof, C7001)**: no C7001 row depends on `ALIASES`. "Backflow DCVA 2in" and "Backflow RPZ 4\"" already contain "backflow", so removing every alias leaves C7001 green. The alias is proven only by the edited C2222 "rpz" assertion in starter-packs.test.ts, outside the check set. A check for the alias itself ("RPZ" or "DCVA 2in" alone typing to Backflow preventer) is missing.
-- **F3 (FAIL, unchecked interaction, C7005 x C7006)**: expansion always numbers units 1..N, and the database then skips any typed row whose type and unit # repeat an earlier row of the same job. Two quantity rows of one type ("VAV boxes (qty 24)" on one floor, "VAV boxes (qty 12)" on another, or the same label in two chunks) make the second group's rows all start skipped as "Same as row N", so "Add N assets" undercounts. They stay visible and unskippable in one click, so this is not data loss, but no check states or covers it, and the C7005 test uses only one quantity row.
-- **F4 (FAIL, matcher over-reach not caught by any check)**: the checks only prove that wording with no related type stays null. Probed on a copy of `domain/imports/index.ts` (scratchpad, not committed): with only a "Boiler" type, "Boiler feed pump", "Boiler room exhaust fan" and "Boiler water treatment tank" all type to Boiler; with only "Fan", "Fan coil unit" types to Fan; with only "Pump", "Sump pump" and "Condensate pump" type to Pump; with "Backflow preventer" and "Pump" types, "Backflow pump" types to Pump; "Exhaust" alone types to "Exhaust fan"; "Thermal expansion tank" types to "Expansion tank" (that one is correct). The rule "every word of a type's name found in the text" lets extra words in the text qualify the type into a different piece of equipment. The author's example "Boiler feed pump typed as Boiler when only Boiler exists" is confirmed. No check bounds this, and it is only visible to the user through the review screen, where a typed row is not shown as less certain than before. Under the stated intent ("a guess would hide a row the review must see") this is the direction of risk C7002/C7003 do not cover. Also "Hot water heater" with "Hot water tank" and "Expansion tank" gives null, which is fine.
-- **F5 (precision gap, C7009)**: the robots test names 6 of 20 disallowed prefixes and the sitemap test uses `SITEMAP_PATHS.length` as its own oracle (`robots.test.ts:21`) and names 5 of 12 pages. A prefix dropped from `DISALLOWED` (for example /imports) or a public page dropped from `SITEMAP_PATHS` would pass unless it is one of the named ones. Live robots.txt matches the code, so no behaviour defect was observed.
-- **F6 (note, C7008)**: proof is negative substring matching on two source files; it passes if the wording is changed to another false claim. Accepted for a copy check, noted for completeness.
-- **F7 (C7013, not observed)**: the live browser run at 375/768/1440, horizontal scroll, console errors and the signing fallback link were not observed by the Verifier. The dev server was up; only HTTP bodies and headers were checked (robots 200, sitemap 200, headers per C7011; `/sign/x` and `/review/x` 404 with `no-referrer`). C7013 rests on the author's report.
+1. C7003 surviving mutant: resolved. Both tie paths are asserted and both mutants die.
+2. C7001 alias not depended on: resolved (`matching.test.ts:55-59`; mutant M4 killed).
+3. Quantity x duplicate interaction: accepted as a documented limit. It is stated in `checks.md` `## Known limits`, loses no data (rows stay visible, one click unskips), and has a bounded effect (the "Add N assets" count undercounts until unskipped). It remains unproven by any test, which the limit states.
+4. Matcher over-reach: the seven named cases and the two other reversed tests are fixed, but the same class survives through the three waiver paths below (F1-F3). This still blocks.
+5. Precision gaps: C7009 still blocks as a recomputed Coverage member with no proof (7 of 12 sitemap pages and 14 of 20 disallowed prefixes never named, and the sitemap length is checked against its own constant). It is a test-only fix: assert the full lists as literals. C7008 does not block: it is a negative-substring proof over source files, a note (P2) with no unproven member.
 
-### The two deliberately changed existing tests
+Remaining wrong typings, probed on a scratch copy of `matchAssetType` over the real 40 hvac type names (nothing in the repo edited):
 
-1. `domain/imports/extract.test.ts` C515, "Rooftop Unit #2": `null` became `id-RTU`, plus two new rows ("Rooftop Unit Curb Adapter Kit Ultra" -> RTU, "Heat Pump Unit" -> null). This reverses what the old test asserted, which was the old rule that wording merely close to a type is not a match. That rule was the cause of the QA report, so the change is legitimate, and the old protection that mattered ("close but different equipment stays untyped") is kept only by "Heat Pump Unit" -> null, a single case. It does not protect against the class in F4 (extra words naming other equipment). The "Curb Adapter Kit Ultra" row asserts the permissive behaviour that F4 shows can be wrong. Weakened in the sense that the permissive direction is pinned and the restrictive direction is thin.
-2. `domain/imports/starter-packs.test.ts` C2222: "rpz" now asserts `BACKFLOW_PREVENTER`, and `matchAssetType("thermal expansion tank", org)` is deleted (the "prv" -> null assertion remains). The test title still reads "left untyped, not given to another type" but one of three assertions now asserts the opposite and one is gone. The deleted spelling is the plumbing pack's own spelling of `EXPANSION_TANK` (`20261109163948_starter_packs.sql:26`), so it typing to the hvac "Expansion tank" is the correct type; deleting the assertion removes a proof rather than replacing it with "types to EXPANSION_TANK". Another assertion (every spelling types to its own type, C2222 loop at :46-57, still green) covers the same-type case. Net: minor weakening, no live proof lost that mattered, but the test title is now partly false and the alias is only proven here (F2).
+- **F1 (any period waives the word before it)**: "Boiler pump." -> Boiler, "Chiller pump." -> Chiller, "Boiler tank." -> Boiler, "Boiler feed." -> Boiler, "Exhaust fan motor." -> Exhaust fan, "Pump motor." -> Pump, "Exh. pump" -> Pump. The `dotted` set takes every word followed by a period, so a sentence-final period turns "pump" into an explained abbreviation. A label with the same words and no period ("Boiler pump") gives null, so the result depends on punctuation alone. No test bounds it.
+- **F2 (an alias waives its word against every type, not only backflow)**: "RPZ pump", "Pump RPZ", "Pump BF" -> Pump; "Boiler RPZ", "Boiler DCVA 2in", "Boiler PVB" -> Boiler; "Chiller RPZ" -> Chiller. The `!ALIASES[token]` clause in `unexplained` applies to whatever type is being scored.
+- **F3 (a bracket is ignored whole)**: "Boiler (feed pump)", "Boiler (sump pump)", "Boiler (water heater)", "Chiller (pump)" -> Boiler / Chiller. Words that are qualifiers ("condensing", "water cooled") and words that name other equipment are treated alike. Lower severity: bracket text is usually a qualifier.
+- Not a regression and not blocking: one-word first-word typing ("Exhaust" -> Exhaust fan, "Unitary" -> Unitary split system, "Supply" -> Supply fan) is the documented limit. Under-matching exists ("Boiler B-1", "Fan coils" give null), which is the safe direction.
+- Regression check: the six report items type correctly and the three that must stay untyped stay null in the check's own org (`matching.test.ts` ran green) and in an HVAC-only catalog. No regression found against those nine.
+
+Other notes:
+
+- **F4 (C7013)**: described in the check table. `/sitemap.xml` at 375 gave scrollWidth 392. Either exempt the raw XML view in the check or accept it explicitly; the signing fallback run is unobserved by the Verifier.
+- **P1**: C7009 precision, above.
+- **P2**: C7008 is a source-substring proof; passes under another false claim.
+- **N1**: the C2222 test title in `starter-packs.test.ts` ("left untyped, not given to another type") is now partly untrue because the "rpz" assertion expects BACKFLOW_PREVENTER; the comment at `:65` explains the change. The "thermal expansion tank" -> null assertion is restored. Minor.
+
+Suggested fix direction (not applied): make the period waiver apply only when the dotted token is a prefix or skeleton of a word that the text otherwise leaves unexplained, or at least not to the last token; scope an alias waiver to a type that contains the alias target word; and add negative tests ("Boiler pump.", "RPZ pump", "Boiler (feed pump)") plus full literals for C7009.
 
 ## Gate
 
-`npx vitest run` - Tests 33 failed (all on the known pre-existing list), 5418 passed; Test Files 6 failed, 323 passed.
-Targeted run of the 13 target files - 322 passed, 0 failed.
+`npx vitest run` - Tests 33 failed (all on the known pre-existing list), 5465 passed; Test Files 6 failed, 328 passed.
+Batched target run (11 files, verbose) - 264 passed, 0 failed.
 `npm run test:db import_duplicates` - PASS import_duplicates, 1 passed, 0 failed.
