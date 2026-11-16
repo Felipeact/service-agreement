@@ -2,65 +2,67 @@
 
 **Verdict**: FAIL
 **Profile**: ui
-**Diff range**: ca7df72..HEAD (fa9e2f0, 4fb8191)
-**Round**: 2 - scoped
+**Diff range**: fa9e2f0..HEAD (b76d976, 793e693)
+**Round**: 3 - scoped (last; escalate to the user)
 **Verifier**: independent sub-agent (author != verifier)
 
-Round 2 closes the three ranked gaps it was given: the stale banner is fixed and now tested, M12 and M20 are both killed, and C5825 has a specific author-run record that matches the code. Every proof was re-run at HEAD (4fb8191) and all pass. The verdict is still FAIL for one reason that round 1 already recorded and no commit touched: the AC 5 coverage row still has an unproven member. `validateSplitBlocks` accepts an answer with an extra property even though door 1 sets `additionalProperties: false` (`web/domain/contract/import.ts:36` reads only `type` and `text`, and the file is unchanged since ca7df72). The API's structured output (`contract-splitter.ts:56`, `output_config.format` json_schema) makes such an answer unlikely in practice. But no proof shows that the app refuses one, so the member stays unproven. It needs one refusal for extra keys plus one test, or the owner deciding that AC 5 is met by the provider and amending the plan.
+Round 3 checks the one gap left by round 2: the AC 5 / door 1 row, where the app accepted Claude answers with extra properties. Round 2 named two members of that row: an extra property **on the answer** and an extra property **on a block**. b76d976 closes the block member. `validateSplitBlocks` now refuses any block key other than `type` and `text` (`web/domain/contract/import.ts:37`), C5802 and C5805 assert it, and removing that line makes both fail. The answer member is still open. The splitter reads only `answer.blocks` (`web/infrastructure/claude/contract-splitter.ts:98`), so `{ "blocks": [ok block], "note": "x" }` still returns `{ ok: true }`. Yet the request's own schema sets `additionalProperties: false` on the root (`contract-splitter.ts:42`), as door 1 does. No commit or proof covers this member. Every proof passes at HEAD (793e693). This was the last of the three rounds, so the remaining gap goes to the user. It needs either a root-key refusal plus one C5805 case, or the owner accepting that the provider's structured output enforces the root and amending AC 5 / door 1.
 
-Environment deviation (unchanged from round 1): vitest runs as `node node_modules/vitest/vitest.mjs run ... --pool=vmThreads` from `web/`. The default pool fails every test on this machine with "Cannot read properties of undefined (reading 'config')".
+Environment: from `web/`, `node node_modules/vitest/vitest.mjs run ... --pool=vmThreads` was used as instructed. **The reported default-pool failure did not happen in this round.** The same batch without `--pool=vmThreads` also gave 9 files, 84 passed, and so did a single file. The "Cannot read properties of undefined (reading 'config')" failure recorded in rounds 1 and 2 is not reproducible at 793e693 on this machine today.
 
-Earlier rounds are superseded. Round 1 is archived verbatim at the end of this file, inside a fenced block, so the gate reads only this round.
+Earlier rounds are superseded. Rounds 1 and 2 are archived verbatim at the end of this file in fenced blocks, so the gate reads only this round.
 
 ## Binding sources
 
-Carried from round 1 (verified at ca7df72). Step 1 reruns only where a fix touched the interface. fa9e2f0 changed one behaviour on `/templates/contract`: the banner now clears after a save. It added no control, label or region. The verified changes are `contract-wording-editor.tsx:67-70`, where `setImportedFrom(null)` runs inside the `saved` branch, and the new test C5820 at `contract-import.test.tsx:113-120`.
+Carried from round 1 (verified at ca7df72) and round 2 (re-checked at 4fb8191). b76d976 changes only the domain validator and two tests. It does not touch the interface, so step 1 does not re-run.
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| `AGENTS..md` Web validation (Playwright 375/768/1440, touch, 44 px, no h-scroll, console clean) | yes - carried from round 1 (lines 25-41); the C5825 record checked against it this round | none | - (the round 1 gap was the live pass; it is now covered by C5825's author-run record, see Checks) |
+| `AGENTS..md` Web validation | yes - carried from rounds 1 and 2 | none | - (C5825 author-run record, carried from round 2) |
 | `DESIGN.md` control heights and button shape | yes - carried from round 1 | none | - |
 | `PRODUCT.md` | yes - carried from round 1 | none | - |
 
 ## Checks
 
-Proof run for every row except C5822 and C5825: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose`, run from `web/` at 4fb8191. Result: 9 files, 84 passed, 0 failed. The verbose output listed each C58xx title individually as passed: C5801, C5802, C5803 x11, C5804 to C5807, C5808 x2, C5809 to C5810, C5811 x2, C5812 to C5817, C5818, C5819 x2, C5820 x2, C5821 x2, C5823, C5824 x5, C5826 and C5827. The folder also brought in the existing C5552 to C5558 tests, which all passed.
+Proof run: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose`, from `web/` at 793e693. Result: 9 files, 84 passed, 0 failed. Each C58xx title was listed individually as passed: C5801, C5802, C5803 x11, C5804 to C5807, C5808 x2, C5809 to C5811 (C5811 x2 across two files), C5812 to C5817, C5818, C5819 x2, C5820 x2, C5821 x2, C5823, C5824 x5, C5826 and C5827. C5822 (SQL) and C5825 (live pass) are not vitest proofs and are carried. Citations were refreshed only for the two test files b76d976 touched. All other rows are carried from round 2 (4fb8191), and their files are unchanged in fa9e2f0..HEAD.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C5801 | form = price, blocks, signatures; default doc; storable | batch - passed at 4fb8191 | carried from ca7df72 (file unchanged): `web/domain/contract/import.test.ts:18-26` | PASS |
-| C5802 | block and length bounds | batch - passed | carried: `web/domain/contract/import.test.ts:34-43` | PASS |
-| C5803 | 8 import variables accepted, the other 8 and unknown refused | batch - 11 passed | carried: `web/domain/contract/import.test.ts:51`, `:57-59`, `:63-64` | PASS |
-| C5804 | schema, the prompt instructions, and a user message that carries only the file | batch - passed | refreshed (file changed): `web/infrastructure/claude/contract-splitter.test.ts:42` `toContain("Do not summarise, paraphrase, reorder or add anything")`; `:43-44` `toContain("write the matching variable instead")`, `toContain("the contractor, the customer, the site, the person signing")`; `:45` `toContain("Never write a variable for them")`; `:40-41`, `:46-48` as in round 1 (data not instructions, copy, signatures, the 8 variables, no `{{terms.`) | PASS (round 1 precision gap closed; M12 and M20 now killed) |
-| C5805 | bad answers are unavailable, a good answer is returned | batch - passed | carried; lines shift by +4 in the changed file (round 1 `:57-72`) | PASS |
-| C5806 | throw, refusal, no key and timeout are unavailable; the log has nothing from the file | batch - passed | carried, shift +4; `:102` `not.toContain("SECRET")` | PASS |
-| C5807 | `max_tokens` is too_large | batch - passed | carried, shift +4 (round 1 `:103`) | PASS |
-| C5808 | docx and pdf paths; form returned | batch - 2 passed | carried: `web/application/use-cases/import-contract-wording.test.ts:23-27`, `:36` | PASS |
-| C5809 | over the wording limit is unavailable | batch - passed | carried: `import-contract-wording.test.ts:42` | PASS |
+| C5801 | form = price, blocks, signatures; storable | batch - passed at 793e693 | carried from 4fb8191: `web/domain/contract/import.test.ts:18-26` | PASS |
+| C5802 | block and length bounds; a block with an extra key is refused | batch - passed | refreshed: `web/domain/contract/import.test.ts:34-43` as before; new `:44` `expect(validateSplitBlocks([{ type: "clause", text: "x", indent: 2 }])).toBeNull()` | PASS |
+| C5803 | 8 import variables accepted, the rest refused | batch - 11 passed | carried: `web/domain/contract/import.test.ts:51`, `:57-59`, `:63-64` (shifted +1 after `:44`) | PASS |
+| C5804 | schema, the prompt instructions, file only | batch - passed | carried from 4fb8191: `web/infrastructure/claude/contract-splitter.test.ts:40-48` | PASS |
+| C5805 | bad answers are unavailable, a good answer is returned | batch - passed | refreshed: new bad answer at `web/infrastructure/claude/contract-splitter.test.ts:67` `{ blocks: [{ type: "clause", text: "x", pageBreakBefore: true }] }`, asserted by `:74` `expect(await splitter.split({ file }), ...).toEqual({ ok: false, code: "unavailable" })` | PASS (the root-level extra property has no case; see Coverage) |
+| C5806 | throw, refusal, no key, timeout; clean log | batch - passed | carried, shifted +1 | PASS |
+| C5807 | `max_tokens` is too_large | batch - passed | carried, shifted +1 | PASS |
+| C5808 | docx and pdf paths | batch - 2 passed | carried: `import-contract-wording.test.ts:23-27`, `:36` | PASS |
+| C5809 | over the wording limit | batch - passed | carried: `import-contract-wording.test.ts:42` | PASS |
 | C5810 | passthrough | batch - passed | carried: `import-contract-wording.test.ts:48` | PASS |
-| C5811 | no writer; action never saves | batch - 2 passed | carried: `import-contract-wording.test.ts:55`; `app/(app)/templates/contract/import-actions.test.ts:58` | PASS |
-| C5812 | address clause left out | batch - passed | carried: `web/domain/contract/import.test.ts:98-99` | PASS |
+| C5811 | no writer; never saves | batch - 2 passed | carried: `import-contract-wording.test.ts:55`; `import-actions.test.ts:58` | PASS |
+| C5812 | address clause left out | batch - passed | carried: `web/domain/contract/import.test.ts:98-99` (shifted +1) | PASS |
 | C5813 | estimator, viewer, none forbidden | batch - passed | carried: `import-contract-wording.test.ts:61-63` | PASS |
-| C5814 | no file or zero bytes is invalid | batch - passed | carried: `import-contract-wording.test.ts:70-72` | PASS |
+| C5814 | no file or zero bytes | batch - passed | carried: `import-contract-wording.test.ts:70-72` | PASS |
 | C5815 | extensions, parser failure, size edge | batch - passed | carried: `import-contract-wording.test.ts:79-91` | PASS |
 | C5816 | action statuses and redirect | batch - 3 passed | carried: `import-actions.test.ts:31-50` | PASS |
-| C5817 | container wiring | batch - passed | carried: `web/composition/contract-import-wiring.test.ts:16-18`; `web/composition/index.ts:228` (unchanged) | PASS |
-| C5818 | imported rows, banner, preview body | batch - passed | carried: `web/components/templates/contract-import.test.tsx:55-61` (lines before 103 unchanged) | PASS |
-| C5819 | confirm when there are unsaved edits; keep the rows on cancel | batch - 2 passed | carried: `contract-import.test.tsx:69-100` | PASS |
-| C5820 | saving after an import sends the form once; the banner then clears | batch - 2 passed | carried `contract-import.test.tsx:109-110` `save).toHaveBeenCalledTimes(1)`, `toHaveBeenCalledWith(IMPORTED)`; new `:117` `toContain("Imported from a.docx")`, `:119` `not.toContain("Imported from")`, `:120` `toContain("Saved.")` | PASS |
-| C5821 | notice beside the control; page passes the action | batch - 2 passed | carried; component lines shift +10 (round 1 `:115-116`); `page.test.ts:76-77` | PASS |
-| C5822 | frozen `template_version_id` (existing AD-186) | not re-run this round. Nothing in ca7df72..HEAD touches `supabase/`. Round 1 ran `npm run test:db contract_templates`: 1 passed | carried from ca7df72: `supabase/tests/contract_templates.sql:121-122`, `:64` | PASS |
-| C5825 | live pass at 375, 768 and 1440 px, plus a real docx import | not runnable by the Verifier (no browser observed, Playwright not used). This is the author's record: `.specs/features/contract-import/checks.md:160`, added in 4fb8191 | The record is specific and matches the code. scrollWidth equals clientWidth at all three widths. The input and button are 44 px at 375 and 768, and the button is 34 px at 1440, which matches `h-11 lg:h-[34px]` (lg is 1024 px) and the input's `min-h-11`. The console showed 0 errors and 0 warnings after a restart. The banner text it quotes matches the code's template (`contract-import.test.tsx:55`). The rows it reports keep `15 days`, `45 days` and `Ontario` literal, use only import variables and drop the signature line, which matches prompt lines 16-21. The second press asked to confirm, which matches the Handoff's rule that "dirty" means rows differ from the baseline. The record's date (2026-11-16) agrees in UTC with the commit time 2026-11-15 18:51 -0700. The record states what it did not exercise: a save, a pdf, and the import at 375 px. | PASS (author-run, author's record) |
-| C5826 | 44 px classes; no wide fixed width | batch - passed | carried, shift +10 | PASS |
-| C5827 | input `.docx,.pdf`, labelled | batch - passed | carried, shift +10 | PASS |
+| C5817 | container wiring | batch - passed | carried: `contract-import-wiring.test.ts:16-18`; `web/composition/index.ts:228` | PASS |
+| C5818 | imported rows, banner, preview | batch - passed | carried: `contract-import.test.tsx:55-61` | PASS |
+| C5819 | confirm on unsaved edits; keep on cancel | batch - 2 passed | carried: `contract-import.test.tsx:69-100` | PASS |
+| C5820 | save once; banner clears | batch - 2 passed | carried: `contract-import.test.tsx:109-110`, `:117-120` | PASS |
+| C5821 | notice beside the control; page passes the action | batch - 2 passed | carried from 4fb8191 | PASS |
+| C5822 | frozen `template_version_id` (AD-186) | not re-run; nothing in fa9e2f0..HEAD touches `supabase/` | carried from ca7df72: `supabase/tests/contract_templates.sql:121-122`, `:64` | PASS |
+| C5823 | pending state, single request | batch - passed | carried: `contract-import.test.tsx` (round 1 `:129-134`, shifted +10) | PASS |
+| C5824 | 5 failure messages, rows kept | batch - 5 passed | carried: `contract-import.test.tsx` (round 1 `:144-147`, shifted +10) | PASS |
+| C5825 | live pass at 375/768/1440 and a real docx import | not runnable by the Verifier (Playwright not used, as instructed) | the author's record at `.specs/features/contract-import/checks.md:160`, judged in round 2 against the code; unchanged | PASS (author-run, author's record) |
+| C5826 | 44 px classes; no wide fixed width | batch - passed | carried from 4fb8191 | PASS |
+| C5827 | input `.docx,.pdf`, labelled | batch - passed | carried from 4fb8191 | PASS |
 
 ## Coverage
 
-Recomputed only for the rows whose authority the fix touched. The rest are carried from round 1, recomputed there at ca7df72.
+Only the row whose authority b76d976 touched was recomputed. All other rows are carried from round 2 (4fb8191), where every member was proven.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| action statuses (6) | plan Surface | carried from ca7df72 | - |
+| action statuses (6) | plan Surface | carried from 4fb8191 | - |
 | import variables (8) | plan door 3 | carried | - |
 | whitelist names refused (8) | AD-188 minus door 3 | carried | - |
 | block types (3) | plan door 1 | carried | - |
@@ -70,51 +72,51 @@ Recomputed only for the rows whose authority the fix touched. The rest are carri
 | file-size bounds (2 edges) | plan AC 1, AC 12 | carried | - |
 | editor failure messages (5) | plan AC 21 | carried | - |
 | AC 7 failure causes (4) | plan AC 7 | carried | - |
-| AC 5 schema mismatches | plan AC 5 + door 1 `additionalProperties: false` (re-judged: a non-PASS row in round 1) | not JSON, no `blocks`, empty list, wrong field type, unknown type, out of bounds: C5805 | extra property on the answer or on a block: still accepted by `validateSplitBlocks` (`web/domain/contract/import.ts:36`, unchanged in ca7df72..HEAD). No proof shows the app refuses it. Only the API's structured output (`contract-splitter.ts:56`) prevents it |
-| AC 3 prompt instructions (6) | plan AC 3 (re-computed: fa9e2f0 touched it) | data, not instructions `contract-splitter.test.ts:40` · copy the words `:41` · no summarise, paraphrase, reorder or add `:42` (M12 killed) · write the matching variable for the parties, site, signer and term `:43-44` (M20 killed) · leave out signature lines `:46` · only the 8 variables, figures literal `:45`, `:47-48` · file only, per round 1 | - |
-| editor banner lifecycle (2 states: shown after import, cleared after save) | plan AC 14, AC 16 + fa9e2f0 (new member) | shown C5818 `contract-import.test.tsx:55` · cleared after save C5820 `:119` (M-banner killed) | - |
+| AC 5 schema mismatches | plan AC 5 + door 1 (`{ blocks: [{ type, text }] }`, `additionalProperties: false`), with the request's schema setting it at both levels (`contract-splitter.ts:37` block, `:42` root). Recomputed at 793e693 | not JSON, no `blocks`, empty list, wrong field type, unknown type, out of bounds: C5805 · extra key on a block: C5802 `import.test.ts:44`, C5805 `contract-splitter.test.ts:67` (M-extra killed) | extra property on the answer root (`{ "blocks": [...], "note": "x" }`): still accepted. `contract-splitter.ts:98` reads only `answer.blocks` and checks no other key. No proof covers it. Only the API's structured output prevents it |
+| AC 3 prompt instructions (6) | plan AC 3 | carried from 4fb8191 | - |
+| editor banner lifecycle (2) | plan AC 14, AC 16 | carried from 4fb8191 | - |
 | Landing doors (3) | plan Landing | carried | - |
 | startup configuration (1 assembly) | `web/composition/index.ts:228` | carried | - |
-| screen widths (3) | AGENTS..md Web validation (re-judged: a non-PASS row in round 1) | 375, 768 and 1440: C5825, author-run record `checks.md:160` | - |
+| screen widths (3) | AGENTS..md Web validation | carried: C5825 author-run record | - |
 
 ## Test policy rows
 
-`contract-splitter.ts` falls under the "Decides, reached across a boundary" row, and its test was the only one touched. C5804 still asserts at the adapter boundary, so that row is met. The other rows are carried from round 1 (met at ca7df72). `contract-wording-editor.tsx` is a component and no policy row classifies it. C5820 proves it.
+b76d976 touches `domain/contract/import.ts`, which the "Decides, not reached across a boundary" row classifies. Its new branch has an own-layer proof (C5802 `:44`), and the adapter boundary proves it too (C5805 `:67`). That row is met for what was added. The open root-level member sits in `contract-splitter.ts` and is recorded under Coverage, not as a policy row failure. Every other row is carried from round 2.
 
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides, reached across a boundary | `import-actions.ts`, `contract-splitter.ts` | boundary plus the layer beneath | yes - re-judged at 4fb8191 for the splitter; carried for the action |
-| Decides, not reached across a boundary | `domain/contract/import.ts`, `import-contract-wording.ts` | own layer | yes - carried from ca7df72. The gap in the AC 5 extra-property member is recorded under Coverage |
+| Decides, reached across a boundary | `import-actions.ts`, `contract-splitter.ts` | boundary plus the layer beneath | yes - carried from 4fb8191; the root-key gap is under Coverage |
+| Decides, not reached across a boundary | `domain/contract/import.ts`, `import-contract-wording.ts` | own layer | yes - re-judged at 793e693 for `import.ts` (C5802 `:44`); carried for the use case |
 | Instrumentation | port type, container line | C5817 | yes - carried |
 
 ## Faults injected
 
-Each fault was applied in place in the real tree with `sed`. The covering file was then run (`--pool=vmThreads`), and the file was reverted with `git checkout -- <file>`. `git status --porcelain` was empty before the first fault and after every revert. `git stash` was not used.
+The fault was applied in place in the real tree with `sed`. The two covering files were run (`--pool=vmThreads`), and the file was reverted with `git checkout -- web/domain/contract/import.ts`. `git status --porcelain` was empty before and after. `git stash` was not used.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| M12 deleted the sentence "Do not summarise, paraphrase, reorder or add anything." | `web/infrastructure/claude/contract-splitter.ts:16` | yes - C5804 failed (1 failed, 3 passed) |
-| M20 deleted the line "Where the text names the contractor ..." | `web/infrastructure/claude/contract-splitter.ts:19` | yes - C5804 failed (1 failed, 3 passed) |
-| M-banner removed `setImportedFrom(null);` | `web/components/templates/contract-wording-editor.tsx:69` | yes - "C5820: after the save the import banner is gone" failed (1 failed, 13 passed) |
+| M-extra: deleted `if (Object.keys(item).some((key) => key !== "type" && key !== "text")) return null;` | `web/domain/contract/import.ts:37` | yes - C5802 failed at `import.test.ts:44` ("expected [ { type: 'clause', text: 'x' } ] to be null"), and C5805 failed at `contract-splitter.test.ts:74` on the `pageBreakBefore` answer (2 failed, 23 passed) |
 
-The round 1 faults M1 to M18 are carried. Their targets are unchanged in ca7df72..HEAD, apart from the test files that gained assertions.
+Faults M1 to M20 and M-banner are carried from rounds 1 and 2. Their targets are unchanged in fa9e2f0..HEAD.
 
-## Remaining notes, carried from round 1 and not gating
+## Remaining notes, carried and not gating
 
-- The confirmation still comes after the model call (`contract-import-control.tsx`). This meets AC 15 to the letter. It is a design choice for the user to confirm.
-- No check pins where the control sits (above the form and outside it). The plan's "existing header area" has no selector check.
+- The confirmation still comes after the model call (`contract-import-control.tsx`). This meets AC 15 to the letter. It is a design choice for the user.
+- No check pins where the control sits.
 - A timeout does not abort the stream.
-- M9 is an equivalent mutant, because the `if (pending) return` guard is redundant.
+- M9 is an equivalent mutant (a redundant `if (pending) return`).
 
 ## Gate
 
-`node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose` (from `web/`, at 4fb8191): 9 files, 84 passed, 0 failed.
+`node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose` (from `web/`, at 793e693): 9 files, 84 passed, 0 failed. The same batch on the default pool also passed (9 files, 84 passed).
 
 ## Ranked gaps
 
-1. AC 5 / door 1: an answer with an extra property is accepted by the app (`web/domain/contract/import.ts:36`), and no proof covers that member. Carried unchanged from round 1 gap 4.
+1. AC 5 / door 1, the root of the answer: an answer with an extra top-level property (`{ "blocks": [...], "note": "x" }`) is still accepted (`web/infrastructure/claude/contract-splitter.ts:98`), and no proof covers it. b76d976 closed only the block-level half of round 2's gap. This was round 3 of 3, so it goes to the user. The fix is a root-key refusal plus one C5805 case. Otherwise the owner accepts that the provider enforces the root and amends AC 5 / door 1.
 
-## Archive: earlier rounds (superseded by Round 2)
+## Archive: earlier rounds (superseded by Round 3)
+
+Round 1:
 
 ```text
 # Upload an existing contract verification
@@ -254,4 +256,124 @@ Each fault was applied in place in the real tree, then the 5 feature test files 
 4. AC 5 / door 1: the app accepts answers with extra properties despite `additionalProperties: false`. See `web/domain/contract/import.ts:36`.
 5. Placement of the Import control is not pinned by any check (UI issue 3). The confirm-after-call order is a design choice to confirm with the user (UI issue 2).
 6. M9 survived as an equivalent mutant (the redundant `if (pending) return`). No action is needed beyond noting that the guard is dead code.
+```
+
+Round 2:
+
+```text
+# Upload an existing contract verification
+
+**Verdict**: FAIL
+**Profile**: ui
+**Diff range**: ca7df72..HEAD (fa9e2f0, 4fb8191)
+**Round**: 2 - scoped
+**Verifier**: independent sub-agent (author != verifier)
+
+Round 2 closes the three ranked gaps it was given: the stale banner is fixed and now tested, M12 and M20 are both killed, and C5825 has a specific author-run record that matches the code. Every proof was re-run at HEAD (4fb8191) and all pass. The verdict is still FAIL for one reason that round 1 already recorded and no commit touched: the AC 5 coverage row still has an unproven member. `validateSplitBlocks` accepts an answer with an extra property even though door 1 sets `additionalProperties: false` (`web/domain/contract/import.ts:36` reads only `type` and `text`, and the file is unchanged since ca7df72). The API's structured output (`contract-splitter.ts:56`, `output_config.format` json_schema) makes such an answer unlikely in practice. But no proof shows that the app refuses one, so the member stays unproven. It needs one refusal for extra keys plus one test, or the owner deciding that AC 5 is met by the provider and amending the plan.
+
+Environment deviation (unchanged from round 1): vitest runs as `node node_modules/vitest/vitest.mjs run ... --pool=vmThreads` from `web/`. The default pool fails every test on this machine with "Cannot read properties of undefined (reading 'config')".
+
+Earlier rounds are superseded. Round 1 is archived verbatim at the end of this file, inside a fenced block, so the gate reads only this round.
+
+## Binding sources
+
+Carried from round 1 (verified at ca7df72). Step 1 reruns only where a fix touched the interface. fa9e2f0 changed one behaviour on `/templates/contract`: the banner now clears after a save. It added no control, label or region. The verified changes are `contract-wording-editor.tsx:67-70`, where `setImportedFrom(null)` runs inside the `saved` branch, and the new test C5820 at `contract-import.test.tsx:113-120`.
+
+| Source | Opened | Contradiction | Uncovered |
+| --- | --- | --- | --- |
+| `AGENTS..md` Web validation (Playwright 375/768/1440, touch, 44 px, no h-scroll, console clean) | yes - carried from round 1 (lines 25-41); the C5825 record checked against it this round | none | - (the round 1 gap was the live pass; it is now covered by C5825's author-run record, see Checks) |
+| `DESIGN.md` control heights and button shape | yes - carried from round 1 | none | - |
+| `PRODUCT.md` | yes - carried from round 1 | none | - |
+
+## Checks
+
+Proof run for every row except C5822 and C5825: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose`, run from `web/` at 4fb8191. Result: 9 files, 84 passed, 0 failed. The verbose output listed each C58xx title individually as passed: C5801, C5802, C5803 x11, C5804 to C5807, C5808 x2, C5809 to C5810, C5811 x2, C5812 to C5817, C5818, C5819 x2, C5820 x2, C5821 x2, C5823, C5824 x5, C5826 and C5827. The folder also brought in the existing C5552 to C5558 tests, which all passed.
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C5801 | form = price, blocks, signatures; default doc; storable | batch - passed at 4fb8191 | carried from ca7df72 (file unchanged): `web/domain/contract/import.test.ts:18-26` | PASS |
+| C5802 | block and length bounds | batch - passed | carried: `web/domain/contract/import.test.ts:34-43` | PASS |
+| C5803 | 8 import variables accepted, the other 8 and unknown refused | batch - 11 passed | carried: `web/domain/contract/import.test.ts:51`, `:57-59`, `:63-64` | PASS |
+| C5804 | schema, the prompt instructions, and a user message that carries only the file | batch - passed | refreshed (file changed): `web/infrastructure/claude/contract-splitter.test.ts:42` `toContain("Do not summarise, paraphrase, reorder or add anything")`; `:43-44` `toContain("write the matching variable instead")`, `toContain("the contractor, the customer, the site, the person signing")`; `:45` `toContain("Never write a variable for them")`; `:40-41`, `:46-48` as in round 1 (data not instructions, copy, signatures, the 8 variables, no `{{terms.`) | PASS (round 1 precision gap closed; M12 and M20 now killed) |
+| C5805 | bad answers are unavailable, a good answer is returned | batch - passed | carried; lines shift by +4 in the changed file (round 1 `:57-72`) | PASS |
+| C5806 | throw, refusal, no key and timeout are unavailable; the log has nothing from the file | batch - passed | carried, shift +4; `:102` `not.toContain("SECRET")` | PASS |
+| C5807 | `max_tokens` is too_large | batch - passed | carried, shift +4 (round 1 `:103`) | PASS |
+| C5808 | docx and pdf paths; form returned | batch - 2 passed | carried: `web/application/use-cases/import-contract-wording.test.ts:23-27`, `:36` | PASS |
+| C5809 | over the wording limit is unavailable | batch - passed | carried: `import-contract-wording.test.ts:42` | PASS |
+| C5810 | passthrough | batch - passed | carried: `import-contract-wording.test.ts:48` | PASS |
+| C5811 | no writer; action never saves | batch - 2 passed | carried: `import-contract-wording.test.ts:55`; `app/(app)/templates/contract/import-actions.test.ts:58` | PASS |
+| C5812 | address clause left out | batch - passed | carried: `web/domain/contract/import.test.ts:98-99` | PASS |
+| C5813 | estimator, viewer, none forbidden | batch - passed | carried: `import-contract-wording.test.ts:61-63` | PASS |
+| C5814 | no file or zero bytes is invalid | batch - passed | carried: `import-contract-wording.test.ts:70-72` | PASS |
+| C5815 | extensions, parser failure, size edge | batch - passed | carried: `import-contract-wording.test.ts:79-91` | PASS |
+| C5816 | action statuses and redirect | batch - 3 passed | carried: `import-actions.test.ts:31-50` | PASS |
+| C5817 | container wiring | batch - passed | carried: `web/composition/contract-import-wiring.test.ts:16-18`; `web/composition/index.ts:228` (unchanged) | PASS |
+| C5818 | imported rows, banner, preview body | batch - passed | carried: `web/components/templates/contract-import.test.tsx:55-61` (lines before 103 unchanged) | PASS |
+| C5819 | confirm when there are unsaved edits; keep the rows on cancel | batch - 2 passed | carried: `contract-import.test.tsx:69-100` | PASS |
+| C5820 | saving after an import sends the form once; the banner then clears | batch - 2 passed | carried `contract-import.test.tsx:109-110` `save).toHaveBeenCalledTimes(1)`, `toHaveBeenCalledWith(IMPORTED)`; new `:117` `toContain("Imported from a.docx")`, `:119` `not.toContain("Imported from")`, `:120` `toContain("Saved.")` | PASS |
+| C5821 | notice beside the control; page passes the action | batch - 2 passed | carried; component lines shift +10 (round 1 `:115-116`); `page.test.ts:76-77` | PASS |
+| C5822 | frozen `template_version_id` (existing AD-186) | not re-run this round. Nothing in ca7df72..HEAD touches `supabase/`. Round 1 ran `npm run test:db contract_templates`: 1 passed | carried from ca7df72: `supabase/tests/contract_templates.sql:121-122`, `:64` | PASS |
+| C5825 | live pass at 375, 768 and 1440 px, plus a real docx import | not runnable by the Verifier (no browser observed, Playwright not used). This is the author's record: `.specs/features/contract-import/checks.md:160`, added in 4fb8191 | The record is specific and matches the code. scrollWidth equals clientWidth at all three widths. The input and button are 44 px at 375 and 768, and the button is 34 px at 1440, which matches `h-11 lg:h-[34px]` (lg is 1024 px) and the input's `min-h-11`. The console showed 0 errors and 0 warnings after a restart. The banner text it quotes matches the code's template (`contract-import.test.tsx:55`). The rows it reports keep `15 days`, `45 days` and `Ontario` literal, use only import variables and drop the signature line, which matches prompt lines 16-21. The second press asked to confirm, which matches the Handoff's rule that "dirty" means rows differ from the baseline. The record's date (2026-11-16) agrees in UTC with the commit time 2026-11-15 18:51 -0700. The record states what it did not exercise: a save, a pdf, and the import at 375 px. | PASS (author-run, author's record) |
+| C5826 | 44 px classes; no wide fixed width | batch - passed | carried, shift +10 | PASS |
+| C5827 | input `.docx,.pdf`, labelled | batch - passed | carried, shift +10 | PASS |
+
+## Coverage
+
+Recomputed only for the rows whose authority the fix touched. The rest are carried from round 1, recomputed there at ca7df72.
+
+| Set (size) | Recomputed from | Member -> proof | Unproven |
+| --- | --- | --- | --- |
+| action statuses (6) | plan Surface | carried from ca7df72 | - |
+| import variables (8) | plan door 3 | carried | - |
+| whitelist names refused (8) | AD-188 minus door 3 | carried | - |
+| block types (3) | plan door 1 | carried | - |
+| roles (5) | `web/domain/members/index.ts` ROLES + none | carried | - |
+| file kinds (6) | plan Assumptions | carried | - |
+| block bounds (6 edges) | plan AC 2 | carried | - |
+| file-size bounds (2 edges) | plan AC 1, AC 12 | carried | - |
+| editor failure messages (5) | plan AC 21 | carried | - |
+| AC 7 failure causes (4) | plan AC 7 | carried | - |
+| AC 5 schema mismatches | plan AC 5 + door 1 `additionalProperties: false` (re-judged: a non-PASS row in round 1) | not JSON, no `blocks`, empty list, wrong field type, unknown type, out of bounds: C5805 | extra property on the answer or on a block: still accepted by `validateSplitBlocks` (`web/domain/contract/import.ts:36`, unchanged in ca7df72..HEAD). No proof shows the app refuses it. Only the API's structured output (`contract-splitter.ts:56`) prevents it |
+| AC 3 prompt instructions (6) | plan AC 3 (re-computed: fa9e2f0 touched it) | data, not instructions `contract-splitter.test.ts:40` · copy the words `:41` · no summarise, paraphrase, reorder or add `:42` (M12 killed) · write the matching variable for the parties, site, signer and term `:43-44` (M20 killed) · leave out signature lines `:46` · only the 8 variables, figures literal `:45`, `:47-48` · file only, per round 1 | - |
+| editor banner lifecycle (2 states: shown after import, cleared after save) | plan AC 14, AC 16 + fa9e2f0 (new member) | shown C5818 `contract-import.test.tsx:55` · cleared after save C5820 `:119` (M-banner killed) | - |
+| Landing doors (3) | plan Landing | carried | - |
+| startup configuration (1 assembly) | `web/composition/index.ts:228` | carried | - |
+| screen widths (3) | AGENTS..md Web validation (re-judged: a non-PASS row in round 1) | 375, 768 and 1440: C5825, author-run record `checks.md:160` | - |
+
+## Test policy rows
+
+`contract-splitter.ts` falls under the "Decides, reached across a boundary" row, and its test was the only one touched. C5804 still asserts at the adapter boundary, so that row is met. The other rows are carried from round 1 (met at ca7df72). `contract-wording-editor.tsx` is a component and no policy row classifies it. C5820 proves it.
+
+| Row | Files it classifies | Required proof | Expectation met |
+| --- | --- | --- | --- |
+| Decides, reached across a boundary | `import-actions.ts`, `contract-splitter.ts` | boundary plus the layer beneath | yes - re-judged at 4fb8191 for the splitter; carried for the action |
+| Decides, not reached across a boundary | `domain/contract/import.ts`, `import-contract-wording.ts` | own layer | yes - carried from ca7df72. The gap in the AC 5 extra-property member is recorded under Coverage |
+| Instrumentation | port type, container line | C5817 | yes - carried |
+
+## Faults injected
+
+Each fault was applied in place in the real tree with `sed`. The covering file was then run (`--pool=vmThreads`), and the file was reverted with `git checkout -- <file>`. `git status --porcelain` was empty before the first fault and after every revert. `git stash` was not used.
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| M12 deleted the sentence "Do not summarise, paraphrase, reorder or add anything." | `web/infrastructure/claude/contract-splitter.ts:16` | yes - C5804 failed (1 failed, 3 passed) |
+| M20 deleted the line "Where the text names the contractor ..." | `web/infrastructure/claude/contract-splitter.ts:19` | yes - C5804 failed (1 failed, 3 passed) |
+| M-banner removed `setImportedFrom(null);` | `web/components/templates/contract-wording-editor.tsx:69` | yes - "C5820: after the save the import banner is gone" failed (1 failed, 13 passed) |
+
+The round 1 faults M1 to M18 are carried. Their targets are unchanged in ca7df72..HEAD, apart from the test files that gained assertions.
+
+## Remaining notes, carried from round 1 and not gating
+
+- The confirmation still comes after the model call (`contract-import-control.tsx`). This meets AC 15 to the letter. It is a design choice for the user to confirm.
+- No check pins where the control sits (above the form and outside it). The plan's "existing header area" has no selector check.
+- A timeout does not abort the stream.
+- M9 is an equivalent mutant, because the `if (pending) return` guard is redundant.
+
+## Gate
+
+`node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose` (from `web/`, at 4fb8191): 9 files, 84 passed, 0 failed.
+
+## Ranked gaps
+
+1. AC 5 / door 1: an answer with an extra property is accepted by the app (`web/domain/contract/import.ts:36`), and no proof covers that member. Carried unchanged from round 1 gap 4.
 ```

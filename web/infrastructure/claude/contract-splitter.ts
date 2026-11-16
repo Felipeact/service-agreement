@@ -95,7 +95,9 @@ export function claudeContractSplitter({ apiKey, client, timeoutMs = SPLIT_TIMEO
         } catch {
           return unavailable("the answer was not JSON");
         }
-        const blocks = validateSplitBlocks((answer as { blocks?: unknown } | null)?.blocks);
+        // Door 1: the answer is exactly `{ blocks }`; the app holds that line as well as the provider's schema.
+        const extra = typeof answer === "object" && answer !== null && Object.keys(answer).some((key) => key !== "blocks");
+        const blocks = extra ? null : validateSplitBlocks((answer as { blocks?: unknown } | null)?.blocks);
         return blocks ? { ok: true, blocks } : unavailable("the answer did not match the schema");
       } catch (cause) {
         return unavailable(cause instanceof Error ? cause.message : String(cause));

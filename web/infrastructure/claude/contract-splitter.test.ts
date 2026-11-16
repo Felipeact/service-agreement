@@ -61,7 +61,8 @@ describe("claudeContractSplitter", () => {
     const bad: unknown[] = [
       "not json {",
       {},
-      { blocks: [] },
+      { blocks: [], },
+      { blocks: [goodBlock], note: "extra" },
       { blocks: [{ type: "clause", text: 5 }] },
       { blocks: [{ type: "table", text: "x" }] },
       { blocks: [{ type: "clause", text: "x", pageBreakBefore: true }] },
