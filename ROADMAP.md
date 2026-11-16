@@ -341,6 +341,8 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 ### Phase 5.9: Launch, owner actions
 Things only the owner can do. Each one is drawn from an open item above.
 - [ ] Set the Supabase Auth SMTP sender to the verified Resend domain (decision 11; launch blocker)
+- [ ] Apply migration `20261116120000_p0_launch_fixes.sql` to the hosted project, then run the live Scope, Send and Settings checks (code and tests done, `.specs/features/p0-launch-fixes/`)
+- [ ] Verify the hosting region and put it on `/security`; have a lawyer review `/terms`, `/privacy` and `/security`
 - [ ] Apply migration `20261115100000_db_freeze.sql` to the hosted project, then run the freeze check live
 - [ ] Find a lawyer to review the starter agreement and contract wording per province (decision 14; launch blocker)
 - [ ] Find one or two plumbing or electrical pilot contractors, and revisit the price points with them (decision 2)
