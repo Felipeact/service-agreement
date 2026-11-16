@@ -837,6 +837,17 @@ describe("the template on the page", () => {
     expect(previewRevision({ ...base, templateVersionId: "v-one" })).toBe(a);
   });
 
+  test("C7110: the choice appears for a writer on an editable draft only, never for a sent agreement, an older version or a viewer", () => {
+    const body = { ...SYSTEM_AGREEMENT_BODY, name: "Quarterly HVAC" } as AgreementDetail["template"];
+    const templateChoices = { choices: [{ versionId: "v-std", name: "Standard agreement" }, { versionId: "v-own", name: "Quarterly HVAC" }], selected: "v-own" };
+    const render = (a: AgreementDetail, role: MemberRole = "estimator") =>
+      renderToStaticMarkup(createElement(AgreementView, { agreement: { ...a, template: body, templateVersionId: "v-own" }, role, actions: { ...actions, setTemplate: async () => ({ status: "saved" }) }, templateChoices }));
+    expect(render(agreement({ status: "draft" }))).toContain("Change template");
+    expect(render(agreement({ status: "sent" }))).not.toContain("Change template");
+    expect(render(agreement({ status: "draft", shownNo: 1, versions: 2 }))).not.toContain("Change template");
+    expect(render(agreement({ status: "draft" }), "viewer")).not.toContain("Change template");
+  });
+
   test("C7109: the page names the template of a draft and of a sent agreement", () => {
     const body = { ...SYSTEM_AGREEMENT_BODY, name: "Quarterly HVAC" } as AgreementDetail["template"];
     expect(text(view({ ...agreement({ status: "draft" }), template: body }))).toContain("Template: Quarterly HVAC");

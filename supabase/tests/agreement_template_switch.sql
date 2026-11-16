@@ -1,5 +1,4 @@
--- agreement-template-switch: C7101-C7105. Run after fixture.sql and the migration 20261116150000_agreement_template_switch.sql, which the
--- recipe replays in the rolled-back transaction (not applied to the hosted project). Fixture: org A owner uA, estimator uE, viewer uV;
+-- agreement-template-switch: C7101-C7105. Run after fixture.sql, against the hosted objects of the applied migration. Fixture: org A owner uA, estimator uE, viewer uV;
 -- org B owner uB; siteA. The system agreement template is the one the hosted database seeds (org_id null).
 
 reset role;

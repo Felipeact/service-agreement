@@ -6,7 +6,7 @@ Profile: ui
 
 The live QA report (2026-11-16) listed P1 and P2 items. This batch does the ones that are code-only and need no new database objects, no account and no real device: import type matching (token and abbreviation matching plus an alias list), quantity rows, duplicate rows skipped by default, remembered corrections (a mapped spelling is saved as a synonym of the type), the site copy that does not match reality (PDF attachment, "ours never appears"), `robots.txt` and a sitemap, security headers, and a visible fallback link on the signing page. Everything else is listed under ROADMAP Phase 5.9 owner actions or Phase 6 follow-ups.
 
-14 checks · 1 migration (not applied) · 0 open
+14 checks · 1 migration (applied by the owner) · 0 open
 
 ## Checks
 
@@ -26,7 +26,7 @@ Proof: `npx vitest run domain/imports/matching.test.ts -t "C7004:"`
 Proof: `npx vitest run application/use-cases/extract-import.test.ts -t "C7005:"`
 
 **C7006** - A row that repeats an earlier row of the same job (same typed type, same unit # ignoring case and punctuation, in the same chunk or an earlier one) is stored skipped; rows with no type or no unit #, the same unit under another type, and the first of a key stay included
-Proof: `npm run test:db import_duplicates` (assertions `C7006`; the migration `20261116140000_import_duplicates_skipped.sql` is replayed inside the rolled-back transaction, it is not applied to the hosted project)
+Proof: `npm run test:db import_duplicates` (assertions `C7006`; against the hosted objects of the applied migration `20261116140000_import_duplicates_skipped.sql`, rolled back)
 
 **C7007** - Mapping an unmatched spelling to a type appends that spelling to the type's synonyms once, and does not append a spelling the type already holds or fail the mapping when the synonym write is refused
 Proof: `npx vitest run infrastructure/supabase/import-review.test.ts -t "C7007:"`

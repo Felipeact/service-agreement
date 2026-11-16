@@ -6,12 +6,12 @@ Profile: ui
 
 Today the agreement page never says which template the agreement is using, and the template cannot be changed once the agreement is created. This shows the template's name on every version of the page, and lets a writer switch the template of a draft's current version. Only the pin changes: the service lines, term and scope stay as they are, and the PDF preview redraws with the new layout and wording. A sent, accepted or older version keeps its pin (the database already freezes it).
 
-14 checks · 1 migration (not applied) · 0 open
+14 checks · 1 migration (applied by the owner) · 0 open
 
 ## Checks
 
 **C7101** - `set_agreement_template` pins the current version of a draft to an org template, then to the system template, leaving an older version's pin alone
-Proof: `npm run test:db agreement_template_switch` (assertions `C7101`; the migration `20261116150000_agreement_template_switch.sql` is replayed inside the rolled-back transaction, it is not applied to the hosted project)
+Proof: `npm run test:db agreement_template_switch` (assertions `C7101`; against the hosted objects of the applied migration `20261116150000_agreement_template_switch.sql`, rolled back)
 
 **C7102** - Choosing the template the version already has succeeds and changes nothing
 Proof: `npm run test:db agreement_template_switch` (assertions `C7102`)
@@ -44,7 +44,7 @@ Proof: `npx vitest run components/agreements/template-picker.test.tsx -t "C7110:
 Proof: `npx vitest run components/agreements/template-picker.click.test.tsx -t "C7111:"`
 
 **C7112** - The PDF preview's revision key differs when only the template differs
-Proof: `npx vitest run components/agreements/template-picker.test.tsx -t "C7112:"`
+Proof: `npx vitest run components/agreements/agreements.test.ts -t "C7112:"`
 
 **C7113** - A live browser run of a draft's page at 375, 768 and 1440 shows the name, the choice and the button with no horizontal scroll and no console errors, and a change redraws the preview (needs the migration applied)
 Proof: live Playwright run

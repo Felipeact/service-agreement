@@ -1,6 +1,4 @@
--- qa-p1-p2 C7006: a repeat of an earlier row of the same job starts skipped. Run after fixture.sql and the migration
--- 20261116140000_import_duplicates_skipped.sql, which the recipe replays in the rolled-back transaction (not applied to the
--- hosted project). Fixture: org A estimator uE, siteA, typeA (RTU).
+-- qa-p1-p2 C7006: a repeat of an earlier row of the same job starts skipped. Run after fixture.sql, against the hosted objects of the applied migration. Fixture: org A estimator uE, siteA, typeA (RTU).
 
 reset role;
 select set_config('request.jwt.claims', '', true);
