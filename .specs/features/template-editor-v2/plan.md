@@ -40,7 +40,7 @@ None - nothing consumed outside. The two preview routes, the save actions and th
 
 ## Landing
 
-None - nothing here is hard to reverse. No stored shape, contract, dependency or backfill changes: the editor keeps `LayoutFormState` as its state, adds no drag-and-drop or editor library (reordering stays Up and Down), and a UI component can be replaced again by another commit.
+None - nothing here is hard to reverse. No stored shape, contract, dependency or backfill changes: the editor keeps `LayoutFormState` as its state and adds no library. Drag and drop uses the browser's own drag events (added 2026-11-16 after the owner said the chosen layout meant dragging from the panel), and a UI component can be replaced again by another commit.
 
 ## Criteria
 
@@ -142,12 +142,28 @@ The owner checks the true PDF with one click, instead of watching a live pane.
 
 **Independent test:** run the editor at 375, 768 and 1440 px with the keyboard only.
 
+### S8: Drag from the panel and drag blocks to reorder (P1)
+
+The owner drags an element from the Add Element panel onto the page, and drags a block to move it, as the chosen sketch showed ("Drop Heading here"). Click and the Up and Down controls stay, for the keyboard and for touch. (Added 2026-11-16 after the owner pointed out the build had no drag; it was wrongly listed out of scope.)
+
+**Acceptance Criteria**
+
+42. WHEN a member drags an Add Element item over a block of the page THEN the system SHALL show one drop line at that block's top edge when the pointer is in its upper half and at its bottom edge when it is in its lower half, and a drop line at the end of the page when the pointer is below the last block.
+43. WHEN a dragged Add Element item is dropped THEN the system SHALL insert the new block at the drop line, select it and focus a new text block's field, exactly as choosing the item would.
+44. WHILE a part is already on the page its panel item SHALL NOT be draggable, and IF its payload is dropped anyway THEN the system SHALL change nothing.
+45. WHEN a block is dragged by its grip and dropped THEN the system SHALL move that row to the drop line, keep it selected, and leave the order of every other row as it was; a drop that leaves it where it was SHALL change nothing.
+46. WHEN a drag ends without a drop, or the pointer leaves the page THEN the system SHALL remove the drop line and change nothing.
+47. The system SHALL keep every drag outcome reachable without a drag: tap or click an item to add it, and Up and Down to move a block.
+48. The system SHALL give every block a grip with the accessible name "Drag to move" and a 44 px touch size below 1024 px.
+
+**Independent test:** drag Heading from the panel between two blocks, then drag that block to the end.
+
 ## Out of scope
 
 | Excluded | Why |
 | --- | --- |
 | Divider element | the layout model has no divider; adding one changes the stored body (a one-way door) |
-| Drag and drop | adds a dependency and is not keyboard-safe; Up and Down stay |
+| Drag and drop on touch screens | the browser's drag events do not fire on most touch browsers; tap, the Add button and the Up and Down controls stay the way on a phone |
 | Italic, bold, other formatting | the model stores plain text; decided against on 2026-11-13 |
 | Per-page header note, click-anywhere pixel placement | deliberately not built in Phase 5.5 |
 | A live PDF beside the page | replaced by Preview PDF on request, the owner's choice |
@@ -179,12 +195,13 @@ The owner checks the true PDF with one click, instead of watching a live pane.
 | screen `editor` | loading state | existing - `templates/[templateId]/loading.tsx`, `templates/new/loading.tsx` and `templates/contract/loading.tsx` |
 | screen `editor` | error state | AC 10 and AC 30 |
 | screen `editor` | unauthorised state | AC 34 |
-| screen `editor` | density and ordering | AC 1 and AC 6 |
+| screen `editor` | density and ordering | AC 1, AC 6 and AC 42 |
+| screen `editor` | drag in progress, cancelled, refused | AC 42, AC 44 and AC 46 |
 | screen `editor` | destructive action confirms | AC 9 |
 | screen `preview dialog` | empty, error | AC 25 and AC 26 |
 | screen `templates list` | empty and error state | AC 37 |
 | screen `templates list` | destructive action confirms | existing - `archive-control.tsx` confirms before archiving |
-| all screens | phone and keyboard | AC 38, AC 39 and AC 40 |
+| all screens | phone and keyboard | AC 38, AC 39, AC 40 and AC 47 |
 | `POST /templates/preview` and `/templates/contract/preview` | error shape, versioning, rate limits | n/a - the routes are unchanged |
 
 ## Sources

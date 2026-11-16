@@ -1,6 +1,6 @@
 import { AGREEMENT_SECTION_KEYS, CONTRACT_SECTION_KEYS, type SectionKey } from "../agreement/layout";
 import type { LayoutRow } from "../agreement/layout-form";
-import { TEMPLATE_VARIABLES, type TemplateVariable } from "../contract/template";
+import { BLOCK_TYPES, TEMPLATE_VARIABLES, type BlockType, type TemplateVariable } from "../contract/template";
 
 /**
  * The rules of the template editor that decide something (template-editor-v2): which parts a document has, which can never be
@@ -88,4 +88,45 @@ export function insertVariable(text: string, caret: { start: number; end: number
   const start = Math.min(Math.max(caret.start, 0), text.length);
   const end = Math.min(Math.max(caret.end, start), text.length);
   return `${text.slice(0, start)}${token}${text.slice(end)}`;
+}
+
+/** The drop line for a pointer over the block at `overIndex`: before it in its upper half, after it in its lower half. */
+export const dropPosition = (overIndex: number, lowerHalf: boolean): number => (lowerHalf ? overIndex + 1 : overIndex);
+
+/** A row put at a drop line (`at` counts rows before the line), held to the ends of the list. */
+export function insertRowAt(rows: LayoutRow[], at: number, row: LayoutRow): { rows: LayoutRow[]; index: number } {
+  const index = Math.min(Math.max(at, 0), rows.length);
+  return { rows: [...rows.slice(0, index), row, ...rows.slice(index)], index };
+}
+
+/** A row moved to a drop line; the same rows when the line is where the row already is. `index` is where the row ends up. */
+export function moveRowTo(rows: LayoutRow[], from: number, at: number): { rows: LayoutRow[]; index: number } {
+  if (from < 0 || from >= rows.length) return { rows, index: from };
+  const line = Math.min(Math.max(at, 0), rows.length);
+  const target = line > from ? line - 1 : line;
+  if (target === from) return { rows, index: from };
+  const rest = rows.filter((_, position) => position !== from);
+  return { rows: [...rest.slice(0, target), rows[from], ...rest.slice(target)], index: target };
+}
+
+/** What a drag carries: an element chosen in the Add Element panel, or a block of the page being moved. */
+export type DragPayload = { kind: "add"; choice: { kind: "block"; type: BlockType } | { kind: "part"; key: SectionKey } } | { kind: "move"; from: number };
+
+export const DRAG_TYPE = "application/x-template-editor";
+
+/** What a drop carried, or `null` for anything that is not exactly one of the payloads above (a drop can bring any text from anywhere). */
+export function readDragPayload(raw: string): DragPayload | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof value !== "object" || value === null) return null;
+  const { kind, choice, from } = value as { kind?: unknown; choice?: { kind?: unknown; type?: unknown; key?: unknown }; from?: unknown };
+  if (kind === "move") return typeof from === "number" && Number.isInteger(from) && from >= 0 ? { kind, from } : null;
+  if (kind !== "add" || typeof choice !== "object" || choice === null) return null;
+  if (choice.kind === "block" && (BLOCK_TYPES as readonly unknown[]).includes(choice.type)) return { kind, choice: { kind: "block", type: choice.type as BlockType } };
+  if (choice.kind === "part" && typeof choice.key === "string" && (AGREEMENT_SECTION_KEYS as readonly string[]).concat(CONTRACT_SECTION_KEYS).includes(choice.key)) return { kind, choice: { kind: "part", key: choice.key as SectionKey } };
+  return null;
 }

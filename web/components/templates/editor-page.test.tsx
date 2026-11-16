@@ -230,7 +230,7 @@ describe("touch and keyboard", () => {
     expect(small.map((element) => `${element.tagName} ${element.textContent}`)).toEqual([]);
   });
 
-  test("[C40] every action has an accessible name, can take focus, and nothing is draggable", async () => {
+  test("[C40] every action has an accessible name, can take focus, and nothing needs a drag", async () => {
     await mountAgreement();
     await selectItem(container, 0);
     const named = (element: Element) =>
@@ -239,7 +239,8 @@ describe("touch and keyboard", () => {
       expect(named(element), element.outerHTML.slice(0, 120)).toBe(true);
       expect((element as HTMLElement).tabIndex, element.outerHTML.slice(0, 120)).toBeGreaterThanOrEqual(0);
     }
-    expect(container.querySelector('[draggable="true"]')).toBeNull();
+    // Dragging is an extra way, never the only one: whatever can be dragged is a focusable button with its own click path (C48).
+    for (const element of container.querySelectorAll('[draggable="true"]')) expect(element.tagName).toBe("BUTTON");
     expect(container.querySelector("[onmouseover], [onmouseenter]")).toBeNull();
   });
 });

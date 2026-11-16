@@ -1,12 +1,12 @@
 "use client";
 
-import type { KeyboardEvent, MutableRefObject, ReactNode } from "react";
+import { useEffect, useState, type DragEvent, type KeyboardEvent, type MutableRefObject, type ReactNode } from "react";
 import { useItemWords } from "@/components/shell/item-words";
 import { MAX_INDENT, PRICE_COLUMN_KEYS, type DocOptions, type PriceColumns } from "@/domain/agreement/layout";
 import { messagesByRow, type BlockRow, type LayoutRow, type SectionRow } from "@/domain/agreement/layout-form";
 import type { TemplateFormLine } from "@/domain/agreement/template-form";
 import { itemText, type ItemWords } from "@/domain/org-settings";
-import { canMove, isRequired, variableLabel, type EditorDocument } from "@/domain/templates/editor-model";
+import { canMove, DRAG_TYPE, dropPosition, isRequired, readDragPayload, variableLabel, type DragPayload, type EditorDocument } from "@/domain/templates/editor-model";
 import { partName } from "./add-element-panel";
 
 const BLOCK_NAME = { heading: "Heading", paragraph: "Text", clause: "Clause" } as const;
@@ -136,6 +136,11 @@ function PartSample({ row, lines, words }: { row: SectionRow; lines: TemplateFor
   }
 }
 
+/** The line a drop would land on: one rule across the page at the edge between two blocks. */
+function DropLine() {
+  return <span data-drop-line="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-1.5 z-10 h-0.5 rounded-full bg-action" />;
+}
+
 type Props = {
   document: EditorDocument;
   /** The company's name for the letterhead. */
@@ -156,18 +161,56 @@ type Props = {
   textRef: MutableRefObject<HTMLTextAreaElement | null>;
   /** What sits under the selected part: its options. */
   options?: (index: number, row: SectionRow) => ReactNode;
+  /** A drag was dropped on the line before the row at `at` (`rows.length` is the end of the page). */
+  onDropAt: (at: number, payload: DragPayload) => void;
 };
 
 /**
  * The document as a page you click (template-editor-v2 S1): the letterhead, the title and one block per layout row. A click, or Enter or
  * Space, selects a block; the selected block shows its toolbar and, for text, a field to type in. Parts show a labelled sample.
  */
-export function EditorPage({ document, orgName, doc, rows, presetLines, selected, errors, onSelect, onTitle, onPatch, onMove, onDelete, textRef, options }: Props) {
+export function EditorPage({ document, orgName, doc, rows, presetLines, selected, errors, onSelect, onTitle, onPatch, onMove, onDelete, textRef, options, onDropAt }: Props) {
   const words = useItemWords();
   const byRow = messagesByRow(errors);
+  // The drop line a drag is over (the number of rows before it), and the row being dragged by its grip.
+  const [dropAt, setDropAt] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+
+  // A drag that ends anywhere, with or without a drop, takes the line away.
+  useEffect(() => {
+    const clear = () => {
+      setDropAt(null);
+      setDragging(null);
+    };
+    window.document.addEventListener("dragend", clear);
+    window.document.addEventListener("drop", clear);
+    return () => {
+      window.document.removeEventListener("dragend", clear);
+      window.document.removeEventListener("drop", clear);
+    };
+  }, []);
+
+  const carriesElement = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes(DRAG_TYPE);
+  const lineFor = (event: DragEvent<HTMLElement>, index: number) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return dropPosition(index, event.clientY > box.top + box.height / 2);
+  };
+  const drop = (event: DragEvent, at: number) => {
+    event.preventDefault();
+    const payload = readDragPayload(event.dataTransfer.getData(DRAG_TYPE));
+    setDropAt(null);
+    setDragging(null);
+    if (payload) onDropAt(at, payload);
+  };
 
   return (
-    <article aria-label="Document page" data-editor-document={document} className="mx-auto flex w-full max-w-[44rem] flex-col gap-5 rounded-control bg-surface p-5 shadow-card sm:p-10">
+    <article
+      aria-label="Document page"
+      data-editor-document={document}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropAt(null);
+      }}
+      className="mx-auto flex w-full max-w-[44rem] flex-col gap-5 rounded-control bg-surface p-5 shadow-card sm:p-10">
       <header className="flex items-center gap-3 border-b border-hairline pb-4">
         <span aria-hidden="true" className="size-9 rounded-control bg-night" />
         <p className="text-[14px] font-semibold text-ink">{orgName}</p>
@@ -204,7 +247,32 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
           const required = row.kind === "section" && isRequired(row, document);
 
           return (
-            <li key={index}>
+            <li
+              key={index}
+              onDragOver={(event) => {
+                if (!carriesElement(event)) return;
+                event.preventDefault();
+                setDropAt(lineFor(event, index));
+              }}
+              onDrop={(event) => drop(event, lineFor(event, index))}
+              className={`relative flex items-start gap-1 ${dragging === index ? "opacity-50" : ""}`}
+            >
+              {dropAt === index && <DropLine />}
+              <button
+                type="button"
+                draggable
+                aria-label="Drag to move"
+                onDragStart={(event) => {
+                  const payload: DragPayload = { kind: "move", from: index };
+                  event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(payload));
+                  event.dataTransfer.effectAllowed = "move";
+                  setDragging(index);
+                }}
+                className="mt-1 inline-flex min-h-11 min-w-11 shrink-0 cursor-grab items-center justify-center rounded-control text-[14px] text-ink-2 hover:bg-board lg:min-h-8 lg:min-w-8"
+              >
+                ⋮⋮
+              </button>
+              <div className="min-w-0 flex-1">
               {row.kind === "block" && row.pageBreakBefore && <p className="mb-1 border-t border-dashed border-field pt-0.5 text-[11px] text-ink-2">Page break</p>}
               {isSelected ? (
                 <div aria-current="true" aria-label={`${name}, selected`} role="group" className={`${frame} flex flex-col gap-3`}>
@@ -306,10 +374,24 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
                   )}
                 </div>
               )}
+              </div>
             </li>
           );
         })}
       </ol>
+      <div
+        aria-hidden="true"
+        data-drop-end=""
+        onDragOver={(event) => {
+          if (!carriesElement(event)) return;
+          event.preventDefault();
+          setDropAt(rows.length);
+        }}
+        onDrop={(event) => drop(event, rows.length)}
+        className="relative -mt-2 h-6"
+      >
+        {dropAt === rows.length && <DropLine />}
+      </div>
     </article>
   );
 }

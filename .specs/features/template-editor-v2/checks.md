@@ -3,7 +3,7 @@
 Profile: ui
 Plan: `.specs/features/template-editor-v2/plan.md`
 
-42 checks in 7 slices · 0 one-way doors · 0 open
+48 checks in 8 slices · 0 one-way doors · 0 open
 
 Proof commands run from PowerShell in `web/` (vitest fails from Git Bash): `npx vitest run <file> -t "<selector>"`. A test is named `[C<n>] <claim>`, so `-t "\[C12\]"` selects exactly one. Live checks are author-run in the Playwright browser, as in every earlier UI feature.
 
@@ -147,7 +147,7 @@ Proof: author-run live pass in the Playwright browser at the three widths on `/t
 Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C39\]"`
 Proof: `npx vitest run components/templates/add-element-panel.test.tsx -t "\[C39\]"`
 
-**C40** - Every editor action is a focusable button or a link with an accessible name, and nothing needs hover or drag (AC 40)
+**C40** - Every editor action is a focusable button or a link with an accessible name, and nothing needs hover or drag: whatever can be dragged is a button with a click path (AC 40)
 Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C40\]"`
 
 **C41** - At 1440 px with the sidebar open, the panel and the page are fully visible with no horizontal scroll (AC 41)
@@ -157,6 +157,28 @@ Proof: author-run live pass at 1440 px with the sidebar open, comparing the pane
 Proof: `npx tsc --noEmit`
 Proof: `npx eslint components/templates "app/(app)/templates"`
 Proof: `npx vitest run`
+
+### S8 - Drag from the panel and drag to reorder · `editor-page.tsx`, `add-element-panel.tsx`, `domain/templates/editor-model.ts` · ~25 KB · ~10k
+
+**C43** - Dragging an Add Element item over a block shows one drop line before it in the upper half and after it in the lower half, and at the end of the page below the last block (AC 42)
+Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C43\]"`
+Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C43\]"`
+
+**C44** - Dropping an Add Element item inserts the new block at the drop line, selected, a text block's field focused (AC 43)
+Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C44\]"`
+
+**C45** - A part already on the page is not draggable, and dropping its payload changes nothing (AC 44)
+Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C45\]"`
+
+**C46** - Dropping a block dragged by its grip moves that row to the drop line, keeps it selected and keeps the other rows in order; a drop where it already is changes nothing (AC 45)
+Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C46\]"`
+Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C46\]"`
+
+**C47** - A drag that ends without a drop, or leaves the page, removes the drop line and changes nothing (AC 46)
+Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C47\]"`
+
+**C48** - Click-to-add and Up and Down still work with no drag event fired, and every grip is named "Drag to move" with the 44 px class (AC 47, AC 48)
+Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C48\]"`
 
 ## Coverage
 
@@ -174,6 +196,9 @@ Proof: `npx vitest run`
 | save statuses (5) | saved C28 · invalid C30 · forbidden C31 · not_found C31 · unavailable C31 | - |
 | editor routes (3) | `/templates/new` C32 · `/templates/[templateId]` C32 · `/templates/contract` C32 | - |
 | list states (3) | cards C35 · empty C37 · load error C37 | - |
+| drag payloads (2) | add an element C44 · move a block C46 | - |
+| drop positions (3) | before a block C43 · after a block C43 · end of the page C43 | - |
+| drag outcomes (3) | drop C44 · refused (part on page) C45 · cancelled C47 | - |
 | viewports (3) | 375 C38 · 768 C38 · 1440 C38 | - |
 
 - Claims naming a route, a status or a response shape: C23, C25, C26, C28, C30, C31, C32, C34 - each has a proof that crosses its boundary
@@ -213,8 +238,9 @@ Cost: 5 proof files at their own layer, about 120 asserted cases. Without these 
 
 ## Out of scope
 
-- Divider, drag and drop, formatting beyond plain text, a live PDF beside the page, new variables or options, starter templates - see the plan's `Out of scope`
+- Divider, drag and drop on touch screens, formatting beyond plain text, a live PDF beside the page, new variables or options, starter templates - see the plan's `Out of scope`
 
 ## Handoff
 
+- S8 = 10k (drag from the panel and reorder; same files as S1 and S2) is added on top of S1 to S7 (~49k): ~59k, under the 150k budget - one builder
 - S1 = 12k and S2 = 8k enter `components/templates/` and the new `domain/templates/editor-model.ts`; S3 = 10k and S4 = 3k stay there; S5 = 14k adds the three page modules; S6 = 6k; S7 = 4k. Source touched about 58 KB and tests about 96 KB (~39k tokens read) plus about 60k of new code and tests: ~100k total, under the 150k budget - one builder

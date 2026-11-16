@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type DragEvent } from "react";
 import { useItemWords } from "@/components/shell/item-words";
 import type { SectionKey } from "@/domain/agreement/layout";
 import type { BlockType, TemplateVariable } from "@/domain/contract/template";
 import { itemText, type ItemWords } from "@/domain/org-settings";
-import { availableParts, VARIABLES, VARIABLE_LABELS, type EditorDocument } from "@/domain/templates/editor-model";
+import { availableParts, DRAG_TYPE, VARIABLES, VARIABLE_LABELS, type DragPayload, type EditorDocument } from "@/domain/templates/editor-model";
 import type { LayoutRow } from "@/domain/agreement/layout-form";
 
 export type AddChoice = { kind: "block"; type: BlockType } | { kind: "part"; key: SectionKey };
@@ -71,6 +71,15 @@ export function AddElementPanel({ document, rows, onAdd, onVariable, canInsertVa
   const [tab, setTab] = useState<"writing" | "parts">("writing");
   const [sheet, setSheet] = useState(false);
   const parts = availableParts(rows, document);
+  // A drag carries the choice; the page decides where it lands. Choosing by click stays the way for keyboard and touch.
+  const drag = (choice: AddChoice) => ({
+    draggable: true as const,
+    onDragStart: (event: DragEvent<HTMLButtonElement>) => {
+      const payload: DragPayload = { kind: "add", choice };
+      event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(payload));
+      event.dataTransfer.effectAllowed = "copy";
+    },
+  });
   const choose = (choice: AddChoice) => {
     onAdd(choice);
     setSheet(false);
@@ -118,7 +127,7 @@ export function AddElementPanel({ document, rows, onAdd, onVariable, canInsertVa
         {tab === "writing" ? (
           <div role="tabpanel" aria-label="Writing" className="flex flex-col">
             {WRITING.map(({ type, label, glyph }) => (
-              <button key={type} type="button" onClick={() => choose({ kind: "block", type })} className={`${ITEM} hover:bg-action`}>
+              <button key={type} type="button" onClick={() => choose({ kind: "block", type })} {...drag({ kind: "block", type })} className={`${ITEM} cursor-grab hover:bg-action`}>
                 <span aria-hidden="true" className="inline-flex size-8 items-center justify-center rounded-control bg-ink-nav font-semibold">
                   {glyph}
                 </span>
@@ -156,7 +165,8 @@ export function AddElementPanel({ document, rows, onAdd, onVariable, canInsertVa
                 onClick={() => {
                   if (!onPage) choose({ kind: "part", key });
                 }}
-                className={`${ITEM} ${onPage ? "cursor-default text-night-ink" : "hover:bg-action"}`}
+                {...(onPage ? { draggable: false as const } : drag({ kind: "part", key }))}
+                className={`${ITEM} ${onPage ? "cursor-default text-night-ink" : "cursor-grab hover:bg-action"}`}
               >
                 <span aria-hidden="true" className="inline-flex size-8 items-center justify-center rounded-control bg-ink-nav font-semibold">
                   {partGlyph(key)}

@@ -6,7 +6,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import type { SectionKey } from "@/domain/agreement/layout";
 import { newBlockRow, newSectionRow, type BlockRow, type LayoutFormState, type LayoutRow, type SectionRow } from "@/domain/agreement/layout-form";
 import type { TemplateVariable } from "@/domain/contract/template";
-import { insertRow, insertVariable, moveRow, removeRow, restoreRow, type EditorDocument, type RemovedRow } from "@/domain/templates/editor-model";
+import { insertRow, insertRowAt, insertVariable, moveRow, moveRowTo, removeRow, restoreRow, type DragPayload, type EditorDocument, type RemovedRow } from "@/domain/templates/editor-model";
 import { AddElementPanel, type AddChoice } from "./add-element-panel";
 import { HeaderPopover, OptionsCard, PageSettingsFields, PartOptions } from "./block-options";
 import { EditorPage } from "./editor-page";
@@ -70,6 +70,24 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
     const row = choice.kind === "block" ? newBlockRow(choice.type) : newSectionRow(choice.key);
     const out = insertRow(rows, selected, row);
     setRemoved(null);
+    setRows(out.rows);
+    setSelected(out.index);
+  };
+
+  // A drag landed on the line before the row at `at`: a new block there, or the dragged block moved there.
+  const dropAt = (at: number, payload: DragPayload) => {
+    setRemoved(null);
+    if (payload.kind === "move") {
+      const out = moveRowTo(rows, payload.from, at);
+      if (out.rows === rows) return;
+      setRows(out.rows);
+      setSelected(out.index);
+      return;
+    }
+    const { choice } = payload;
+    // A part the page already has cannot be added twice, by drag or by click.
+    if (choice.kind === "part" && rows.some((row) => row.kind === "section" && row.key === choice.key)) return;
+    const out = insertRowAt(rows, at, choice.kind === "block" ? newBlockRow(choice.type) : newSectionRow(choice.key));
     setRows(out.rows);
     setSelected(out.index);
   };
@@ -157,6 +175,7 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
             setSelected(null);
           }}
           textRef={textRef}
+          onDropAt={dropAt}
           options={(index, row) => (
             <OptionsCard label="Options">
               <PartOptions row={row} id={`layout-${index}`} at={(suffix) => errors[`layout.${index}.${suffix}`]} onChange={(change) => patch(index, change)} />

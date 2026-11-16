@@ -3,6 +3,10 @@ import { newBlockRow, newSectionRow, type LayoutRow } from "../agreement/layout-
 import { TEMPLATE_VARIABLES } from "../contract/template";
 import {
   availableParts,
+  dropPosition,
+  insertRowAt,
+  moveRowTo,
+  readDragPayload,
   canMove,
   insertRow,
   insertVariable,
@@ -159,5 +163,75 @@ describe("merge variables", () => {
   test("[C16] a caret outside the text is held to its ends", () => {
     expect(insertVariable("ab", { start: 99, end: 120 }, "province")).toBe("ab{{province}}");
     expect(insertVariable("ab", { start: -4, end: -1 }, "province")).toBe("{{province}}ab");
+  });
+});
+
+describe("drop lines", () => {
+  test("[C43] a pointer in the upper half of a block drops before it and in the lower half after it", () => {
+    expect(dropPosition(2, false)).toBe(2);
+    expect(dropPosition(2, true)).toBe(3);
+    expect(dropPosition(0, false)).toBe(0);
+  });
+
+  test("[C43] the end of the page is the line after the last row, and an insert there goes last", () => {
+    const rows = [block("a"), block("b")];
+    expect(dropPosition(rows.length - 1, true)).toBe(2);
+    expect(texts(insertRowAt(rows, 2, block("new")).rows)).toEqual(["a", "b", "new"]);
+    expect(texts(insertRowAt(rows, 0, block("new")).rows)).toEqual(["new", "a", "b"]);
+    expect(insertRowAt(rows, 1, block("new")).index).toBe(1);
+  });
+
+  test("[C43] a line beyond the list is held to its ends", () => {
+    const rows = [block("a")];
+    expect(texts(insertRowAt(rows, 9, block("new")).rows)).toEqual(["a", "new"]);
+    expect(texts(insertRowAt(rows, -3, block("new")).rows)).toEqual(["new", "a"]);
+  });
+});
+
+describe("moving a row to a drop line", () => {
+  const rows = [block("a"), block("b"), block("c"), block("d")];
+
+  test("[C46] a row dragged down lands before the line, with every other row in order", () => {
+    const out = moveRowTo(rows, 0, 3);
+    expect(texts(out.rows)).toEqual(["b", "c", "a", "d"]);
+    expect(out.index).toBe(2);
+  });
+
+  test("[C46] a row dragged up lands at the line", () => {
+    const out = moveRowTo(rows, 3, 1);
+    expect(texts(out.rows)).toEqual(["a", "d", "b", "c"]);
+    expect(out.index).toBe(1);
+  });
+
+  test("[C46] a row dragged to the end goes last", () => {
+    expect(texts(moveRowTo(rows, 1, 4).rows)).toEqual(["a", "c", "d", "b"]);
+  });
+
+  test("[C46] a drop on either side of the row itself changes nothing", () => {
+    expect(moveRowTo(rows, 2, 2).rows).toBe(rows);
+    expect(moveRowTo(rows, 2, 3).rows).toBe(rows);
+    expect(moveRowTo(rows, 2, 2).index).toBe(2);
+  });
+
+  test("[C46] a row that is not in the list is not moved", () => {
+    expect(moveRowTo(rows, 9, 0).rows).toBe(rows);
+    expect(moveRowTo(rows, -1, 0).rows).toBe(rows);
+  });
+});
+
+describe("what a drop may carry", () => {
+  test("[C44] a block of each type and a part of each key are read back as dropped", () => {
+    for (const type of ["heading", "paragraph", "clause"] as const) expect(readDragPayload(JSON.stringify({ kind: "add", choice: { kind: "block", type } }))).toEqual({ kind: "add", choice: { kind: "block", type } });
+    for (const key of ["price", "schedule", "included", "equipment", "terms", "signatures"] as const) expect(readDragPayload(JSON.stringify({ kind: "add", choice: { kind: "part", key } }))).toEqual({ kind: "add", choice: { kind: "part", key } });
+  });
+
+  test("[C46] a move is read back with its index", () => {
+    expect(readDragPayload('{"kind":"move","from":3}')).toEqual({ kind: "move", from: 3 });
+  });
+
+  test("[C45] anything else is refused: other text, other shapes, unknown types and keys, bad indexes", () => {
+    for (const raw of ["", "hello", "null", "[]", "{}", '{"kind":"add"}', '{"kind":"add","choice":{"kind":"block","type":"table"}}', '{"kind":"add","choice":{"kind":"part","key":"footer"}}', '{"kind":"move","from":-1}', '{"kind":"move","from":1.5}', '{"kind":"move","from":"1"}', '{"kind":"delete","from":1}']) {
+      expect(readDragPayload(raw), raw).toBeNull();
+    }
   });
 });
