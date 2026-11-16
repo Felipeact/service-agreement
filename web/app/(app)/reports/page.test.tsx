@@ -189,8 +189,8 @@ describe("the reports page (reporting S1 to S4)", () => {
     expect(html).toContain("$100.00 a year");
     expect(html).toContain("Apply range");
     expect(html).toMatch(/<a href="\/reports"[^>]*>Last 12 months/);
-    expect(html).toContain("Pipeline value");
-    expect(html).toContain("$2,399.98");
+    expect(html).toMatch(/Pipeline value<\/dt><dd[^>]*>\$2,399\.98</);
+    expect(html).toMatch(/Recurring revenue<\/dt><dd[^>]*>\$1,199\.99</);
     expect(html).toContain("Expired · 1");
     expect(html).not.toContain("Reason:");
   });

@@ -242,3 +242,97 @@ Not run: sign-in needs an emailed link to the owner's address, so an agent canno
 3. Screen elements still without a check: revenue-by-type rows, the "Apply range" button and "Last 12 months" link, the headline pipeline value stat; an expired group with rows is never rendered in a test. All minor and selector-reachable.
 
 Closed since round 1: ROADMAP contradiction (lines 229, 231), AC 8 grouping (C5761), screen elements (C5762), real container wiring (C5763), future `from` on export (C5764), C5712 and C5743 precision gaps (recorded in the checks.md Handoff).
+
+---
+
+# Round 3
+
+**Verdict**: FAIL (round 3 verdict; rounds 1 and 2 above are kept as written)
+**Profile**: ui
+**Diff range**: 9764140..HEAD (3c7b594), plus every round 2 open item re-proven
+**Round**: 3 - scoped (proofs verified at 3c7b594; C5701 to C5716 re-proven this round; unchanged round 2 sections carried from 9764140)
+**Verifier**: independent sub-agent (author != verifier)
+
+Summary: both round 2 database and recipe items are closed (`npm run test:db reports` passes at HEAD and four SQL faults were killed), and C5765 is proven in all but one assertion. Two things keep this FAIL. (1) C5751, the live browser pass, is still Unproven: sign-in needs an emailed magic link to the owner's address, which an agent cannot receive. (2) One surviving mutant: C5765's pipeline-stat assertion does not pin the pipeline value (F18 below). So this is not the "FAIL only on C5751, an author/owner-run live check" case: it is FAIL on C5751 and on the weak pipeline-value assertion in C5765.
+
+## Binding sources (round 3)
+
+Carried from 9764140: 3c7b594 changes the recipe wiring, `reports.sql` and the page test only; the page view was not edited. Nothing re-opened. Per-screen enumeration: the round 2 minor gaps (type rows, Apply range, Last 12 months, pipeline stat, an Expired group) now have a check, C5765 (`page.test.tsx:185-196`); the pipeline stat is covered only by its label, see F18. Regions, columns and bar rendering remain C5751.
+
+## Checks (round 3)
+
+Recipe at HEAD: `web/scripts/test-db/runner.mts:70` is `plain("reports")`, so `reports.sql` runs against the applied functions. `cd web && npm run test:db reports` printed `PASS reports`, `1 passed, 0 failed` (rolled back, nothing applied). Each labelled assertion below exists in `supabase/tests/reports.sql` under its check id.
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C5701 | Recurring revenue 119999 | `npm run test:db reports` PASS; F14 killed it | `reports.sql:73` `tests.ok('C5701 recurring revenue', h.recurring_cents = 119999, ...)` | PASS |
+| C5702 | Pipeline counts sent and accepted-not-in-term, in-term zero times | same run | `reports.sql:75` `tests.ok('C5702 pipeline value', h.pipeline_cents = 239998, ...)` | PASS |
+| C5703 | accepted 1, refused 1, expired 1; renewed adds 0 | same run | `reports.sql:76` `h.accepted_n = 1`, `:77` `h.refused_n = 1`, `:78` `h.expired_n = 1`, `:83` empty range zeros | PASS |
+| C5704 | Average days to sign 4.0, null when none | same run | `reports.sql:80` `h.avg_days_to_sign = 4.0`, `:82` `n.avg_days_to_sign is null and n.signed_n = 0` | PASS |
+| C5705 | Four funnel rows, each by its own event date, in range only | same run | `reports.sql:94` `got = 'created:4:479996 sent:2:239998 accepted:2:239998 signed:1:119999'`, `:96` empty range keeps four rows | PASS |
+| C5706 | Three medians, at most ten stuck oldest first, none finished | same run | `reports.sql:112` medians string, `:123` `cnt = 10`, `:124` `first_id = tests.id('rpSt7')`, `:126` never-stuck check | PASS |
+| C5707 | One row per refused, expired, withdrawn; reason Price, expired null | same run | `reports.sql:140` `got = 'withdrawn=Customer left=119999 expired=null=119999 refused=Price=119999'`, `:141` newest first | PASS |
+| C5708 | 30 in bucket 30, 31 in bucket 60, 91 absent, auto only below threshold | same run; F17 killed it | `reports.sql:234` `got = 'AG-rpR30=30 AG-rpR31=60 ...'`, `:235` rpR91 absent, `:236` `kind = 'auto'`, `:240`, `:244` | PASS |
+| C5709 | Customers largest first, ties by name, in-term only | same run | `reports.sql:200` `got = expected \|\| '=139998 Alpha Co=119999 Beta Co=119999'` | PASS |
+| C5710 | 19999 line splits 10000 and 9999, total equals recurring | same run; F15 killed it | `reports.sql:201` `= 10000`, `:202` `= 9999`, `:204` total equals headline | PASS |
+| C5711 | Viewer and non-member get 42501 from each of seven functions | same run | `reports.sql:265` `tests.expect_error('C5711 ' \|\| who \|\| ..., c, '42501')` over the seven calls (`:251-267`) | PASS |
+| C5712 | Estimator 42501 on headline and two revenue; null money on funnel, losses, renewals | same run | `reports.sql:275-277` three `expect_error ... '42501'`, `:278` funnel `value_cents is null`, `:281`, `:283`; aging `:280` counts the 3 medians (no money column, recorded in the checks.md Handoff) | PASS |
+| C5713 | Org B appears in none of org A's results | same run | `reports.sql:165` no org B loss, `:166` no org B revenue, `:167` headline `= 119999` | PASS |
+| C5714 | Canceled-billing org still reads the headline | same run | `reports.sql:294` `recurring_cents ... > 0` | PASS |
+| C5715 | 2030-07-02 03:00 UTC counted on 07-01, not 07-02 | same run; F16 killed it | `reports.sql:156` `on_first = 1`, `:157` `on_second = 0` | PASS |
+| C5716 | Empty org: zeros and four funnel rows | same run | `reports.sql:308` zeros, `:310` `got = 'created:0:0 sent:0:0 accepted:0:0 signed:0:0'`, `:311` no rows elsewhere | PASS |
+| C5765 | Type revenue rows, Apply range, Last 12 months, pipeline stat, an Expired group with no Reason line | `npx vitest run ... "app/(app)/reports"`, `C5765: ...` listed passed | `page.test.tsx:188` `toContain("Aaa Type")`, `:189` `"$100.00 a year"`, `:190` `"Apply range"`, `:191` `toMatch(/<a href="\/reports"[^>]*>Last 12 months/)`, `:192` `"Pipeline value"`, `:194` `"Expired · 1"`, `:195` `not.toContain("Reason:")`. Precision gap: `:193` `toContain("$2,399.98")` is also satisfied by the funnel's sent value (`page.test.tsx:15`) and the customer row (`:168`), so it does not pin the pipeline stat (F18 survives) | FAIL (a wrong pipeline value passes) |
+| C5751 | Live browser pass 375/768/1440, CSV, targets, console | not run: sign-in needs an emailed magic link to the owner's address, which an agent cannot receive | none | Unproven (not run) |
+
+Carried from 9764140 and re-run green in full at 3c7b594 (no source changed since): C5721 to C5726, C5731, C5741, C5742, C5743, C5761, C5762, C5763, C5764, each listed individually as passed in the verbose run (see Gate).
+
+## Coverage (round 3)
+
+| Set (size) | Recomputed from | Member -> proof | Unproven |
+| --- | --- | --- | --- |
+| report functions (7) | migration functions | headline `reports.sql:73`, funnel `:94`, aging `:112`, losses `:140`, renewals `:234`, by customer `:200`, by type `:201`, all re-run at HEAD | - |
+| functions refused to viewer (7) | plan Landing door 1 | `reports.sql:251-267` | - |
+| roles (4), decision events (3), renewal buckets (3) | plan | `reports.sql:265,275-277`; `:76-78`; `:234` | - |
+| screen elements added by C5765 (5) | round 2 open list | type rows `page.test.tsx:188-189`, Apply range `:190`, Last 12 months `:191`, Expired group `:194-195`; pipeline value stat `:192-193` asserted only by label | pipeline value not pinned (F18) |
+| viewport widths (3) | C5751 | 375, 768, 1440 | C5751 not run: all three Unproven |
+
+## Test policy rows (round 3)
+
+| Row | Files it classifies | Required proof | Expectation met |
+| --- | --- | --- | --- |
+| `public.report_*` | migration | `reports.sql` recipe as uA, uE, uV, uX | yes, re-run at HEAD: each event, bucket and role asserted |
+| `domain/reports` | `index.ts` | `reports.test.ts` | yes, green at HEAD |
+| `app/(app)/reports/export` | `route.ts` | `route.test.ts` | yes, green at HEAD |
+| adapter, page markup (instrumentation) | `reports.ts`, `reports-view.tsx` | C5731, C5742, C5761 to C5765 | yes, except the pipeline value in C5765 (F18) |
+
+## Faults injected (round 3)
+
+Method: the real tree was mutated in place and reverted at once with `git checkout -- <file>` (no stash, no worktree; the hosted database was never touched, every SQL run is the rolled-back recipe). `git status --porcelain` was empty before and after.
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| F14: expected recurring revenue 119999 -> 119998 | `supabase/tests/reports.sql:73` | yes: `FAIL reports: C5701 recurring revenue: recurring is 119999` |
+| F15: expected second type share 9999 -> 9998 | `supabase/tests/reports.sql:202` | yes: `FAIL reports: C5710 second type: Zzz Type share` |
+| F16: expected UTC-date count 0 -> 1 | `supabase/tests/reports.sql:157` | yes: `FAIL reports: C5715 not on the UTC date: on 07-02: 0` |
+| F17: expected renewal kind 'auto' -> 'negotiate' | `supabase/tests/reports.sql:236` | yes: `FAIL reports: C5708 CPI below the threshold is auto: kind` |
+| Type revenue rows: row name `r.type` -> `"x"` | `components/reports/reports-view.tsx:330` | yes: C5765 failed |
+| "Apply range" label -> "Go" | `reports-view.tsx:289` | yes: C5765 failed |
+| "Last 12 months" link `/reports` -> `/report` | `reports-view.tsx:291` | yes: C5765 failed |
+| F18: pipeline stat shows recurring revenue (`pipelineCents` -> `recurringCents`) | `reports-view.tsx:109` | **no**: `Tests 14 passed (14)`, the mutant survived |
+| Reason line shown for a null reason (`r.reason &&` -> `true &&`) | `reports-view.tsx:204` | yes: C5765 failed |
+| Expired group dropped from the group list | `reports-view.tsx:191` | yes: C5765 failed |
+
+10 injected, 9 killed, 1 survived (F18). Suggested fix, not applied: assert the stat next to its label (a regex on `Pipeline value` followed by `$2,399.98`), or give the headline a value no other element renders.
+
+## Gate (round 3)
+
+`cd web && npx vitest run domain/reports infrastructure/supabase/reports.test.ts "app/(app)/reports" components/shell/nav-items.test.ts composition/composition.test.ts scripts/test-db --reporter=verbose` - 9 files, 172 passed, 0 failed.
+`cd web && npm run test:db reports` - `PASS reports`, 1 passed, 0 failed (rolled back).
+Known pre-existing failures, not findings and outside this run's scope: `domain/purity.test.ts` C2021, components/kanban, pricing catalog, `components/vocabulary.test.ts` C2019, `components/shell/app-shell.test.ts` C1590.
+
+## Ranked gaps (why FAIL)
+
+1. C5751 - Unproven (not run; sign-in needs an emailed magic link to the owner's address). The live 375/768/1440 pass, 44 px targets, no horizontal scroll, console and CSV download are an author/owner-run live check.
+2. Surviving mutant F18 - C5765's pipeline stat assertion (`page.test.tsx:193`) matches `$2,399.98`, which other elements also render, so a wrong pipeline value passes. Tighten the assertion.
+
+Closed since round 2: the database proof re-run (C5701 to C5716, `plain("reports")` at `runner.mts:70`) and C5765 for type rows, range controls and the Expired group.
