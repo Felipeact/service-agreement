@@ -1,6 +1,5 @@
--- p0-launch-fixes, database side: C6001-C6008, C6012, C6021 (.specs/features/p0-launch-fixes/checks.md). Run after fixture.sql,
--- p0_launch_fixes_pre.sql and the migration 20261116120000_p0_launch_fixes.sql, which the recipe replays in the rolled-back
--- transaction (it is not applied to the hosted project). Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB.
+-- p0-launch-fixes, database side: C6001-C6008 (.specs/features/p0-launch-fixes/checks.md). Run after fixture.sql,
+-- the hosted objects of the applied migration 20261116120000_p0_launch_fixes.sql. Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB.
 -- Expected values come from the checks, never read back from the migration.
 
 reset role;
@@ -181,22 +180,24 @@ begin
   perform tests.ok('C6008 scope', tests.p0_assets(public.agreement_service_scope(tests.id('p0r')), 'RTU') = 1, 'the revised draft does not leave R-1 out');
 end $$;
 
--- C6012: the snapshot written before the migration is byte-for-byte what it was.
+-- C6003 (inactive units): a unit removed from service is in neither the scope, the controls nor the uncovered list.
+select tests.p0_asset('p0s', 'blrA', 'B-2');
+select public.set_asset_active(tests.id('p0s:B-2'), false);
+do $$
+declare doc jsonb := public.agreement_service_scope(tests.id('p0b'));
+begin
+  perform tests.ok('C6003 inactive not uncovered', not exists (select 1 from jsonb_array_elements(doc -> 'uncovered') u where (u ->> 'assetCount')::int > 1 and u ->> 'code' = 'BOILER'),
+    'a deactivated unit is counted as uncovered: ' || (doc -> 'uncovered')::text);
+  perform tests.ok('C6003 inactive not controlled', not exists (select 1 from jsonb_array_elements(doc -> 'controls') c where c ->> 'unitNo' = 'B-2'), 'a deactivated unit has a control');
+end $$;
+
+-- C6008 (cascade): deleting the version, or the asset, deletes its exclusion rows.
 reset role;
 select set_config('request.jwt.claims', '', true);
 do $$ begin
-  perform tests.ok('C6012 untouched',
-    (select snapshot from public.agreement_versions where id = tests.id('p0old:v1'))
-      = '{"schema": 2, "types": [{"code": "CHILLER", "name": "Chiller", "tasks": [], "assets": [{"unitNo": "CH-1", "typeModel": null, "location": null}]}], "takenAt": "2026-01-01T00:00:00+00:00"}'::jsonb,
-    'a snapshot from before the change was rewritten');
+  perform tests.ok('C6008 asset cascade pre', (select count(*) from public.agreement_scope_exclusions where asset_id = tests.id('p0r:R-1')) = 2, 'expected the exclusion on both versions');
+  delete from public.assets where id = tests.id('p0r:R-1');
+  perform tests.ok('C6008 asset cascade', (select count(*) from public.agreement_scope_exclusions where asset_id = tests.id('p0r:R-1')) = 0, 'deleting the asset left exclusion rows');
 end $$;
-
--- C6021: the backfill confirmed the real org and left the demo-shaped org and the org with no phone unconfirmed.
-do $$ begin
-  perform tests.ok('C6021 real org', (select company_confirmed_at is not null from public.org_settings where org_id = tests.id('orgC')), 'a real org was left unconfirmed');
-  perform tests.ok('C6021 demo org', (select company_confirmed_at is null from public.org_settings where org_id = tests.id('orgD')), 'the demo-shaped org was confirmed');
-  perform tests.ok('C6021 no phone', (select company_confirmed_at is null from public.org_settings where org_id = tests.id('orgE')), 'an org with no phone was confirmed');
-end $$;
-
 rollback;
 select 'p0_launch_fixes: pass' as result;

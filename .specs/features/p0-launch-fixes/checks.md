@@ -52,7 +52,7 @@ Proof: `npx vitest run "app/(app)/sendAgreement.test.ts" -t "C6011:"`
 
 **C6012** - A version that is already frozen is read from its stored snapshot with `source: "frozen"`, and the migration leaves every existing snapshot byte-for-byte unchanged (AC 13)
 Proof: `npx vitest run infrastructure/supabase/agreements.test.ts -t "C6012:"`
-Proof: `npm run test:db p0_launch_fixes` (assertions `C6012`)
+Proof: pre-apply replay, run once on 2026-11-16 before the owner applied the migration (a snapshot written before the migration was unchanged after it); not repeatable now the migration is applied
 
 **C6013** - The Scope control renders an exclude button per asset on a draft, an include button for an excluded one, and nothing editable for a viewer or a frozen version (AC 4, AC 5, AC 8)
 Proof: `npx vitest run components/agreements -t "C6013:"`
@@ -81,7 +81,8 @@ Proof: `npx vitest run components/agreements -t "C6019:"`
 Proof: `npx vitest run "app/(app)/settings/page.test.ts" -t "C6020:"`
 
 **C6021** - The migration sets `company_confirmed_at` for an org with real values and leaves it null for the demo org and for an org with an empty phone (AC 20)
-Proof: `npm run test:db p0_launch_fixes` (assertions `C6021`)
+Proof: pre-apply replay, run once on 2026-11-16 (real org confirmed, demo-shaped and phoneless orgs left null); on the hosted project the demo org reads `company_confirmed_at` null after the apply
+
 
 ### S3 - Public legal pages
 

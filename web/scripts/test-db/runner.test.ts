@@ -121,18 +121,18 @@ describe("test:db runner", () => {
     expect(parts.demo_seed).toEqual(["fixture.sql", "SEED_BODY", "demo_seed.sql", "SEED_BODY", "demo_seed_rerun.sql"]);
   });
 
-  test("C830: service_included is a plain recipe, one of 42, over 45 SQL files", () => {
+  test("C830: service_included is a plain recipe, one of 42, over 44 SQL files", () => {
     expect(RECIPES).toHaveLength(42);
     expect(RECIPES.find((recipe) => recipe.name === "service_included")?.parts).toEqual(["fixture.sql", "service_included.sql"]);
     expect(REAL_FILES).toContain("service_included.sql");
-    expect(REAL_FILES).toHaveLength(45);
+    expect(REAL_FILES).toHaveLength(44);
   });
 
-  test("C1045: outbox_dispatch is a plain recipe, one of 42, over 45 SQL files", () => {
+  test("C1045: outbox_dispatch is a plain recipe, one of 42, over 44 SQL files", () => {
     expect(RECIPES).toHaveLength(42);
     expect(RECIPES.find((recipe) => recipe.name === "outbox_dispatch")?.parts).toEqual(["fixture.sql", "outbox_dispatch.sql"]);
     expect(REAL_FILES).toContain("outbox_dispatch.sql");
-    expect(REAL_FILES).toHaveLength(45);
+    expect(REAL_FILES).toHaveLength(44);
   });
 
   test("C202: the seed body drops only begin; and commit;, and replaces only an exact SEED_BODY line", () => {
@@ -255,7 +255,7 @@ describe("test:db runner", () => {
     expect(f.connects).toBe(0);
     expect(code).toBe(2);
 
-    expect(REAL_FILES).toHaveLength(45);
+    expect(REAL_FILES).toHaveLength(44);
     const covered = new Set(RECIPES.flatMap((recipe) => recipe.parts));
     for (const file of REAL_FILES) expect(covered.has(file), file).toBe(true);
   });
