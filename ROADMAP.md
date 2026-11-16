@@ -392,7 +392,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
 | 23 | Scheduling | The product does not schedule visits or track who performs them, so Phase 6 has no visit schedule or per-visit invoicing. Visit months on the agreement grid stay: they are cadence, not scheduling (added 2026-11-15 by the owner) | Same line as the dispatch and GPS non-goal; the product feeds a field-service suite rather than replacing one |
 
-**Needs you:** a pilot contractor (2), a lawyer for the starter wording (14), and the Supabase SMTP change (11). Plan prices were set on 2026-11-13.
+**Needs you:** see Phase 5.9. Plan prices were set on 2026-11-13.
 
 ## Research sources
 - n8n license FAQ (backend-only use is allowed; Cloud has separate terms): https://docs.n8n.io/n8n-community-license/community-license/license-faq
