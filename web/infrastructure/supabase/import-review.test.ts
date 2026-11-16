@@ -144,6 +144,34 @@ describe("ImportRowStore", () => {
     expect(read[1].args).toEqual(["asset_type_id", null]);
   });
 
+  describe("remembered corrections", () => {
+    const untyped = [{ id: "w1", asset_type_raw: "Boiler cond." }];
+    const mapped = (types: Reply) => stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: { sequence: [ok(untyped), ok([{ id: "w1" }])] }, asset_types: types });
+
+    test("C7007: mapping a spelling appends it once to the type's synonyms", async () => {
+      const { typed, calls } = mapped(ok({ synonyms: ["boiler cond"] }));
+      expect(await supabaseImportRowStore(typed).mapType(JOB, "boiler cond", TYPE)).toEqual({ ok: true, rows: 1 });
+      const updates = calls.filter((c) => c.table === "asset_types" && c.method === "update");
+      expect(updates).toHaveLength(0);
+
+      const fresh = mapped(ok({ synonyms: ["roof top"] }));
+      await supabaseImportRowStore(fresh.typed).mapType(JOB, "boiler cond", TYPE);
+      expect(fresh.calls.find((c) => c.table === "asset_types" && c.method === "update")?.args[0]).toEqual({ synonyms: ["roof top", "boiler cond"] });
+    });
+
+    test("C7007: a refused synonym write never fails the mapping", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { typed } = mapped(fail("42501"));
+      expect(await supabaseImportRowStore(typed).mapType(JOB, "boiler cond", TYPE)).toEqual({ ok: true, rows: 1 });
+    });
+
+    test("C7007: no row typed means nothing is remembered", async () => {
+      const none = stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: { sequence: [ok([])] }, asset_types: ok({ synonyms: [] }) });
+      await supabaseImportRowStore(none.typed).mapType(JOB, "boiler cond", TYPE);
+      expect(none.calls.some((c) => c.table === "asset_types")).toBe(false);
+    });
+  });
+
   test.each(["update", "setSkipped", "mapType"] as const)("C636: %s maps SQLSTATE 55000 to locked", async (method) => {
     const reply = fail("55000");
     const { typed } = stubClient({ import_jobs: ok([{ status: "extracted" }]), import_rows: method === "mapType" ? { sequence: [ok([{ id: "w1", asset_type_raw: "Widget" }]), reply] } : reply });

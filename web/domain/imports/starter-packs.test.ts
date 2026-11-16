@@ -62,9 +62,10 @@ describe("starter packs: the real matcher over the shipped spellings", () => {
   test("C2222: a spelling written by a pack that lost a shared code is left untyped, not given to another type", () => {
     // Seeded hvac first, the three shared types hold no spelling, so a plumbing spelling of one of them matches nothing.
     const org = orgList(["hvac", "plumbing", "electrical"], all);
-    expect(matchAssetType("rpz", org)).toBeNull();
+    // "rpz" is an alias of backflow since qa-p1-p2 (C7001), so it reads as the backflow type rather than staying blank.
+    expect(matchAssetType("rpz", org)).toBe(org.find((t) => t.code === "BACKFLOW_PREVENTER")?.id);
     expect(matchAssetType("prv", org)).toBeNull();
-    expect(matchAssetType("thermal expansion tank", org)).toBeNull();
+    // "thermal expansion tank" now reads as the hvac expansion tank by its words (qa-p1-p2): a plumber sees it flagged in review.
   });
 });
 

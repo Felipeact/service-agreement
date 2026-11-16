@@ -135,9 +135,34 @@ export function normalized(text: string): string {
 /** An org type as matching sees it: its own spellings (`asset_types.synonyms`) are other ways a list writes it. */
 export type AssetTypeRef = { id: string; code: string; name: string; synonyms: string[] };
 
+/** Words a list adds around a type's name; they never decide a match. */
+const STOP_WORDS = new Set(["a", "an", "the", "of", "and", "for", "with"]);
+
 /**
- * The org's type a list's wording means, or `null`. A code or name wins; only then a spelling one of the org's own types holds.
- * Blank text, no match and more than one distinct match all give `null`: a guess would hide a row the review must see.
+ * Short forms lists use for a whole family of equipment. A token on the left also counts as the word on the right, so
+ * "Backflow DCVA 2in" reads as a backflow preventer. Kept small and literal: an alias is only worth adding when the
+ * short form means one thing across trades.
+ */
+const ALIASES: Record<string, string> = { dcva: "backflow", rpz: "backflow", rpza: "backflow", dcda: "backflow", pvb: "backflow", bf: "backflow" };
+
+const tokensOf = (text: string): string[] => normalized(text).split(" ").filter((token) => token !== "" && !STOP_WORDS.has(token));
+
+/** A list's token is a type word when it is that word, its start ("exh" for exhaust), or its consonant skeleton ("chlr" for chiller). */
+function fitsWord(token: string, word: string): boolean {
+  if (token === word) return true;
+  if (token.length < 3 || token.length >= word.length) return false;
+  if (word.startsWith(token)) return true;
+  if (token.length < 4 || token[0] !== word[0]) return false;
+  let at = 0;
+  for (const letter of word) if (letter === token[at]) at += 1;
+  return at === token.length;
+}
+
+/**
+ * The org's type a list's wording means, or `null`. A code or name wins; then a spelling one of the org's own types holds;
+ * then the words: every word of a type's name found in the list's text (as itself, a short form, or an alias), the type
+ * with the most words winning, else the one type whose first word (five letters or more) the text holds. Blank text, no
+ * match and a tie all give `null`: a guess would hide a row the review must see.
  */
 export function matchAssetType(raw: string | null, types: AssetTypeRef[]): string | null {
   const wanted = normalized(raw ?? "");
@@ -147,7 +172,35 @@ export function matchAssetType(raw: string | null, types: AssetTypeRef[]): strin
   const viaSynonym = new Set(
     types.filter((t) => t.synonyms.some((synonym) => normalized(synonym) === wanted)).map((t) => t.id),
   );
-  return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
+  if (viaSynonym.size > 0) return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
+
+  // Sizes and counts ("2in", "4") say nothing about the type.
+  const spoken = tokensOf(wanted).filter((token) => !/^\d/.test(token));
+  const heard = [...new Set([...spoken, ...spoken.flatMap((token) => (ALIASES[token] ? [ALIASES[token]] : []))])];
+  if (heard.length === 0) return null;
+  const named = types.map((t) => ({ id: t.id, words: tokensOf(t.name) })).filter((t) => t.words.length > 0);
+  const whole = named.filter((t) => t.words.every((word) => heard.some((token) => fitsWord(token, word))));
+  const best = Math.max(0, ...whole.map((t) => t.words.length));
+  const top = whole.filter((t) => t.words.length === best);
+  if (top.length > 0) return top.length === 1 ? top[0].id : null;
+  const byHead = named.filter((t) => t.words[0].length >= 5 && heard.includes(t.words[0]));
+  return byHead.length === 1 ? byHead[0].id : null;
+}
+
+/** A row that stands for several units: "VAV boxes (qty 24)", "Exhaust fans x6", "24 x VAV boxes". Two to fifty, else a count we do not trust. */
+export const MAX_ROW_QUANTITY = 50;
+
+export function splitQuantity(raw: string | null): { label: string; qty: number } | null {
+  const text = (raw ?? "").trim();
+  const patterns = [/\(?\s*(?:qty|quantity)\s*[:=]?\s*(\d+)\s*\)?/i, /\(?\s*[x×]\s*(\d+)\s*\)?\s*$/i, /^\s*[x×]\s*(\d+)\s+/i, /^\s*(\d+)\s*[x×]\s+/i];
+  for (const pattern of patterns) {
+    const found = pattern.exec(text);
+    if (!found) continue;
+    const qty = Number(found[1]);
+    const label = text.replace(pattern, " ").replace(/\s+/g, " ").trim();
+    if (qty >= 2 && qty <= MAX_ROW_QUANTITY && label !== "") return { label, qty };
+  }
+  return null;
 }
 
 /** One extracted row as the review needs it. The domain cannot import the ports, so this repeats `ImportRowView`'s fields. */
