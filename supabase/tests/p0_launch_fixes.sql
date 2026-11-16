@@ -199,5 +199,23 @@ do $$ begin
   delete from public.assets where id = tests.id('p0r:R-1');
   perform tests.ok('C6008 asset cascade', (select count(*) from public.agreement_scope_exclusions where asset_id = tests.id('p0r:R-1')) = 0, 'deleting the asset left exclusion rows');
 end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+-- C6018 (role): only an owner or admin can stamp the company confirmation; an estimator and a viewer change nothing.
+select tests.act_as('uE');
+do $$ begin
+  perform tests.expect_rows('C6018 estimator', format('update public.org_settings set company_confirmed_at = now() where org_id = %L', tests.id('orgA')), 0);
+end $$;
+select tests.act_as('uV');
+do $$ begin
+  perform tests.expect_rows('C6018 viewer', format('update public.org_settings set company_confirmed_at = now() where org_id = %L', tests.id('orgA')), 0);
+end $$;
+select tests.act_as('uA');
+do $$ begin
+  perform tests.expect_rows('C6018 owner', format('update public.org_settings set company_confirmed_at = now() where org_id = %L', tests.id('orgA')), 1);
+end $$;
+
+reset role;
+select set_config('request.jwt.claims', '', true);
 rollback;
 select 'p0_launch_fixes: pass' as result;

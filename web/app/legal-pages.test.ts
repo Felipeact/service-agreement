@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
@@ -43,5 +45,19 @@ describe("public legal pages", () => {
       expect(shown, region).not.toContain(region);
     }
     expect(shown).toContain("we have not yet confirmed");
+  });
+
+  test("C6026: every factual claim on /security has its source in the repo", () => {
+    const root = path.join(__dirname, "..", "..");
+    const read = (file: string) => readFileSync(path.join(root, file), "utf8");
+    // separated by company: the isolation proofs exist
+    expect(existsSync(path.join(root, "supabase/tests/rls_isolation.sql"))).toBe(true);
+    // one-time sign-in link: the magic-link confirm route
+    expect(existsSync(path.join(root, "web/app/auth/confirm/route.ts"))).toBe(true);
+    // DocuSeal signing, with each signer's time and network address kept
+    expect(existsSync(path.join(root, "web/app/api/webhooks/docuseal/route.ts"))).toBe(true);
+    expect(read("supabase/migrations/20261107175044_signature_webhook.sql")).toContain("signed_ip");
+    // card details go to Stripe: no card number field in the app or the register form
+    expect(read("web/app/register/register-fields.tsx")).not.toMatch(/card.?number|cardNumber/i);
   });
 });

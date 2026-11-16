@@ -73,6 +73,7 @@ Proof: `npx vitest run "app/(app)/sendAgreement.test.ts" -t "C6017:"`
 
 **C6018** - `saveSettingsAction` with real values saves with `confirmedAt` set to the clock's now; with a placeholder value it saves the other fields and leaves `confirmedAt` out of the update (AC 17)
 Proof: `npx vitest run infrastructure/supabase/settings.test.ts -t "C6018:"`
+Proof: `npm run test:db p0_launch_fixes` (assertions `C6018`, only an owner or admin can stamp it)
 
 **C6019** - The send dialog shows, for `company_unconfirmed`, the names of the failing details and a link to `/settings` (AC 18)
 Proof: `npx vitest run components/agreements -t "C6019:"`
@@ -100,6 +101,7 @@ Proof: `npx vitest run app/legal-pages.test.ts -t "C6025:"`
 
 **C6026** - `/security` names no hosting region while open question 1 is unanswered, and a live run of the three pages at 375x812, 768x1024 and 1440x900 has no horizontal scroll (AC 25, AC 26)
 Proof: `npx vitest run app/legal-pages.test.ts -t "C6026:"`
+(also asserts each factual claim on /security has its source file in the repo)
 Proof: live Playwright run at 375x812, 768x1024, 1440x900
 
 ## Coverage
