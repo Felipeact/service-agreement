@@ -64,7 +64,10 @@ export function ContractWordingEditor({ initial, save, importAction }: Props) {
             event.preventDefault();
             start(async () => {
               const answer = await save(values);
-              if (answer.status === "saved") setBaseline(values);
+              if (answer.status === "saved") {
+                setBaseline(values);
+                setImportedFrom(null);
+              }
               setState(answer);
             });
           }}
