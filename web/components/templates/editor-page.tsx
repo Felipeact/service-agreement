@@ -191,8 +191,24 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
   }, []);
 
   const carriesElement = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes(DRAG_TYPE);
-  const lineFor = (event: DragEvent<HTMLElement>, index: number) => {
-    const box = event.currentTarget.getBoundingClientRect();
+  // The drop line for a pointer over the list: before or after the block it is over, or, in the gap between blocks, the nearest one.
+  const lineAt = (event: DragEvent<HTMLElement>) => {
+    const blocks = Array.from(event.currentTarget.children);
+    const over = (event.target as HTMLElement).closest("li");
+    let index = over ? blocks.indexOf(over) : -1;
+    if (index === -1) {
+      let nearest = Infinity;
+      blocks.forEach((block, at) => {
+        const box = block.getBoundingClientRect();
+        const distance = event.clientY < box.top ? box.top - event.clientY : event.clientY > box.bottom ? event.clientY - box.bottom : 0;
+        if (distance < nearest) {
+          nearest = distance;
+          index = at;
+        }
+      });
+    }
+    if (index === -1) return rows.length;
+    const box = blocks[index].getBoundingClientRect();
     return dropPosition(index, event.clientY > box.top + box.height / 2);
   };
   const drop = (event: DragEvent, at: number) => {
@@ -229,7 +245,15 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
         {errors["doc.title"] && <p className="px-2 text-[12px] font-medium text-danger">{errors["doc.title"]}</p>}
       </div>
 
-      <ol className="flex flex-col gap-3">
+      <ol
+        className="flex flex-col gap-3"
+        onDragOver={(event) => {
+          if (!carriesElement(event)) return;
+          event.preventDefault();
+          setDropAt(lineAt(event));
+        }}
+        onDrop={(event) => drop(event, lineAt(event))}
+      >
         {rows.map((row, index) => {
           const isSelected = selected === index;
           const messages = byRow.get(index) ?? [];
@@ -249,12 +273,6 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
           return (
             <li
               key={index}
-              onDragOver={(event) => {
-                if (!carriesElement(event)) return;
-                event.preventDefault();
-                setDropAt(lineFor(event, index));
-              }}
-              onDrop={(event) => drop(event, lineFor(event, index))}
               className={`relative flex items-start gap-1 ${dragging === index ? "opacity-50" : ""}`}
             >
               {dropAt === index && <DropLine />}

@@ -98,6 +98,40 @@ describe("adding from the panel", () => {
   });
 });
 
+describe("the preview follows the order on the page", () => {
+  const sentKinds = () => (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.map((call) => (JSON.parse(String((call as [string, RequestInit])[1].body)) as { layout: { kind: string; key?: string; text?: string }[] }).layout.map((row) => row.key ?? row.text));
+
+  test("[C23] a block moved with the Down button is sent to Preview PDF in its new place", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    await mountAgreement();
+    await selectItem(container, 0);
+    await click(container.querySelector('[aria-label="Move down"]'));
+    await click(withText(container, "button", "Preview PDF"));
+    const [layout] = sentKinds();
+    expect(layout.slice(0, 3)).toEqual(["Prepared for {{customer.name}}.", "About this agreement", "price"]);
+  });
+
+  test("[C23] a block dragged to a new place is sent to Preview PDF in that place", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    await mountAgreement();
+    const grip = container.querySelectorAll('button[aria-label="Drag to move"]')[0];
+    const carried = new Map<string, string>();
+    const transfer = { setData: (t: string, v: string) => carried.set(t, v), getData: (t: string) => carried.get(t) ?? "", get types() { return [...carried.keys()]; }, effectAllowed: "" };
+    const fire = (target: Element, type: string, clientY = 0) =>
+      act(async () => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "dataTransfer", { value: transfer });
+        Object.defineProperty(event, "clientY", { value: clientY });
+        target.dispatchEvent(event);
+      });
+    await fire(grip, "dragstart");
+    await fire(pageItems(container)[2], "drop", -1);
+    await click(withText(container, "button", "Preview PDF"));
+    const [layout] = sentKinds();
+    expect(layout.slice(0, 3)).toEqual(["Prepared for {{customer.name}}.", "About this agreement", "price"]);
+  });
+});
+
 describe("saving", () => {
   test("[C28] the agreement's Save sends the template id and the form as typed, once", async () => {
     await mountAgreement();

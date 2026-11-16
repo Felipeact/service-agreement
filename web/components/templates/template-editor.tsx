@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TextInput } from "@/components/ui/text-input";
 import { previewBodyFromLayoutForm, type AgreementLayoutForm } from "@/domain/agreement/template-form";
 import { DetailsFields, PresetLines } from "./block-options";
 import { DocumentEditor } from "./document-editor";
@@ -52,7 +51,21 @@ export function TemplateEditor({ templateId, initial, types, save, orgName = "Yo
       }}
       errors={errors}
       heading={
-        <TextInput id="template-name" name="name" label="Name" value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} error={errors.name} />
+        <div className="flex flex-col gap-0.5">
+          <label htmlFor="template-name" className="sr-only">
+            Name
+          </label>
+          <input
+            id="template-name"
+            name="name"
+            value={values.name}
+            placeholder="Name this template"
+            onChange={(event) => setValues({ ...values, name: event.target.value })}
+            aria-invalid={errors.name ? true : undefined}
+            className={`min-h-11 w-full rounded-control border bg-transparent px-2 font-display text-[18px] font-semibold tracking-tight text-ink placeholder:text-ink-2 hover:border-hairline focus:bg-surface lg:min-h-9 ${errors.name ? "border-danger" : "border-transparent"}`}
+          />
+          {errors.name && <p className="px-2 text-[12px] font-medium text-danger">{errors.name}</p>}
+        </div>
       }
       details={<DetailsFields description={values.description} termMonths={values.termMonths} errors={errors} onChange={(change) => setValues({ ...values, ...change })} />}
       presetLines={values.lines}

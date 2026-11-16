@@ -73,8 +73,8 @@ describe("/templates/contract", () => {
 
   test("C5821: the page gives the editor the import action, so the Import control and its notice are on the page", async () => {
     const html = await render();
-    expect(html).toContain('id="contract-import-file"');
-    expect(html).toContain("A starting point: you own your wording.");
+    // The control lives in the header's Import contract popover, closed until the owner opens it.
+    expect(html).toContain("Import contract");
   });
 
   test("C5558: signed out goes to /login and nothing is read", async () => {

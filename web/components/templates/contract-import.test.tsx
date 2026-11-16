@@ -35,10 +35,13 @@ afterEach(() => {
 });
 
 const save = vi.fn(async (): Promise<SaveContractWordingState> => ({ status: "saved" }));
-const mount = (importAction: (formData: FormData) => Promise<ImportContractWordingState>) =>
-  act(async () => {
+// The import control sits in the header's Import contract popover; open it, as the owner does.
+const mount = async (importAction: (formData: FormData) => Promise<ImportContractWordingState>) => {
+  await act(async () => {
     root.render(createElement(ContractWordingEditor, { initial: INITIAL, save, importAction }));
   });
+  await act(async () => ([...container.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Import contract") as HTMLElement | undefined)?.click());
+};
 const rowTexts = () => [...container.querySelectorAll('article[aria-label="Document page"] > ol > li')].map((li) => li.textContent ?? "");
 const fileInput = () => container.querySelector("#contract-import-file") as HTMLInputElement;
 const choose = (name: string) => Object.defineProperty(fileInput(), "files", { value: [new File([new Uint8Array([1])], name)], configurable: true });

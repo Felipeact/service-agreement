@@ -116,6 +116,16 @@ describe("dropping an element from the panel", () => {
     expect(texts()[3]).toContain("Price lines");
   });
 
+  test("[C44] a drop on the list itself, in the gap between two blocks, still lands", async () => {
+    await mountAgreement();
+    const carried = await dragFromPanel(writing("Clause"));
+    const list = container.querySelector('article[aria-label="Document page"] > ol') as HTMLElement;
+    await fire(list, "dragover", { transfer: carried, clientY: UPPER });
+    expect(lines()).toHaveLength(1);
+    await fire(list, "drop", { transfer: carried, clientY: UPPER });
+    expect(pageItems(container)).toHaveLength(8);
+  });
+
   test("[C44] a Clause dropped on the lower half of a block lands after it", async () => {
     await mountAgreement();
     const carried = await dragFromPanel(writing("Clause"));

@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { LinkButton } from "@/components/ui/link-button";
+import Link from "next/link";
 import type { SectionKey } from "@/domain/agreement/layout";
 import { newBlockRow, newSectionRow, type BlockRow, type LayoutFormState, type LayoutRow, type SectionRow } from "@/domain/agreement/layout-form";
 import type { TemplateVariable } from "@/domain/contract/template";
@@ -20,7 +20,7 @@ type Props<V extends LayoutFormState> = {
   /** Messages by the validator's field name: live ones and the last save's. */
   errors: Record<string, string>;
   /** The left of the header: the template's name field, or the contract's fixed title. */
-  heading: ReactNode;
+  heading?: ReactNode;
   /** The agreement's description and term fields, shown under a Details button; absent for the contract. */
   details?: ReactNode;
   /** More header controls, such as the contract's Import. */
@@ -112,21 +112,31 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
 
   return (
     <form onSubmit={submit} noValidate className="flex min-w-0 flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="min-w-0 flex-1 basis-60">{heading}</div>
-        <span data-save-state={dirty ? "unsaved" : "saved"} className={`text-[12px] font-medium ${dirty ? "text-attention-fg" : "text-ink-2"}`}>
+      <div className="z-20 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-panel border border-hairline bg-surface px-3 py-2.5 shadow-card lg:sticky lg:top-2">
+        <Link href={cancelHref} className="inline-flex min-h-11 items-center gap-1 rounded-control px-1.5 text-[13px] font-medium text-ink-2 hover:text-ink lg:min-h-8">
+          <span aria-hidden="true">←</span> Templates
+        </Link>
+        <div className="min-w-0 flex-1 basis-48">{heading}</div>
+        <span
+          data-save-state={dirty ? "unsaved" : "saved"}
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium ${dirty ? "bg-attention-bg text-attention-fg" : "bg-board text-ink-2"}`}
+        >
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
           {dirty ? "Unsaved changes" : "Saved"}
         </span>
-        {extra}
-        {details && <HeaderPopover label="Details">{details}</HeaderPopover>}
-        <HeaderPopover label="Page settings">
-          <PageSettingsFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />
-        </HeaderPopover>
-        <PreviewDialog values={values} endpoint={preview.endpoint} canDraw={preview.canDraw} frameTitle={preview.frameTitle} />
-        <Button type="submit" variant="primary" disabled={pending}>
-          {pending ? "Saving…" : saveLabel}
-        </Button>
-        <LinkButton href={cancelHref}>Back</LinkButton>
+        <div className="flex flex-wrap items-center gap-2">
+          {extra}
+          {details && <HeaderPopover label="Details">{details}</HeaderPopover>}
+          <HeaderPopover label="Page settings">
+            <PageSettingsFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />
+          </HeaderPopover>
+        </div>
+        <div className="flex items-center gap-2 md:border-l md:border-hairline md:pl-3">
+          <PreviewDialog values={values} endpoint={preview.endpoint} canDraw={preview.canDraw} frameTitle={preview.frameTitle} />
+          <Button type="submit" variant="primary" disabled={pending}>
+            {pending ? "Saving…" : saveLabel}
+          </Button>
+        </div>
       </div>
 
       {notices}

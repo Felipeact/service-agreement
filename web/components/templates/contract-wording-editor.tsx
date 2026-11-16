@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { bodyFromContractForm, type ContractLayoutForm } from "@/domain/contract/layout-form";
 import { ContractImportControl } from "./contract-import-control";
+import { HeaderPopover } from "./block-options";
 import { DocumentEditor } from "./document-editor";
 import { firstErrorRow } from "./first-error-row";
 import { WORDING_MESSAGES, type ImportContractWordingState, type SaveContractWordingState } from "./state";
@@ -48,18 +49,19 @@ export function ContractWordingEditor({ initial, save, importAction, orgName = "
         setValues(next);
       }}
       errors={errors}
-      heading={<h2 className="font-display text-[18px] font-semibold tracking-tight">Contract wording</h2>}
       extra={
         importAction && (
-          <ContractImportControl
-            importAction={importAction}
-            dirty={dirty}
-            onImported={(form, fileName) => {
-              setValues(form);
-              setImportedFrom(fileName);
-              setState({ status: "idle" });
-            }}
-          />
+          <HeaderPopover label="Import contract">
+            <ContractImportControl
+              importAction={importAction}
+              dirty={dirty}
+              onImported={(form, fileName) => {
+                setValues(form);
+                setImportedFrom(fileName);
+                setState({ status: "idle" });
+              }}
+            />
+          </HeaderPopover>
         )
       }
       dirty={dirty}
