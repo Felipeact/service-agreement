@@ -58,6 +58,14 @@ export function SigningView({ result, logoUrl = null }: SigningViewProps) {
           <p className="text-[13px] text-ink-2">{`Signer: ${signerName}`}</p>
         </div>
         {state === "open" && embedSrc && <SigningForm src={embedSrc} />}
+        {state === "open" && embedSrc && (
+          <p className="text-[13px] text-ink-2">
+            {"Form not showing? "}
+            <a href={embedSrc} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-medium text-action underline underline-offset-2">
+              Open signing page
+            </a>
+          </p>
+        )}
         {state === "signed" && <Message>{SIGNED_MESSAGE}</Message>}
         {state === "closed" && <Message>{CLOSED_MESSAGE}</Message>}
       </main>

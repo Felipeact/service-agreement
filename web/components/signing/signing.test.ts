@@ -33,6 +33,20 @@ beforeEach(() => {
   refresh.mockClear();
 });
 
+describe("the signing page fallback", () => {
+  test("C7012: an open contract shows a visible Open signing page link to the same signing address", () => {
+    const markup = html(shown());
+    expect(markup).toMatch(new RegExp(`<a href="${EMBED}"[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*>Open signing page</a>`));
+  });
+
+  test.each([
+    ["signed", shown({ state: "signed", embedSrc: null })],
+    ["closed", shown({ state: "closed", embedSrc: null })],
+  ])("C7012: a %s contract shows no fallback link", (_label, result) => {
+    expect(html(result)).not.toContain("Open signing page");
+  });
+});
+
 describe("the signing page", () => {
   test("C1704: in the open state it shows the tenant, its colour, the contract number, the signer and the embedded form with a completion handler", () => {
     const markup = html(shown());
