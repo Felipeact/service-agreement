@@ -119,6 +119,18 @@ describe("composition root", () => {
     expect(plainRpc).not.toHaveBeenCalled();
   });
 
+  test("C5731: getContainer() exposes the report reader on the session client", async () => {
+    setEnv("https://example.supabase.co", "sb_publishable_test");
+    const { createServerClient } = await import("@supabase/ssr");
+    vi.mocked(createServerClient).mockClear();
+    const { getContainer } = await import("./index");
+    const container = await getContainer();
+    const serverClient = vi.mocked(createServerClient).mock.results[0].value as { rpc: (...args: unknown[]) => unknown };
+    const rpc = vi.spyOn(serverClient, "rpc").mockResolvedValue({ data: [], error: null } as never);
+    expect(await container.reports.renewals()).toEqual({ ok: true, value: [] });
+    expect(rpc).toHaveBeenCalledWith("report_renewals");
+  });
+
   test("C27: getContainer() wires the sign-in link, link verification, sign out and the current member", async () => {
     setEnv("https://example.supabase.co", "sb_publishable_test");
     const { getContainer } = await import("./index");

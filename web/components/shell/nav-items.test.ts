@@ -111,4 +111,22 @@ describe("navigation, item words", () => {
     expect(html).toMatch(/<a\b[^>]*href="\/sites"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Sites &amp; stations<\/a>/);
     expect(html).not.toMatch(/equipment/i);
   });
+
+  test("C5743: Reports links to /reports after Imports and appears only when the member may read reports", () => {
+    pathname = "/pipeline";
+    const withReports = renderToStaticMarkup(createElement(SidebarNav, { reports: true }));
+    expect(withReports).toMatch(/href="\/reports"/);
+    expect(withReports.indexOf('href="/imports"')).toBeLessThan(withReports.indexOf('href="/reports"'));
+    expect(renderToStaticMarkup(createElement(SidebarNav, {}))).not.toContain('href="/reports"');
+    expect(renderToStaticMarkup(createElement(SidebarNav, { reports: false }))).not.toContain('href="/reports"');
+  });
+
+  test("C5743: the Reports item is current on /reports and on a path under it", () => {
+    for (const path of ["/reports", "/reports?from=2027-01-01"]) {
+      pathname = path;
+      const html = renderToStaticMarkup(createElement(SidebarNav, { reports: true }));
+      const link = /<a [^>]*href="[/]reports"[^>]*>/.exec(html)?.[0] ?? "";
+      expect(link.includes('aria-current="page"')).toBe(true);
+    }
+  });
 });

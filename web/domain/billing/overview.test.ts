@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cardLine, canChangeBilling, isEnded, dateLine, invoiceRows, statusLabel, type BillingOverview, type InvoiceSummary } from "./overview";
+import { cardLine, canChangeBilling, ENDED_STATUSES, isEnded, dateLine, invoiceRows, statusLabel, type BillingOverview, type InvoiceSummary } from "./overview";
 
 /** Noon in Vancouver on the given day, as unix seconds (UTC-8 in winter, so 20:00 UTC). */
 const noon = (year: number, month: number, day: number) => Date.UTC(year, month - 1, day, 20) / 1000;
@@ -120,5 +120,31 @@ describe("an ended plan freezes the workspace", () => {
   ])("%s is ended: %s, and billing changes are allowed only when it is not", (status, ended) => {
     expect(isEnded(status)).toBe(ended);
     expect(canChangeBilling(status)).toBe(!ended);
+  });
+});
+
+describe("freeze status set", () => {
+  // The same eight statuses supabase/tests/db_freeze.sql (C5613) runs through private.org_is_frozen and public.my_org_frozen.
+  test.each([
+    ["active", false],
+    ["trialing", false],
+    ["past_due", false],
+    ["incomplete", false],
+    ["paused", false],
+    ["canceled", true],
+    ["unpaid", true],
+    ["incomplete_expired", true],
+  ])("%s freezes: %s", (status, frozen) => {
+    expect(isEnded(status)).toBe(frozen);
+  });
+
+  test("the ended set has exactly the three members the database freezes", () => {
+    expect([...ENDED_STATUSES].sort()).toEqual(["canceled", "incomplete_expired", "unpaid"]);
+  });
+});
+
+describe("unknown status", () => {
+  test("a status Stripe adds later leaves the workspace writable", () => {
+    expect(isEnded("something_new")).toBe(false);
   });
 });

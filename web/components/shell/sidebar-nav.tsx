@@ -37,12 +37,12 @@ function NavEntry({ item, pathname, onNavigate, pillId }: { item: NavItem; pathn
 }
 
 /** The main nav, and Settings and Members pinned to the bottom above an optional footer. It sits on the Night shell. */
-export function SidebarNav({ onNavigate, footer, words = DEFAULT_ITEM_WORDS }: { onNavigate?: () => void; footer?: ReactNode; words?: ItemWords }) {
+export function SidebarNav({ onNavigate, footer, words = DEFAULT_ITEM_WORDS, reports = false }: { onNavigate?: () => void; footer?: ReactNode; words?: ItemWords; reports?: boolean }) {
   const pathname = usePathname();
   const pillId = `nav-pill-${useId()}`;
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-0.5">
-      {mainNav(words).map((item) => (
+      {mainNav(words, reports).map((item) => (
         <NavEntry key={item.label} item={item} pathname={pathname} onNavigate={onNavigate} pillId={pillId} />
       ))}
       <div className="mt-auto flex flex-col gap-0.5 border-t border-surface/10 pt-3">

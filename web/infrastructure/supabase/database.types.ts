@@ -1577,6 +1577,67 @@ export type Database = {
       archive_agreement_template: { Args: { p_template_id: string }; Returns: undefined }
       remove_member: { Args: { p_user_id: string }; Returns: undefined }
       revoke_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
+      report_aging: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          agreement_id: string | null
+          customer_name: string | null
+          days: number | null
+          kind: string
+          number: string | null
+          site_name: string | null
+          stage: string | null
+          status: string | null
+        }[]
+      }
+      report_funnel: {
+        Args: { p_from: string; p_to: string }
+        Returns: { n: number; ord: number; stage: string; value_cents: number | null }[]
+      }
+      report_headline: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          accepted_n: number
+          avg_days_to_sign: number | null
+          expired_n: number
+          pipeline_cents: number
+          recurring_cents: number
+          refused_n: number
+          signed_n: number
+        }[]
+      }
+      report_losses: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          agreement_id: string
+          customer_name: string
+          number: string | null
+          occurred: string
+          outcome: string
+          reason: string | null
+          site_name: string
+          value_cents: number | null
+        }[]
+      }
+      report_renewals: {
+        Args: never
+        Returns: {
+          agreement_id: string
+          bucket: number
+          customer_name: string
+          days_left: number
+          kind: string
+          number: string | null
+          site_name: string
+          term_end: string
+          value_cents: number | null
+        }[]
+      }
+      report_revenue_by_customer: {
+        Args: never
+        Returns: { agreements: number; customer_id: string; customer_name: string; value_cents: number }[]
+      }
+      report_revenue_by_type: { Args: never; Returns: { type_name: string; value_cents: number }[] }
       save_agreement_template: {
         Args: { p_body: Json; p_template_id: string | null }
         Returns: { template_id: string; version_no: number }[]

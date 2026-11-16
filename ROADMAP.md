@@ -64,11 +64,11 @@ Price points were set by the owner on 2026-11-13 (decision 10), in CAD. Revisit 
 | Housecall Pro | About US$59 to US$299 a month on annual billing, 1 to 8 users included | Charges for extra users; 14-day trial |
 | ServiceTitan | About US$250 to US$500 a technician a month, plus setup | Quote-only; built for large shops |
 
-Our position is a single-job tool priced below the suites, with a few seats included and a flat fee for each extra one. It does not replace a field-service suite; it feeds one later (Phase 6).
+Our position is a single-job tool priced below the suites, with a few seats included and a flat fee for each extra one. It does not replace a field-service suite; scheduling and dispatch stay in the suite.
 
 ### Not in the product
 
-Dispatch and GPS, payroll, project or construction contracts, a Word-style document editor, and any per-estimator ranking (decision 18). Quebec is a later, separate item.
+Dispatch and GPS, visit scheduling (who performs which visit, and when), payroll, project or construction contracts, a Word-style document editor, and any per-estimator ranking (decision 18). Quebec is a later, separate item.
 
 ## Stack
 
@@ -103,7 +103,7 @@ Dispatch and GPS, payroll, project or construction contracts, a Word-style docum
 | M13 | Email | Portal links, reminders, signed copies | 3 |
 | M14 | SaaS billing & onboarding | Public pricing page, Stripe plans per tenant, plan limits, workspace provisioning from the Stripe webhook, setup screen on first login | 5 |
 | M15 | Audit, files, security | Org-scoped storage, event log, portal rate limits, Supabase advisors clean | 1+ |
-| M16 | Post-contract operations | Visit schedule, deficiency reports, per-visit invoicing, annual CPI adjustment, renewals and cancellations, mid-term amendments, billing schedule | 6 |
+| M16 | Post-contract operations | Annual CPI adjustment, renewals and cancellations, mid-term amendments. No deficiency reports, visit scheduling or per-visit invoicing (decision 23) | 6 |
 | M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in DESIGN.md and `.impeccable/design.json`, tokens and components | 0.5 |
 | M18 | Trades, packs & vocabulary | Starter packs per trade (types, checklists, default months, synonyms, extraction context), a per-org label for the serviced item ("Equipment", "Areas", "Stations"), per-org synonyms, catalog drafted by Claude for other trades | 4.5, 5 |
 | M19 | Document templates | Tenant-owned agreement and contract templates built from text blocks with merge variables and fixed system blocks, versioned and frozen into each agreement and contract | 5.5 |
@@ -226,12 +226,12 @@ Tenant reports for the contractor's owner and office, read from data that alread
 - **Aging and speed:** median time per stage and the oldest stuck items.
 - **Losses:** refused, expired and withdrawn grouped by reason, each linking to its agreement.
 - **Renewals:** contracts ending in 30, 60 and 90 days, with value and type (auto or needs negotiation).
-- **Revenue breakdown:** by customer and by serviced-item type, filterable by date range.
+- **Revenue breakdown:** by customer and by serviced-item type, as of today (agreements in term now; amended 2026-11-15, a point-in-time figure has no range).
 - **CSV export** on every table, and a useful empty state for a new tenant.
-- **Rules:** win rate is per agreement, not per version. Automatic renewals (W7) are accepted without a customer decision, so they are excluded from win rate and shown separately.
+- **Rules:** win rate is per agreement, not per version. Automatic renewals (W7) are accepted without a customer decision, so they are excluded from win rate and left out of the figures (an automatic renewal has no customer decision, so it never appears in win rate or losses).
 - **Access:** owners and admins see money; estimators see operational reports; viewers see none (decision 17). No per-estimator ranking in v1.
 - **Not here:** the product's own SaaS metrics (MRR, churn, signups by trade). Stripe and product analytics cover those; onboarding only has to store the trade on the org.
-- **Later (Phase 6):** visit workload per month and invoicing reports, once visit data exists.
+- **Not planned:** visit workload and per-visit invoicing reports, since the product does not track visits (decision 23).
 
 ## Phases
 
@@ -306,7 +306,6 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Public `/pricing` page with plan and trade selection. Built 2026-11-09 (`.specs/features/pricing-page/`, AD-166, no migration): three draft plans in CAD, four trades, one start-trial button per plan; the choice goes through `makeStartTrial` to the `CheckoutStarter` port, whose only starter answers `not_configured` until the Stripe item. Verifier round 1 failed on a surviving mutant on the port, a Test policy gap and an overstated `303` row; round 2 PASS (36 of 36, 5 faults injected and killed). Linked from the public site since 2026-11-09 (trades moved to `/register`); the price points (decision 10) are still drafts
 - [x] Public site as the front door (M21): `/` home, `/product`, `/demo`, `/trades`, `/about`, `/faq`, `/contact`, with Sign in as a link. Built 2026-11-09 (AD-167, no migration), with three home-page concepts under `/concepts/a|b|c` to choose from (the owner deletes two). Sample-data visuals only; `SITE.contactEmail` and `DEMO_VIDEO_URL` in `web/components/site/content.ts` are yours to confirm and fill
 - [x] Trades chosen at `/register`, not on `/pricing`: `/pricing` is plans only and each plan links to `/register?plan=<key>`; `/register` takes the trades and the plan, then the same `makeStartTrial` hand-off. Built 2026-11-09 (AD-167)
-- [ ] Record the demo video and set `DEMO_VIDEO_URL` (the `/demo` page shows a "coming soon" panel until then)
 - [x] Stripe Checkout (the 14-day trial it was built with was removed on 2026-11-13, see the items below), card collected up front, and the signed, idempotent webhook ledger (`.specs/features/billing-checkout/`, AD-168 to AD-171, migration `20261109190000`). Built 2026-11-09 against a fake `fetch` and rolled-back SQL; the live run in Stripe test mode and applying the migration wait for the owner. Go-live blockers: the Stripe webhook endpoint and its secret in Vault, and do not set `STRIPE_SECRET_KEY` in production until provisioning ships
 - [x] Stripe Customer Portal, and the rule that cancels a subscription when payment fails after the trial (a Stripe dashboard setting the owner makes; the session already asks for a card up front and cancels a trial with none). The portal needs the Stripe customer id that provisioning stores on the org Portal half built 2026-11-10 (`.specs/features/billing-portal/`, AD-177, no migration): a Billing section on `/settings` opens Stripe's portal for the member's own org. Still open, and yours: save the Customer portal configuration in the Stripe dashboard (test, then live) and set the cancel-on-failed-payment rule; the live Stripe run waits for your test keys Replaced on 2026-11-10 by an in-app billing page at `/settings/billing` (`.specs/features/billing-page/`, AD-178, no migration): plan, status, next date, card and invoices read live from Stripe; update the card (Stripe's embedded field), cancel at period end and resume, all inside the product. The owner set the cancel-on-failed-payment rule in the Stripe dashboard. Go-live: in the Stripe Dashboard turn off every payment method except Cards (test and live) and set `STRIPE_PUBLISHABLE_KEY` in each environment
 - [x] Workspace provisioning from the webhook: org, settings, seeded packs, the chosen trades stored on the org (`org_billing`), Stripe ids, owner invitation, and the owner's sign-in link (`.specs/features/workspace-provisioning/`, AD-173 to AD-175, migration `20261110100000`). Built 2026-11-10 on rolled-back SQL and fakes; migration applied by the owner on 2026-11-10, the live test-mode run waits for the owner. Vocabulary stays the default "equipment" (packs carry no word for it). Go-live blockers: the Auth SMTP sender below, and Stripe's own dashboard rules. Refusals (`email_in_use`, `invalid_metadata`) are only a code on the stored event for now: no alert, no refund flow
@@ -322,12 +321,8 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] One workspace per company name and per person (2026-11-13, migrations `20261113110000` and `20261113120000`, applied): `/register` refuses a company name or an email (ignoring a `+tag`) that already has a workspace, before Checkout; provisioning refuses a duplicate name as a backstop
 - [x] Frozen workspace when the subscription ends, and renewal (2026-11-13, migration `20261113130000`, applied): `org_billing.status` follows Stripe's subscription events; a canceled, unpaid or expired org signs in read-only with a banner (the member holds the viewer's role), and an owner or admin renews from `/settings/billing` through a Checkout for the same customer, which thaws the org. Proven on rolled-back SQL and fakes. Not built: database-level enforcement of the read-only state (the app layer enforces it today); the live Stripe renewal run
 - [x] Sending an agreement emails the site contact and asks for the email when none is on file; the customer link is no longer shown (2026-11-13, migration `20261113120000`). The earlier "no email" was n8n skipping with `no_recipient` because the contact had no email, not an n8n fault. "Get a new link" is no longer offered
-- [ ] AI-import token logging (2026-11-13, `20261113140000_ai_import_tokens.sql`): each import job stores the input and output tokens of its Claude calls (`import_jobs.input_tokens`, `output_tokens`, added by `record_extraction_chunk`), `org_usage` returns the month's totals, and the owner's Usage card on `/settings/billing` shows imports used, imports left and the AI reading used this month in tokens. Tokens are shown, never limited: the allowance stays a count of imports. Built and tested (5,190 tests pass); the migration is written but not applied, and it must be applied before the code deploys. Not covered: a call that failed or hit the output limit has no recorded rows, so its tokens are not counted; no per-company token report for you yet (a SQL query over `import_jobs` does it)
-- [ ] Database-level freeze: restrictive row-level policies and a check in the write functions, so a frozen org cannot write through the API either
-- [ ] Live runs the author could not do: a Stripe renewal of a canceled test subscription, and a send by email on production
-- [ ] A paid checkout the webhook then refuses (email or company name taken in a race) has no refund or alert yet
-- [ ] Decide whether to bring back a "Resend email" control for a sent agreement (the old reissue action is still in the code, with no button)
-- [ ] Supabase Auth SMTP sender on the verified Resend domain (blocks launch)
+- [x] AI-import token logging (2026-11-13, `20261113140000_ai_import_tokens.sql`, migration applied by the owner 2026-11-15): each import job stores the input and output tokens of its Claude calls (`import_jobs.input_tokens`, `output_tokens`, added by `record_extraction_chunk`), `org_usage` returns the month's totals, and the owner's Usage card on `/settings/billing` shows imports used, imports left and the AI reading used this month in tokens. Tokens are shown, never limited: the allowance stays a count of imports. Built and tested (5,190 tests pass); the migration is now applied, so the code can deploy. Not covered: a call that failed or hit the output limit has no recorded rows, so its tokens are not counted; no per-company token report for you yet (a SQL query over `import_jobs` does it)
+- [x] Database-level freeze (`.specs/features/db-freeze/`, planned and built 2026-11-15, AD-189, migration `20261115100000_db_freeze.sql`, written and proven in a rolled-back recipe, not yet applied to the hosted project): `private.has_org_role` answers false for a frozen org, so every write policy, write function and storage write is refused for members; five reads (billing row, pending invitations, invitation list, usage, logo) keep working so a frozen owner can reach Billing and renew. Customer review and signing links stay open
 
 ### Phase 5.5: Document templates (M19)
 - [x] Template and template-version tables; agreements and contracts record the template version used. Contract half 2026-11-12 (`.specs/features/contract-templates/`, AD-186). Agreement half 2026-11-12 (`.specs/features/agreement-templates/`, AD-187, migration `20261112240000_agreement_templates.sql` applied by the owner): `agreement_versions.template_version_id` (set by Use template, filled with the system version at send, copied by a revise, frozen once sent), several agreement templates per org with archive, `save_agreement_template` and `archive_agreement_template`, intro, closing text, shown sections and preset service lines, drawn by the agreement PDF and the review page, and a Templates screen (list, preview, editor, duplicate, archive, Use template; also lands the editor of item 3 without its live PDF preview). Verifier round 2 PASS, 54 of 54 checks at the `ui` profile, 14 faults injected and killed over both rounds. Not built: a per-asset plus base fee pricing model; the live browser pass is pending
@@ -335,13 +330,35 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Block editor with live PDF preview, plus clone. **Built 2026-11-12 to 2026-11-13** (`.specs/features/agreement-templates/`, `template-flow/`, `block-editor/`, Verifier PASS on each): the Templates screen, a block editor for agreement templates and a Contract wording editor, each with the live PDF beside it (`POST /templates/preview`, `POST /templates/contract/preview`), Duplicate, Archive, Customize, and Use template opening the New agreement dialog. Schema 2 bodies: headings, paragraphs and clauses with indent and page breaks, movable and hideable sections with options, page header and footer options, a signatures section, sixteen merge variables. The owner's real Enviroware proposal and contract are created as templates in the demo workspace. Not built, deliberately: a per-page header note (the proposal's "(Address) Maintenance" line), italic text, click-on-the-page editing. Task-library wording (Boiler Major and Minor lists, the SUBCONTRACTOR flag) is catalogue data, not template data.
 - [x] Simpler template and contract editors (2026-11-13): layout rows fold to one line and open one at a time, rarely used options sit under "More options", preset lines and document options fold the same way. The data model and validation are unchanged
 - [ ] Starter agreement and contract templates in each pack, province-aware, legally reviewed
-- [ ] Upload an existing contract and let Claude split it into blocks and variables
+- [x] Upload an existing contract and let Claude split it into blocks and variables (2026-11-16, `.specs/features/contract-import/`, AD-191, no migration). On `/templates/contract` an owner or admin attaches a docx or pdf (up to 4 MiB); Claude returns heading, paragraph and clause blocks with only the eight identity variables (never `terms.*` or the province, so the document's own figures stay literal); the rows load unsaved into the editor and the existing save writes the next version. Live run 2026-11-16 with the real Claude call on a docx. Verifier round 1 FAIL on C5825 only (not run then); gaps it found were fixed. Not covered: saving an imported wording live, a pdf live, metering against the AI-import allowance
 
 ### Phase 5.6: Reporting (M20)
-- [ ] Report functions and views (`security invoker`), with the event-date rules above
-- [ ] Reports page: headline row, funnel, aging, loss reasons, renewals, revenue breakdown
-- [ ] CSV export and empty states
-- [ ] Role access: money for owner and admin, operational for estimators
+- [x] Report functions and views (`security invoker`), with the event-date rules above (`.specs/features/reporting/`, AD-190, migration `20261115110000_reports.sql` applied by the owner 2026-11-15; seven `report_*` functions; Verifier round 4 PASS, all 29 checks, the live pass author-run on 2026-11-16)
+- [x] Reports page: headline row, funnel, aging, loss reasons, renewals, revenue breakdown (`/reports`, losses grouped by outcome; revenue as of today)
+- [x] CSV export and empty states (`/reports/export`, six reports; one empty state for a new org)
+- [x] Role access: money for owner and admin, operational for estimators (enforced in the database; a viewer is redirected from the page and refused 403 on the export)
+
+### Phase 5.9: Launch, owner actions
+Things only the owner can do. Each one is drawn from an open item above.
+- [ ] Set the Supabase Auth SMTP sender to the verified Resend domain (decision 11; launch blocker)
+- [ ] Apply migration `20261115100000_db_freeze.sql` to the hosted project, then run the freeze check live
+- [ ] Find a lawyer to review the starter agreement and contract wording per province (decision 14; launch blocker)
+- [ ] Find one or two plumbing or electrical pilot contractors, and revisit the price points with them (decision 2)
+- [ ] Stripe go-live settings: webhook endpoint and its secret in Vault, only Cards enabled (test and live), `STRIPE_PUBLISHABLE_KEY` in each environment, `STRIPE_SECRET_KEY` set in production only once provisioning is confirmed
+- [ ] Live runs: a renewal of a canceled test subscription, and an agreement sent by email on production
+- [ ] Record the demo video and set `DEMO_VIDEO_URL`; confirm `SITE.contactEmail` in `web/components/site/content.ts`
+- [ ] Choose one home-page concept and delete the other two under `/concepts/a|b|c`
+- [ ] Decide on a refund or alert for a paid checkout the webhook refuses, and whether a "Resend email" control comes back
+- [ ] Optional: a plumber and an electrician review their starter packs (released 2026-11-09 on the owner's own review)
+
+### Phase 6: Post-contract operations (M16)
+No visit scheduling and no per-visit invoicing (decision 23). Nothing here is started or planned in detail; each item waits for a pilot customer who needs it.
+- [ ] Annual CPI adjustment on the contract anniversary, capped by the contract (n8n W6)
+- [ ] Renewals and cancellations beyond the auto-renew rule: cancel a live contract with the notice days applied
+- [ ] Mid-term amendments: change scope or price on a live contract, signed by both parties
+- [ ] Weekly cadence kind for trades that work weekly (janitorial, landscaping, pest control), beyond the 12-month grid
+- [ ] Quebec: its own e-signature framework and language rules, with counsel (decision 3)
+- [ ] Fire and elevator starter packs, once a practitioner reviews them (decision 5)
 
 
 
@@ -373,8 +390,9 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 20 | Reporting as a plan tier | No. Plans limit volume and include seats (amended 2026-11-09); features, templates and reports are the same on every plan | One pricing axis is easier to explain and build |
 | 21 | Build order | Finish Phase 4, then 4.5, 5, 5.5, then reporting (5.6) | Nobody can be sold a contract that cannot complete (the DocuSeal webhook, signed PDF and audit log are still open). Templates decide whether a contractor adopts the product; reports need real tenant data to say anything |
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
+| 23 | Scheduling | The product does not schedule visits or track who performs them, so Phase 6 has no visit schedule or per-visit invoicing. Visit months on the agreement grid stay: they are cadence, not scheduling (added 2026-11-15 by the owner) | Same line as the dispatch and GPS non-goal; the product feeds a field-service suite rather than replacing one |
 
-**Needs you:** a pilot contractor (2), a lawyer for the starter wording (14), and the Supabase SMTP change (11). Plan prices were set on 2026-11-13.
+**Needs you:** see Phase 5.9. Plan prices were set on 2026-11-13.
 
 ## Research sources
 - n8n license FAQ (backend-only use is allowed; Cloud has separate terms): https://docs.n8n.io/n8n-community-license/community-license/license-faq

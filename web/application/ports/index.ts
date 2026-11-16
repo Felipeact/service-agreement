@@ -14,6 +14,7 @@ import type { ContractDocument, ContractParties, ContractStatus, SignatureReques
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { DraftType } from "@/domain/catalog-draft";
+import type { SplitBlock } from "@/domain/contract/import";
 import type { TenantLogo } from "@/domain/org-settings/logo";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
@@ -479,6 +480,20 @@ export interface ImportAllowance {
   check(jobId: string): Promise<ImportAllowanceResult>;
 }
 
+/** Why a report could not be read: the role may not see it, or the database could not answer (reporting door 3). */
+export type ReportResult<T> = { ok: true; value: T } | { ok: false; code: "forbidden" | "unavailable" };
+
+/** The tenant reports of the signed-in member's own org, read under their role (reporting door 3). Money fields are null for an estimator. */
+export interface ReportReader {
+  headline(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").Headline>>;
+  funnel(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").FunnelRow[]>>;
+  aging(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").Aging>>;
+  losses(range: import("@/domain/reports").ReportRange): Promise<ReportResult<import("@/domain/reports").LossRow[]>>;
+  renewals(): Promise<ReportResult<import("@/domain/reports").RenewalRow[]>>;
+  revenueByCustomer(): Promise<ReportResult<import("@/domain/reports").CustomerRevenue[]>>;
+  revenueByType(): Promise<ReportResult<import("@/domain/reports").TypeRevenue[]>>;
+}
+
 /** The plan and usage of the member's own org for the billing page; `null` when it cannot be read. */
 export interface OrgUsageReader {
   read(): Promise<import("@/domain/billing/plan-limits").OrgUsage | null>;
@@ -588,6 +603,13 @@ export type DraftResult = { ok: true; types: DraftType[] } | { ok: false; code: 
 /** Drafts a catalog of types, checklists and months for a trade. Knows nothing about orgs: it receives the trade, the notes and the file only. */
 export interface CatalogDrafter {
   draft(input: { trade: string; notes: string; file?: DraftSource }): Promise<DraftResult>;
+}
+
+export type SplitResult = { ok: true; blocks: SplitBlock[] } | { ok: false; code: "unavailable" | "too_large" };
+
+/** Reads an existing contract into blocks (contract-import door 1). Knows nothing about orgs: it receives the file only. */
+export interface ContractSplitter {
+  split(input: { file: DraftSource }): Promise<SplitResult>;
 }
 
 export type AddDraftResult = { ok: true; added: number } | { ok: false; code: "forbidden" | "not_empty" | "invalid" | "unavailable" };
