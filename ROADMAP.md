@@ -338,10 +338,10 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [ ] Upload an existing contract and let Claude split it into blocks and variables
 
 ### Phase 5.6: Reporting (M20)
-- [ ] Report functions and views (`security invoker`), with the event-date rules above
-- [ ] Reports page: headline row, funnel, aging, loss reasons, renewals, revenue breakdown
-- [ ] CSV export and empty states
-- [ ] Role access: money for owner and admin, operational for estimators
+- [x] Report functions and views (`security invoker`), with the event-date rules above (`.specs/features/reporting/`, AD-190, migration `20261115110000_reports.sql` applied by the owner 2026-11-15; seven `report_*` functions; Verifier round 4 PASS, all 29 checks, the live pass author-run on 2026-11-16)
+- [x] Reports page: headline row, funnel, aging, loss reasons, renewals, revenue breakdown (`/reports`, losses grouped by outcome; revenue as of today)
+- [x] CSV export and empty states (`/reports/export`, six reports; one empty state for a new org)
+- [x] Role access: money for owner and admin, operational for estimators (enforced in the database; a viewer is redirected from the page and refused 403 on the export)
 
 
 

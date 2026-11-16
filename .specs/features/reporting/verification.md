@@ -1,6 +1,9 @@
 # Reporting verification
 
-**Verdict**: FAIL
+Rounds 1 to 3 are archived verbatim in the fenced block below (superseded by Round 4; fenced so the completion gate reads the current round, not the history).
+
+```text
+**Round 1 outcome (superseded by Round 4)**: FAIL
 **Profile**: ui
 **Diff range**: a0d2ea6..HEAD (c702243)
 **Round**: 1 - full
@@ -136,7 +139,7 @@ Known pre-existing failures re-run and confirmed unrelated (none names a reporti
 
 # Round 2
 
-**Verdict**: FAIL (round 2 verdict; round 1 above is kept as written)
+**Round 2 outcome (superseded by Round 4)**: FAIL (round 2 outcome; round 1 above is kept as written)
 **Profile**: ui
 **Diff range**: c702243..HEAD (9764140), plus every round 1 gap and unproven check re-proven
 **Round**: 2 - scoped (code and screen sections verified at 9764140; database sections carried from c702243, see below)
@@ -247,7 +250,7 @@ Closed since round 1: ROADMAP contradiction (lines 229, 231), AC 8 grouping (C57
 
 # Round 3
 
-**Verdict**: FAIL (round 3 verdict; rounds 1 and 2 above are kept as written)
+**Round 3 outcome (superseded by Round 4)**: FAIL (round 3 outcome; rounds 1 and 2 above are kept as written)
 **Profile**: ui
 **Diff range**: 9764140..HEAD (3c7b594), plus every round 2 open item re-proven
 **Round**: 3 - scoped (proofs verified at 3c7b594; C5701 to C5716 re-proven this round; unchanged round 2 sections carried from 9764140)
@@ -336,3 +339,73 @@ Known pre-existing failures, not findings and outside this run's scope: `domain/
 2. Surviving mutant F18 - C5765's pipeline stat assertion (`page.test.tsx:193`) matches `$2,399.98`, which other elements also render, so a wrong pipeline value passes. Tighten the assertion.
 
 Closed since round 2: the database proof re-run (C5701 to C5716, `plain("reports")` at `runner.mts:70`) and C5765 for type rows, range controls and the Expired group.
+
+```
+
+---
+
+# Round 4
+
+**Verdict**: PASS with one named caveat (C5751 is author-run; the Verifier did not observe any browser session). Rounds 1 to 3 above are kept as written.
+**Profile**: ui
+**Diff range**: 3c7b594..HEAD (7d01900), plus every round 3 open item re-proven
+**Round**: 4 - scoped (proofs verified at 7d01900; binding sources, coverage and test policy carried from 3c7b594 because b017412 changed only `page.test.tsx` and 7d01900 only docs)
+**Verifier**: independent sub-agent (author != verifier)
+
+Summary: the round 3 surviving mutant F18 is now killed. Every code and database proof is green at HEAD. The only caveat is C5751: the live browser pass was run by the author and recorded in the checks.md Handoff; this Verifier did not observe it.
+
+## Binding sources (round 4)
+
+| Source | Opened | Contradiction | Uncovered |
+| --- | --- | --- | --- |
+| `reports-view.tsx`, `page.tsx`, `export/route.ts` re-read statically against the C5751 Handoff record | yes | none: the seven sections the Handoff names are the seven `Section` ids at `reports-view.tsx:103,124,149,185,219,315,324`; agreement links `min-h-11 ... lg:min-h-0` at `:95`; date inputs only `sm:w-44` at `:286-287`; the only `overflow` class is `overflow-hidden` on the funnel bar (`:132`), no `overflow-x` anywhere; export answers `text/csv; charset=utf-8` with an attachment name at `export/route.ts:41-42` | - |
+
+Carried from 3c7b594 for the rest (views and routes untouched since).
+
+## Checks (round 4)
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C5765 | Type rows, Apply range, Last 12 months, pipeline stat, Expired group without a Reason line | `npx vitest run ... "app/(app)/reports"` (listed individually, passed) and the F18 re-injection below | `page.test.tsx:192` `expect(html).toMatch(/Pipeline value<\/dt><dd[^>]*>\$2,399\.98</)`, `:193` `expect(html).toMatch(/Recurring revenue<\/dt><dd[^>]*>\$1,199\.99</)`, `:188` `"Aaa Type"`, `:190` `"Apply range"`, `:191` `/<a href="\/reports"[^>]*>Last 12 months/`, `:194` `"Expired · 1"`, `:195` `not.toContain("Reason:")` | PASS |
+| C5701 to C5716 | Database report functions | `cd web && npm run test:db reports`: `PASS reports`, 1 passed, 0 failed, rolled back, nothing applied | assertion lines as in round 3 (`reports.sql:73` C5701 `h.recurring_cents = 119999`, `:157` C5715 `on_second = 0`, `:236` C5708, `:265` C5711 `'42501'`); `reports.sql` unchanged since 3c7b594 | PASS |
+| C5721 to C5726, C5731, C5741, C5742, C5743, C5761 to C5764 | Domain, adapter, routes, page, nav, wiring | single vitest run, each appears individually as passed in the verbose output (C5763 as `C5731: getContainer() exposes the report reader`, C5764 as `a start date after today with no end is 400`) | as round 2 and 3: `reports.test.ts:34,38`, `route.test.ts:60`, `page.test.tsx:157-182`, `nav-gate.test.ts:33`, `composition.test.ts:130-131` | PASS |
+| C5751 | Live browser pass 375/768/1440, CSV, targets, console | not run by the Verifier. The author's record is the last bullet of the checks.md Handoff ("C5751 author-run, 2026-11-15/16") | The record is specific (demo workspace owner, dev server, hosted database; 1440 px: all seven sections, 0 console warnings; export 200 `text/csv` with `Stage,Agreements,Value` rows and 400 for `report=nope`; 768 and 375 px: scrollWidth equals clientWidth, no link, button or input under 44 px, nothing past the right edge; Apply range submitted the GET form) and states what was not exercised (non-empty org, estimator and viewer roles). It is consistent with the code read statically: sections `reports-view.tsx:103-324`, 44 px classes `:95` and `components/ui/button.tsx:13`, no `overflow-x`, export headers `route.ts:41-42` | PASS-author-run (I did not observe it myself) |
+
+## Coverage (round 4)
+
+| Set (size) | Recomputed from | Member -> proof | Unproven |
+| --- | --- | --- | --- |
+| screen elements added by C5765 (5) | round 2 open list | type rows `page.test.tsx:188-189`, Apply range `:190`, Last 12 months `:191`, pipeline stat `:192`, Expired group `:194-195` | - |
+| report functions (7), roles (4), events (3), buckets (3) | plan | `reports.sql` re-run at HEAD | - |
+| viewport widths (3) | C5751 | 375, 768, 1440 in the author-run record | - |
+
+The viewport row is Unproven only in the sense that no Verifier observed it; it rests on the author-run record and is named as the caveat.
+
+## Test policy rows (round 4)
+
+| Row | Files it classifies | Required proof | Expectation met |
+| --- | --- | --- | --- |
+| `public.report_*` | migration | `reports.sql` recipe | yes, re-run at HEAD |
+| `domain/reports` | `index.ts` | `reports.test.ts` | yes, green at HEAD |
+| `app/(app)/reports/export` | `route.ts` | `route.test.ts` | yes, green at HEAD |
+| adapter, page markup (instrumentation) | `reports.ts`, `reports-view.tsx` | C5731, C5742, C5761 to C5765 | yes, F18 now killed |
+
+## Faults injected (round 4)
+
+Method: real tree mutated in place, reverted with `git checkout -- <file>` (no stash); `git status --porcelain` was empty before and after.
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| F18 re-injected: Pipeline value stat shows `recurringCents` instead of `pipelineCents` | `web/components/reports/reports-view.tsx:109` | yes: `npx vitest run "app/(app)/reports/page.test.tsx" -t C5765` failed at `page.test.tsx:192` (`Pipeline value<\/dt>...\$2,399\.98` no longer matches); `1 failed, 13 skipped` |
+
+1 injected, 1 killed. Rounds 1 to 3 faults carried.
+
+## Gate (round 4)
+
+`cd web && npx vitest run domain/reports infrastructure/supabase/reports.test.ts "app/(app)/reports" components/shell/nav-items.test.ts composition/composition.test.ts scripts/test-db --reporter=verbose` - 172 passed, 0 failed (9 files).
+`cd web && npm run test:db reports` - `PASS reports`, 1 passed, 0 failed (rolled back).
+Known pre-existing failures, not run and not findings: `domain/purity.test.ts` C2021, components/kanban, pricing catalog, `components/vocabulary.test.ts` C2019, `components/shell/app-shell.test.ts` C1590.
+
+## Caveat
+
+C5751 is an author-run live check. A Verifier cannot observe a browser, so it is scored PASS-author-run on the strength of a specific Handoff record that matches the static code, not as something observed here. Not exercised live by the author: a non-empty org and the estimator and viewer roles (those are covered by the code tests C5742 and C5762).
