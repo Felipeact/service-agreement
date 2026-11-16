@@ -45,15 +45,15 @@ describe("/templates/contract", () => {
     const html = await render();
     expect(html).toContain("Contract wording");
     expect(html).toContain("This is the standard wording.");
-    expect(html).toContain('id="doc-title"');
+    expect(html).toContain('id="document-title"');
     expect(html).toContain('value="Service Contract"');
-    expect(html).toContain("Invoices are payable within {{terms.paymentDays}}.");
+    expect(html).toContain("Invoices are payable within");
+    expect(html).toContain('data-variable="terms.paymentDays"');
     expect(html).toContain("Signatures");
-    const form = html.indexOf('<section aria-label="Contract wording form"');
-    const preview = html.indexOf('<section aria-label="Preview"');
-    expect(form).toBeGreaterThan(-1);
-    expect(preview).toBeGreaterThan(form);
-    expect(html.indexOf('id="doc-title"')).toBeLessThan(preview);
+    // The page and the Preview PDF button replace the form and the live pane.
+    expect(html).toContain('aria-label="Document page"');
+    expect(html).toContain("Preview PDF");
+    expect(html).not.toContain('aria-label="Preview"');
   });
 
   test("C5552: the org's own wording opens with its own options and rows, and says saving writes a new version", async () => {
@@ -62,7 +62,7 @@ describe("/templates/contract", () => {
     expect(html).toContain("Saving writes a new version.");
     expect(html).toContain('value="PREVENTIVE MAINTENANCE SERVICE AGREEMENT"');
     expect(html).toContain("1. Service provided");
-    expect(html).toContain('value="Client"');
+    expect(html).toContain("Client");
     expect(html).not.toContain("Invoices are payable within {{terms.paymentDays}}.");
   });
 

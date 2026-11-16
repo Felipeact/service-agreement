@@ -75,9 +75,9 @@ describe("/templates/[templateId]", () => {
     expect(html).toContain("Edit template");
     expect(html).toContain("Saving writes version 5.");
     expect(html).toMatch(/id="template-name"[^>]*value="Quarterly HVAC"/);
-    // A schema 1 body opens as its layoutOf rows: the closing clause is the sixth row, after the terms.
-    expect(html).toMatch(/<textarea[^>]*id="layout-5-text"[^>]*>Thank you\.<\/textarea>/);
-    expect(html).toContain('id="doc-title"');
+    // A schema 1 body opens as its layoutOf rows: the closing clause is the last block on the page, after the terms.
+    expect(html.indexOf("Thank you.")).toBeGreaterThan(html.indexOf("Select Terms"));
+    expect(html).toContain('id="document-title"');
     expect(html).toContain("Preventive maintenance service agreement");
   });
 });

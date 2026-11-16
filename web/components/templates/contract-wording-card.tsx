@@ -1,18 +1,27 @@
+import { Icon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 
 /**
- * The Contract wording card below the agreement templates (block-editor AC 46): which wording new contracts use, and for an owner or
- * admin the way into its editor. Everyone else sees the card and no link.
+ * The Contract wording card, in the same grid as the agreement templates (template-editor-v2 AC 36): which wording new contracts use,
+ * and for an owner or admin the way into its editor. Everyone else sees the card and no link.
  */
 export function ContractWordingCard({ own, canWrite }: { own: boolean; canWrite: boolean }) {
   return (
-    <section aria-label="Contract wording" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-col gap-0.5">
-        <h2 className="font-display text-[16px] font-semibold tracking-tight">Contract wording</h2>
-        <p className="text-[13px] font-medium text-ink">{own ? "Your contract wording" : "Standard contract wording"}</p>
-        <p className="text-[13px] text-ink-2">The terms, schedules and signature blocks on the contract a customer signs after accepting an agreement.</p>
+    <article aria-label="Contract wording" className="flex h-full flex-col gap-3 rounded-panel border border-hairline bg-surface p-5 shadow-card">
+      <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-control bg-action-tint text-action">
+        <Icon name="file" className="size-5" />
+      </span>
+      <div className="flex flex-col gap-1">
+        <h3 className="font-display text-[16px] leading-snug font-semibold tracking-tight">Contract wording</h3>
+        <p className="line-clamp-2 min-h-[2.9em] text-[13px] text-ink-2">The terms, schedules and signature blocks on the contract a customer signs after accepting an agreement.</p>
       </div>
-      {canWrite && <LinkButton href="/templates/contract">{own ? "Edit" : "Customize"}</LinkButton>}
-    </section>
+      <hr className="border-hairline" />
+      <span className="text-[12px] font-semibold text-ink">{own ? "Your contract wording" : "Standard contract wording"}</span>
+      {canWrite && (
+        <LinkButton href="/templates/contract" className="mt-auto w-full">
+          {own ? "Edit" : "Customize"}
+        </LinkButton>
+      )}
+    </article>
   );
 }

@@ -8,7 +8,6 @@ import { SYSTEM_CONTRACT_BODY } from "@/domain/contract";
 import { importedWordingForm } from "@/domain/contract/import";
 import { contractFormFromBody, type ContractLayoutForm } from "@/domain/contract/layout-form";
 import { ContractWordingEditor } from "./contract-wording-editor";
-import { PREVIEW_DEBOUNCE_MS } from "./template-preview-frame";
 import { IMPORT_MESSAGES, IMPORT_NOTICE, type ImportContractWordingState, type SaveContractWordingState } from "./state";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -40,28 +39,28 @@ const mount = (importAction: (formData: FormData) => Promise<ImportContractWordi
   act(async () => {
     root.render(createElement(ContractWordingEditor, { initial: INITIAL, save, importAction }));
   });
-const rowTexts = () => [...container.querySelectorAll('section[aria-label="Layout"] > ol > li')].map((li) => li.textContent ?? "");
+const rowTexts = () => [...container.querySelectorAll('article[aria-label="Document page"] > ol > li')].map((li) => li.textContent ?? "");
 const fileInput = () => container.querySelector("#contract-import-file") as HTMLInputElement;
 const choose = (name: string) => Object.defineProperty(fileInput(), "files", { value: [new File([new Uint8Array([1])], name)], configurable: true });
 const readButton = () => [...container.querySelectorAll("button")].find((b) => /Read my contract|Reading/.test(b.textContent ?? "")) as HTMLButtonElement;
 const press = () => act(async () => readButton().click());
+const button = (name: string) => [...container.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === name);
 const lastPreviewBody = () => JSON.parse(String(((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1) as [string, RequestInit])[1].body));
 
 describe("the import control in the contract wording editor", () => {
-  test("C5818: after an import the rows are the imported ones, the banner names the file, and the preview request carries them", async () => {
+  test("[C33] C5818: after an import the rows are the imported ones, the banner names the file, and the preview request carries them", async () => {
     await mount(async () => ({ status: "imported", form: IMPORTED }));
     choose("Our contract.docx");
     await press();
     expect(container.querySelector('[role="status"]')?.textContent).toBe("Imported from Our contract.docx. Nothing is saved until you save.");
     expect(rowTexts().length).toBe(IMPORTED.layout.length);
     expect(container.innerHTML).toContain("Imported terms");
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, PREVIEW_DEBOUNCE_MS + 100));
-    });
+    // The PDF is drawn when the owner asks for it, from the rows as they are then.
+    await act(async () => (button("Preview PDF") as HTMLButtonElement).click());
     expect(lastPreviewBody()).toEqual(JSON.parse(JSON.stringify(IMPORTED)));
   });
 
-  test("C5819: with unsaved edits the editor asks before replacing and keeps them on cancel; with none it does not ask", async () => {
+  test("[C33] C5819: with unsaved edits the editor asks before replacing and keeps them on cancel; with none it does not ask", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     await mount(async () => ({ status: "imported", form: IMPORTED }));
     choose("a.docx");
@@ -81,14 +80,14 @@ describe("the import control in the contract wording editor", () => {
     expect(container.innerHTML).toContain("Imported terms");
   });
 
-  test("C5819: cancelling the confirmation leaves the editor's own rows in place", async () => {
+  test("[C33] C5819: cancelling the confirmation leaves the editor's own rows in place", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     await mount(async () => ({ status: "imported", form: IMPORTED }));
-    // Make an edit first: remove the first row's text through the first row's text field.
-    const field = container.querySelector('section[aria-label="Layout"] textarea, section[aria-label="Layout"] input[type="text"]') as HTMLTextAreaElement | HTMLInputElement;
-    const proto = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    // Make an edit first: select the first block on the page and type in its text field.
+    await act(async () => (container.querySelector('article[aria-label="Document page"] [aria-label^="Select Heading"]') as HTMLElement).click());
+    const field = container.querySelector("textarea") as HTMLTextAreaElement;
     await act(async () => {
-      Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(field, "edited by hand");
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(field, "edited by hand");
       field.dispatchEvent(new Event("input", { bubbles: true }));
     });
     const before = rowTexts();
@@ -100,7 +99,7 @@ describe("the import control in the contract wording editor", () => {
     expect(container.textContent).not.toContain("Imported from");
   });
 
-  test("C5820: saving after an import sends the imported form to the existing save once", async () => {
+  test("[C33] C5820: saving after an import sends the imported form to the existing save once", async () => {
     save.mockClear();
     await mount(async () => ({ status: "imported", form: IMPORTED }));
     choose("a.docx");
@@ -110,7 +109,7 @@ describe("the import control in the contract wording editor", () => {
     expect(save).toHaveBeenCalledWith(IMPORTED);
   });
 
-  test("C5820: after the save the import banner is gone and only the saved line remains", async () => {
+  test("[C33] C5820: after the save the import banner is gone and only the saved line remains", async () => {
     await mount(async () => ({ status: "imported", form: IMPORTED }));
     choose("a.docx");
     await press();

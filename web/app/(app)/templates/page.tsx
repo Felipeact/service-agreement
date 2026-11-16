@@ -8,29 +8,20 @@ import { archiveTemplateAction, customizeSystemTemplateAction, duplicateTemplate
 
 export const metadata: Metadata = { title: "Agreement templates" };
 
-type Params = Record<string, string | string[] | undefined>;
-
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-
-/** Every member sees the list and the preview; `?selected=<templateId>` picks the card, else the first (agreement-templates AC 16, 17, 21, 22). */
-export async function TemplatesForRequest({ params }: { params: Params }) {
-  const { currentMember, listAgreementTemplates, listAssetTypes, getItemWords, getContractWording, clock } = await getContainer();
+/** Every member sees the list; Use template and the card menu follow the member's role (template-editor-v2 AC 35). */
+export async function TemplatesForRequest() {
+  const { currentMember, listAgreementTemplates, getContractWording, clock } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
-  const [list, types, words, wording] = await Promise.all([listAgreementTemplates(), listAssetTypes(), getItemWords(member.orgId), getContractWording()]);
+  const [list, wording] = await Promise.all([listAgreementTemplates(), getContractWording()]);
   const templates = list.ok ? list.templates : null;
   // Use template opens the New agreement dialog over this page, so the dialog's customers, sites and actions are read for those who can start one.
   const dialog = canUseTemplates(member.role) ? await dialogProps(list) : undefined;
-  const asked = first(params.selected);
-  const selectedId = templates?.find((template) => template.id === asked)?.id ?? templates?.[0]?.id ?? null;
   return (
     <TemplatesView
       templates={templates}
-      selectedId={selectedId}
       role={member.role}
-      typeNames={Object.fromEntries(types.map((type) => [type.code, type.name]))}
       now={clock.now()}
-      words={words}
       dialog={dialog}
       contractWording={wording.ok ? { own: wording.own } : undefined}
       actions={canWriteTemplates(member.role) ? { duplicate: duplicateTemplateAction, archive: archiveTemplateAction, customize: customizeSystemTemplateAction } : undefined}
@@ -38,6 +29,6 @@ export async function TemplatesForRequest({ params }: { params: Params }) {
   );
 }
 
-export default async function TemplatesPage({ searchParams }: PageProps<"/templates">) {
-  return <TemplatesForRequest params={await searchParams} />;
+export default async function TemplatesPage() {
+  return <TemplatesForRequest />;
 }
