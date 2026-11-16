@@ -95,6 +95,15 @@ describe("Preview PDF", () => {
     expect(withText(dialog()!, "button", "Try again")).toBeDefined();
   });
 
+  test("[C26] a refusal from the route (422) shows the frame's message in the dialog and no PDF", async () => {
+    fetchSpy.mockResolvedValue(new Response("{}", { status: 422, headers: { "Content-Type": "application/json" } }));
+    await mount({ title: "Hello" });
+    await click(opener());
+    await act(async () => {});
+    expect(dialog()?.textContent).toContain("Fix the highlighted fields to refresh the preview.");
+    expect(container.querySelector("iframe")).toBeNull();
+  });
+
   test("[C27] Escape closes the dialog and focus returns to the Preview PDF button", async () => {
     fetchSpy.mockResolvedValue(pdf());
     await mount({ title: "Hello" });

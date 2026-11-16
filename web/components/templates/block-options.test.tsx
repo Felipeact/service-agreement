@@ -127,6 +127,14 @@ describe("page settings and details", () => {
     expect(card.querySelectorAll("textarea")).toHaveLength(0);
   });
 
+  test("[C21] Escape closes the Page settings", async () => {
+    await mountAgreement();
+    await click(withText(container, "button", "Page settings"));
+    expect(container.querySelector('section[aria-label="Page settings"]')).not.toBeNull();
+    await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(container.querySelector('section[aria-label="Page settings"]')).toBeNull();
+  });
+
   test("[C21] a switch changes only its own option", async () => {
     await mountAgreement();
     await click(withText(container, "button", "Page settings"));

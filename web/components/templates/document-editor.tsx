@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { SectionKey } from "@/domain/agreement/layout";
 import { newBlockRow, newSectionRow, type BlockRow, type LayoutFormState, type LayoutRow, type SectionRow } from "@/domain/agreement/layout-form";
 import type { TemplateVariable } from "@/domain/contract/template";
-import { insertRow, insertRowAt, insertVariable, moveRow, moveRowTo, removeRow, restoreRow, type DragPayload, type EditorDocument, type RemovedRow } from "@/domain/templates/editor-model";
+import { insertRow, insertRowAt, insertVariable, moveRow, moveRowTo, partsOf, removeRow, restoreRow, type DragPayload, type EditorDocument, type RemovedRow } from "@/domain/templates/editor-model";
 import { AddElementDock, type AddChoice } from "./add-element-dock";
 import { HeaderPopover, OptionsCard, PageSettingsFields, PartOptions } from "./block-options";
 import { EditorPage } from "./editor-page";
@@ -85,8 +85,9 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
       return;
     }
     const { choice } = payload;
-    // A part the page already has cannot be added twice, by drag or by click.
-    if (choice.kind === "part" && rows.some((row) => row.kind === "section" && row.key === choice.key)) return;
+    // A part the page already has cannot be added twice, and a part this document does not have (terms in a contract, signatures in an
+    // agreement) cannot be dropped in from another window.
+    if (choice.kind === "part" && (!partsOf(kind).includes(choice.key) || rows.some((row) => row.kind === "section" && row.key === choice.key))) return;
     const out = insertRowAt(rows, at, choice.kind === "block" ? newBlockRow(choice.type) : newSectionRow(choice.key));
     setRows(out.rows);
     setSelected(out.index);

@@ -164,6 +164,19 @@ describe("what cannot be dropped", () => {
     expect(pageItems(container)).toHaveLength(7);
   });
 
+  test("[C45] a part the document does not have, dropped in from another window, changes nothing", async () => {
+    await mountContract();
+    const terms = transfer();
+    terms.setData(DRAG_TYPE, JSON.stringify({ kind: "add", choice: { kind: "part", key: "terms" } }));
+    await fire(pageItems(container)[0], "drop", { transfer: terms, clientY: UPPER });
+    expect(pageItems(container)).toHaveLength(3);
+    await mountAgreement();
+    const signatures = transfer();
+    signatures.setData(DRAG_TYPE, JSON.stringify({ kind: "add", choice: { kind: "part", key: "signatures" } }));
+    await fire(pageItems(container)[0], "drop", { transfer: signatures, clientY: UPPER });
+    expect(pageItems(container)).toHaveLength(7);
+  });
+
   test("[C45] text dragged in from somewhere else, and a payload of another shape, change nothing", async () => {
     await mountAgreement();
     for (const raw of ["hello", '{"kind":"add","choice":{"kind":"block","type":"table"}}', '{"kind":"move","from":99}']) {

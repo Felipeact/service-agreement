@@ -122,7 +122,7 @@ describe("the import control in the contract wording editor", () => {
     expect(container.textContent).toContain("Saved.");
   });
 
-  test("C5821: the notice sits beside the control, and the control is absent when no import action is given", async () => {
+  test("[C33] C5821: the notice sits beside the control, and the control is absent when no import action is given", async () => {
     await mount(async () => ({ status: "imported", form: IMPORTED }));
     expect(IMPORT_NOTICE).toBe("A starting point: you own your wording. Read it through, and confirm it is valid under your province's law.");
     expect(container.querySelector("#contract-import-file")!.closest("div")!.textContent).toContain(IMPORT_NOTICE);

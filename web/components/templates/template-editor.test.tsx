@@ -209,6 +209,15 @@ describe("saving", () => {
   });
 });
 
+describe("leaving", () => {
+  test("[C28] the back link in the header leads to the Templates list, in both editors", async () => {
+    await mountAgreement();
+    expect(container.querySelector('form a[href="/templates"]')?.textContent).toContain("Templates");
+    await mountContract();
+    expect(container.querySelector('form a[href="/templates"]')?.textContent).toContain("Templates");
+  });
+});
+
 describe("one editor", () => {
   test("[C32] the agreement and the contract are the same editor: the same panel, page and header controls, with the parts of their own document", async () => {
     const shape = () => ({

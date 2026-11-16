@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { MonthGrid, monthBox, monthChoice } from "@/components/ui/month-grid";
 import { Select } from "@/components/ui/select";
@@ -251,6 +251,15 @@ export function DetailsFields({ description, termMonths, onChange, errors }: { d
 /** A header button that opens a card of fields under it and closes again; nothing here needs hover. */
 export function HeaderPopover({ label, children }: { label: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  // Escape closes it, as it closes the preview dialog.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.document.addEventListener("keydown", onKeyDown);
+    return () => window.document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
   return (
     <div className="relative">
       <Button onClick={() => setOpen((was) => !was)} aria-expanded={open}>

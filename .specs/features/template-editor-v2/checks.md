@@ -59,7 +59,7 @@ Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C13\
 Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C14\]"`
 
 **C15** - A newly added text block's field takes focus (AC 15)
-Proof: `npx vitest run components/templates/add-element-dock.test.tsx -t "\[C15\]"`
+Proof: `npx vitest run components/templates/template-editor.test.tsx -t "\[C15\]"`
 
 **C16** - The Field button lists the 16 merge variables as chips, and choosing one inserts `{{name}}` at the caret, or at the end when the field was not focused, and closes the list (AC 16)
 Proof: `npx vitest run domain/templates/editor-model.test.ts -t "\[C16\]"`
@@ -96,15 +96,15 @@ Proof: `npx vitest run components/templates/preview-dialog.test.tsx -t "\[C24\]"
 **C25** - A form that cannot be drawn opens the dialog with "Fix the highlighted blocks to preview" and makes no request (AC 25)
 Proof: `npx vitest run components/templates/preview-dialog.test.tsx -t "\[C25\]"`
 
-**C26** - A failed request, and an answer that is not a PDF, each show "Preview unavailable." with Try again, and Try again requests again (AC 26)
+**C26** - A failed request, and an answer that is not a PDF, each show "Preview unavailable." with Try again, and Try again requests again; a refusal from the route (422) shows "Fix the highlighted fields to refresh the preview." and no PDF (AC 26)
 Proof: `npx vitest run components/templates/preview-dialog.test.tsx -t "\[C26\]"`
 
-**C27** - Escape or Close closes the dialog and returns focus to the Preview PDF button; below 1024 px it offers "Open in a new tab" (AC 27)
+**C27** - Escape or Close closes the dialog and returns focus to the Preview PDF button, and the dialog offers "Open the preview in a new tab" at every width (AC 27)
 Proof: `npx vitest run components/templates/preview-dialog.test.tsx -t "\[C27\]"`
 
 ### S5 - Save, import, one editor · `template-editor.tsx`, the three page modules · ~35 KB · ~14k
 
-**C28** - Save template calls the save with the same input as before (agreement: `save(templateId, values)`; contract: `save(values)`), and the contract editor shows its saved message and stays open (AC 28)
+**C28** - Save template (the contract's button reads Save wording) calls the save with the same input as before (agreement: `save(templateId, values)`; contract: `save(values)`), and the contract editor shows its saved message and stays open (AC 28)
 Proof: `npx vitest run components/templates/template-editor.test.tsx -t "\[C28\]"`
 
 **C29** - The header reads "Unsaved changes" while the form differs from the last save, and "Saved" otherwise (AC 29)
@@ -121,7 +121,7 @@ Proof: `npx vitest run "app/(app)/templates/page.test.ts" -t "\[C32\]"`
 Proof: `npx vitest run components/templates/template-editor.test.tsx -t "\[C32\]"`
 
 **C33** - The contract editor shows Import for an owner or admin and keeps the unsaved-rows and overwrite guard (AC 33)
-Proof: `npx vitest run components/templates/contract-import.test.tsx -t "\[C33\]"`
+Proof: `npx vitest run components/templates/contract-import.test.tsx "app/(app)/templates/contract/page.test.ts" -t "\[C33\]"`
 
 **C34** - A role that cannot write templates is redirected to `/templates` from both editor routes (AC 34)
 Proof: `npx vitest run "app/(app)/templates/page.test.ts" -t "\[C34\]"`
@@ -153,7 +153,7 @@ Proof: `npx vitest run components/templates/editor-page.test.tsx -t "\[C40\]"`
 **C41** - At 1440 px with the sidebar open, the dock and the page are fully visible with no horizontal scroll (AC 41)
 Proof: author-run live pass at 1440 px with the sidebar open, comparing the dock's and the page's bounding boxes to the viewport
 
-**C42** - The old editor files and their now-wrong tests are gone, and `npx tsc --noEmit`, `npx eslint components/templates "app/(app)/templates"` and the whole `npx vitest run` pass (all ACs, regression)
+**C42** - The old editor files and their now-wrong tests are gone, `npx tsc --noEmit` and `npx eslint components/templates "app/(app)/templates"` pass, and the whole `npx vitest run` fails only in the 33 tests that also fail on the base commit 7e26f69 (all ACs, regression)
 Proof: `npx tsc --noEmit`
 Proof: `npx eslint components/templates "app/(app)/templates"`
 Proof: `npx vitest run`
@@ -167,7 +167,7 @@ Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C43\]"`
 **C44** - Dropping an Add Element item inserts the new block at the drop line, selected, a text block's field focused (AC 43)
 Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C44\]"`
 
-**C45** - A part already on the page is not draggable, and dropping its payload changes nothing (AC 44)
+**C45** - A part already on the page is not draggable, and dropping its payload, or a part the document does not have (terms in a contract, signatures in an agreement), changes nothing (AC 44)
 Proof: `npx vitest run components/templates/editor-drag.test.tsx -t "\[C45\]"`
 
 **C46** - Dropping a block dragged by its grip moves that row to the drop line, keeps it selected and keeps the other rows in order; a drop where it already is changes nothing (AC 45)
@@ -218,9 +218,9 @@ Evidence:
 
 - `domain/templates/editor-model.ts` (new): 6 helpers, about 14 branch points -> decides
 - `components/templates/editor-page.tsx` (new): selection, five toolbar rules, error outline -> decides
-- `components/templates/add-element-panel.tsx` (new): group layout, on-page state, field menu -> decides
+- `components/templates/add-element-dock.tsx` (new): group layout, on-page state, field menu -> decides
 - `components/templates/preview-dialog.tsx` (new): five outcomes -> decides
-- closest analogue: `components/templates/block-editor.test.tsx`, same shape, already proven at this level with about 40 cases
+- closest analogue: `components/templates/editor-page.test.tsx`, same shape, already proven at this level with about 40 cases
 
 Cost: 5 proof files at their own layer, about 120 asserted cases. Without these rows the toolbar and panel rules would be proven only by the save path traversing them.
 

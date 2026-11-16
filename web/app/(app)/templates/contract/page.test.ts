@@ -71,7 +71,7 @@ describe("/templates/contract", () => {
     await expect(ContractWordingPage()).rejects.toThrow("could not be read");
   });
 
-  test("C5821: the page gives the editor the import action, so the Import control and its notice are on the page", async () => {
+  test("[C33] C5821: the page gives the editor the import action, so the Import control and its notice are on the page", async () => {
     const html = await render();
     // The control lives in the header's Import contract popover, closed until the owner opens it.
     expect(html).toContain("Import contract");

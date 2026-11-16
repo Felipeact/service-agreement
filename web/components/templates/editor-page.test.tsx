@@ -56,6 +56,9 @@ describe("the page", () => {
     await selectItem(container, 1);
     expect(container.querySelectorAll('[aria-current="true"]')).toHaveLength(1);
     expect(pageItems(container)[1].querySelector('[aria-current="true"]')).not.toBeNull();
+    // the selected block is outlined in Action Blue; an unselected one is not
+    expect(frameOf(container, 1).className).toContain("border-action");
+    expect(frameOf(container, 0).className).not.toContain("border-action");
     const frame = frameOf(container, 3);
     await act(async () => frame.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
     expect(container.querySelectorAll('[aria-current="true"]')).toHaveLength(1);
@@ -69,6 +72,12 @@ describe("the page", () => {
     await mountAgreement();
     await selectItem(container, 0);
     expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Size 1", "Size 2", "Delete"]);
+    await selectItem(container, 1);
+    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Delete"]);
+  });
+
+  test("[C3] a clause's toolbar has the indents and Page break, and no Size", async () => {
+    await mountContract();
     await selectItem(container, 1);
     expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Delete"]);
   });
@@ -228,6 +237,17 @@ describe("touch and keyboard", () => {
     await selectItem(container, 0);
     const small = [...container.querySelectorAll("button, a")].filter((element) => !FORTY_FOUR.test(element.className) && !/(?:^|\s)(?:min-h-11|h-11)(?:\s|$)/.test(element.className));
     expect(small.map((element) => `${element.tagName} ${element.textContent}`)).toEqual([]);
+  });
+
+  test("[C39] the fields and switches of the header popovers carry the 44px class too", async () => {
+    await mountAgreement();
+    await click(withText(container, "button", "Details"));
+    await click(withText(container, "button", "Page settings"));
+    const small = [...container.querySelectorAll("section[aria-label] input:not([role='switch']), section[aria-label] select, section[aria-label] textarea")].filter((field) => !/(?:^|\s)(?:min-h-11|h-11)(?:\s|$)/.test(field.className) && !/(?:^|\s)h-11(?:\s|$)/.test(field.className) && field.tagName !== "TEXTAREA");
+    expect(small.map((field) => field.id)).toEqual([]);
+    const labels = [...container.querySelectorAll('input[role="switch"]')].map((input) => input.closest("label")!.className);
+    expect(labels.length).toBe(2);
+    for (const label of labels) expect(label).toContain("min-h-11");
   });
 
   test("[C40] every action has an accessible name, can take focus, and nothing needs a drag", async () => {
