@@ -1,24 +1,26 @@
 # P0 launch fixes verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: ui
-**Diff range**: 88017a0^..HEAD (HEAD 2126db2)
-**Round**: 2 - full (all 26 checks re-run; round 1 findings re-judged)
+**Diff range**: 88017a0^..HEAD (HEAD 6699518)
+**Round**: 3 - full (all 26 checks re-run at HEAD; round 2 failures re-judged)
 **Verifier**: independent sub-agent (author != verifier)
+
+Residual risk accepted, not hidden: C6021 and the "byte-for-byte" half of C6012 cannot be replayed against the migration itself (applied once to the hosted project). They are proven by restated conditions and catalog assertions, judged below as adequate but not a proof of the migration run. See the C6021 and C6012 rows.
 
 ## Binding sources
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| plan `Landing` doors 1-3 vs `supabase/migrations/20261116120000_p0_launch_fixes.sql` and `supabase/tests/p0_launch_fixes.sql` | yes - read both | none | Door 2 cascade "deleting the version" has no assertion (only the asset side, `p0_launch_fixes.sql:198-200`) |
+| plan `Landing` doors 1-3 vs `supabase/migrations/20261116120000_p0_launch_fixes.sql` and `supabase/tests/p0_launch_fixes.sql` | yes - read both | none | - |
 | plan `Surface` (3 public routes, 2 RPCs) | yes | none | - |
 | plan AC 1-26 vs checks C6001-C6026 | yes | none | - |
 
-No design-file source is marked binding in the plan. Not observed by me: the live browser runs the author reports (legal pages at 375/768/1440, Settings banner, Send gate refusal on production). C6026's second half (no horizontal scroll) and the Scope control's click path therefore rest on the author's word.
+Door 2 version-side cascade, uncovered in round 2, is now asserted at `p0_launch_fixes.sql:245`. No design-file source is marked binding in the plan. Not observed by me: the live browser runs the author reports (legal pages at 375/768/1440, Settings banner, Send gate refusal). C6026's no-horizontal-scroll half therefore rests on the author's word. I also did not read the hosted `org_settings` rows (the demo org reading null); that is the author's claim.
 
 ## Checks
 
-Proofs run at HEAD: `npm run test:db p0_launch_fixes` (PASS, 1 passed 0 failed, rolled back) and one vitest invocation over 8 files, 17 files / 424 tests passed, every C60xx name listed individually as passed.
+Proofs at HEAD: `npm run test:db p0_launch_fixes` (PASS, 1 passed 0 failed, rolled back); one vitest invocation over 10 files / 36 matched C60xx names (61 tests passed, 0 failed, each C60xx name listed individually as passed). The C6007 adapter table (`agreement-scope.test.ts:33`) was filtered out by my C6009-C6026 pattern and is not counted; C6007 is carried by test:db.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
@@ -28,79 +30,67 @@ Proofs run at HEAD: `npm run test:db p0_launch_fixes` (PASS, 1 passed 0 failed, 
 | C6004 | include restores, double exclude = one row | test:db | `:114` RTU = 2, `:119` count = 1 | PASS |
 | C6005 | snapshot types = draft scope, exclusion respected, no `uncovered` | test:db | `:127` snapshot types = shown, `:129` no `uncovered`/`controls`, `:131` no `RTU-1` | PASS |
 | C6006 | non-current / non-draft version raises P0001, no row | test:db | `:143-145` P0001 x3, `:148` count = 1 | PASS |
-| C6007 | viewer, other org, anon raise 42501 | test:db | `:153,155,157` 42501, `:161` nothing written; anon scope `:81` | PASS |
-| C6008 | revise copies exclusions | test:db | `:177` copied array = `array[tests.id('p0r:R-1')]` | PASS (version-delete cascade unasserted, see Coverage) |
-| C6009 | empty-line copy | vitest `-t "C6009:"` | `components/agreements/scope-controls.test.ts:46-50,52-56` `toContain("No equipment is covered until you add a service line.")` | PASS |
-| C6010 | 3 uncovered -> `needs_confirmation`, no send | vitest | `app/(app)/sendAgreement.test.ts:126`; killed by mutant 2 | PASS |
-| C6011 | `confirmUncovered` proceeds | vitest | `sendAgreement.test.ts:138` | PASS |
-| C6012 | frozen version read from snapshot; migration leaves snapshots unchanged | vitest + (none repeatable) | App half: `infrastructure/supabase/agreements.test.ts:320-329` `source: "frozen"`, rpc not called with `agreement_service_scope`. Snapshot-unchanged half: only a one-time pre-apply replay that is not committed or replayable. Reasoned from the migration: the only `update` of `agreement_versions` is in the freeze function (`migration:195-196`), so existing snapshots are not rewritten, but no assertion proves it. | FAIL (DB half unproven) |
-| C6013 | exclude / include button per asset, none for viewer / frozen | vitest | `scope-controls.test.ts:26-27` buttons by aria-label, `:34` `not.toContain("<button")`, `:43` `toBe("")`. Click handler never asserted (mutant 6 survived). | FAIL (surviving mutant) |
-| C6014 | 3 empties named, table-driven | vitest | `company-details.test.ts:12-16` | PASS |
+| C6007 | viewer, other org, anon refused 42501, no row | test:db | `:153` viewer 42501, `:155` other org 42501, `:157` anon 42501, `:161` count = 0; anon scope `:81` | PASS |
+| C6008 | revise copies exclusions; cascade both ways | test:db | `:177` copied = `array[R-1]`, `:179` old kept, `:200` asset cascade = 0, `:245` version cascade = 0 | PASS |
+| C6009 | no line -> "No equipment is covered until you add a service line" | vitest `-t "C6009:"` | `components/agreements/scope-controls.test.ts:46,52,58` (3 tests passed) | PASS |
+| C6010 | 3 uncovered, no flag -> `needs_confirmation`, no send | vitest | `app/(app)/sendAgreement.test.ts:126`; adapter `infrastructure/supabase/agreement-scope.test.ts:12`; dialog `components/agreements/scope-controls.test.ts:79` | PASS |
+| C6011 | with flag sends | vitest | `sendAgreement.test.ts:138` | PASS |
+| C6012 | frozen version read as `frozen`; no snapshot rewritten | vitest + test:db | `infrastructure/supabase/agreements.test.ts:320` (frozen, never asks live scope); `p0_launch_fixes.sql:229-233` `array_agg(proname) of functions whose source updates agreement_versions snapshot = array['freeze_agreement_version']`, `:234` `not has_table_privilege('authenticated','public.agreement_versions','update')`. Migration text read: its only snapshot write is inside the freeze function (`migration:196`) and the revision insert copy (`:252`); no UPDATE of existing snapshots | PASS (see C6012 judgment) |
+| C6013 | exclude/include buttons per asset, none for viewer/frozen | vitest | `scope-controls.test.ts:24,32,42`; click wiring `scope-controls.click.test.tsx:42` `toHaveBeenLastCalledWith("a1", true)`, `:44` `("a2", false)`, `:50` alert text; adapter `agreement-scope.test.ts:19`; reader `agreements.test.ts:332` | PASS |
+| C6014 | 3 empties each named | vitest | `domain/org-settings/company-details.test.ts:12` table over 3, `:16` | PASS |
 | C6015 | unconfirmed | vitest | `company-details.test.ts:20` | PASS |
-| C6016 | 4 placeholders refused, 3 real values ready | vitest | `company-details.test.ts:29,33,37`; killed by mutant 1 | PASS |
-| C6017 | `company_unconfirmed`, recipient and sender untouched | vitest | `sendAgreement.test.ts:151` (4 cases); killed by mutant 5 | PASS |
-| C6018 | confirmedAt stamped only with real values; only owner/admin can stamp | vitest + test:db | `settings.test.ts:56,67`; killed by mutant 4. Role: `p0_launch_fixes.sql:207` estimator 0 rows, `:211` viewer 0 rows, `:215` owner 1 row | PASS |
-| C6019 | dialog names failing details and links /settings | vitest | `scope-controls.test.ts:68,75` | PASS |
-| C6020 | settings banner | vitest | `settings/page.test.ts:81,85` | PASS |
-| C6021 | backfill confirms real org, leaves demo and phoneless null | none repeatable | Declared one-time pre-apply replay on 2026-11-16, not committed, cannot be re-run now the migration is applied (a rolled-back recipe cannot re-run an `update` that already ran at migration time). The only located artifact is the migration `UPDATE` text (`migration:9-18`), which is the code, not a proof. Demo org "null after apply" is a production read I did not repeat. | FAIL (no replayable evidence) |
-| C6022 | 3 paths not redirected, `/terms/x` still is | vitest | `session.test.ts:59`; killed by mutant 3 | PASS |
-| C6023 | notice on each page, no "reviewed by a lawyer" | vitest | `legal-pages.test.ts:22-28` | PASS |
-| C6024 | footer links | vitest | `legal-pages.test.ts:31` | PASS |
-| C6025 | `/register` links, beside the button | vitest | `legal-pages.test.ts:36-38` | PASS |
-| C6026 | no region on /security; claims traceable; no horizontal scroll | vitest + live | `legal-pages.test.ts:41-48` region list absent, `:50-61` source files exist, `signed_ip` present, no card-number field. Live scroll check: not observed by me. | PASS (scroll half author-observed only) |
+| C6016 | 4 placeholders refuse, 3 real accepted | vitest | `company-details.test.ts:29` (table), `:33`, `:37` | PASS |
+| C6017 | company_unconfirmed, touches neither store | vitest | `sendAgreement.test.ts:151` (table: no row, never confirmed, demo, empty phone) | PASS |
+| C6018 | confirmedAt set / omitted; role | vitest + test:db | `settings.test.ts:56` (set to clock now), `:67` (omitted for 3 shapes); `p0_launch_fixes.sql:251` estimator 0 rows, `:255` viewer 0, `:259` owner 1 | PASS |
+| C6019 | dialog names failing details + `/settings` link | vitest | `components/agreements/scope-controls.test.ts:68,75` | PASS |
+| C6020 | banner while unconfirmed/placeholder, absent otherwise | vitest | `app/(app)/settings/page.test.ts:81` (table), `:85` no banner | PASS |
+| C6021 | backfill sets real, leaves demo and phoneless null | test:db | `p0_launch_fixes.sql:222` real org confirmed, `:223` demo `is distinct from true`, `:224` phoneless `is distinct from true`. WHERE restated at `:220-221`; byte-compared to `migration:11-17`: identical (four patterns, three non-empty guards) | PASS (see C6021 judgment) |
+| C6022 | /terms /privacy /security not redirected, /terms/x redirected | vitest | `session.test.ts:59` table, 4 cases passed | PASS |
+| C6023 | notice present, no "reviewed by a lawyer" | vitest | `app/legal-pages.test.ts:22` x3 | PASS |
+| C6024 | footer links | vitest | `legal-pages.test.ts:29` | PASS |
+| C6025 | /register links | vitest | `legal-pages.test.ts:34` | PASS |
+| C6026 | no region; claims sourced; no horizontal scroll | vitest + live | `legal-pages.test.ts:41,50`; live run not observed by me | PASS (live half: author-reported, not observed) |
+
+### Judgment on the two round-2 DB gaps
+
+- **C6012 (DB half)**: adequate. The claim is "the freeze function is the only code that updates a snapshot, and members hold no update" and the assertion tests exactly that over the live catalog (`pg_proc.prosrc`) and privileges, which is checkable at HEAD without replay. Weak points: the regex only catches `update public.agreement_versions ... snapshot` written in one statement with that spelling, so an aliased or dynamic-SQL writer would slip past; a SECURITY DEFINER function owned by postgres could still write. The migration text shows no snapshot UPDATE outside the freeze function, which covers the apply-time half by reading rather than by run.
+- **C6021**: partial but acceptable. The assertion is a copy of the WHERE, so it would still pass if the migration's WHERE were mutated (a surviving mutant by construction, unkillable without replay). I compared the two texts and they are identical, and the TS gate (`company-details.ts:18-22`) states the same four patterns. The evidence reaches the condition's behaviour on three org shapes, not the executed UPDATE. Accepted because the migration cannot be replayed and the demo org's hosted null is the author's observation, not mine.
 
 ## Coverage
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| legal pages (3) | `web/app/{terms,privacy,security}/page.tsx` | each C6023 (`test.each` over 3) | - |
-| rpc `agreement_service_scope` statuses (2) | plan `Surface` | 200 C6001, anon 42501 `:81` | - |
-| rpc `set_scope_exclusion` statuses (5) | plan `Surface` | ok C6003, 42501 C6007, P0001 C6006, re-include C6004 | - |
-| scope paths on freeze (3) | plan `Landing` door 1 | line removed C6002 (draft only), asset excluded C6005, frozen untouched C6012 | frozen-untouched DB half (C6012) has no replayable proof |
-| `companyDetailsReady` problems (4 values) | `company-details.ts:4` | legalName/address/phone C6014, unconfirmed C6015 | - |
-| placeholder patterns (4) | `company-details.ts:19-23` | each C6016 | - |
-| new send outcomes (3) | `agreement-actions.ts` | C6010, C6011, C6017 | - |
-| entity `agreement_scope_exclusions` (2 constraints + copy) | plan `Relations` / door 2 | unique pair C6004, copy C6008, cascade from asset `:200` | cascade from version delete: no assertion anywhere |
-| entity `org_settings.company_confirmed_at` (2) | door 3 | set on save C6018 | backfill C6021 not replayable |
-| `uncovered` never stored (1) | door 1 | C6005 `:129` | - |
-| startup config: public paths (2 places) | `session.ts` PUBLIC_PATHS (read) and `content.ts` FOOTER_LINKS | C6022, C6024 | - |
+| public routes (3) | plan Surface | /terms /privacy /security: C6022 (redirect), C6023 (page) | - |
+| `agreement_service_scope` statuses (2) | plan Surface | 200 `:66`; anon 42501 `:81` | - |
+| `set_scope_exclusion` outcomes (5) | plan Surface + migration | ok `:101`; anon/viewer/other org 42501 `:153-157`; P0001 `:143-145`; re-include `:112` | - |
+| scope paths on freeze (3) | plan Flow | line removed `:91`; excluded `:127`; frozen untouched C6012 | - |
+| `companyDetailsReady` problems (4) | `company-details.ts:2` | legalName, address, phone C6014; unconfirmed C6015 | - |
+| placeholder patterns (4) | `company-details.ts:18-22` | each in the C6016 table (`company-details.test.ts:29`) | - |
+| send outcomes added (3) | `agreement-actions.ts` | needs_confirmation C6010; confirmed C6011; company_unconfirmed C6017 | - |
+| `agreement_scope_exclusions` (unique pair, cascade x2, copy) | plan Landing door 2 | `:119` one row; `:200` asset cascade; `:245` version cascade; `:177` copy | - |
+| `company_confirmed_at` writers (set on save, role, backfill) | plan door 3 | C6018 (`settings.test.ts:56`, `p0_launch_fixes.sql:251-259`); C6021 | - |
+| door 1 `uncovered` never stored (1) | plan door 1 | `:129` | - |
+| ScopeControls buttons (exclude, include, refusal) | `scope-controls.tsx:68-76` | `scope-controls.click.test.tsx:42,44,50` | - |
 
 ## Test policy rows
 
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides (`companyDetailsReady`, scope function) | `company-details.ts`, `agreement_service_scope` | own-layer proof, one asserted case per decision-table row | yes - 3 empties + unconfirmed + 4 placeholders (C6014-16); join, anti-join, uncovered, inactive filter (`:189,191`) and per-version exclusion (C6001-C6004) |
-| Entry point that decides nothing (legal pages) | the 3 `page.tsx` | one at the boundary, each rendered page | yes - C6023 over all 3, C6026 on /security |
-
-## Round 1 findings re-judged
-
-- (a) DB proofs not replayable: the recipe now targets hosted objects and passes at HEAD, so C6001-C6008 are replayable. Adequate. C6012 DB half and C6021 are NOT adequate. A "one-time pre-apply replay" leaves no committed artifact; only the author's statement says it ran. I call both unproven, not an accepted gap, because evidence-or-zero requires a located assertion. The honest exit is an owner-signed acceptance recorded in checks.md, or a rolled-back recipe that runs the backfill predicate against fixture orgs (real, demo-shaped, phoneless); it would test a copy of the `WHERE`, which is a weaker but replayable proof.
-- (b) inactive-asset filter: now asserted (`:189,191`). Asset cascade now asserted (`:198-200`). Version-delete cascade still not asserted.
-- (c) AC 17 role: adequate (`:207,211,215`, estimator and viewer 0 rows, owner 1 row). AC 25 traceability: adequate as a repo-existence check (`legal-pages.test.ts:50-61`); it proves the source file exists, not that each prose sentence matches it.
+| Decides (`companyDetailsReady`, scope function) | `company-details.ts`, `agreement_service_scope` | one at own layer; one asserted case per decision-table row | yes - 3 empties, unconfirmed, 4 placeholders (C6014-16); covered/excluded/uncovered/inactive/foreign-org (`:66-93,189-192,77`) |
+| Entry point that decides nothing (legal pages) | `terms/page.tsx`, `privacy/page.tsx`, `security/page.tsx` | one at the boundary, each rendered page | yes - `legal-pages.test.ts:22` renders all three |
 
 ## Faults injected
 
-Baseline `git status --porcelain` = `?? node_modules/`; identical after every restore (`git checkout -- <file>`; no stash).
+Run in the real tree (restored from git each time; `git status --porcelain` after each shows only `?? node_modules/`, identical to baseline). No scratch worktree was used.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| placeholder phone pattern `555-01xx` -> `555-09xx` | `domain/org-settings/company-details.ts:22` | yes (C6016 placeholder phone) |
-| `uncovered.length > 0` -> `> 5` | `app/(app)/agreement-actions.ts` send gate | yes (C6010) |
-| drop `/privacy` from `PUBLIC_PATHS` | `infrastructure/supabase/session.ts:10` | yes (C6022 /privacy) |
-| stamp `company_confirmed_at` even for a placeholder | `infrastructure/supabase/settings.ts:62` | yes (3 C6018 tests) |
-| delete the `company_unconfirmed` return | `app/(app)/agreement-actions.ts` | yes (4 C6017 tests) |
-| Leave out / Include button click passes `row.excluded` instead of `!row.excluded` | `components/agreements/scope-controls.tsx:72` | NO - C6013 survived (4 passed) |
+| Exclude button asks `row.excluded` instead of `!row.excluded` | `web/components/agreements/scope-controls.tsx:72` | yes - `scope-controls.click.test.tsx` C6013 failed |
+| Placeholder legal name pattern `/kettle ridge/i` -> `/kettle ridgeX/i` | `web/domain/org-settings/company-details.ts:19` | yes - C6016 placeholder legalName failed |
+| Uncovered gate `uncovered.length > 0` -> `> 3` | `web/app/(app)/agreement-actions.ts:210` | yes - C6010 failed |
 
-SQL mutants (anti-join removed, `P0001` guard removed, role check removed, backfill predicate) were reasoned only, not injected (hosted database not touched, no scratch run). Each has a located assertion in `p0_launch_fixes.sql` that would fail, except the backfill predicate (C6021) and the version-cascade, which have none.
+SQL mutants (reasoned, not run, hosted schema not altered): dropping the exclusion anti-join fails `:105`; setting the freeze types from `site_service_scope` fails `:127`/`:131`; the migration's backfill WHERE is not killable (see C6021).
 
 ## Gate
 
-`npm run test:db p0_launch_fixes` - 1 passed, 0 failed. `npx vitest run` over the 8 C60xx files - 17 files, 424 passed, 0 failed.
-
-## Findings (all gaps)
-
-1. C6021 - backfill has no replayable proof (`migration:9-18`); declared one-time replay is not evidence in the repo.
-2. C6012 - "migration leaves every existing snapshot byte-for-byte unchanged" has no replayable proof; app half passes.
-3. C6013 - surviving mutant: the click handler's `excluded` argument is never asserted; the client-to-RPC path (`setScopeExclusionAction` in `agreement-actions.ts`, `infrastructure/supabase/agreement-scope.ts`, both new) has no unit test, only the author's live run.
-4. Door 2 / C6008 - cascade on version delete has no assertion (plan names both directions).
-5. Not observed by me: the live browser runs (C6026 scroll at 3 widths, Settings banner, Send refusal on production, demo org null after apply).
+`npx vitest run <10 files> -t "C60(09|1\d|2[0-6]):"` - 61 passed, 0 failed; `npm run test:db p0_launch_fixes` - 1 passed, 0 failed. Not run: `validate_verification.py`, the full suite. Known unrelated failures not touched.
