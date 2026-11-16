@@ -1,9 +1,9 @@
 # Agreement template switch verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: ui
-**Diff range**: 4b79d13..HEAD
-**Round**: 1 - full
+**Diff range**: 4b79d13..HEAD (round 2 fix range 62c762c..4cbf777)
+**Round**: 2 - scoped (proofs re-run in full at HEAD 4cbf777; unchanged sections carried from 62c762c)
 **Verifier**: independent sub-agent (author != verifier)
 
 ## Binding sources
@@ -16,20 +16,20 @@
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C7101 | pins current version of a draft to org then system template, older version untouched | `npm run test:db agreement_template_switch` exit 1: `function "set_agreement_template" already exists with same argument types` (the function is already on the hosted project with a body identical to the migration, so the replayed `create function` collides). The same recipe with `create or replace`, in the rolled-back transaction: `agreement_template_switch: pass` | `supabase/tests/agreement_template_switch.sql` - `C7101 pinned`, `C7101 older version untouched`, `C7101 system` | FAIL (proof as written is red; modified copy green) |
-| C7102 | same template succeeds, changes nothing | as C7101 | `agreement_template_switch.sql` - `tests.ok('C7102 same', ... = SYS)` | FAIL (as C7101) |
-| C7103 | sent refuses P0001 and keeps pin; unknown agreement P0002 | as C7101 | `expect_error('C7103 sent', ..., 'P0001')`, `expect_error('C7103 missing', ..., 'P0002')` | FAIL (as C7101) |
-| C7104 | other-org version and non-template id raise 22023, pin nothing | as C7101 | `expect_error('C7104 other org template', ..., '22023')`, `'C7104 not a template'` | FAIL (as C7101) |
-| C7105 | viewer, other org owner, anon raise 42501, pin nothing | as C7101 | `expect_error('C7105 viewer' / 'C7105 other org' / 'C7105 anon', ..., '42501')` | FAIL (as C7101) |
+| C7101 | pins current version of a draft to org then system template, older version untouched | `npm run test:db agreement_template_switch` exit 0: `PASS agreement_template_switch`, 1 passed, 0 failed (recipe now `fixture.sql` + `agreement_template_switch.sql` against the applied hosted function; hosted body md5 unchanged `4268d0d7...`, migration file unchanged since 62c762c) | `agreement_template_switch.sql` - `C7101 pinned`, `C7101 older version untouched`, `C7101 system`; round 1 SQL mutants (current-version filter, org scope, viewer role, draft check) were killed against the same body (carried from 62c762c) | PASS |
+| C7102 | same template succeeds, changes nothing | `npm run test:db agreement_template_switch` exit 0: `PASS agreement_template_switch`, 1 passed, 0 failed (recipe now `fixture.sql` + `agreement_template_switch.sql` against the applied hosted function; hosted body md5 unchanged `4268d0d7...`, migration file unchanged since 62c762c) | `agreement_template_switch.sql` - `tests.ok('C7102 same', ... = SYS)`; round 1 SQL mutants (current-version filter, org scope, viewer role, draft check) were killed against the same body (carried from 62c762c) | PASS |
+| C7103 | sent refuses P0001 and keeps pin; unknown agreement P0002 | `npm run test:db agreement_template_switch` exit 0: `PASS agreement_template_switch`, 1 passed, 0 failed (recipe now `fixture.sql` + `agreement_template_switch.sql` against the applied hosted function; hosted body md5 unchanged `4268d0d7...`, migration file unchanged since 62c762c) | `expect_error('C7103 sent', ..., 'P0001')`, `expect_error('C7103 missing', ..., 'P0002')`; round 1 SQL mutants (current-version filter, org scope, viewer role, draft check) were killed against the same body (carried from 62c762c) | PASS |
+| C7104 | other-org version and non-template id raise 22023, pin nothing | `npm run test:db agreement_template_switch` exit 0: `PASS agreement_template_switch`, 1 passed, 0 failed (recipe now `fixture.sql` + `agreement_template_switch.sql` against the applied hosted function; hosted body md5 unchanged `4268d0d7...`, migration file unchanged since 62c762c) | `expect_error('C7104 other org template', ..., '22023')`, `'C7104 not a template'`; round 1 SQL mutants (current-version filter, org scope, viewer role, draft check) were killed against the same body (carried from 62c762c) | PASS |
+| C7105 | viewer, other org owner, anon raise 42501, pin nothing | `npm run test:db agreement_template_switch` exit 0: `PASS agreement_template_switch`, 1 passed, 0 failed (recipe now `fixture.sql` + `agreement_template_switch.sql` against the applied hosted function; hosted body md5 unchanged `4268d0d7...`, migration file unchanged since 62c762c) | `expect_error('C7105 viewer' / 'C7105 other org' / 'C7105 anon', ..., '42501')`; round 1 SQL mutants (current-version filter, org scope, viewer role, draft check) were killed against the same body (carried from 62c762c) | PASS |
 | C7106 | reader returns templateVersionId (pinned id, null for unpinned) | `npx vitest run infrastructure/supabase/agreements.test.ts -t "C7106:"` 2 passed | `infrastructure/supabase/agreements.test.ts:310` - `expect(detail?.templateVersionId).toBe(expected)` | PASS |
 | C7107 | store calls the rpc with two ids; maps 42501/P0002/P0001/22023/other | `agreement-template.test.ts -t "C7107:"` 7 passed | `infrastructure/supabase/agreement-template.test.ts:11` and the per-SQLSTATE tests (P0001 to locked confirmed by mutant) | PASS |
 | C7108 | action: forbidden before call, not_found malformed, calls store once and revalidates, returns refusal | `app/(app)/agreement-template.test.ts -t "C7108:"` 11 passed | `app/(app)/agreement-template.test.ts:33` `toEqual({ status: "forbidden" })`, `:41` not_found, `:47` saved, `:56` `{ status: code }` | PASS |
 | C7109 | page shows `Template: <name>` for draft and sent | `template-picker.test.tsx -t "C7109:"` 1 passed; page-level `components/agreements/agreements.test.ts -t "C7109:"` 1 passed | `template-picker.test.tsx:18` `toContain("Template: Quarterly HVAC")`; `agreements.test.ts:843-844` draft and sent | PASS |
-| C7110 | writer on editable version sees choices, current selected, button; viewer, sent, older version name only | `template-picker.test.tsx -t "C7110:"` 4 and `template-choices.test.ts -t "C7110:"` 5 passed | `template-picker.test.tsx:24-26` option, selected, `Change template` button; `:34` name-only cases | PASS (see finding 6 on the sent/older gate) |
+| C7110 | writer on editable version sees choices, current selected, button; viewer, sent, older version name only | `template-picker.test.tsx`, `template-choices.test.ts` (6) and the new view-level `agreements.test.ts -t "C7110:"` all pass | `template-picker.test.tsx:24-26`; new `agreements.test.ts:840-849` `toContain("Change template")` for the draft and `not.toContain(...)` for sent, older version (`shownNo: 1`) and viewer; `template-choices.test.ts` `toEqual(["Standard agreement", "Standard agreement (built in)"])` | PASS |
 | C7111 | asks action for chosen version; nothing when current; shows refusal | `template-picker.click.test.tsx -t "C7111:"` 5 passed | `:50` `toHaveBeenCalledWith("v-hvac")`, `:57` `expect(button.disabled).toBe(true)`, `:67` refusal messages in an alert | PASS |
-| C7112 | preview revision differs when only template differs | stated command `template-picker.test.tsx -t "C7112:"` runs 0 tests (5 skipped): the test is not in that file. In the right file, `components/agreements/agreements.test.ts -t "C7112:"`, 1 passed | `components/agreements/agreements.test.ts:833-837` `expect(previewRevision({ ...base, templateVersionId: "v-two" })).not.toBe(a)` | PASS (proof path in checks.md is wrong, finding 2) |
-| C7113 | live browser run at 375/768/1440, redraw on change | not observed: the migration is absent from the hosted migration history, the page needs a signed-in session, and Change template was not to be pressed. Dev server answers 200 on `/` | none | FAIL (not observed) |
-| C7114 | full test set no worse than known failures | `npx vitest run` from `web/` in PowerShell: 33 failed in 6 files, all known: kanban/pipeline-view (28), kanban/expiring-view (1), shell/app-shell (1), pricing-catalog (1), vocabulary C2019 (1), purity C2021 (1; lists only `agreements-list.tsx` and `pipeline-view.tsx`). `tsc --noEmit` and eslint on the new component and page folder: no output | no failure in any file this feature touched | PASS |
+| C7112 | preview revision differs when only template differs | `npx vitest run components/agreements/agreements.test.ts -t "C7112:"` 1 passed (checks.md path corrected) | `components/agreements/agreements.test.ts:833-837` `expect(previewRevision({ ...base, templateVersionId: "v-two" })).not.toBe(a)` | PASS |
+| C7113 | live browser run at 375/768/1440, redraw on change | Verifier loaded the signed-in dev server read-only (no click on Change template) at 375, 768, 1440: AG-1001 (draft) shows `Template: Standard agreement`, a select with options `Standard agreement` and `Standard agreement (built in)` (selected: built in) and a `Change template` button, `scrollWidth <= clientWidth` at all three widths, 0 console errors; AG-1002 (not a draft) shows the name only, no select, no button. The redraw after a change was not reproduced (writing to the real draft is out of bounds); it rests on the author's run in checks.md plus C7112 and the C7108 revalidate proof | observed values above (Playwright evaluate, this session) | PASS (render, choice, button, no scroll, no errors observed; the click-and-redraw leg is author-reported) |
+| C7114 | full test set no worse than known failures | `npx vitest run` (PowerShell) at 4cbf777: 33 failed, 5483 passed, 6 files, all known: kanban/pipeline-view (28), kanban/expiring-view (1), shell/app-shell (1), pricing-catalog (1), vocabulary C2019 (1), purity C2021 (1). Same 33 as round 1 | no failing file is one this feature touched | PASS |
 
 ## Coverage
 
@@ -56,21 +56,29 @@ No `Test policy` section in checks.md: nothing to judge; the repo convention (DB
 | P0001 mapped to invalid_template | `infrastructure/supabase/agreements.ts` TEMPLATE_CODES | yes (C7107) |
 | drop template pin from the revision key | `agreement-view.tsx:176` | yes (C7112, agreements.test.ts) |
 | drop `revalidatePath("/pipeline")` | `agreement-actions.ts` | yes (C7108, 3 failed) |
+| `(built in)` label removed from the choice name | `template-choices.ts` | yes (2 tests in `template-choices.test.ts`, round 2) |
+| unguard `choices` and `change` by `agreement.editable` together | `agreement-view.tsx` | yes (new view-level C7110, round 2; unguarding only one of the two survives, the other guard still hides the picker: equivalent) |
 | drop `and v.template_version_id is distinct from ...` | migration update (SQL) | yes, by reasoning only: survives C7102 but the mutant is equivalent (same-value write unobservable), not counted as a gap |
 
 Two more TypeScript mutants were equivalent and are not counted (the redundant `chosen === selectedVersionId` guard in `apply`, behind a disabled button; `??` to `||` on the pinned id). TypeScript mutants restored exactly; `git status --porcelain` afterwards shows only the pre-existing `?? node_modules/`. The scratch runner placed in `web/scripts/test-db/` was deleted.
 
 ## Gate
 
+Round 2: `npm run test:db agreement_template_switch` 1 passed, 0 failed; feature proofs C7106-C7112 39 passed in 7 files; full `npx vitest run` 33 failed, all known.
+
+Round 1 gate (carried): 
 `npx vitest run` - 33 failed (all in the known list), feature proofs C7106-C7112 35 passed, 0 failed.
 
 ## Findings
 
-1. C7101-C7105: the stated proof is red. `npm run test:db agreement_template_switch` exits 1 with `function "set_agreement_template" already exists`. The hosted project already has `public.set_agreement_template(uuid, uuid)` with a body identical to the migration (read-only `pg_proc` check), although checks.md and the brief say the migration is not applied and `list_migrations` does not show it. So the "not applied" claim is wrong or the function was applied outside the migration history, and the recipe cannot be re-run because the migration uses `create function`, not `create or replace function`. A `create or replace` copy inside the rolled-back transaction passes in full.
-2. C7112: the proof path in checks.md matches nothing. `template-picker.test.tsx -t "C7112:"` exits 0 with 5 skipped. The test is `components/agreements/agreements.test.ts:833`. A vacuous green command as written.
-3. C7113 not observed (author-declared limit). Not loaded: the page needs a session and the only draft on hosted is real.
-4. Design: only the pin changes. The update touches the max `version_no` of a draft; older versions are guarded by `agreement_version_pin_frozen` (mutant 1 showed it refuses) and sent agreements refuse with P0001. Other readers of the pin: the staff PDF route reads `agreement.template` live from the shown version (`pdf/route.ts:32`) so a draft PDF follows the switch after revalidation; the portal and contracts read the pin of a sent or frozen version (`portal.ts`, `contracts.ts`) and a draft has no live link. No stale PDF or portal view found.
-5. System template reachable: `list` returns the org's templates and the system one (`templates.ts:30-56`), `templateChoicesOf` offers all and selects the system version when the pin is null, and re-adds a pinned version that is no longer the latest. If the reader fails the picker silently falls back to the name only.
-6. Minor: the sent and older-version gate (`agreement.editable` in `agreement-view.tsx:167-171`) has no view-level assertion with choices supplied; C7110 proves only the picker with no choices.
+Round 2 status of the round 1 findings:
 
-FAIL stands on findings 1, 2 and 3. The code behaved correctly in every run, every killable mutant was killed, and C7114 holds.
+1. Resolved: C7101-C7105 proof now runs against the applied function and passes; mutants carried from round 1.
+2. Resolved: C7112 proof path corrected and the test runs.
+3. Resolved (render legs): C7113 observed by the Verifier read-only; the click-and-redraw leg stays author-reported.
+4. Design review stands: only the pin changes, older and sent pins stay frozen, the staff PDF reads the pin live, the portal and contracts read frozen or sent pins, the system template is offered ("(built in)" label, an org copy of the same name is told apart).
+5. Resolved: view-level gate test added.
+
+Remaining, none blocking:
+- The hosted `supabase_migrations.schema_migrations` has no row for `20261116150000` (the function exists with the migration's exact body), so the history table and the migration folder disagree; the same holds for other recent migrations. Hygiene for the owner.
+- The SQL mutants were not re-run after the recipe stopped replaying the migration; the function body is unchanged (md5 equal), so the round 1 kills carry.
