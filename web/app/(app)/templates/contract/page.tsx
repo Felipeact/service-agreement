@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { getContainer } from "@/composition";
 import { contractFormFromBody } from "@/domain/contract/layout-form";
 import { saveContractWordingAction } from "./contract-actions";
+import { importContractWordingAction } from "./import-actions";
 
 export const metadata: Metadata = { title: "Contract wording" };
 
@@ -27,7 +28,7 @@ export default async function ContractWordingPage() {
         title="Contract wording"
         subtitle={wording.own ? "Saving writes a new version. Contracts already made keep the wording they were made with." : "This is the standard wording. Saving makes it your own; contracts already made keep theirs."}
       />
-      <ContractWordingEditor initial={contractFormFromBody(wording.body)} save={saveContractWordingAction} />
+      <ContractWordingEditor initial={contractFormFromBody(wording.body)} save={saveContractWordingAction} importAction={importContractWordingAction} />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import type { ContractDocument, ContractParties, ContractStatus, SignatureReques
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { DraftType } from "@/domain/catalog-draft";
+import type { SplitBlock } from "@/domain/contract/import";
 import type { TenantLogo } from "@/domain/org-settings/logo";
 import type { ImportContentType, ImportFile, ImportFilter, ReadError, ReadOutcome } from "@/domain/imports";
 import type { AssetValue, ContactValue, CustomerValue, SiteFilter, SiteValue } from "@/domain/records";
@@ -602,6 +603,13 @@ export type DraftResult = { ok: true; types: DraftType[] } | { ok: false; code: 
 /** Drafts a catalog of types, checklists and months for a trade. Knows nothing about orgs: it receives the trade, the notes and the file only. */
 export interface CatalogDrafter {
   draft(input: { trade: string; notes: string; file?: DraftSource }): Promise<DraftResult>;
+}
+
+export type SplitResult = { ok: true; blocks: SplitBlock[] } | { ok: false; code: "unavailable" | "too_large" };
+
+/** Reads an existing contract into blocks (contract-import door 1). Knows nothing about orgs: it receives the file only. */
+export interface ContractSplitter {
+  split(input: { file: DraftSource }): Promise<SplitResult>;
 }
 
 export type AddDraftResult = { ok: true; added: number } | { ok: false; code: "forbidden" | "not_empty" | "invalid" | "unavailable" };

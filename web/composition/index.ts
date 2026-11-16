@@ -43,6 +43,8 @@ import { supabaseReportReader } from "@/infrastructure/supabase/reports";
 import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
+import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
+import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
@@ -222,6 +224,8 @@ export async function getContainer() {
     setupCatalog: setup.catalog,
     // The "Other" trade's catalog draft (other-trade-draft): the Claude call and the one atomic write, both behind the setup screen.
     draftCatalog: makeDraftCatalog(async () => (await setup.catalog()).length, importParser, claudeCatalogDrafter({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    // Reading an uploaded contract into the wording editor (contract-import): one Claude call, nothing stored.
+    importContractWording: makeImportContractWording(importParser, claudeContractSplitter({ apiKey: process.env.ANTHROPIC_API_KEY })),
     acceptCatalogDraft: makeAcceptCatalogDraft(supabaseCatalogWriter(supabase)),
     saveSetupProfile: (orgId: string, value: SetupProfileValue) => setup.saveProfile(orgId, value, systemClock.now()),
     skipSetup: (orgId: string) => setup.skip(orgId, systemClock.now()),

@@ -71,6 +71,12 @@ describe("/templates/contract", () => {
     await expect(ContractWordingPage()).rejects.toThrow("could not be read");
   });
 
+  test("C5821: the page gives the editor the import action, so the Import control and its notice are on the page", async () => {
+    const html = await render();
+    expect(html).toContain('id="contract-import-file"');
+    expect(html).toContain("A starting point: you own your wording.");
+  });
+
   test("C5558: signed out goes to /login and nothing is read", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(ContractWordingPage()).rejects.toThrow("NEXT_REDIRECT /login");

@@ -14,6 +14,21 @@ export type SaveContractWordingState =
   | { status: "idle" | "saved" | Failure }
   | { status: "invalid"; errors: TemplateFormErrors; values: ContractLayoutForm };
 
+/** What `importContractWordingAction` answers (contract-import): the form to review, or why there is none. */
+export type ImportContractWordingState =
+  | { status: "imported"; form: ContractLayoutForm }
+  | { status: "failed"; code: "invalid" | "forbidden" | "unreadable" | "too_large" | "unavailable" };
+
+export const IMPORT_MESSAGES = {
+  invalid: "Choose a Word (.docx) or PDF file.",
+  forbidden: "You don't have permission to change the contract wording.",
+  unreadable: "We couldn't read that file. Choose a Word (.docx) or PDF file with text in it.",
+  too_large: "That file is too big to read. Use one under 4 MB.",
+  unavailable: "We couldn't read your contract. Try again.",
+} as const satisfies Record<Extract<ImportContractWordingState, { status: "failed" }>["code"], string>;
+
+export const IMPORT_NOTICE = "A starting point: you own your wording. Read it through, and confirm it is valid under your province's law.";
+
 /** What `duplicateTemplateAction` answers when it does not redirect to the copy's editor. */
 export type DuplicateTemplateState = { status: "idle" | "name_taken" | Failure };
 
