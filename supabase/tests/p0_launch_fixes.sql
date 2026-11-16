@@ -201,6 +201,39 @@ do $$ begin
 end $$;
 reset role;
 select set_config('request.jwt.claims', '', true);
+-- C6021: the backfill's condition (the WHERE of the migration's UPDATE, restated here over fixture orgs) confirms a real
+-- company and leaves the demo-shaped one and the one with no phone unconfirmed. The migration itself ran once, at apply time.
+reset role;
+select set_config('request.jwt.claims', '', true);
+insert into public.orgs (id, name) values (tests.id('orgC'), 'Acme Heating (test)'), (tests.id('orgD'), 'Demo shaped (test)'), (tests.id('orgE'), 'Phoneless (test)');
+insert into public.org_settings (org_id, legal_name, address, phone) values
+  (tests.id('orgC'), 'Acme Heating Ltd.', '12 Main St, Surrey, BC V3T 1A1', '604-555-2368'),
+  (tests.id('orgD'), 'Kettle Ridge Mechanical Ltd.', '100 Sample Street, Burnaby, BC V5A 0A0', '604-555-0100'),
+  (tests.id('orgE'), 'Phoneless Plumbing Ltd.', '9 Side Rd, Surrey, BC V3T 1A1', null);
+do $$
+declare
+  c boolean; d boolean; e boolean;
+begin
+  select bool_or(s.org_id = tests.id('orgC')), bool_or(s.org_id = tests.id('orgD')), bool_or(s.org_id = tests.id('orgE'))
+  into c, d, e
+  from public.org_settings s
+  where btrim(coalesce(s.legal_name, '')) <> '' and btrim(coalesce(s.address, '')) <> '' and btrim(coalesce(s.phone, '')) <> ''
+    and s.legal_name !~* 'kettle ridge' and s.address !~* 'sample street' and s.address !~* '0a0\s*$' and s.phone !~ '555[-. ]?01[0-9][0-9]';
+  perform tests.ok('C6021 real org', c, 'a real org would be left unconfirmed');
+  perform tests.ok('C6021 demo org', d is distinct from true, 'the demo-shaped org would be confirmed');
+  perform tests.ok('C6021 no phone', e is distinct from true, 'an org with no phone would be confirmed');
+end $$;
+
+-- C6012: the only code that rewrites a version's snapshot is the freeze function, which runs when a draft leaves draft.
+do $$ begin
+  perform tests.ok('C6012 single writer',
+    (select coalesce(array_agg(p.proname::text order by p.proname), '{}') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname in ('public', 'private') and p.prosrc ~* 'update\s+public\.agreement_versions[^;]*snapshot')
+      = array['freeze_agreement_version'],
+    'a function other than freeze_agreement_version updates a snapshot');
+  perform tests.ok('C6012 no direct update', not has_table_privilege('authenticated', 'public.agreement_versions', 'update'), 'members can update agreement_versions');
+end $$;
+
 -- C6008 (cascade, version side): deleting a version deletes its exclusion rows.
 select tests.p0_site('p0c');
 select tests.p0_asset('p0c', 'typeA', 'C-1');
