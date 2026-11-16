@@ -1,264 +1,240 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
-import { layoutFormFromBody, type AgreementLayoutForm } from "@/domain/agreement/template-form";
-import type { SaveTemplateState } from "./state";
-import { TemplateEditor, TemplateEditorView } from "./template-editor";
+import type { AgreementLayoutForm } from "@/domain/agreement/template-form";
+import { VARIABLE_LABELS } from "@/domain/templates/editor-model";
+import { ContractWordingEditor } from "./contract-wording-editor";
+import { AGREEMENT, CONTRACT, click, frameOf, pageItems, selectItem, setValue, toolbar, withText } from "./editor-test-kit";
+import { SAVE_MESSAGES, WORDING_MESSAGES, type SaveContractWordingState, type SaveTemplateState } from "./state";
+import { TemplateEditor } from "./template-editor";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const TYPES = [
-  { code: "RTU", name: "Rooftop units" },
-  { code: "HP", name: "Heat pumps" },
-];
-const VALUES: AgreementLayoutForm = layoutFormFromBody({
-  ...SYSTEM_AGREEMENT_BODY,
-  name: "Quarterly HVAC",
-  description: "Quarterly visits",
-  intro: [
-    { type: "heading", text: "Welcome" },
-    { type: "paragraph", text: "Hello {{customer.name}}." },
-  ],
-  footer: [{ type: "clause", text: "Thank you." }],
-  sections: { schedule: true, scope: false },
-  preset: { termMonths: 24, lines: [{ description: "Quarterly visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 }] },
+let container: HTMLDivElement;
+let root: Root;
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn());
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+});
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+  vi.unstubAllGlobals();
 });
 
-/** Every input tag of the markup whose attributes include all of `parts`. */
-const inputs = (html: string, ...parts: string[]) => (html.match(/<input[^>]*>/g) ?? []).filter((tag) => parts.every((part) => tag.includes(part)));
+const saveAgreement = vi.fn<(id: string | null, form: AgreementLayoutForm) => Promise<SaveTemplateState>>(async () => ({ status: "idle" }));
+const saveContract = vi.fn<(form: typeof CONTRACT) => Promise<SaveContractWordingState>>(async () => ({ status: "saved" }));
+const mountAgreement = () => act(async () => root.render(createElement(TemplateEditor, { templateId: "t-1", initial: AGREEMENT, types: [], save: saveAgreement })));
+const mountContract = () => act(async () => root.render(createElement(ContractWordingEditor, { initial: CONTRACT, save: saveContract })));
+const submit = () => act(async () => container.querySelector("form")!.requestSubmit());
+const items = () => pageItems(container).map((item) => item.textContent ?? "");
+const state = () => container.querySelector("[data-save-state]")?.getAttribute("data-save-state");
+const panelButton = (label: string) => [...container.querySelectorAll('[role="toolbar"][aria-label="Add element"] button')].find((b) => (b.textContent ?? "").includes(label)) as HTMLElement;
+const openFields = () => click(panelButton("Field"));
 
-const view = (values: AgreementLayoutForm = VALUES, errors: Record<string, string> = {}, message: string | null = null) =>
-  renderToStaticMarkup(createElement(TemplateEditorView, { values, errors, types: TYPES, pending: false, message }));
-
-describe("the template editor", () => {
-  test("C5349: each preset line has a description, a month grid, equipment types and a price per visit, then Remove; Add line follows the lines", () => {
-    const html = view();
-    const line = html.slice(html.indexOf("<details"));
-    const order = [
-      line.search(/<label[^>]*for="line-0-description"[^>]*>Description</),
-      line.search(/<label[^>]*for="line-0-price"[^>]*>Price per visit</),
-      line.indexOf("Visit months"),
-      line.indexOf("Equipment types"),
-      line.indexOf("Remove line 1"),
-      line.indexOf(">Add line<"),
-    ];
-    expect(order.every((index) => index > -1)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(line.match(/name="lineMonths-0"/g)).toHaveLength(12);
-    expect(line.match(/name="lineTypes-0"/g)).toHaveLength(2);
-    expect(line).toContain("Rooftop units");
-    expect(line).toContain("Heat pumps");
-    expect(inputs(line, 'name="lineTypes-0"', 'value="RTU"', 'checked=""')).toHaveLength(1);
-    expect(inputs(line, 'name="lineTypes-0"', 'value="HP"', 'checked=""')).toHaveLength(0);
-  });
-
-  test("C5349: a code already on a line that the org's catalog lacks is still shown, as its code", () => {
-    const html = view({ ...VALUES, lines: [{ ...VALUES.lines[0], assetTypeCodes: ["NOPE"] }] });
-    expect(inputs(html, 'name="lineTypes-0"', 'value="NOPE"', 'checked=""')).toHaveLength(1);
-    expect(html).toContain("NOPE");
-  });
-
-  test("C5349: Add line is disabled at 20 lines", () => {
-    const lines = Array.from({ length: 20 }, () => VALUES.lines[0]);
-    expect(view({ ...VALUES, lines })).toMatch(/<button[^>]*disabled=""[^>]*>Add line<\/button>/);
-    expect(view()).not.toMatch(/<button[^>]*disabled=""[^>]*>Add line<\/button>/);
-  });
+beforeEach(() => {
+  saveAgreement.mockClear();
+  saveContract.mockClear();
 });
 
-describe("a field that fails validation", () => {
-  test("C5350: a form with no errors shows no alert, and a refusal that is not about a field is shown in words", () => {
-    expect(view()).not.toContain('role="alert"');
-    expect(view(VALUES, {}, "Only owners and admins can change templates.")).toContain("Only owners and admins can change templates.");
-  });
-});
-
-describe("a save that fails for a reason other than a field", () => {
-  async function submitWith(answer: SaveTemplateState) {
-    const save = vi.fn(async () => answer);
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    await act(async () => root.render(createElement(TemplateEditor, { templateId: "88888888-8888-4888-8888-888888888888", initial: VALUES, types: TYPES, save })));
-    await act(async () => container.querySelector("form")!.requestSubmit());
-    return { save, container, root };
-  }
-  const save = (container: HTMLElement) => [...container.querySelectorAll("button")].find((button) => button.type === "submit")!;
-  const field = (container: HTMLElement, id: string) => container.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`)!;
-
-  test.each<[SaveTemplateState["status"], string]>([
-    ["forbidden", "You don't have permission to save templates."],
-    ["not_found", "This template no longer exists."],
-    ["unavailable", "We couldn't save the template. Try again."],
-  ])("C5548: a save answering %s shows %s, keeps every typed value and every row, and re-enables Save", async (status, message) => {
-    const { save: action, container, root } = await submitWith({ status } as SaveTemplateState);
-    expect(action).toHaveBeenCalledTimes(1);
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe(message);
-    expect(field(container, "template-name").value).toBe("Quarterly HVAC");
-    expect(field(container, "template-description").value).toBe("Quarterly visits");
-    expect(field(container, "template-term").value).toBe("24");
-    expect(field(container, "line-0-price").value).toBe("$450.00");
-    expect(field(container, "doc-title").value).toBe("Preventive maintenance service agreement");
-    expect(field(container, "layout-0-text").value).toBe("Welcome");
-    expect(field(container, "layout-1-text").value).toBe("Hello {{customer.name}}.");
-    expect(container.querySelectorAll('section[aria-label="Layout"] > ol > li')).toHaveLength(VALUES.layout.length);
-    expect(save(container).disabled).toBe(false);
-    expect(save(container).textContent).toBe("Save template");
-    act(() => root.unmount());
-    container.remove();
+describe("adding from the panel", () => {
+  test("[C14] with a block selected the new block goes right after it and becomes the selected one", async () => {
+    await mountAgreement();
+    await selectItem(container, 0);
+    await click(panelButton("Clause"));
+    expect(items()).toHaveLength(8);
+    expect(pageItems(container)[1].querySelector('[aria-current="true"]')).not.toBeNull();
+    expect(pageItems(container)[0].querySelector('[aria-current="true"]')).toBeNull();
+    expect(pageItems(container)[1].querySelector("textarea")).not.toBeNull();
   });
 
-  test("C5548: the invalid answer of a save keeps the editor open with the row's message beside it and the typed text", async () => {
-    const errors = { "layout.1.text": "Item 2 uses an unknown variable: nope.", name: "Name is required." };
-    const { container, root } = await submitWith({ status: "invalid", errors, values: { ...VALUES, name: "" } });
-    const rows = container.querySelectorAll('section[aria-label="Layout"] > ol > li');
-    expect(rows[1].textContent).toContain("Item 2 uses an unknown variable: nope.");
-    expect(rows[0].textContent).not.toContain("unknown variable");
-    expect(field(container, "layout-1-text").value).toBe("Hello {{customer.name}}.");
-    expect(field(container, "template-name").getAttribute("aria-invalid")).toBe("true");
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Fix the highlighted fields");
-    act(() => root.unmount());
-    container.remove();
+  test("[C14] with nothing selected it goes at the end, and in the contract before the final signatures", async () => {
+    await mountAgreement();
+    await click(panelButton("Text"));
+    expect(items()).toHaveLength(8);
+    expect(pageItems(container)[7].querySelector('[aria-current="true"]')).not.toBeNull();
+    await mountContract();
+    await click(panelButton("Heading"));
+    expect(items()).toHaveLength(4);
+    expect(frameOf(container, 2).getAttribute("aria-label")).toBe("Heading, selected");
+    expect(items()[3]).toContain("Signatures");
   });
 
-  test("C5424: the message is gone from a form whose save has not failed", () => {
-    expect(view()).not.toContain("You don't have permission");
-    expect(view()).not.toContain("no longer exists");
+  test("[C14] a part added from Document parts lands on the page with its sample and its options", async () => {
+    await mountContract();
+    await click(panelButton("Visit schedule"));
+    expect(items().some((text) => text.includes("Visit schedule"))).toBe(true);
+    expect(container.querySelector('section[aria-label="Options"]')).not.toBeNull();
+  });
+
+  test("[C15] a new text block takes focus in its field", async () => {
+    await mountAgreement();
+    await click(panelButton("Text"));
+    const field = container.querySelector("textarea") as HTMLTextAreaElement;
+    expect(field).not.toBeNull();
+    expect(document.activeElement).toBe(field);
+  });
+
+  test("[C16] a field chosen from the Field list puts {{name}} at the caret of the selected text block", async () => {
+    await mountAgreement();
+    await selectItem(container, 1);
+    const field = container.querySelector("textarea") as HTMLTextAreaElement;
+    await setValue(field, "Hello , welcome");
+    field.setSelectionRange(6, 6);
+    await openFields();
+    await click([...container.querySelectorAll("button")].find((b) => b.textContent === VARIABLE_LABELS["customer.name"]));
+    expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("Hello {{customer.name}}, welcome");
+  });
+
+  test("[C16] a chip does nothing while a part is selected", async () => {
+    await mountAgreement();
+    await selectItem(container, 3);
+    await openFields();
+    const chip = [...container.querySelectorAll("button")].find((b) => b.textContent === VARIABLE_LABELS["customer.name"]) as HTMLButtonElement;
+    expect(chip.disabled).toBe(true);
   });
 });
 
-describe("the editor's two regions", () => {
-  const editor = () => renderToStaticMarkup(createElement(TemplateEditor, { templateId: null, initial: VALUES, types: TYPES, save: vi.fn() }));
+describe("the preview follows the order on the page", () => {
+  const sentKinds = () => (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.map((call) => (JSON.parse(String((call as [string, RequestInit])[1].body)) as { layout: { kind: string; key?: string; text?: string }[] }).layout.map((row) => row.key ?? row.text));
 
-  test("C5430: the form comes first and the preview second, and the preview region is labelled Preview", () => {
-    const html = editor();
-    const form = html.indexOf('<section aria-label="Template form"');
-    const preview = html.indexOf('<section aria-label="Preview"');
-    expect(form).toBeGreaterThan(-1);
-    expect(preview).toBeGreaterThan(form);
-    expect(html.match(/aria-label="Preview"/g)).toHaveLength(1);
-    expect(html.match(/<form/g)).toHaveLength(1);
-    // The fields sit in the first region and the preview heading in the second.
-    expect(html.indexOf('id="template-name"')).toBeGreaterThan(form);
-    expect(html.indexOf('id="template-name"')).toBeLessThan(preview);
-    expect(html.slice(preview)).toContain(">Preview</h2>");
+  test("[C23] a block moved with the Down button is sent to Preview PDF in its new place", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    await mountAgreement();
+    await selectItem(container, 0);
+    await click(container.querySelector('[aria-label="Move down"]'));
+    await click(withText(container, "button", "Preview PDF"));
+    const [layout] = sentKinds();
+    expect(layout.slice(0, 3)).toEqual(["Prepared for {{customer.name}}.", "About this agreement", "price"]);
   });
 
-  test("C5430: the container is a column below 1280 px and two equal tracks from xl", () => {
-    const container = /^<div class="([^"]*)"/.exec(editor())?.[1] ?? "";
-    expect(container).toMatch(/\bflex\b/);
-    expect(container).toMatch(/\bflex-col\b/);
-    expect(container).toMatch(/\bxl:grid\b/);
-    expect(container).toMatch(/\bxl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
-    expect(container).not.toMatch(/(?<![:\w])grid-cols-/);
+  test("[C23] a block dragged to a new place is sent to Preview PDF in that place", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    await mountAgreement();
+    const grip = container.querySelectorAll('button[aria-label="Drag to move"]')[0];
+    const carried = new Map<string, string>();
+    const transfer = { setData: (t: string, v: string) => carried.set(t, v), getData: (t: string) => carried.get(t) ?? "", get types() { return [...carried.keys()]; }, effectAllowed: "" };
+    const fire = (target: Element, type: string, clientY = 0) =>
+      act(async () => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "dataTransfer", { value: transfer });
+        Object.defineProperty(event, "clientY", { value: clientY });
+        target.dispatchEvent(event);
+      });
+    await fire(grip, "dragstart");
+    await fire(pageItems(container)[2], "drop", -1);
+    await click(withText(container, "button", "Preview PDF"));
+    const [layout] = sentKinds();
+    expect(layout.slice(0, 3)).toEqual(["Prepared for {{customer.name}}.", "About this agreement", "price"]);
   });
 });
 
-describe("the preview follows the editor", () => {
-  type Call = { url: string; init: RequestInit };
-  let calls: Call[];
-  let container: HTMLDivElement;
-  let root: Root;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    calls = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string, init: RequestInit) => {
-        calls.push({ url, init });
-        return new Promise<Response>(() => {});
-      }),
-    );
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
-  });
-  afterEach(() => {
-    act(() => root.unmount());
-    container.remove();
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
+describe("saving", () => {
+  test("[C28] the agreement's Save sends the template id and the form as typed, once", async () => {
+    await mountAgreement();
+    await setValue(container.querySelector("#template-name") as HTMLInputElement, "Renamed");
+    await submit();
+    expect(saveAgreement).toHaveBeenCalledTimes(1);
+    expect(saveAgreement.mock.calls[0][0]).toBe("t-1");
+    expect(saveAgreement.mock.calls[0][1]).toEqual({ ...AGREEMENT, name: "Renamed" });
   });
 
-  const open = (initial: AgreementLayoutForm = VALUES) => act(async () => root.render(createElement(TemplateEditor, { templateId: "88888888-8888-4888-8888-888888888888", initial, types: TYPES, save: vi.fn() })));
-  const tick = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
-  const bodyOf = (index: number) => JSON.parse(String(calls[index].init.body)) as AgreementLayoutForm;
-  const type = (id: string, value: string) =>
-    act(async () => {
-      const input = container.querySelector<HTMLInputElement>(`#${id}`)!;
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+  test("[C28] the contract's Save sends the form, shows its saved line and the editor stays open", async () => {
+    await mountContract();
+    await submit();
+    expect(saveContract).toHaveBeenCalledTimes(1);
+    expect(saveContract).toHaveBeenCalledWith(CONTRACT);
+    expect(container.textContent).toContain(WORDING_MESSAGES.saved);
+    expect(container.querySelector('article[aria-label="Document page"]')).not.toBeNull();
+  });
+
+  test("[C29] the header reads Saved until the form differs, then Unsaved changes, and Saved again after the contract is saved", async () => {
+    await mountContract();
+    expect(state()).toBe("saved");
+    expect(container.textContent).toContain("Saved");
+    await selectItem(container, 1);
+    await setValue(container.querySelector("textarea") as HTMLTextAreaElement, "Changed clause.");
+    expect(state()).toBe("unsaved");
+    expect(container.textContent).toContain("Unsaved changes");
+    await submit();
+    expect(state()).toBe("saved");
+  });
+
+  test("[C29] editing the agreement makes it Unsaved changes, and putting the text back makes it Saved", async () => {
+    await mountAgreement();
+    expect(state()).toBe("saved");
+    await setValue(container.querySelector("#document-title") as HTMLInputElement, "Other");
+    expect(state()).toBe("unsaved");
+    await setValue(container.querySelector("#document-title") as HTMLInputElement, AGREEMENT.doc.title);
+    expect(state()).toBe("saved");
+  });
+
+  test("[C30] a refused save keeps what was typed, shows the message on its block and selects the first block with an error", async () => {
+    saveAgreement.mockResolvedValueOnce({ status: "invalid", errors: { "layout.4.options.title": "That title is too long.", "layout.1.text": "This text is not allowed." }, values: AGREEMENT });
+    await mountAgreement();
+    await setValue(container.querySelector("#template-name") as HTMLInputElement, "Kept name");
+    await submit();
+    expect(container.textContent).toContain("Fix the highlighted fields, then save again. Nothing you typed is lost.");
+    expect((container.querySelector("#template-name") as HTMLInputElement).value).toBe("Kept name");
+    expect(pageItems(container)[1].querySelector('[aria-current="true"]')).not.toBeNull();
+    expect(pageItems(container)[1].textContent).toContain("This text is not allowed.");
+    expect(pageItems(container)[4].textContent).toContain("That title is too long.");
+    expect(frameOf(container, 4).className).toContain("border-danger");
+  });
+
+  test("[C30] a refused contract save also keeps the form and selects the first block with an error", async () => {
+    saveContract.mockResolvedValueOnce({ status: "invalid", errors: { "layout.1.text": "Not allowed." }, values: CONTRACT });
+    await mountContract();
+    await submit();
+    expect(pageItems(container)[1].querySelector('[aria-current="true"]')).not.toBeNull();
+    expect(pageItems(container)[1].textContent).toContain("Not allowed.");
+    expect(toolbar(container)).toContain("Delete");
+  });
+
+  test.each(["forbidden", "not_found", "unavailable"] as const)("[C31] the agreement's %s answer shows its message", async (status) => {
+    saveAgreement.mockResolvedValueOnce({ status });
+    await mountAgreement();
+    await submit();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(SAVE_MESSAGES[status]);
+  });
+
+  test.each(["forbidden", "not_found", "unavailable"] as const)("[C31] the contract's %s answer shows its message", async (status) => {
+    saveContract.mockResolvedValueOnce({ status });
+    await mountContract();
+    await submit();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(WORDING_MESSAGES[status]);
+  });
+});
+
+describe("leaving", () => {
+  test("[C28] the back link in the header leads to the Templates list, in both editors", async () => {
+    await mountAgreement();
+    expect(container.querySelector('form a[href="/templates"]')?.textContent).toContain("Templates");
+    await mountContract();
+    expect(container.querySelector('form a[href="/templates"]')?.textContent).toContain("Templates");
+  });
+});
+
+describe("one editor", () => {
+  test("[C32] the agreement and the contract are the same editor: the same panel, page and header controls, with the parts of their own document", async () => {
+    const shape = () => ({
+      panel: container.querySelector('[role="toolbar"][aria-label="Add element"]') !== null,
+      page: container.querySelector('article[aria-label="Document page"]') !== null,
+      buttons: ["Preview PDF", "Page settings"].map((label) => withText(container, "button", label) !== undefined),
     });
-  const press = (label: string) => act(async () => void [...container.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === label || button.textContent === label)!.click());
-
-  test("C5549: opened on a saved template it requests the PDF once on mount, with its layout and options, and no more without an edit", async () => {
-    await open();
-    expect(calls).toHaveLength(1);
-    expect(calls[0].url).toBe("/templates/preview");
-    expect(bodyOf(0)).toEqual(JSON.parse(JSON.stringify(VALUES)));
-    await tick(5000);
-    expect(calls).toHaveLength(1);
-  });
-
-  test("C5549: a change to a document option makes one request, 700 ms after the change, carrying the new option", async () => {
-    await open();
-    await type("doc-title", "Maintenance schedule");
-    await tick(699);
-    expect(calls).toHaveLength(1);
-    await tick(1);
-    expect(calls).toHaveLength(2);
-    expect(bodyOf(1).doc.title).toBe("Maintenance schedule");
-    await tick(3000);
-    expect(calls).toHaveLength(2);
-  });
-
-  test("C5549: moving a row and then changing a section option 300 ms later makes one request, at 1,000 ms, carrying both", async () => {
-    await open();
-    await press("Move row 2 up");
-    await tick(300);
-    await type("layout-3-title", "Visits this year");
-    await tick(699);
-    expect(calls).toHaveLength(1);
-    await tick(1);
-    expect(calls).toHaveLength(2);
-    const sent = bodyOf(1);
-    expect(sent.layout[0]).toMatchObject({ kind: "block", text: "Hello {{customer.name}}." });
-    expect(sent.layout[1]).toMatchObject({ kind: "block", text: "Welcome" });
-    expect(sent.layout.find((row) => row.kind === "section" && row.key === "schedule")).toMatchObject({ title: "Visits this year" });
-  });
-
-  test("C5549: with the preview unavailable the form's fields and Save stay editable", async () => {
-    let fail: (error: unknown) => void = () => {};
-    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((_resolve, reject) => void (fail = reject))));
-    await open();
-    await act(async () => fail(new TypeError("Failed to fetch")));
-    expect(container.textContent).toContain("Preview unavailable.");
-    for (const id of ["template-name", "doc-title", "layout-0-text", "template-term", "line-0-price"]) {
-      expect(container.querySelector<HTMLInputElement>(`#${id}`)!.disabled, id).toBe(false);
-    }
-    expect([...container.querySelectorAll("button")].find((button) => button.type === "submit")!.disabled).toBe(false);
-  });
-
-  test("C5548: invalid values mark the price field aria-invalid and the preview frame says Fix the highlighted fields to refresh the preview.", async () => {
-    await open();
-    expect(container.querySelector("#line-0-price")!.getAttribute("aria-invalid")).not.toBe("true");
-    expect(container.textContent).not.toContain("Fix the highlighted fields to refresh the preview.");
-    await type("line-0-price", "lots");
-    await tick(2000);
-    expect(container.querySelector("#line-0-price")!.getAttribute("aria-invalid")).toBe("true");
-    expect(container.textContent).toContain("Fix the highlighted fields to refresh the preview.");
-    expect(calls).toHaveLength(1);
-  });
-
-  test("C5549: values the preview cannot draw make no request and the row's message shows without the save banner", async () => {
-    await open();
-    await type("line-0-price", "lots");
-    await tick(2000);
-    expect(calls).toHaveLength(1);
-    expect(container.textContent).toContain("Enter a price per visit like $450.00");
-    expect(container.querySelector('[role="alert"]')).toBeNull();
+    await mountAgreement();
+    const agreement = shape();
+    expect(container.querySelector("article")?.getAttribute("data-editor-document")).toBe("agreement");
+    expect(container.textContent).toContain("Terms");
+    expect(container.textContent).not.toContain("Signatures");
+    await mountContract();
+    const contract = shape();
+    expect(container.querySelector("article")?.getAttribute("data-editor-document")).toBe("contract");
+    expect(container.textContent).toContain("Signatures");
+    expect(agreement).toEqual(contract);
+    expect(agreement).toEqual({ panel: true, page: true, buttons: [true, true] });
   });
 });

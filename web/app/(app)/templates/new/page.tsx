@@ -19,7 +19,7 @@ export default async function NewTemplatePage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="New template" subtitle="Wording, sections and the lines a new agreement starts with." />
-      <TemplateEditor templateId={null} initial={EMPTY_LAYOUT_FORM} types={types.map(({ code, name }) => ({ code, name }))} save={saveAgreementTemplateAction} />
+      <TemplateEditor templateId={null} initial={EMPTY_LAYOUT_FORM} types={types.map(({ code, name }) => ({ code, name }))} save={saveAgreementTemplateAction} orgName={member.orgName} />
     </div>
   );
 }

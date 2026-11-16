@@ -34,6 +34,7 @@ export async function EditTemplateForRequest({ templateId }: { templateId: strin
         initial={layoutFormFromBody(template.body)}
         types={types.map(({ code, name }) => ({ code, name }))}
         save={saveAgreementTemplateAction}
+        orgName={member.orgName}
       />
     </div>
   );

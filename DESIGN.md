@@ -292,6 +292,17 @@ Quiet, familiar, and exact. Every control is a native element styled with role t
 - **Renewal pill:** a renewal's kanban card shows a neutral `StatusPill` "Renewal" before any attention pill; the agreement page lists "Renewal of AG-x" / "Renewed by AG-y" links beside the customer and site links.
 - **Empty-state panel** is the shared `EmptyPanel`; list screens (Customers, site register) use it with a title, one line of text and, for a search with no match, a Clear search button.
 
+### Template editor (page and dock)
+
+The Templates editor (`/templates/new`, `/templates/[id]`, `/templates/contract`) edits a document on a page, not in a form. Four parts, all from the existing tokens:
+
+- **Header bar:** one `surface` card with a hairline border and card shadow (sticky from 1024px): a `← Templates` link, the template's name as an inline title-style field, a Saved or Unsaved pill (`board` or `attention`), the Details, Page settings and Import contract buttons that open a small options card, then Preview PDF and the primary Save.
+- **Page:** a white `surface` sheet, 44rem wide and centred, with the letterhead, the title field and one block per layout row. A block is selected by click, Enter or Space and gets a 1.5px `action` outline over an `action-tint` wash; its toolbar (move, indent, page break, size, delete) sits inside the block. A part (price table, schedule, service included, equipment, terms, signatures) draws a labelled sample, and a required one carries a quiet "Required" pill instead of Delete. A merge field is a rounded `action-tint` chip with its plain label; an unknown name shows as an `attention` chip. An error outlines the block in `danger` and prints its message under it.
+- **Dock:** a dark `night` pill that floats at the bottom of the screen (sticky), holding Writing, Document parts and Field as glyph-over-label buttons on `ink-nav` hover. A part already on the page is dimmed. It scrolls sideways inside itself when narrower than its items and never widens the page. The Field list opens above it as a `night` card of `ink-nav` chips.
+- **Dragging:** a dragged element or block shows one 2px `action` rule between blocks where it will land; every block has a grip (⋮⋮) and the dragged block dims. Click, tap and the Up and Down buttons do the same without dragging.
+
+Preview PDF opens a modal dialog over the page (`bg-ink/50` scrim); nothing renders the PDF beside the page.
+
 ### Focus
 Every focusable element gets the global `:focus-visible` treatment: a 2px solid Action Blue outline with a 2px offset. Components do not override it.
 

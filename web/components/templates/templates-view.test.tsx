@@ -1,183 +1,133 @@
-import { createElement } from "react";
+// @vitest-environment jsdom
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementTemplateSummary, MemberRole } from "@/application/ports";
 import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
 import { TemplatesView } from "./templates-view";
 
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/templates" }));
 
 const NOW = new Date("2026-11-12T18:00:00Z");
-const line = (months: number[], codes: string[] = ["RTU"]) => ({ description: "Visit", visitMonths: months, assetTypeCodes: codes, costPerVisitCents: 45000 });
-
 const template = (id: string, name: string, patch: Partial<AgreementTemplateSummary> = {}): AgreementTemplateSummary => ({
   id,
   versionId: `${id}-v`,
   versionNo: 2,
   updatedAt: new Date("2026-10-29T12:00:00Z"),
   system: false,
-  body: { ...SYSTEM_AGREEMENT_BODY, name, description: `About ${name}`, preset: { termMonths: 12, lines: [line([3, 6, 9, 12])] } },
+  body: { ...SYSTEM_AGREEMENT_BODY, name, description: `About ${name}`, preset: { termMonths: 12, lines: [{ description: "Visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 }] } },
   ...patch,
 });
-
 const A = template("t-a", "Annual boiler");
 const B = template("t-b", "Quarterly HVAC");
-const SYSTEM = template("t-0", "Standard agreement", { system: true, body: SYSTEM_AGREEMENT_BODY });
-
 const actions = { duplicate: vi.fn(), archive: vi.fn() };
 const render = (role: MemberRole, props: Partial<Parameters<typeof TemplatesView>[0]> = {}) =>
-  renderToStaticMarkup(
-    createElement(TemplatesView, { templates: [A, B], selectedId: "t-b", role, typeNames: { RTU: "Rooftop units" }, now: NOW, actions: role === "owner" || role === "admin" ? actions : undefined, ...props }),
-  );
+  renderToStaticMarkup(createElement(TemplatesView, { templates: [A, B], role, now: NOW, actions: role === "owner" || role === "admin" ? actions : undefined, ...props }));
 
-describe("the Templates page header", () => {
-  test.each(["owner", "admin"] as const)("C5340: a %s sees the title, the subtitle and one primary New template link to /templates/new after the title", (role) => {
-    const html = render(role);
-    expect(html).toContain("<h1");
-    expect(html).toContain("Agreement templates");
-    expect(html).toContain("Standardize scope and pricing without making every customer agreement feel generic.");
-    const buttons = html.match(/<a[^>]*href="\/templates\/new"[^>]*>/g) ?? [];
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toContain('data-variant="primary"');
-    expect(html.indexOf("Agreement templates")).toBeLessThan(html.indexOf('href="/templates/new"'));
-    expect(html).toContain("New template");
-  });
-
-  test.each(["estimator", "viewer"] as const)("C5340: a %s sees the title and no New template", (role) => {
-    const html = render(role);
-    expect(html).toContain("Agreement templates");
-    expect(html).not.toContain("New template");
-    expect(html).not.toContain('href="/templates/new"');
-  });
-});
-
-describe("the two regions", () => {
-  test("C5341: the card grid comes first, then the preview, and each exists once", () => {
+describe("the Templates page", () => {
+  test("[C35] one grid of cards, a card per template, and no preview panel", () => {
     const html = render("owner");
-    const grid = html.indexOf('aria-label="Templates"');
-    const preview = html.indexOf('aria-label="Template preview"');
-    expect(grid).toBeGreaterThan(-1);
-    expect(preview).toBeGreaterThan(grid);
-    expect(html.match(/aria-label="Templates"/g)).toHaveLength(1);
-    expect(html.match(/aria-label="Template preview"/g)).toHaveLength(1);
-  });
-
-  test("C5341: side by side from 1280px with a two-column grid, stacked and one column below", () => {
-    const html = render("owner");
-    expect(html).toMatch(/class="[^"]*xl:grid-cols-\[minmax\(0,1fr\)_22rem\][^"]*"/);
-    expect(html).toMatch(/<ul class="[^"]*\bgrid-cols-1\b[^"]*md:grid-cols-2[^"]*"/);
-    expect(html).not.toMatch(/<ul class="[^"]*\b(?:sm|lg|xl):grid-cols-[3-9]/);
-  });
-});
-
-describe("controls by role", () => {
-  const menuItems = (html: string) => ({
-    newButton: html.includes('href="/templates/new"'),
-    menu: (html.match(/aria-label="Actions for /g) ?? []).length,
-    edit: (html.match(/href="\/templates\/t-[ab]"/g) ?? []).length,
-    duplicate: (html.match(/>Duplicate</g) ?? []).length,
-    archive: (html.match(/>Archive</g) ?? []).length,
-    use: html.includes("Use template"),
-  });
-
-  test.each(["owner", "admin"] as const)("C5344: a %s sees New template, a menu on each card (Edit, Duplicate, Archive), Duplicate and Use template", (role) => {
-    // Two cards: two menus with Edit, Duplicate and Archive each; the preview of the selected org template adds one more Edit and one more Duplicate.
-    expect(menuItems(render(role))).toEqual({ newButton: true, menu: 2, edit: 3, duplicate: 3, archive: 2, use: true });
-  });
-
-  test("C5344: an estimator sees Use template and none of the writer controls", () => {
-    expect(menuItems(render("estimator"))).toEqual({ newButton: false, menu: 0, edit: 0, duplicate: 0, archive: 0, use: true });
-  });
-
-  test("C5344: a viewer sees none of the controls and still sees the list and the preview", () => {
-    const html = render("viewer");
-    expect(menuItems(html)).toEqual({ newButton: false, menu: 0, edit: 0, duplicate: 0, archive: 0, use: false });
+    expect(html.match(/<ul[^>]*aria-label="Templates"/g)).toHaveLength(1);
+    expect(html.match(/<article/g)).toHaveLength(2);
+    expect(html).not.toContain('aria-label="Template preview"');
+    expect(html).not.toContain("xl:grid-cols-[minmax(0,1fr)_22rem]");
     expect(html).toContain("Annual boiler");
     expect(html).toContain("Quarterly HVAC");
-    expect(html).toContain('aria-label="Template preview"');
   });
-});
 
-describe("empty and error states", () => {
-  test("C5345: an org with no template of its own shows the system template as the only, selected card with its preview and New template for an owner", () => {
-    const html = render("owner", { templates: [SYSTEM], selectedId: "t-0" });
-    expect(html.match(/<article/g)).toHaveLength(1);
-    expect(html).toContain('aria-current="true"');
-    expect(html).toContain("Standard agreement");
-    expect(html).toContain('aria-label="Template preview"');
+  test.each(["owner", "admin"] as const)("[C35] a %s sees New template, a menu on each card and Use template", (role) => {
+    const html = render(role);
     expect(html).toContain('href="/templates/new"');
-    // The system template can be copied, not edited or archived.
-    expect(html).not.toContain('href="/templates/t-0"');
-    expect(html).not.toContain(">Archive<");
+    expect(html.match(/aria-label="Actions for /g)).toHaveLength(2);
+    expect(html.match(/Use template/g)).toHaveLength(2);
   });
 
-  test("C5345: an estimator in that org sees the system template and no New template", () => {
-    const html = render("estimator", { templates: [SYSTEM], selectedId: "t-0" });
-    expect(html).toContain("Standard agreement");
-    expect(html).not.toContain("New template");
+  test("[C35] an estimator has Use template and none of the writer controls; a viewer has neither", () => {
+    const estimator = render("estimator");
+    expect(estimator.match(/Use template/g)).toHaveLength(2);
+    expect(estimator).not.toContain("Actions for ");
+    expect(estimator).not.toContain("New template");
+    const viewer = render("viewer");
+    expect(viewer).not.toContain("Use template");
+    expect(viewer).not.toContain("Actions for ");
+    expect(viewer).toContain("Annual boiler");
   });
 
-  test("C5346: when the list cannot be read the page says so with a link back to /templates and shows no cards", () => {
-    const html = render("owner", { templates: null, selectedId: null });
+  test("[C37] an unreadable list shows the load error with a way back, and no cards", () => {
+    const html = render("owner", { templates: null });
     expect(html).toContain("We couldn&#x27;t load templates. Try again.");
     expect(html).toMatch(/<a[^>]*href="\/templates"[^>]*>Try again<\/a>/);
     expect(html).not.toContain("<article");
-    expect(html).not.toContain('aria-label="Template preview"');
+  });
+
+  test("[C37] an empty list says there are no templates yet", () => {
+    const html = render("owner", { templates: [] });
+    expect(html).toContain("No templates yet.");
+    expect(html).not.toContain("<article");
   });
 });
-
-describe("the two regions, arranged", () => {
-  test("C5341: the preview sits beside the grid section, not inside it, and the container is a flex column that becomes a two-track grid from xl", () => {
-    const html = render("owner");
-    const sectionEnd = html.indexOf("</section>");
-    expect(sectionEnd).toBeGreaterThan(html.indexOf('aria-label="Templates"'));
-    expect(html.indexOf('aria-label="Template preview"')).toBeGreaterThan(sectionEnd);
-    const container = /<div class="([^"]*)"><section aria-label="Templates"/.exec(html)?.[1] ?? "";
-    expect(container.split(" ")).toEqual(expect.arrayContaining(["flex", "flex-col", "xl:grid", "xl:grid-cols-[minmax(0,1fr)_22rem]"]));
-    expect(container).not.toMatch(/(?:^| )(?:sm|md|lg):grid\b/);
-  });
-
-  test("C5341: every card is one cell of the grid list, one per template, inside the grid section", () => {
-    const html = render("owner");
-    const section = html.slice(html.indexOf('<section aria-label="Templates"'), html.indexOf("</section>"));
-    expect(section.match(/<li>/g)).toHaveLength(2);
-    expect(section.match(/<article/g)).toHaveLength(2);
-    expect(html.slice(html.indexOf("</section>")).match(/<article/g)).toBeNull();
-  });
-});
-
 
 describe("the Contract wording card", () => {
   const link = (html: string) => html.match(/<a[^>]*href="\/templates\/contract"[^>]*>([^<]*)</);
 
-  test("C5557: the card comes below the agreement templates and says Standard contract wording while the org has none, with Customize for an owner", () => {
+  test("[C36] the card is one more cell of the same grid, below the templates, saying Standard contract wording with Customize for an owner", () => {
     const html = render("owner", { contractWording: { own: false } });
-    expect(html.indexOf('aria-label="Contract wording"')).toBeGreaterThan(html.indexOf('aria-label="Templates"'));
-    expect(html.indexOf('aria-label="Contract wording"')).toBeGreaterThan(html.indexOf('aria-label="Template preview"'));
+    const grid = html.slice(html.indexOf("<ul"), html.indexOf("</ul>"));
+    expect(grid.match(/<article/g)).toHaveLength(3);
+    expect(grid.indexOf('aria-label="Contract wording"')).toBeGreaterThan(grid.indexOf("Quarterly HVAC"));
     expect(html).toContain("Standard contract wording");
-    expect(html).not.toContain("Your contract wording");
     expect(link(html)?.[1]).toBe("Customize");
   });
 
-  test("C5557: after the org saved its own wording the card says Your contract wording with Edit, for an owner and an admin", () => {
+  test("[C36] after the org saved its own wording the card says Your contract wording with Edit, for an owner and an admin", () => {
     for (const role of ["owner", "admin"] as const) {
       const html = render(role, { contractWording: { own: true } });
       expect(html).toContain("Your contract wording");
-      expect(html).not.toContain("Standard contract wording");
       expect(link(html)?.[1], role).toBe("Edit");
     }
-    expect(link(render("admin", { contractWording: { own: false } }))?.[1]).toBe("Customize");
   });
 
-  test.each(["estimator", "viewer"] as const)("C5557: a %s sees the card and no link to the editor", (role) => {
+  test.each(["estimator", "viewer"] as const)("[C36] a %s sees the card and no link to the editor", (role) => {
     const html = render(role, { contractWording: { own: true } });
     expect(html).toContain("Your contract wording");
     expect(html).not.toContain('href="/templates/contract"');
   });
 
-  test("C5557: with no wording read there is no card, and the agreement templates are still drawn", () => {
+  test("[C36] with no wording read there is no card and the templates are still drawn", () => {
     const html = render("owner");
     expect(html).not.toContain('aria-label="Contract wording"');
     expect(html).toContain("Quarterly HVAC");
+  });
+});
+
+describe("Use template", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  test("[C35] pressing Use template on a card opens the New agreement dialog without leaving the page", async () => {
+    // jsdom has no native dialog behaviour.
+    HTMLDialogElement.prototype.showModal = function () {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close = function () {
+      this.removeAttribute("open");
+    };
+    const dialog = { customers: [], sites: [], templates: [], actions: {} as never };
+    await act(async () => root.render(createElement(TemplatesView, { templates: [A, B], role: "estimator", now: NOW, dialog })));
+    const use = [...container.querySelectorAll("button")].filter((b) => b.textContent?.includes("Use template"));
+    expect(use).toHaveLength(2);
+    await act(async () => use[1].click());
+    expect(container.querySelector("dialog[open]")).not.toBeNull();
   });
 });

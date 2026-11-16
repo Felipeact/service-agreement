@@ -1,16 +1,18 @@
 import Link from "next/link";
 import type { AgreementTemplateSummary } from "@/application/ports";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { derivedFrequency } from "@/domain/agreement";
 import { updatedAgo } from "@/lib/relative-time";
 import { ArchiveControl } from "./archive-control";
+import { CustomizeControl } from "./customize-control";
 import { DuplicateControl } from "./duplicate-control";
 import type { ArchiveTemplateState, CustomizeTemplateState, DuplicateTemplateState } from "./state";
 
 export type TemplateCardActions = {
   duplicate: (templateId: string) => Promise<DuplicateTemplateState>;
   archive: (templateId: string) => Promise<ArchiveTemplateState>;
-  /** Saves the system template as the org's own (template-flow AC 14); the preview offers it. */
+  /** Saves the system template as the org's own (template-flow AC 14). */
   customize?: (templateId: string) => Promise<CustomizeTemplateState>;
 };
 
@@ -21,11 +23,14 @@ const ITEM = "flex min-h-11 w-full items-center px-3 text-[13px] font-medium tex
 
 type CardProps = {
   template: AgreementTemplateSummary;
-  selected: boolean;
-  /** Owners and admins: the card menu. */
+  /** Owners and admins: the card menu and the link into the editor. */
   canWrite: boolean;
+  /** Owner, admin and estimator start agreements from a template. */
+  canUse: boolean;
   now: Date;
   actions?: TemplateCardActions;
+  /** Called with the template's latest version id when Use template is pressed. */
+  onUse?: (versionId: string) => void;
 };
 
 /** The three-dot menu: Edit, Duplicate and Archive. A details element, so it opens by touch and without hover. The system template can only be copied. */
@@ -49,6 +54,7 @@ function CardMenu({ template, actions }: { template: AgreementTemplateSummary; a
             Edit
           </Link>
         )}
+        {actions?.customize && system && <CustomizeControl templateId={id} action={actions.customize} />}
         {actions && <DuplicateControl templateId={id} action={actions.duplicate} look="item" />}
         {actions && !system && <ArchiveControl templateId={id} name={body.name} action={actions.archive} look="item" />}
       </div>
@@ -56,16 +62,13 @@ function CardMenu({ template, actions }: { template: AgreementTemplateSummary; a
   );
 }
 
-/** One template as a card: icon tile, menu, name, description, a divider, then the derived frequency and when it was last saved. */
-export function TemplateCard({ template, selected, canWrite, now, actions }: CardProps) {
-  const { id, body, system, updatedAt } = template;
+/** One template as a card: icon tile, menu, name, description, a divider, the derived frequency and when it was last saved, and Use template. */
+export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }: CardProps) {
+  const { id, body, system, updatedAt, versionId } = template;
   const frequency = derivedFrequency(body.preset);
   const description = body.description || (system ? SYSTEM_DESCRIPTION : "");
   return (
-    <article
-      data-template={id}
-      className={`relative flex h-full flex-col gap-3 rounded-panel border bg-surface p-5 shadow-card transition-colors duration-150 ${selected ? "border-action ring-1 ring-action" : "border-hairline hover:border-field"}`}
-    >
+    <article data-template={id} className="flex h-full flex-col gap-3 rounded-panel border border-hairline bg-surface p-5 shadow-card">
       <div className="flex items-start justify-between gap-2">
         <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-control bg-action-tint text-action">
           <Icon name="template" className="size-5" />
@@ -73,15 +76,7 @@ export function TemplateCard({ template, selected, canWrite, now, actions }: Car
         {canWrite && <CardMenu template={template} actions={actions} />}
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className="font-display text-[16px] leading-snug font-semibold tracking-tight">
-          <Link
-            href={`/templates?selected=${id}`}
-            aria-current={selected ? "true" : undefined}
-            className="after:absolute after:inset-0 after:rounded-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
-          >
-            {body.name}
-          </Link>
-        </h3>
+        <h3 className="font-display text-[16px] leading-snug font-semibold tracking-tight">{body.name}</h3>
         <p className="line-clamp-2 min-h-[2.9em] text-[13px] text-ink-2">{description}</p>
       </div>
       <hr className="border-hairline" />
@@ -89,6 +84,12 @@ export function TemplateCard({ template, selected, canWrite, now, actions }: Car
         <span className="font-semibold text-ink">{frequency ?? "No preset lines"}</span>
         <span className="text-ink-2">{updatedAgo(updatedAt, now)}</span>
       </div>
+      {canUse && (
+        <Button variant="primary" className="mt-auto w-full" onClick={() => onUse?.(versionId)}>
+          <Icon name="document" className="size-4" />
+          Use template
+        </Button>
+      )}
     </article>
   );
 }
