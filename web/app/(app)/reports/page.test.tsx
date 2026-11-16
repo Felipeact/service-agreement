@@ -181,4 +181,17 @@ describe("the reports page (reporting S1 to S4)", () => {
     expect(html).toContain("50% dropped off");
     expect(html).toContain('<h1 class="font-display leading-tight font-semibold tracking-tight text-[26px]">Reports</h1>');
   });
+
+  test("C5765: the type revenue rows, the range controls, the pipeline stat and an expired group render", async () => {
+    reports.losses.mockResolvedValue(ok([{ agreementId: "a5", number: "AG-5", customer: "Acme", site: "Plant", outcome: "expired", reason: null, occurred: "2027-03-12", valueCents: 119999 }]));
+    const html = await render();
+    expect(html).toContain("Aaa Type");
+    expect(html).toContain("$100.00 a year");
+    expect(html).toContain("Apply range");
+    expect(html).toMatch(/<a href="\/reports"[^>]*>Last 12 months/);
+    expect(html).toContain("Pipeline value");
+    expect(html).toContain("$2,399.98");
+    expect(html).toContain("Expired · 1");
+    expect(html).not.toContain("Reason:");
+  });
 });

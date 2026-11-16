@@ -67,7 +67,7 @@ export const RECIPES: Recipe[] = [
   plain("agreement_templates"),
   plain("block_editor"),
   { name: "db_freeze", parts: ["fixture.sql", "../migrations/20261115100000_db_freeze.sql", "db_freeze.sql"] },
-  { name: "reports", parts: ["fixture.sql", "../migrations/20261115110000_reports.sql", "reports.sql"] },
+  plain("reports"),
 ];
 
 const COMMIT = /^\s*commit(\s+work)?\s*;/im;

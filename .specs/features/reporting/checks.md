@@ -5,7 +5,7 @@ Plan: `.specs/features/reporting/plan.md`
 
 24 checks in 4 slices · 4 one-way doors · 0 open
 
-Database proofs run as `cd web && npm run test:db reports` (recipe `reports`: fixture, the db-freeze migration, the reporting migration, `supabase/tests/reports.sql`); each assertion is labelled with its check id. Code proofs run as `cd web && npx vitest run <file> -t "<id>"`. Expected values come from the plan, never from the migration.
+Database proofs run as `cd web && npm run test:db reports` (recipe `reports`: fixture, then `supabase/tests/reports.sql` against the hosted functions, the migration having been applied by the owner on 2026-11-15); each assertion is labelled with its check id. Code proofs run as `cd web && npx vitest run <file> -t "<id>"`. Expected values come from the plan, never from the migration.
 
 ## Checks
 
@@ -111,6 +111,9 @@ Proof: `cd web && npx vitest run composition/composition.test.ts -t "C5731: getC
 
 **C5764** - `GET /reports/export?report=funnel&from=<a date after today>` with no `to` answers 400 and `from=<today>` answers 200 (AC 18)
 Proof: `cd web && npx vitest run "app/(app)/reports/export" -t "after today with no end"`
+
+**C5765** - The revenue-by-type rows, the "Apply range" button, the "Last 12 months" link, the pipeline value stat and an Expired group (with no Reason line) render on the page (AC 1, 2, 8, 11)
+Proof: `cd web && npx vitest run "app/(app)/reports/page.test.tsx" -t "C5765"`
 
 ## Coverage
 

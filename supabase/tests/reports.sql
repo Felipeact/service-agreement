@@ -1,6 +1,6 @@
 -- Reporting, database side: C5701-C5716 (.specs/features/reporting/checks.md).
--- Run after fixture.sql and the migration 20261115110000_reports.sql, in the same transaction (the recipe replays the migration
--- until the owner applies it to the hosted project). Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB; uX has no
+-- Run after fixture.sql (npm run test:db reports). The migration 20261115110000_reports.sql was applied to the hosted project by the
+-- owner on 2026-11-15, so this file no longer replays it and tests the hosted functions. Fixture: org A owner uA, estimator uE, viewer uV; org B owner uB; uX has no
 -- membership. Expected values come from the plan, never read back from the migration.
 --
 -- Scenario, org A, range R = 2030-01-01 to 2030-12-31 (the fixture's own events are dated now, so they stay outside R).

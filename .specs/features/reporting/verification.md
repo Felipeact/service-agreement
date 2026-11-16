@@ -131,3 +131,114 @@ Known pre-existing failures re-run and confirmed unrelated (none names a reporti
 4. Screen elements with no check: stuck-list and loss/renewal links, loss reason line and outcome labels, revenue tables' rendering and order, section order, range form controls, funnel drop-off text and bar, page title.
 5. Precision gaps in checks: C5743's proof command runs only the link toggle, the four-role proof is in an unnamed file; C5712 claims null `value_cents` from aging, which has no such column; no test boots the real `getContainer()` assembly for `reports`.
 6. Edge: `/reports/export?from=<future date>` with no `to` answers 200 with the default range instead of 400 (`route.ts:158-161`, unasserted).
+
+---
+
+# Round 2
+
+**Verdict**: FAIL (round 2 verdict; round 1 above is kept as written)
+**Profile**: ui
+**Diff range**: c702243..HEAD (9764140), plus every round 1 gap and unproven check re-proven
+**Round**: 2 - scoped (code and screen sections verified at 9764140; database sections carried from c702243, see below)
+**Verifier**: independent sub-agent (author != verifier)
+
+Summary: all six round 1 gaps are closed in code and checks except two things the Verifier could not close and three small screen elements. Open items, in order: (1) C5751 live browser pass is still Unproven (needs an emailed sign-in link to the owner, an agent cannot do it); (2) the database proof `npm run test:db reports` can no longer be re-run at HEAD, because the recipe re-applies the migration the owner already applied to the hosted project and Postgres answers `function "report_org" already exists`; (3) three screen elements have no selector check (revenue-by-type rows, the Apply range and Last 12 months controls, the pipeline value stat). Everything else is PASS: 169 code tests green at HEAD, 8 faults injected on the four new checks, 8 killed, tree clean. If the owner accepts C5751 as the live check left open, items (2) and (3) are the only other blockers; the repo's precedent is to tick with C5751 open and let the owner decide.
+
+## Binding sources (round 2, verified at 9764140)
+
+| Source | Opened | Contradiction | Uncovered |
+| --- | --- | --- | --- |
+| ROADMAP.md "Reporting" | yes, re-read | none: line 229 now reads "as of today (agreements in term now; amended 2026-11-15 ...)" which matches AC 11 and C5709/C5710; line 231 now says automatic renewals are "left out of the figures", which matches the code (excluded from win rate and losses) and removes the "shown separately" demand. Round 1 contradiction closed. ROADMAP line 226 still says "grouped by reason" while plan AC 8 says "grouped by outcome"; the build and C5761 follow the plan | - |
+| plan AC 8, 7, 10, 11, 18 vs `reports-view.tsx` | yes | none: losses grouped Refused, Expired, Withdrawn with counts (`reports-view.tsx:189-209`, h3 at `:196`), empty groups return null (`:191`) | - |
+| AGENTS..md web validation | yes (static only) | none | live pass is C5751, still not run |
+| DESIGN.md / PRODUCT.md | yes | none | see enumeration |
+
+### Per-screen enumeration, `/reports` (round 2)
+
+| Element or arrangement | Checked by | Gap |
+| --- | --- | --- |
+| Page title "Reports" | `page.test.tsx:182` asserts the exact h1 | closed |
+| Range form prefilled From, To | `page.test.tsx:179-180` (`name="from"` value 2026-06-16, `name="to"` value 2027-06-15) | closed for the inputs; the "Apply range" button and "Last 12 months" link are not asserted: open, minor |
+| Section order | `page.test.tsx:174-176` indexOf order of the seven headings, sorted equals actual | closed |
+| Stuck list links to agreements | `page.test.tsx:177` `/<a href="\/agreements\/a1"[^>]*>AG-1/` | closed (one row asserted, not ten) |
+| Renewal links | `page.test.tsx:178` link `a3` | closed |
+| Losses grouped, labels, count, reason, date, link | `page.test.tsx:157-163` | closed |
+| Revenue by customer largest first | `page.test.tsx:179` Acme before Beta, `:178` neighbour `$2,399.98 a year` (lines 177-181 of the C5762 test, see file) | closed. The view does not sort, so this proves the page keeps the SQL order |
+| Revenue by type rows | none: only the heading is asserted | open, minor |
+| Funnel drop-off text | `page.test.tsx:181` `50% dropped off` | closed; the bar itself is not asserted (arrangement, browser only) |
+| Headline pipeline value stat and "a year" notes | `$1,199.99` only (`page.test.tsx:78`) | open, minor |
+| Regions, columns, bar rendering | none, a selector cannot reach them | C5751 |
+
+## Checks (round 2)
+
+New checks and every check that round 1 ranked as a gap or Unproven, re-proven.
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C5761 | Lost deals grouped under Refused, Expired, Withdrawn with count, empty groups left out, each row link, date, reason | `npx vitest run ... "app/(app)/reports"` exit 0, `C5761: lost deals are grouped ...` listed passed | `page.test.tsx:157` `toContain("Refused · 1")`, `:159` `not.toContain("Expired · ")`, `:160` Refused before Withdrawn, `:161` link regex `/<a href="\/agreements\/a2"[^>]*>AG-2/`, `:162` `Reason: Price`, `:163` `2027-03-13`. Code `reports-view.tsx:189-209` | PASS |
+| C5762 | Stuck and renewal links, section order, revenue largest first, prefilled form, "50% dropped off", title | same run, `C5762: the screen links ...` passed | `page.test.tsx:175` `expect([...order].sort((a, b) => a - b)).toEqual(order)`, `:177` link a1, `:178` link a3, `:179-180` form values, `:181` `50% dropped off`, `:182` h1 | PASS |
+| C5763 | `getContainer()` exposes `reports` on the session client and `renewals()` calls rpc `report_renewals` | same run, `C5731: getContainer() exposes the report reader ...` passed | `composition.test.ts:130` `toEqual({ ok: true, value: [] })`, `:131` `toHaveBeenCalledWith("report_renewals")`; assembly read directly at `composition/index.ts:203` `reports: supabaseReportReader(supabase)` | PASS |
+| C5764 | Export `from` after today and no `to` is 400; `from=today` is 200 | same run, `C5741: a start date after today with no end ...` passed | `route.test.ts:60` `get("report=funnel&from=2027-06-16")).status).toBe(400)`, `:61` `from=2027-06-15 ... toBe(200)`. Code `route.ts:33` guard | PASS |
+| C5751 | Live browser pass 375/768/1440, CSV, targets, console | not run | none | Unproven (not run) |
+| C5743 | Nav shows Reports for four roles | `nav-gate.test.ts` and `nav-items.test.ts` both in the run | `nav-gate.test.ts:33` `expect(element.props.reports).toBe(expected)` over 4 roles; `nav-items.test.ts` link toggle. The Handoff now records that both files carry it (precision gap documented, not edited, as instructed) | PASS |
+| C5712 | Estimator 42501 on headline and two revenue, null money elsewhere | carried from c702243 (SQL unchanged) | `reports.sql:275-277`, `:278`, `:281-284`; the precision gap (aging has no money column) is recorded in the checks.md Handoff, not edited | PASS (carried) |
+
+Carried from c702243 (migration, recipe and SQL test are untouched by 9764140: `git diff --stat c702243 HEAD -- supabase` is empty): C5701 to C5716, PASS in round 1 with located evidence at `reports.sql:73` to `:310` (see the round 1 table). Their re-run at HEAD is open item (2).
+
+Re-run in full at HEAD (`npx vitest run domain/reports infrastructure/supabase/reports.test.ts "app/(app)/reports" components/shell/nav-items.test.ts scripts/test-db/runner.test.ts composition/composition.test.ts --reporter=verbose`): 8 files, 169 passed, 0 failed. Each of C5721 to C5726, C5731, C5741, C5742, C5743 and the new C5761 to C5764 appears in the output as an individual passed test. No regression against round 1 (137 passed then; this run adds the composition file and the new tests).
+
+## Coverage (round 2)
+
+| Set (size) | Recomputed from | Member -> proof | Unproven |
+| --- | --- | --- | --- |
+| startup configuration: report reader wiring (1 assembly) | `composition/index.ts:203` read directly | C5763 boots the real `getContainer()` (`composition.test.ts:122-132`), killed by F11 | - |
+| `GET /reports/export` statuses (5) | plan Surface, `route.ts` | 200 `route.test.ts:32`; 400 `:51,:55,:60`; 401; 403; 503. The `from`-after-today edge is now asserted | - |
+| loss outcomes (3) on the screen | AC 8 | refused and withdrawn asserted rendered (`page.test.tsx:157-158`), expired asserted absent when empty (`:159`) | an expired group with rows is never rendered in a test (minor) |
+| acceptance criteria 1 to 19 | plan Criteria | AC 7 link `page.test.tsx:177`; AC 8 grouping, link, reason `:157-163`; AC 10 link `:178`; AC 11 order `:179`; AC 18 `route.test.ts:60` plus parse tests; the rest as round 1 | - |
+| viewport widths (3) | C5751 | 375, 768, 1440 | C5751 not run: all three Unproven |
+| database functions (7), roles (4), events (3), buckets (3) | `reports.sql`, round 1 | carried from c702243 | re-run blocked, open item (2) |
+| Landing doors (4) | plan Landing | door 3 now also proven through the real container (C5763); doors 1, 2, 4 as round 1 | - |
+
+## Test policy rows (round 2)
+
+| Row | Files it classifies | Required proof | Expectation met |
+| --- | --- | --- | --- |
+| `public.report_*` | migration | `reports.sql` recipe | met in round 1 at c702243; cannot be re-run at HEAD (open item 2) |
+| `domain/reports` | `index.ts` | `reports.test.ts` | yes, green at HEAD |
+| `app/(app)/reports/export` | `route.ts` (touched) | `route.test.ts` | yes, now includes the future `from` rejection (`:60`) |
+| adapter, page markup (instrumentation) | `reports.ts`, `reports-view.tsx` (touched) | C5731, C5742, C5761, C5762, C5763 | yes; links, reasons, outcome labels, section order and revenue-by-customer now exercised. Revenue by type rows still not |
+
+## Faults injected (round 2)
+
+Method: real tree mutated, reverted at once with `git checkout -- <file>` (no stash, no worktree); `git status --porcelain` was empty before and after.
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| F6: empty groups kept (`if (rows.length === 0) return null` to `if (false)`) | `components/reports/reports-view.tsx:191` | yes: C5761 `not to contain 'Expired · '` |
+| F7: group filter inverted (`r.outcome === outcome` to `!==`) | `reports-view.tsx:190` | yes: C5761 failed |
+| F8: agreement link points at `/agreement/${id}` | `reports-view.tsx:95` | yes: C5762 `to match /<a href="\/agreements\/a1"` |
+| F9: Losses and Renewals sections swapped | `reports-view.tsx:311-312` | yes: C5762 order `toEqual` failed |
+| F10: "dropped off" text changed to "lost" | `reports-view.tsx:137` | yes: C5762 `to contain '50% dropped off'` |
+| F11: `reports:` line removed from the container | `composition/index.ts:203` | yes: C5763 `Cannot read properties of undefined (reading 'renewals')` |
+| F12: future-`from` guard removed | `app/(app)/reports/export/route.ts:33` | yes: C5764 `expected 200 to be 400` |
+| F13: guard off by one (`from > now` to `from >= now`) | `route.ts:33` | yes: C5764 `expected 400 to be 200` (the `from=today` half) |
+
+8 injected, 8 killed. Every new check (C5761 to C5764) was made to fail at least once, C5762 on three separate surfaces. Round 1 faults F1 to F5 were not re-run (their files were not touched by 9764140); carried from c702243.
+
+## Gate (round 2)
+
+`cd web && npx vitest run domain/reports infrastructure/supabase/reports.test.ts "app/(app)/reports" components/shell/nav-items.test.ts scripts/test-db/runner.test.ts composition/composition.test.ts` - 169 passed, 0 failed (8 files).
+`cd web && npm run test:db reports` - 0 passed, 1 failed: `FAIL reports: function "report_org" already exists with same argument types`. Cause: the recipe (`scripts/test-db/runner.mts:70`) applies `20261115110000_reports.sql` inside the test transaction, and the owner has already applied that migration to the hosted project the suite connects to. This is not a regression in the SQL (unchanged since c702243, where it passed) but the recipe cannot re-run on a database that already holds the migration; `npm run test:db db_freeze` still passes (PASS, 1 passed). The Verifier tried a rolled-back run of `fixture.sql` plus `reports.sql` without the migration step; the permission layer denied it and no workaround was attempted. Fix options for the owner: make the migration idempotent (`create or replace`), or point the recipe at a database that does not yet hold it.
+Known pre-existing failures, not findings: `domain/purity.test.ts` C2021, components/kanban, pricing catalog, `components/vocabulary.test.ts` C2019, `components/shell/app-shell.test.ts` C1590.
+
+## C5751, static review of `components/reports/reports-view.tsx`
+
+Not run: sign-in needs an emailed link to the owner's address, so an agent cannot reach `/reports` signed in. Unproven. What a static read shows, and no more: one column of full-width panels (`Section`), headline grid `sm:grid-cols-2 lg:grid-cols-4`; agreement links `min-h-11 ... lg:min-h-0` (`:95`); buttons and date inputs inherit `h-11 lg:h-[34px]`; the widest fixed width is `sm:w-44` on the two date inputs (`:286-287`), applied only from the `sm` breakpoint; no `overflow-x`, no fixed pixel width at 375 px; rows use `flex-wrap` with `basis-full` for the reason line. Nothing found that would force horizontal scroll or a sub-44 px mobile target, but wrapped rows, the funnel bar, the real touch size of the date inputs and the CSV download are only settled by a browser.
+
+## Ranked gaps (why FAIL)
+
+1. C5751 - Unproven (not run; emailed sign-in link, owner only). Live 375/768/1440, 44 px targets, console and CSV download open.
+2. Database proof not re-runnable at HEAD: `npm run test:db reports` fails with "function already exists" because the migration is live on the hosted project. C5701 to C5716 are carried from c702243 (SQL unchanged), not re-proven this round.
+3. Screen elements still without a check: revenue-by-type rows, the "Apply range" button and "Last 12 months" link, the headline pipeline value stat; an expired group with rows is never rendered in a test. All minor and selector-reachable.
+
+Closed since round 1: ROADMAP contradiction (lines 229, 231), AC 8 grouping (C5761), screen elements (C5762), real container wiring (C5763), future `from` on export (C5764), C5712 and C5743 precision gaps (recorded in the checks.md Handoff).
