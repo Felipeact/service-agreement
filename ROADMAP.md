@@ -24,7 +24,7 @@ A web app that takes a trade contractor from a customer's list of equipment to a
 |---|---|---|
 | 1. Import | Upload the customer's Excel, CSV, Word or PDF. Claude extracts the rows, the app maps them to the tenant's equipment types, and the estimator fixes doubts in a review grid | Estimator |
 | 2. Build | Price lines (visits per year × cost per visit), visit months on a 12-month grid, "Service included" built from the types on site, term dates, default terms | Estimator |
-| 3. Send | A branded PDF and a review link are emailed. Reminders go out on day 3 and day 7 unless the customer has viewed or decided | Automatic (n8n) |
+| 3. Send | An email with a review link is sent; the branded PDF is on the review page. Reminders go out on day 3 and day 7 unless the customer has viewed or decided | Automatic (n8n) |
 | 4. Decide | The customer views, downloads, accepts, refuses (reason required) or requests changes. A change request opens a new version | Customer |
 | 5. Sign | The accepted version becomes a contract. The customer signs, then the contractor countersigns | Customer, owner |
 | 6. Renew | Near the end of the term, a low-CPI contract renews on its own with the increase applied; a high-CPI one becomes a renewal draft for staff | Automatic, staff |
@@ -352,6 +352,27 @@ Things only the owner can do. Each one is drawn from an open item above.
 - [ ] Choose one home-page concept and delete the other two under `/concepts/a|b|c`
 - [ ] Decide on a refund or alert for a paid checkout the webhook refuses, and whether a "Resend email" control comes back
 - [ ] Optional: a plumber and an electrician review their starter packs (released 2026-11-09 on the owner's own review)
+
+From the live QA report (2026-11-16). Each one needs the owner: an account, DNS, money, a lawyer, a real device or a production change.
+- [ ] Apply migration `20261116140000_import_duplicates_skipped.sql` (duplicate import rows start skipped; proven in the rolled-back recipe `import_duplicates`), then turn that recipe into a hosted-objects recipe as was done for `p0_launch_fixes`
+- [ ] Re-test the AI import with the same messy file (Excel, CSV, Word, PDF) after the matching change; the target is 17 or more of 24 real items auto-typed with none wrong. Note the matcher now types by words, so "Boiler feed pump" would read as "Boiler" if there is no feed-pump type: review the typed rows once
+- [ ] Sign on a real iPhone (Safari), real Chrome and an Android phone from the emailed link; confirm the embedded form shows, no second URL is needed and there is no sandbox banner. The page now also shows an "Open signing page" fallback link (code done)
+- [ ] Email: choose a product domain, then set SPF, DKIM and DMARC for it and switch the Resend sender from `agreements@felipeviana.com`; test delivery to Gmail, Outlook and Yahoo (inbox, not spam). Also switch `SITE.contactEmail` (`hello@felipeviana.com`) to a product address
+- [ ] DocuSeal: decide between a white-label plan (check the cost) and keeping the provider's name on the signing page and audit log (the site copy now says the signing page shows the provider's name); set the account's date and locale so the signing flow shows a Canadian date format; confirm the contractor countersign link cannot be used by anyone who is not the contractor
+- [ ] Decide whether the customer email should carry the PDF as an attachment (the site wording now says the PDF is on the review page); if yes it is a new build item
+- [ ] Check the Billing page for a subscribed workspace: it lives at Settings, Billing and is listed only for an org with a subscription, so the demo org does not show it. Confirm it shows imports left, live agreements against the limit and invoices
+- [ ] Delete the test data in the production workspace: the ZZ TEST customer, site, 18 assets, imports and AG-1002 (the agreements are never deleted by the app, so this is a database cleanup you approve)
+- [ ] Test the renewal flow on a staging copy with a backdated term (the first real term starts in 2027)
+- [ ] Look into the two early logouts: check the Supabase session and JWT expiry settings, and whether a redeploy invalidates sessions
+- [ ] Decide a Content-Security-Policy (it must allow Stripe, the signature provider frame and the Supabase origin); the other security headers are set in code. Also check what the host (Railway) adds
+- [ ] Choose starter templates: the first-use template is empty. Pick two or three (for example commercial HVAC quarterly, boiler annual, backflow annual) and their lines, then it is a build item
+
+Code items from the same report that are not built yet (no owner action needed, they need a plan each):
+- [ ] Offer to add another trade pack when an import row looks like another trade's equipment (water heater, sump pump, grease interceptor)
+- [ ] Let the model propose a type with a confidence and show suggestions as the default in the review dropdown
+- [ ] A Reply-To setting so replies reach the contractor
+- [ ] A real 404 for unknown URLs (today a signed-out visitor is sent to the login page)
+- [ ] Record the signer's IP and email on the signed PDF itself (the audit log already has them)
 
 ### Phase 6: Post-contract operations (M16)
 No visit scheduling and no per-visit invoicing (decision 23). Nothing here is started or planned in detail; each item waits for a pilot customer who needs it.
