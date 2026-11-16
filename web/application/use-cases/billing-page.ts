@@ -20,6 +20,9 @@ export type ChangePlanResult =
   | { ok: true }
   | { ok: false; code: "forbidden" | "invalid" | "no_subscription" | "same_plan" | "not_configured" | "unavailable" | "unsupported" };
 
+/** The subscription id of the demo org's placeholder billing row; the webhook only ever writes real `sub_` ids. */
+const DEMO_SUBSCRIPTION = /^demo_sub_/;
+
 /** The error's name only: a database message can quote a row. */
 const nameOf = (cause: unknown) => (cause instanceof Error ? cause.name : "a non-error");
 
@@ -53,6 +56,11 @@ export function makeBilling(billing: OrgBilling, gateway: BillingGateway, plans:
     async load(member: Member): Promise<BillingLoad> {
       const found = await idsOf(member);
       if (!found.ok) return found.code === "unavailable" ? { kind: "error" } : { kind: found.code };
+      // The demo org has a placeholder subscription (supabase/seed.sql): its plan and usage are real, Stripe has nothing to read.
+      if (DEMO_SUBSCRIPTION.test(found.value.subscriptionId)) {
+        const plan = PLANS.find((candidate) => candidate.key === found.value.plan)?.name ?? found.value.plan;
+        return { kind: "ready", plan, overview: { status: "active", trialEnd: null, periodEnd: null, endsAt: null, plan: found.value.plan, extraSeats: 0, card: null, invoices: [] } };
+      }
       const answer = await gateway.overview(stripeIds(found.value));
       if (!answer.ok) return answer.code === "not_configured" ? { kind: "not_configured" } : { kind: "error" };
       const plan = PLANS.find((candidate) => candidate.key === found.value.plan)?.name ?? found.value.plan;

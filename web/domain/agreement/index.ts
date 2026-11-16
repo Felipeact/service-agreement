@@ -243,6 +243,7 @@ export function parseTerms(snapshot: unknown): AgreementTerms | null {
 }
 
 export * from "./cadence";
+export * from "./scope-controls";
 export * from "./term";
 export * from "./document";
 export * from "./version-diff";

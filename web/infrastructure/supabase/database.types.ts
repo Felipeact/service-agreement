@@ -1048,6 +1048,7 @@ export type Database = {
           accent_color: string | null
           address: string | null
           cancellation_notice_days: number | null
+          company_confirmed_at: string | null
           cpi_cap_pct: number
           cpi_renegotiation_threshold_pct: number
           default_term_months: number
@@ -1073,6 +1074,7 @@ export type Database = {
           accent_color?: string | null
           address?: string | null
           cancellation_notice_days?: number | null
+          company_confirmed_at?: string | null
           cpi_cap_pct?: number
           cpi_renegotiation_threshold_pct?: number
           default_term_months?: number
@@ -1098,6 +1100,7 @@ export type Database = {
           accent_color?: string | null
           address?: string | null
           cancellation_notice_days?: number | null
+          company_confirmed_at?: string | null
           cpi_cap_pct?: number
           cpi_renegotiation_threshold_pct?: number
           default_term_months?: number
@@ -1727,7 +1730,10 @@ export type Database = {
         Returns: string[]
       }
       signature_view: { Args: { p_token_hash: string }; Returns: Json }
+      agreement_service_scope: { Args: { p_agreement_id: string }; Returns: Json }
       signature_webhook: { Args: { p_body: string; p_documents?: Json; p_signature: string }; Returns: Json }
+      set_agreement_template: { Args: { p_agreement_id: string; p_template_version_id: string }; Returns: undefined }
+      set_scope_exclusion: { Args: { p_asset_id: string; p_excluded: boolean; p_version_id: string }; Returns: undefined }
       site_service_scope: { Args: { p_site_id: string }; Returns: Json }
       stripe_receive_event: { Args: { p_body: string; p_signature: string }; Returns: Json }
     }

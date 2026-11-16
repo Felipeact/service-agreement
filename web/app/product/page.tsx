@@ -39,7 +39,7 @@ export default function ProductPage() {
       </section>
       <section className="bg-ground">
         <Wrap className="grid gap-8 py-14 lg:grid-cols-2 lg:gap-14 lg:py-20">
-          <SectionHead title="E-signature, with a paper trail." text="The customer signs on your branded page, then you countersign. The contract is complete only when both have signed. The signed PDF and an audit log of who signed, when and from where are stored with it. Your contract wording is yours; you confirm it is valid under your province." />
+          <SectionHead title="E-signature, with a paper trail." text="The customer signs on a secure page run by our signature provider, then you countersign. The contract is complete only when both have signed. The signed PDF and an audit log of who signed, when and from where are stored with it. Your contract wording is yours; you confirm it is valid under your province." />
           <div className="flex flex-col gap-3">
             <h3 className="font-display text-[18px] font-semibold">Not in the product</h3>
             <ul className="flex flex-col divide-y divide-hairline rounded-panel border border-hairline bg-surface">

@@ -1,4 +1,4 @@
-import { chunksOf, matchAssetType } from "@/domain/imports";
+import { chunksOf, matchAssetType, splitQuantity } from "@/domain/imports";
 import type {
   AssetExtractor,
   AssetTypeCatalog,
@@ -36,6 +36,18 @@ function rowFor(row: ExtractedRow, chunk: ExtractChunk, refs: Set<string>, types
     sourceRef: invented ? null : sourceRef,
     assetTypeId: matchAssetType(assetTypeRaw, types),
   };
+}
+
+/**
+ * The rows one extracted row stands for. A row with no unit # whose type text carries a count ("VAV boxes (qty 24)") becomes
+ * that many rows, the count removed from the type text and the units numbered 1 to N, never above `medium` confidence so the
+ * review looks at them. Anything else is one row (qa-p1-p2 C7005).
+ */
+function rowsFor(row: ExtractedRow, chunk: ExtractChunk, refs: Set<string>, types: Awaited<ReturnType<AssetTypeCatalog["list"]>>): ImportRowInput[] {
+  const counted = cleaned(row.unitNo) === null ? splitQuantity(cleaned(row.assetTypeRaw)) : null;
+  if (!counted) return [rowFor(row, chunk, refs, types)];
+  const confidence = row.confidence === "high" ? "medium" : row.confidence;
+  return Array.from({ length: counted.qty }, (_, i) => rowFor({ ...row, assetTypeRaw: counted.label, unitNo: String(i + 1), confidence }, chunk, refs, types));
 }
 
 /**
@@ -95,7 +107,7 @@ export function makeExtractImport(store: ImportJobStore, parser: ImportParser, e
       jobId,
       cursor,
       total,
-      answered.rows.map((row) => rowFor(row, chunk, refs, types)),
+      answered.rows.flatMap((row) => rowsFor(row, chunk, refs, types)),
       answered.usage,
     );
     if (!recorded.ok) return recorded;

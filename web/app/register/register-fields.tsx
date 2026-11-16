@@ -203,6 +203,17 @@ export function RegisterFields({ state, pending, initialPlan = "team", action }:
         <p className="max-w-[60ch] text-[12px] text-ink-2">
           Next you enter your card with our payment provider. You are charged the plan price today, then monthly. Prices are in Canadian dollars.
         </p>
+        <p className="max-w-[60ch] text-[12px] text-ink-2">
+          By continuing you accept our{" "}
+          <Link href="/terms" className="underline underline-offset-2">
+            terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline underline-offset-2">
+            privacy policy
+          </Link>
+          .
+        </p>
       </div>
     </form>
   );

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -45,6 +45,14 @@ describe("the public site", () => {
       const dir = path.join(ROOT, link.href.replace(/^\//, ""));
       expect(existsSync(path.join(dir, "page.tsx")), link.href).toBe(true);
     }
+  });
+
+  test("C7008: the site claims neither a PDF attached to the email nor that the signing page never shows our name", () => {
+    const sources = ["content.ts", "../../app/product/page.tsx"].map((file) => readFileSync(path.join(__dirname, file), "utf8")).join(" ");
+    expect(sources).not.toContain("A branded PDF and a review link");
+    expect(sources).not.toContain("Ours never appears");
+    expect(sources).not.toContain("signing page carry your");
+    expect(sources).not.toContain("signs on your branded page");
   });
 
   test("the root route is the public site, not a redirect to the app", async () => {

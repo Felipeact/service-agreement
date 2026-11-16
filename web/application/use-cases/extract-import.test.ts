@@ -91,6 +91,34 @@ const recorded = (store: ReturnType<typeof setup>["store"]) => store.recordExtra
 
 afterEach(() => vi.restoreAllMocks());
 
+describe("extractImport: quantity rows", () => {
+  const rowsRecorded = (store: ReturnType<typeof setup>["store"]) => recorded(store)[3] as { assetTypeRaw: string | null; unitNo: string | null; confidence: string; assetTypeId: string | null }[];
+
+  test("C7005: a row with qty 24 and no unit # is recorded as 24 rows, units 1 to 24, count removed, confidence at most medium", async () => {
+    const s = setup({
+      parse: tableOf(1),
+      types: [{ id: "t-vav", code: "VAV", name: "VAV box" }],
+      answer: async () => ({ ok: true as const, rows: [row({ assetTypeRaw: "VAV box (qty 24)", unitNo: null, confidence: "high" })] }),
+    });
+    await s.extractImport(JOB);
+    const rows = rowsRecorded(s.store);
+    expect(rows).toHaveLength(24);
+    expect(rows.map((r) => r.unitNo)).toEqual(Array.from({ length: 24 }, (_, i) => String(i + 1)));
+    expect(new Set(rows.map((r) => r.assetTypeRaw))).toEqual(new Set(["VAV box"]));
+    expect(rows.every((r) => r.confidence === "medium" && r.assetTypeId === "t-vav")).toBe(true);
+  });
+
+  test.each([
+    ["a row that already has a unit #", row({ assetTypeRaw: "VAV box (qty 24)", unitNo: "V-1" })],
+    ["a count above fifty", row({ assetTypeRaw: "VAV box (qty 80)", unitNo: null })],
+    ["a count of one", row({ assetTypeRaw: "VAV box (qty 1)", unitNo: null })],
+  ])("C7005: %s stays one row", async (_label, extracted) => {
+    const s = setup({ parse: tableOf(1), answer: async () => ({ ok: true as const, rows: [extracted] }) });
+    await s.extractImport(JOB);
+    expect(rowsRecorded(s.store)).toHaveLength(1);
+  });
+});
+
 describe("extractImport", () => {
   test("the tokens the extractor reports are recorded with the chunk, and none is recorded as nothing", async () => {
     const used = setup({ answer: async () => ({ ok: true as const, rows: [row()], usage: { inputTokens: 6000, outputTokens: 8000 } }) });

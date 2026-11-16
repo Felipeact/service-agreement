@@ -13,6 +13,8 @@ import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
+import { ScopeControls } from "./scope-controls";
+import { TemplatePicker, type TemplateChoice } from "./template-picker";
 import { ServiceScopeSections } from "./service-scope";
 import { AgreementPdfPreview } from "./agreement-pdf-preview";
 import { LinkControls } from "./link-controls";
@@ -23,7 +25,7 @@ import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "./visit-schedule";
 import type { GenerateContractState } from "./contract-state";
-import type { LineState, LinkState, MoveState, NoteState, TermState } from "./state";
+import type { LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -32,7 +34,11 @@ export type AgreementActions = {
   remove: (lineId: string) => () => Promise<LineState>;
   revise: () => Promise<MoveState>;
   withdraw: () => Promise<MoveState>;
-  send: (email?: string) => Promise<LinkState>;
+  send: (email?: string, confirmUncovered?: boolean) => Promise<LinkState>;
+  /** Leaves an asset out of the draft's scope, or puts it back (p0-launch-fixes). Optional so older fixtures compile. */
+  setExcluded?: (assetId: string, excluded: boolean) => Promise<ScopeState>;
+  /** Switches the draft to another template (agreement-template-switch). Optional so older fixtures compile. */
+  setTemplate?: (templateVersionId: string) => Promise<TemplateState>;
   /** No longer offered on the page (the customer gets the link by email); kept so older callers still type-check. */
   reissue?: () => Promise<LinkState>;
   saveTerm: (formData: FormData) => Promise<TermState>;
@@ -52,6 +58,8 @@ type AgreementViewProps = {
   skippedCodes?: string[];
   /** The customer contact email the agreement is sent to, or `null` when there is none yet. */
   recipient?: string | null;
+  /** The templates a writer can switch a draft to, the pinned one included; absent for a version that cannot change its template. */
+  templateChoices?: { choices: TemplateChoice[]; selected: string };
 };
 
 /** A short fingerprint of what the PDF would say, so an open preview knows when to redraw. */
@@ -77,7 +85,7 @@ function deliveryLine(email: LinkEmailView | null): string {
 }
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
-export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient }: AgreementViewProps) {
+export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient, templateChoices }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
   const latest = agreement.versions[0]?.versionNo ?? shown.versionNo;
@@ -154,9 +162,18 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         <GenerateContractControl signer={agreement.signer ?? null} term={agreement.term} annualCents={shown.annualCents} action={writer.generate} />
       )}
 
-      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} />}
+      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} words={words} />}
 
-      <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status])} />
+      {agreement.template && (
+        <TemplatePicker
+          name={agreement.template.name}
+          choices={agreement.editable ? templateChoices?.choices : undefined}
+          selectedVersionId={agreement.editable ? templateChoices?.selected : undefined}
+          change={agreement.editable ? writer?.setTemplate : undefined}
+        />
+      )}
+
+      <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status, agreement.templateVersionId ?? null])} />
 
       {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
 
@@ -230,10 +247,15 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
 
       <VisitScheduleSection schedule={visitSchedule(shown.lines, agreement.serviceScope.source === "not_recorded" ? [] : agreement.serviceScope.types)} />
 
+      {agreement.editable && agreement.scopeDraft && (
+        <ScopeControls controls={agreement.scopeDraft.controls} uncovered={agreement.scopeDraft.uncovered} setExcluded={writer?.setExcluded} words={words} />
+      )}
+
       <ServiceScopeSections
         scope={agreement.serviceScope}
         siteId={agreement.site.id}
         canAddEquipment={canWriteRecords(role)}
+        noLinesYet={agreement.editable && shown.lines.length === 0 && (agreement.scopeDraft?.uncovered.length ?? 0) > 0}
         lines={shown.lines}
         words={words}
       />

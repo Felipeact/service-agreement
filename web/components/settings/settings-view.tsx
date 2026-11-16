@@ -5,6 +5,7 @@ import type { MemberRole, OrgSettings } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import type { LogoUploadAnswer } from "@/app/logo-upload";
+import { companyDetailsReady } from "@/domain/org-settings";
 import { SettingsFields } from "./settings-fields";
 import { canEditSettings, toInput, type SettingsFormState } from "./state";
 
@@ -34,6 +35,12 @@ export function SettingsView(props: SettingsViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
+      {props.settings && !companyDetailsReady({ legalName: props.settings.legalName, address: props.settings.address, phone: props.settings.phone, confirmedAt: props.settings.companyConfirmedAt ?? null }).ready && (
+        <div role="status" className="flex flex-col gap-1 rounded-panel border border-hairline bg-attention-bg px-4 py-3 text-[13px] text-attention-fg">
+          <p className="font-semibold">Confirm your company details before you send agreements</p>
+          <p>Your customer sees your legal name, address and phone on the review page, the emails and the PDF. Enter your own and save to confirm them; sample details are not accepted.</p>
+        </div>
+      )}
       {props.settings ? (
         <SettingsForm {...props} settings={props.settings} billingNav={props.billingLink === true} />
       ) : (

@@ -53,6 +53,25 @@ describe("org settings store", () => {
     expect(client.rpc).not.toHaveBeenCalled();
   });
 
+  test("C6018: saving real details sets company_confirmed_at to the clock's now", async () => {
+    const { typed, calls } = stubClient({ org_settings: { data: [{ org_id: ORG }], error: null } });
+    const real = { ...value, address: "12 Main St, Surrey, BC V3T 1A1", phone: "604-555-2368" };
+    await supabaseOrgSettingsStore(typed).save(ORG, real, AT);
+    expect(calls.find((call) => call.method === "update")?.args[0]).toMatchObject({ company_confirmed_at: "2026-10-24T12:00:00.000Z" });
+  });
+
+  test.each([
+    ["a placeholder phone", { ...value, address: "12 Main St, Surrey, BC V3T 1A1" }],
+    ["an empty address", { ...value, phone: "604-555-2368" }],
+    ["the sample legal name", { ...value, legalName: "Kettle Ridge Mechanical Ltd.", address: "12 Main St", phone: "604-555-2368" }],
+  ])("C6018: saving %s leaves company_confirmed_at out of the update", async (_label, details) => {
+    const { typed, calls } = stubClient({ org_settings: { data: [{ org_id: ORG }], error: null } });
+    await supabaseOrgSettingsStore(typed).save(ORG, details, AT);
+    const update = calls.find((call) => call.method === "update")?.args[0] as Record<string, unknown>;
+    expect(update).not.toHaveProperty("company_confirmed_at");
+    expect(update).toHaveProperty("legal_name");
+  });
+
   test("C150: an update that changes no row is forbidden", async () => {
     const { typed } = stubClient({ org_settings: { data: [], error: null } });
     expect(await supabaseOrgSettingsStore(typed).save(ORG, value, AT)).toEqual({ ok: false, code: "forbidden" });

@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
+import { companyDetailsReady } from "@/domain/org-settings";
 import { validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
 import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
-import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, TermState } from "@/components/agreements/state";
+import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 import { linkBase } from "./link-base";
 
@@ -184,23 +185,64 @@ async function issueLink(
   }
 }
 
-/** Sends a draft to the customer: `sent`, frozen, and a link shown once. */
-export async function sendAgreementAction(agreementId: string, email?: string): Promise<LinkState> {
+/**
+ * Sends a draft to the customer: `sent`, frozen, and a link shown once. Two checks come first, and both write nothing:
+ * the company's details must be its own and confirmed (`company_unconfirmed`), and a site type no line covers must be
+ * acknowledged (`needs_confirmation`, answered by sending again with `confirmUncovered`). p0-launch-fixes AC 11, 14-16.
+ */
+export async function sendAgreementAction(agreementId: string, email?: string, confirmUncovered = false): Promise<LinkState> {
   const container = await writer();
   if (!container) return FORBIDDEN;
   if (!isUuid(agreementId)) return NOT_FOUND;
-  // The customer's contact email is where the agreement goes; without one on file the sender gives it first.
+  const member = await container.currentMember();
+  if (member.status !== "member") redirect("/login");
   try {
+    const settings = await container.getOrgSettings(member.orgId);
+    const ready = companyDetailsReady({
+      legalName: settings?.legalName ?? null,
+      address: settings?.address ?? null,
+      phone: settings?.phone ?? null,
+      confirmedAt: settings?.companyConfirmedAt ?? null,
+    });
+    if (!ready.ready) return { status: "company_unconfirmed", problems: ready.problems };
+    if (!confirmUncovered) {
+      const uncovered = await container.agreementScope.uncovered(agreementId);
+      if (uncovered.length > 0) return { status: "needs_confirmation", uncovered };
+    }
+    // The customer's contact email is where the agreement goes; without one on file the sender gives it first.
     if (!(await container.agreementRecipient.get(agreementId))) {
       const typed = (email ?? "").trim().toLowerCase();
       if (!typed) return { status: "needs_email" };
       if (!(await container.agreementRecipient.set(agreementId, typed))) return { status: "invalid_email" };
     }
   } catch (cause) {
-    console.error(`Agreement send failed: the contact email step threw ${cause instanceof Error ? cause.message : String(cause)}`);
+    console.error(`Agreement send failed before sending: ${cause instanceof Error ? cause.message : String(cause)}`);
     return { status: "unavailable" };
   }
   return issueLink(agreementId, "sent", (ready) => ready.sendAgreement(agreementId));
+}
+
+/** Switches a draft to another template. Only the pin changes: the lines, term and scope stay as they are. */
+export async function setAgreementTemplateAction(agreementId: string, templateVersionId: string): Promise<TemplateState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId) || !isUuid(templateVersionId)) return NOT_FOUND;
+  const done = await container.agreementStore.setTemplate(agreementId, templateVersionId);
+  if (!done.ok) return { status: done.code };
+  revalidatePath(`/agreements/${agreementId}`);
+  revalidatePath("/pipeline");
+  return { status: "saved" };
+}
+
+/** Leaves one asset out of a draft's scope, or puts it back. The asset stays on the site and in other agreements. */
+export async function setScopeExclusionAction(agreementId: string, assetId: string, excluded: boolean): Promise<ScopeState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId) || !isUuid(assetId)) return NOT_FOUND;
+  const done = await container.agreementScope.setExcluded(agreementId, assetId, excluded);
+  if (!done.ok) return { status: done.code };
+  revalidatePath(`/agreements/${agreementId}`);
+  return { status: "saved" };
 }
 
 /** Replaces the live link of a sent agreement; the old address stops working. */

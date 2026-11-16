@@ -7,6 +7,18 @@ const nextConfig: NextConfig = {
   // A review link is a secret address: nothing may cache it, send it on as a referrer, or index it (customer-portal door 4).
   async headers() {
     return [
+      // Every page: no sniffing, no framing of our pages, HTTPS only, and a referrer that names only our origin. The two secret
+      // addresses below come later in the list and keep their stricter `no-referrer` (qa-p1-p2 C7011). No Content-Security-Policy
+      // yet: it must allow Stripe, the signature provider's frame and the Supabase origin, and is an owner follow-up.
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        ],
+      },
       {
         source: "/review/:path*",
         headers: [

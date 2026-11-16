@@ -95,6 +95,7 @@ import { supabaseAssetStore, supabaseContactStore, supabaseCustomerStore, supaba
 import { supabaseSignatureStore, supabaseSigningReader, supabaseSigningSecrets } from "@/infrastructure/supabase/signing";
 import { itemWordsReader } from "@/application/use-cases/item-words";
 import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
+import { supabaseAgreementScopeStore } from "@/infrastructure/supabase/agreement-scope";
 import { makeTenantLogo } from "@/application/use-cases/tenant-logo";
 import { supabaseOrgLogo } from "@/infrastructure/supabase/org-logo";
 import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
@@ -274,6 +275,8 @@ export async function getContainer() {
     // Agreements and their lines are read and written as the member, from the same client (AC 29).
     agreementReader: supabaseAgreementReader(supabase),
     agreementStore: supabaseAgreementStore(supabase),
+    // What a draft's scope leaves out, and the exclusion writer (p0-launch-fixes): both run as the member.
+    agreementScope: supabaseAgreementScopeStore(supabase),
     // The site contact's email, which a send writes to (the database checks the member's org and role).
     agreementRecipient: {
       async get(agreementId: string): Promise<string | null> {
@@ -289,6 +292,8 @@ export async function getContainer() {
     },
     // Agreement templates are read and written as the member: the definer functions check owner or admin themselves.
     listAgreementTemplates: makeListAgreementTemplates(supabaseAgreementTemplateReader(supabase)),
+    // Every template the member can see (the org's own and the system one): the choice a draft can switch to.
+    readAgreementTemplates: supabaseAgreementTemplateReader(supabase).list,
     saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,
     archiveAgreementTemplate: supabaseAgreementTemplateStore(supabase).archive,
     duplicateAgreementTemplate: makeDuplicateAgreementTemplate(supabaseAgreementTemplateReader(supabase), supabaseAgreementTemplateStore(supabase)),

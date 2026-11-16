@@ -14,10 +14,13 @@ import {
   saveTermAction,
   saveVersionNoteAction,
   sendAgreementAction,
+  setScopeExclusionAction,
+  setAgreementTemplateAction,
   updateServiceLineAction,
   withdrawAgreementAction,
 } from "../../agreement-actions";
 import { generateContractAction } from "../../contract-actions";
+import { templateChoicesOf } from "./template-choices";
 
 export const metadata: Metadata = { title: "Agreement" };
 
@@ -33,7 +36,7 @@ function versionOf(value: string | undefined): number | undefined {
 /** Reads the agreement and `?version` at request time. */
 export async function AgreementForRequest({ agreementId, searchParams }: AgreementProps) {
   if (!isUuid(agreementId)) notFound();
-  const { currentMember, agreementReader, getItemWords, listAssetTypes, agreementRecipient } = await getContainer();
+  const { currentMember, agreementReader, getItemWords, listAssetTypes, agreementRecipient, readAgreementTemplates } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
   const params = await searchParams;
@@ -51,6 +54,8 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         revise: reviseAgreementAction.bind(null, agreementId),
         withdraw: withdrawAgreementAction.bind(null, agreementId),
         send: sendAgreementAction.bind(null, agreementId),
+        setExcluded: setScopeExclusionAction.bind(null, agreementId),
+        setTemplate: setAgreementTemplateAction.bind(null, agreementId),
         saveTerm: saveTermAction.bind(null, agreementId),
         saveNote: saveVersionNoteAction.bind(null, agreementId),
         generate: generateContractAction.bind(null, agreementId),
@@ -62,7 +67,10 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
 
   const recipient = actions && agreement.editable ? await agreementRecipient.get(agreementId).catch(() => null) : null;
 
-  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} skippedCodes={skipped} recipient={recipient} />;
+  // A writer on a draft can switch the template: the org's own and the system one, with the pinned version kept in the list.
+  const templateChoices = actions && agreement.editable ? await templateChoicesOf(readAgreementTemplates, agreement) : undefined;
+
+  return <AgreementView agreement={agreement} role={member.role} actions={actions} words={words} skippedCodes={skipped} recipient={recipient} templateChoices={templateChoices} />;
 }
 
 export default async function AgreementPage({ params, searchParams }: PageProps<"/agreements/[agreementId]">) {

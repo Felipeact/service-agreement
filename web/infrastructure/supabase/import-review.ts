@@ -90,6 +90,25 @@ export function supabaseImportReviewReader(client: Client): ImportReviewReader {
   };
 }
 
+/**
+ * A correction made once is made for every later import: the spelling joins the type's own spellings (synonyms as data), which
+ * `matchAssetType` reads. Best effort: a member who may not edit types, or a spelling the database refuses, never fails the
+ * mapping that already happened (qa-p1-p2 C7007).
+ */
+async function rememberSpellingOf(client: Client, assetTypeId: string, spelling: string): Promise<void> {
+  try {
+    const wanted = spelling.trim().toLowerCase();
+    if (!wanted || wanted.length > 60) return;
+    const { data, error } = await client.from("asset_types").select("synonyms").eq("id", assetTypeId).maybeSingle();
+    if (error || !data) return;
+    const held = (data.synonyms as string[] | null) ?? [];
+    if (held.some((synonym) => normalized(synonym) === normalized(wanted))) return;
+    await client.from("asset_types").update({ synonyms: [...held, wanted] }).eq("id", assetTypeId);
+  } catch (cause) {
+    console.error(`Remembering an import spelling failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+}
+
 export function supabaseImportRowStore(client: Client): ImportRowStore {
   /** One row's update as the member; RLS hides other orgs' rows, so no row back is `not_found`. */
   async function updateRow(what: string, rowId: string, values: Database["public"]["Tables"]["import_rows"]["Update"]): Promise<RowWriteResult> {
@@ -145,6 +164,7 @@ export function supabaseImportRowStore(client: Client): ImportRowStore {
           if (error) return failure("Mapping an import spelling", error);
           rows += (data ?? []).length;
         }
+        if (rows > 0) await rememberSpellingOf(client, assetTypeId, rawNormalized);
         return { ok: true, rows };
       } catch (cause) {
         return unavailable("Mapping an import spelling", cause);

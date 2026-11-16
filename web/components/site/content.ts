@@ -23,7 +23,10 @@ export const NAV: readonly NavLink[] = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-export const FOOTER_LINKS: readonly NavLink[] = [...NAV, { href: "/about", label: "About" }, { href: "/faq", label: "FAQ" }, { href: "/contact", label: "Contact" }];
+export const FOOTER_LINKS: readonly NavLink[] = [...NAV, { href: "/about", label: "About" }, { href: "/faq", label: "FAQ" }, { href: "/contact", label: "Contact" }, { href: "/terms", label: "Terms" }, { href: "/privacy", label: "Privacy" }, { href: "/security", label: "Security" }];
+
+/** The public pages a search engine may list, in sitemap order (qa-p1-p2 C7009). */
+export const SITEMAP_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/contact", "/register", "/terms", "/privacy", "/security"];
 
 export type Step = { n: number; title: string; summary: string; detail: string; who: string };
 
@@ -46,7 +49,7 @@ export const STEPS: readonly Step[] = [
   {
     n: 3,
     title: "Send",
-    summary: "A branded PDF and a review link.",
+    summary: "An email with a review link; the branded PDF is on that page.",
     detail: "The customer gets your logo, your colour and a link by email. Reminders go out on day 3 and day 7 unless they have viewed or decided.",
     who: "Automatic",
   },
@@ -80,7 +83,7 @@ export const FEATURES: readonly Feature[] = [
   { title: "Scope that writes itself", text: "\"Service included\" is built from the item types on site, with a checklist for each, editable by you." },
   { title: "Cadence by month", text: "Pick visit months on a 12-month grid per service line, with quarterly, spring and fall, and monthly presets." },
   { title: "A pipeline that never goes quiet", text: "Every deal sits in one stage with its age, so you see what is stuck and what needs a reply." },
-  { title: "Their link, your brand", text: "The review page, PDFs, emails and signing page carry your name, logo and colour. Ours never appears." },
+  { title: "Their link, your brand", text: "The review page, PDFs and emails carry your name, logo and colour. The signing page is run by our signature provider and shows its name." },
   { title: "E-signature with evidence", text: "The customer signs, you countersign, and the signed PDF and audit log are stored with the contract." },
   { title: "Reminders on their own", text: "Emails, nudges and follow-ups run in the background. Your team does not build workflows." },
   { title: "Renewals with CPI", text: "A renewal is a new agreement linked to the old one, with the increase applied inside your cap." },
@@ -136,7 +139,7 @@ export const FAQS: readonly Faq[] = [
   { q: "Is it a field-service suite?", a: "No. It has no dispatch, GPS or payroll. It does one job, from the customer's list to a signed recurring contract, and later will feed a suite." },
   { q: "Does my customer need an account?", a: "No. They get a link by email, review the agreement, decide, and sign. Their email approval counts as written approval." },
   { q: "What file types can I import?", a: "Excel, CSV, Word and PDF. AI reads the rows, maps them to your types and shows a review grid for anything it is unsure of." },
-  { q: "Will my customer see your brand?", a: "No. The review page, PDFs, emails and signing page carry your company name, logo and accent colour." },
+  { q: "Will my customer see your brand?", a: "On the review page, the PDFs and the emails, your company name, logo and accent colour. The signing page is run by our signature provider, so it and the signed audit log show its name." },
   { q: "Are e-signatures legally valid?", a: "At launch the product targets Canada outside Quebec, where e-signature law follows the UECA model. You own your contract wording and confirm its validity under your province. Starter wording is reviewed by a lawyer before launch." },
   { q: "What about Quebec?", a: "Quebec has its own e-signature framework and language rules. It is a later, separate item." },
   { q: "How does billing work?", a: "Pick a plan and pay by card at checkout. Billing is monthly and you can cancel any time. Stripe handles payment." },

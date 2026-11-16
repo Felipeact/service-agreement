@@ -15,6 +15,12 @@ values ('00000000-0000-4000-8000-00000000de30', 'Kettle Ridge Mechanical Ltd.',
         'Prices exclude applicable taxes (GST and PST).')
 on conflict (org_id) do nothing;
 
+-- The demo org is on the Business plan (200 live agreements, 120 AI imports, 10 seats). The Stripe ids are placeholders, so
+-- Checkout and the Stripe portal do not work for it; the Billing page, the plan limits and the usage numbers do.
+insert into public.org_billing (org_id, stripe_customer_id, stripe_subscription_id, plan, seats, trades, other_trade)
+values ('00000000-0000-4000-8000-00000000de30', 'demo_cus_business', 'demo_sub_business', 'business', 10, array['hvac'], false)
+on conflict (org_id) do nothing;
+
 select private.seed_org_catalog('00000000-0000-4000-8000-00000000de30');
 
 drop table if exists pg_temp.demo_customers;

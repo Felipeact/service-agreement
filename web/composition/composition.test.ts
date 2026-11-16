@@ -379,7 +379,7 @@ describe("composition root", () => {
       { ok: false, code: "unavailable" },
       { ok: false, code: "open_exists", agreementId: "g0", number: "AG-1048" },
     ];
-    const store: AgreementStore = { create: async () => created[0] };
+    const store: AgreementStore = { create: async () => created[0], setTemplate: async () => ({ ok: true }) };
     const added: AddServiceLineResult[] = [{ ok: true, id: "l1" }, { ok: false, code: "locked" }, { ok: false, code: "too_many" }];
     const written: ServiceLineWriteResult[] = [{ ok: true }, { ok: false, code: "locked" }, { ok: false, code: "not_found" }];
     const lines: ServiceLineStore = { add: async () => added[0], update: async () => written[0], remove: async () => written[0] };
