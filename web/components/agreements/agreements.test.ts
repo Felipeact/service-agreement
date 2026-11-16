@@ -841,7 +841,7 @@ describe("the template on the page", () => {
     const body = { ...SYSTEM_AGREEMENT_BODY, name: "Quarterly HVAC" } as AgreementDetail["template"];
     const templateChoices = { choices: [{ versionId: "v-std", name: "Standard agreement" }, { versionId: "v-own", name: "Quarterly HVAC" }], selected: "v-own" };
     const render = (a: AgreementDetail, role: MemberRole = "estimator") =>
-      renderToStaticMarkup(createElement(AgreementView, { agreement: { ...a, template: body, templateVersionId: "v-own" }, role, actions: { ...actions, setTemplate: async () => ({ status: "saved" }) }, templateChoices }));
+      renderToStaticMarkup(createElement(AgreementView, { agreement: { ...a, template: body, templateVersionId: "v-own" }, role, actions: { ...actions, setTemplate: async () => ({ status: "saved" as const }) }, templateChoices }));
     expect(render(agreement({ status: "draft" }))).toContain("Change template");
     expect(render(agreement({ status: "sent" }))).not.toContain("Change template");
     expect(render(agreement({ status: "draft", shownNo: 1, versions: 2 }))).not.toContain("Change template");

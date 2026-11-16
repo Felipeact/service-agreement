@@ -31,6 +31,19 @@ describe("loading the billing page", () => {
     expect(gateway.overview).toHaveBeenCalledWith(IDS);
   });
 
+  test("C7201: the demo org's placeholder subscription shows its plan with no card and no invoices, and Stripe is never asked", async () => {
+    const { billing, gateway } = setup({ billing: async () => ({ customerId: "demo_cus_business", subscriptionId: "demo_sub_business", plan: "business" as const, seats: 10 }) });
+    const out = await billing.load(member("owner"));
+    expect(out).toEqual({ kind: "ready", plan: "Business", overview: { status: "active", trialEnd: null, periodEnd: null, endsAt: null, plan: "business", extraSeats: 0, card: null, invoices: [] } });
+    expect(gateway.overview).not.toHaveBeenCalled();
+  });
+
+  test("C7201: a real subscription id is still read from Stripe", async () => {
+    const { billing, gateway } = setup({ billing: async () => ({ customerId: "cus_x", subscriptionId: "sub_demo_sub_x", plan: "team" as const, seats: 5 }) });
+    await billing.load(member("owner"));
+    expect(gateway.overview).toHaveBeenCalledTimes(1);
+  });
+
   test.each(["estimator", "viewer"])("C3112: a %s is forbidden and nothing is read", async (role) => {
     const { billing, get, gateway } = setup();
     expect(await billing.load(member(role))).toEqual({ kind: "forbidden" });
