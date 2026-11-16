@@ -5,8 +5,9 @@ import type { TemplateChoice } from "@/components/agreements/template-picker";
 export async function templateChoicesOf(read: () => ReturnType<AgreementTemplateReader["list"]>, agreement: AgreementDetail): Promise<{ choices: TemplateChoice[]; selected: string } | undefined> {
   const listed = await read().catch(() => null);
   if (!listed || !listed.ok) return undefined;
-  const choices = listed.templates.map(({ versionId, body }) => ({ versionId, name: body.name }));
+  // The built-in template is labelled: an org often keeps its own copy under the same name.
+  const choices = listed.templates.map(({ versionId, body, system }) => ({ versionId, name: system ? `${body.name} (built in)` : body.name }));
   const pinned = agreement.templateVersionId ?? listed.templates.find((template) => template.system)?.versionId;
-  if (pinned && agreement.template && !choices.some((choice) => choice.versionId === pinned)) choices.unshift({ versionId: pinned, name: agreement.template.name });
+  if (pinned && agreement.template && !choices.some((choice) => choice.versionId === pinned)) choices.unshift({ versionId: pinned, name: `${agreement.template.name} (earlier version)` });
   return pinned ? { choices, selected: pinned } : undefined;
 }

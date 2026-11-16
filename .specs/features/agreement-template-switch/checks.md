@@ -46,7 +46,7 @@ Proof: `npx vitest run components/agreements/template-picker.click.test.tsx -t "
 **C7112** - The PDF preview's revision key differs when only the template differs
 Proof: `npx vitest run components/agreements/agreements.test.ts -t "C7112:"`
 
-**C7113** - A live browser run of a draft's page at 375, 768 and 1440 shows the name, the choice and the button with no horizontal scroll and no console errors, and a change redraws the preview (needs the migration applied)
+**C7113** - A live browser run of a draft's page at 375, 768 and 1440 shows the name, the choice and the button with no horizontal scroll and no console errors, and a change redraws the preview (run 2026-11-16 on the hosted project after the owner applied the migration: panel at 375, 768 and 1440 without horizontal scroll or console errors; at 375 a click switched the real draft AG-1001 to the org copy of Standard agreement and back to the built-in one, the name updated and no alert showed. AG-1001 is now pinned to the built-in template, which is what an unpinned draft means)
 Proof: live Playwright run
 
 **C7114** - The full test set is no worse than the failures that existed before (kanban, shell, pricing, purity listing agreements-list and pipeline-view, vocabulary C2019)
