@@ -1,45 +1,45 @@
 # Upload an existing contract verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: ui
-**Diff range**: fa9e2f0..HEAD (b76d976, 793e693)
-**Round**: 3 - scoped (last; escalate to the user)
+**Diff range**: 793e693..HEAD (a05895c)
+**Round**: 4 - scoped (final)
 **Verifier**: independent sub-agent (author != verifier)
 
-Round 3 checks the one gap left by round 2: the AC 5 / door 1 row, where the app accepted Claude answers with extra properties. Round 2 named two members of that row: an extra property **on the answer** and an extra property **on a block**. b76d976 closes the block member. `validateSplitBlocks` now refuses any block key other than `type` and `text` (`web/domain/contract/import.ts:37`), C5802 and C5805 assert it, and removing that line makes both fail. The answer member is still open. The splitter reads only `answer.blocks` (`web/infrastructure/claude/contract-splitter.ts:98`), so `{ "blocks": [ok block], "note": "x" }` still returns `{ ok: true }`. Yet the request's own schema sets `additionalProperties: false` on the root (`contract-splitter.ts:42`), as door 1 does. No commit or proof covers this member. Every proof passes at HEAD (793e693). This was the last of the three rounds, so the remaining gap goes to the user. It needs either a root-key refusal plus one C5805 case, or the owner accepting that the provider's structured output enforces the root and amending AC 5 / door 1.
+Round 4 checks the one gap round 3 left open: the AC 5 / door 1 member where an answer with an extra top-level key (`{ "blocks": [ok], "note": "x" }`) was accepted. a05895c closes it. `claudeContractSplitter` now computes `extra` (`web/infrastructure/claude/contract-splitter.ts:99`, any key other than `blocks` on an object answer) and sets `blocks` to null when it is true (`:100`), so the answer is `unavailable`. C5805 has a new bad answer, `{ blocks: [goodBlock], note: "extra" }` (`contract-splitter.test.ts:65`), asserted by `:75` `toEqual({ ok: false, code: "unavailable" })`. When the check is removed, C5805 fails on exactly that answer. Every proof passes at HEAD (a05895c): 9 files, 84 passed, 0 failed. No Unproven, Contradiction or Uncovered cell remains. C5825 stays PASS on the author's record, as in rounds 2 and 3.
 
-Environment: from `web/`, `node node_modules/vitest/vitest.mjs run ... --pool=vmThreads` was used as instructed. **The reported default-pool failure did not happen in this round.** The same batch without `--pool=vmThreads` also gave 9 files, 84 passed, and so did a single file. The "Cannot read properties of undefined (reading 'config')" failure recorded in rounds 1 and 2 is not reproducible at 793e693 on this machine today.
+Environment: run from `web/` with `node node_modules/vitest/vitest.mjs run ... --pool=vmThreads`. The real tree's `git status --porcelain` was ` M ROADMAP.md` before the fault and after the revert. This is an uncommitted user edit outside the feature, and it was identical both times. It was not empty, so the brief's "empty" expectation does not hold literally. The baseline-equality rule in verify.md step 4 does hold.
 
-Earlier rounds are superseded. Rounds 1 and 2 are archived verbatim at the end of this file in fenced blocks, so the gate reads only this round.
+Earlier rounds are superseded. Rounds 1, 2 and 3 are archived verbatim at the end of this file in fenced blocks, so the gate reads only this round.
 
 ## Binding sources
 
-Carried from round 1 (verified at ca7df72) and round 2 (re-checked at 4fb8191). b76d976 changes only the domain validator and two tests. It does not touch the interface, so step 1 does not re-run.
+Carried from round 1 (verified at ca7df72) and round 2 (re-checked at 4fb8191). a05895c changes only the adapter's answer check and one test case. It does not touch the interface, so step 1 does not re-run.
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| `AGENTS..md` Web validation | yes - carried from rounds 1 and 2 | none | - (C5825 author-run record, carried from round 2) |
+| `AGENTS..md` Web validation | yes - carried from rounds 1 and 2; its live pass is covered by C5825's author-run record (judged in round 2) | none | - |
 | `DESIGN.md` control heights and button shape | yes - carried from round 1 | none | - |
 | `PRODUCT.md` | yes - carried from round 1 | none | - |
 
 ## Checks
 
-Proof run: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose`, from `web/` at 793e693. Result: 9 files, 84 passed, 0 failed. Each C58xx title was listed individually as passed: C5801, C5802, C5803 x11, C5804 to C5807, C5808 x2, C5809 to C5811 (C5811 x2 across two files), C5812 to C5817, C5818, C5819 x2, C5820 x2, C5821 x2, C5823, C5824 x5, C5826 and C5827. C5822 (SQL) and C5825 (live pass) are not vitest proofs and are carried. Citations were refreshed only for the two test files b76d976 touched. All other rows are carried from round 2 (4fb8191), and their files are unchanged in fa9e2f0..HEAD.
+Proof run: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose`, from `web/` at a05895c. Result: 9 files, 84 passed, 0 failed. Each C58xx title was listed individually as passed: C5801, C5802, C5803 x11, C5804 to C5807, C5808 x2, C5809, C5810, C5811 x2 (across two files), C5812 to C5815, C5816 x3, C5817, C5818, C5819 x2, C5820 x2, C5821 x2, C5823, C5824 x5, C5826 and C5827. C5822 (SQL) and C5825 (live pass) are not vitest proofs and are carried. Citations were refreshed only for the splitter test file that a05895c touched. Its new array entry moves later lines by +1. All other rows are carried from round 3 (793e693), and their files are unchanged in 793e693..HEAD.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C5801 | form = price, blocks, signatures; storable | batch - passed at 793e693 | carried from 4fb8191: `web/domain/contract/import.test.ts:18-26` | PASS |
-| C5802 | block and length bounds; a block with an extra key is refused | batch - passed | refreshed: `web/domain/contract/import.test.ts:34-43` as before; new `:44` `expect(validateSplitBlocks([{ type: "clause", text: "x", indent: 2 }])).toBeNull()` | PASS |
-| C5803 | 8 import variables accepted, the rest refused | batch - 11 passed | carried: `web/domain/contract/import.test.ts:51`, `:57-59`, `:63-64` (shifted +1 after `:44`) | PASS |
-| C5804 | schema, the prompt instructions, file only | batch - passed | carried from 4fb8191: `web/infrastructure/claude/contract-splitter.test.ts:40-48` | PASS |
-| C5805 | bad answers are unavailable, a good answer is returned | batch - passed | refreshed: new bad answer at `web/infrastructure/claude/contract-splitter.test.ts:67` `{ blocks: [{ type: "clause", text: "x", pageBreakBefore: true }] }`, asserted by `:74` `expect(await splitter.split({ file }), ...).toEqual({ ok: false, code: "unavailable" })` | PASS (the root-level extra property has no case; see Coverage) |
-| C5806 | throw, refusal, no key, timeout; clean log | batch - passed | carried, shifted +1 | PASS |
+| C5801 | form = price, blocks, signatures; storable | batch - passed at a05895c | carried from 793e693: `web/domain/contract/import.test.ts:18-26` | PASS |
+| C5802 | block and length bounds; a block with an extra key is refused | batch - passed | carried from 793e693: `web/domain/contract/import.test.ts:34-44` | PASS |
+| C5803 | 8 import variables accepted, the rest refused | batch - 11 passed | carried from 793e693 | PASS |
+| C5804 | schema, the prompt instructions, file only | batch - passed | carried from 4fb8191: `web/infrastructure/claude/contract-splitter.test.ts:40-48` (above the inserted line, unchanged) | PASS |
+| C5805 | bad answers are unavailable, a good answer is returned | batch - passed | refreshed: new bad answer at `web/infrastructure/claude/contract-splitter.test.ts:65` `{ blocks: [goodBlock], note: "extra" }`; block extra key still at `:68`; all asserted by `:75` `expect(await splitter.split({ file }), ...).toEqual({ ok: false, code: "unavailable" })` | PASS |
+| C5806 | throw, refusal, no key, timeout; clean log | batch - passed | carried, shifted +1: `contract-splitter.test.ts:85-88` `toEqual({ ok: false, code: "unavailable" })` | PASS |
 | C5807 | `max_tokens` is too_large | batch - passed | carried, shifted +1 | PASS |
 | C5808 | docx and pdf paths | batch - 2 passed | carried: `import-contract-wording.test.ts:23-27`, `:36` | PASS |
 | C5809 | over the wording limit | batch - passed | carried: `import-contract-wording.test.ts:42` | PASS |
 | C5810 | passthrough | batch - passed | carried: `import-contract-wording.test.ts:48` | PASS |
 | C5811 | no writer; never saves | batch - 2 passed | carried: `import-contract-wording.test.ts:55`; `import-actions.test.ts:58` | PASS |
-| C5812 | address clause left out | batch - passed | carried: `web/domain/contract/import.test.ts:98-99` (shifted +1) | PASS |
+| C5812 | address clause left out | batch - passed | carried: `web/domain/contract/import.test.ts:98-99` | PASS |
 | C5813 | estimator, viewer, none forbidden | batch - passed | carried: `import-contract-wording.test.ts:61-63` | PASS |
 | C5814 | no file or zero bytes | batch - passed | carried: `import-contract-wording.test.ts:70-72` | PASS |
 | C5815 | extensions, parser failure, size edge | batch - passed | carried: `import-contract-wording.test.ts:79-91` | PASS |
@@ -49,16 +49,16 @@ Proof run: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.
 | C5819 | confirm on unsaved edits; keep on cancel | batch - 2 passed | carried: `contract-import.test.tsx:69-100` | PASS |
 | C5820 | save once; banner clears | batch - 2 passed | carried: `contract-import.test.tsx:109-110`, `:117-120` | PASS |
 | C5821 | notice beside the control; page passes the action | batch - 2 passed | carried from 4fb8191 | PASS |
-| C5822 | frozen `template_version_id` (AD-186) | not re-run; nothing in fa9e2f0..HEAD touches `supabase/` | carried from ca7df72: `supabase/tests/contract_templates.sql:121-122`, `:64` | PASS |
-| C5823 | pending state, single request | batch - passed | carried: `contract-import.test.tsx` (round 1 `:129-134`, shifted +10) | PASS |
-| C5824 | 5 failure messages, rows kept | batch - 5 passed | carried: `contract-import.test.tsx` (round 1 `:144-147`, shifted +10) | PASS |
+| C5822 | frozen `template_version_id` (AD-186) | not re-run; nothing in 793e693..HEAD touches `supabase/` | carried from ca7df72: `supabase/tests/contract_templates.sql:121-122`, `:64` | PASS |
+| C5823 | pending state, single request | batch - passed | carried from 793e693 | PASS |
+| C5824 | 5 failure messages, rows kept | batch - 5 passed | carried from 793e693 | PASS |
 | C5825 | live pass at 375/768/1440 and a real docx import | not runnable by the Verifier (Playwright not used, as instructed) | the author's record at `.specs/features/contract-import/checks.md:160`, judged in round 2 against the code; unchanged | PASS (author-run, author's record) |
 | C5826 | 44 px classes; no wide fixed width | batch - passed | carried from 4fb8191 | PASS |
 | C5827 | input `.docx,.pdf`, labelled | batch - passed | carried from 4fb8191 | PASS |
 
 ## Coverage
 
-Only the row whose authority b76d976 touched was recomputed. All other rows are carried from round 2 (4fb8191), where every member was proven.
+Only the row whose authority a05895c touched was recomputed. All other rows are carried from round 3 (793e693) and round 2 (4fb8191), where every member was proven.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
@@ -72,32 +72,32 @@ Only the row whose authority b76d976 touched was recomputed. All other rows are 
 | file-size bounds (2 edges) | plan AC 1, AC 12 | carried | - |
 | editor failure messages (5) | plan AC 21 | carried | - |
 | AC 7 failure causes (4) | plan AC 7 | carried | - |
-| AC 5 schema mismatches | plan AC 5 + door 1 (`{ blocks: [{ type, text }] }`, `additionalProperties: false`), with the request's schema setting it at both levels (`contract-splitter.ts:37` block, `:42` root). Recomputed at 793e693 | not JSON, no `blocks`, empty list, wrong field type, unknown type, out of bounds: C5805 · extra key on a block: C5802 `import.test.ts:44`, C5805 `contract-splitter.test.ts:67` (M-extra killed) | extra property on the answer root (`{ "blocks": [...], "note": "x" }`): still accepted. `contract-splitter.ts:98` reads only `answer.blocks` and checks no other key. No proof covers it. Only the API's structured output prevents it |
+| AC 5 schema mismatches | plan AC 5 (`plan.md:65`) + door 1 (`plan.md:46`, `{ blocks: [{ type, text }] }`, `additionalProperties: false`), at both levels. Recomputed at a05895c | not JSON, no `blocks`, empty list, wrong field type, unknown type, out of bounds: C5805 · extra key on a block: C5802 `import.test.ts:44`, C5805 `contract-splitter.test.ts:68` (M-extra killed in round 3) · extra key on the answer root: C5805 `contract-splitter.test.ts:65`, refused at `contract-splitter.ts:99-100` (M-root-extra killed) | - |
 | AC 3 prompt instructions (6) | plan AC 3 | carried from 4fb8191 | - |
 | editor banner lifecycle (2) | plan AC 14, AC 16 | carried from 4fb8191 | - |
-| Landing doors (3) | plan Landing | carried | - |
+| Landing doors (3) | plan Landing | carried; door 1 now proven at both levels | - |
 | startup configuration (1 assembly) | `web/composition/index.ts:228` | carried | - |
 | screen widths (3) | AGENTS..md Web validation | carried: C5825 author-run record | - |
 
 ## Test policy rows
 
-b76d976 touches `domain/contract/import.ts`, which the "Decides, not reached across a boundary" row classifies. Its new branch has an own-layer proof (C5802 `:44`), and the adapter boundary proves it too (C5805 `:67`). That row is met for what was added. The open root-level member sits in `contract-splitter.ts` and is recorded under Coverage, not as a policy row failure. Every other row is carried from round 2.
+a05895c touches `contract-splitter.ts`, which the "Decides, reached across a boundary" row classifies. Its new branch has a boundary proof at the adapter (C5805 `:65`). No domain proof sits beneath it, because the root shape belongs to the adapter's answer parsing and not to `validateSplitBlocks`, which takes only the `blocks` array. The domain layer beneath the adapter still proves every block-level member (C5802, C5803). This matches the row's expectation ("each answer-shape row"). Other rows are carried from round 3.
 
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides, reached across a boundary | `import-actions.ts`, `contract-splitter.ts` | boundary plus the layer beneath | yes - carried from 4fb8191; the root-key gap is under Coverage |
-| Decides, not reached across a boundary | `domain/contract/import.ts`, `import-contract-wording.ts` | own layer | yes - re-judged at 793e693 for `import.ts` (C5802 `:44`); carried for the use case |
+| Decides, reached across a boundary | `import-actions.ts`, `contract-splitter.ts` | boundary plus the layer beneath | yes - re-judged at a05895c for the splitter (root-key member C5805 `:65`); carried for the action |
+| Decides, not reached across a boundary | `domain/contract/import.ts`, `import-contract-wording.ts` | own layer | yes - carried from 793e693 |
 | Instrumentation | port type, container line | C5817 | yes - carried |
 
 ## Faults injected
 
-The fault was applied in place in the real tree with `sed`. The two covering files were run (`--pool=vmThreads`), and the file was reverted with `git checkout -- web/domain/contract/import.ts`. `git status --porcelain` was empty before and after. `git stash` was not used.
+The fault was applied in place in the real tree with `sed`. The covering file was run (`--pool=vmThreads`), and the file was reverted with `git checkout -- web/infrastructure/claude/contract-splitter.ts`. `git status --porcelain` read ` M ROADMAP.md` (a pre-existing user edit) before the fault and after the revert, and the two were diffed as identical. `git stash` was not used.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| M-extra: deleted `if (Object.keys(item).some((key) => key !== "type" && key !== "text")) return null;` | `web/domain/contract/import.ts:37` | yes - C5802 failed at `import.test.ts:44` ("expected [ { type: 'clause', text: 'x' } ] to be null"), and C5805 failed at `contract-splitter.test.ts:74` on the `pageBreakBefore` answer (2 failed, 23 passed) |
+| M-root-extra: `const blocks = extra ? null : validateSplitBlocks(...)` -> `const blocks = validateSplitBlocks(...)` (the extra-keys check no longer gates) | `web/infrastructure/claude/contract-splitter.ts:100` | yes - C5805 failed at `contract-splitter.test.ts:75:83` on the `{"blocks":[...],"note":"extra"}` answer ("expected { ok: true, blocks: [...] } to deeply equal { ok: false, code: 'unavailable' }"); 1 failed, 3 passed |
 
-Faults M1 to M20 and M-banner are carried from rounds 1 and 2. Their targets are unchanged in fa9e2f0..HEAD.
+M-extra (round 3), M12, M20 and M-banner (round 2), and M1 to M18 (round 1) are carried. Their targets are unchanged in 793e693..HEAD.
 
 ## Remaining notes, carried and not gating
 
@@ -105,16 +105,13 @@ Faults M1 to M20 and M-banner are carried from rounds 1 and 2. Their targets are
 - No check pins where the control sits.
 - A timeout does not abort the stream.
 - M9 is an equivalent mutant (a redundant `if (pending) return`).
+- a05895c also adds a trailing comma, `{ blocks: [], }`, at `contract-splitter.test.ts:64`. It is cosmetic.
 
 ## Gate
 
-`node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose` (from `web/`, at 793e693): 9 files, 84 passed, 0 failed. The same batch on the default pool also passed (9 files, 84 passed).
+`node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose` (from `web/`, at a05895c): 9 files, 84 passed, 0 failed.
 
-## Ranked gaps
-
-1. AC 5 / door 1, the root of the answer: an answer with an extra top-level property (`{ "blocks": [...], "note": "x" }`) is still accepted (`web/infrastructure/claude/contract-splitter.ts:98`), and no proof covers it. b76d976 closed only the block-level half of round 2's gap. This was round 3 of 3, so it goes to the user. The fix is a root-key refusal plus one C5805 case. Otherwise the owner accepts that the provider enforces the root and amends AC 5 / door 1.
-
-## Archive: earlier rounds (superseded by Round 3)
+## Archive: earlier rounds (superseded by Round 4)
 
 Round 1:
 
@@ -376,4 +373,124 @@ The round 1 faults M1 to M18 are carried. Their targets are unchanged in ca7df72
 ## Ranked gaps
 
 1. AC 5 / door 1: an answer with an extra property is accepted by the app (`web/domain/contract/import.ts:36`), and no proof covers that member. Carried unchanged from round 1 gap 4.
+```
+
+Round 3:
+
+```text
+# Upload an existing contract verification
+
+**Verdict**: FAIL
+**Profile**: ui
+**Diff range**: fa9e2f0..HEAD (b76d976, 793e693)
+**Round**: 3 - scoped (last; escalate to the user)
+**Verifier**: independent sub-agent (author != verifier)
+
+Round 3 checks the one gap left by round 2: the AC 5 / door 1 row, where the app accepted Claude answers with extra properties. Round 2 named two members of that row: an extra property **on the answer** and an extra property **on a block**. b76d976 closes the block member. `validateSplitBlocks` now refuses any block key other than `type` and `text` (`web/domain/contract/import.ts:37`), C5802 and C5805 assert it, and removing that line makes both fail. The answer member is still open. The splitter reads only `answer.blocks` (`web/infrastructure/claude/contract-splitter.ts:98`), so `{ "blocks": [ok block], "note": "x" }` still returns `{ ok: true }`. Yet the request's own schema sets `additionalProperties: false` on the root (`contract-splitter.ts:42`), as door 1 does. No commit or proof covers this member. Every proof passes at HEAD (793e693). This was the last of the three rounds, so the remaining gap goes to the user. It needs either a root-key refusal plus one C5805 case, or the owner accepting that the provider's structured output enforces the root and amending AC 5 / door 1.
+
+Environment: from `web/`, `node node_modules/vitest/vitest.mjs run ... --pool=vmThreads` was used as instructed. **The reported default-pool failure did not happen in this round.** The same batch without `--pool=vmThreads` also gave 9 files, 84 passed, and so did a single file. The "Cannot read properties of undefined (reading 'config')" failure recorded in rounds 1 and 2 is not reproducible at 793e693 on this machine today.
+
+Earlier rounds are superseded. Rounds 1 and 2 are archived verbatim at the end of this file in fenced blocks, so the gate reads only this round.
+
+## Binding sources
+
+Carried from round 1 (verified at ca7df72) and round 2 (re-checked at 4fb8191). b76d976 changes only the domain validator and two tests. It does not touch the interface, so step 1 does not re-run.
+
+| Source | Opened | Contradiction | Uncovered |
+| --- | --- | --- | --- |
+| `AGENTS..md` Web validation | yes - carried from rounds 1 and 2 | none | - (C5825 author-run record, carried from round 2) |
+| `DESIGN.md` control heights and button shape | yes - carried from round 1 | none | - |
+| `PRODUCT.md` | yes - carried from round 1 | none | - |
+
+## Checks
+
+Proof run: `node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose`, from `web/` at 793e693. Result: 9 files, 84 passed, 0 failed. Each C58xx title was listed individually as passed: C5801, C5802, C5803 x11, C5804 to C5807, C5808 x2, C5809 to C5811 (C5811 x2 across two files), C5812 to C5817, C5818, C5819 x2, C5820 x2, C5821 x2, C5823, C5824 x5, C5826 and C5827. C5822 (SQL) and C5825 (live pass) are not vitest proofs and are carried. Citations were refreshed only for the two test files b76d976 touched. All other rows are carried from round 2 (4fb8191), and their files are unchanged in fa9e2f0..HEAD.
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C5801 | form = price, blocks, signatures; storable | batch - passed at 793e693 | carried from 4fb8191: `web/domain/contract/import.test.ts:18-26` | PASS |
+| C5802 | block and length bounds; a block with an extra key is refused | batch - passed | refreshed: `web/domain/contract/import.test.ts:34-43` as before; new `:44` `expect(validateSplitBlocks([{ type: "clause", text: "x", indent: 2 }])).toBeNull()` | PASS |
+| C5803 | 8 import variables accepted, the rest refused | batch - 11 passed | carried: `web/domain/contract/import.test.ts:51`, `:57-59`, `:63-64` (shifted +1 after `:44`) | PASS |
+| C5804 | schema, the prompt instructions, file only | batch - passed | carried from 4fb8191: `web/infrastructure/claude/contract-splitter.test.ts:40-48` | PASS |
+| C5805 | bad answers are unavailable, a good answer is returned | batch - passed | refreshed: new bad answer at `web/infrastructure/claude/contract-splitter.test.ts:67` `{ blocks: [{ type: "clause", text: "x", pageBreakBefore: true }] }`, asserted by `:74` `expect(await splitter.split({ file }), ...).toEqual({ ok: false, code: "unavailable" })` | PASS (the root-level extra property has no case; see Coverage) |
+| C5806 | throw, refusal, no key, timeout; clean log | batch - passed | carried, shifted +1 | PASS |
+| C5807 | `max_tokens` is too_large | batch - passed | carried, shifted +1 | PASS |
+| C5808 | docx and pdf paths | batch - 2 passed | carried: `import-contract-wording.test.ts:23-27`, `:36` | PASS |
+| C5809 | over the wording limit | batch - passed | carried: `import-contract-wording.test.ts:42` | PASS |
+| C5810 | passthrough | batch - passed | carried: `import-contract-wording.test.ts:48` | PASS |
+| C5811 | no writer; never saves | batch - 2 passed | carried: `import-contract-wording.test.ts:55`; `import-actions.test.ts:58` | PASS |
+| C5812 | address clause left out | batch - passed | carried: `web/domain/contract/import.test.ts:98-99` (shifted +1) | PASS |
+| C5813 | estimator, viewer, none forbidden | batch - passed | carried: `import-contract-wording.test.ts:61-63` | PASS |
+| C5814 | no file or zero bytes | batch - passed | carried: `import-contract-wording.test.ts:70-72` | PASS |
+| C5815 | extensions, parser failure, size edge | batch - passed | carried: `import-contract-wording.test.ts:79-91` | PASS |
+| C5816 | action statuses and redirect | batch - 3 passed | carried: `import-actions.test.ts:31-50` | PASS |
+| C5817 | container wiring | batch - passed | carried: `contract-import-wiring.test.ts:16-18`; `web/composition/index.ts:228` | PASS |
+| C5818 | imported rows, banner, preview | batch - passed | carried: `contract-import.test.tsx:55-61` | PASS |
+| C5819 | confirm on unsaved edits; keep on cancel | batch - 2 passed | carried: `contract-import.test.tsx:69-100` | PASS |
+| C5820 | save once; banner clears | batch - 2 passed | carried: `contract-import.test.tsx:109-110`, `:117-120` | PASS |
+| C5821 | notice beside the control; page passes the action | batch - 2 passed | carried from 4fb8191 | PASS |
+| C5822 | frozen `template_version_id` (AD-186) | not re-run; nothing in fa9e2f0..HEAD touches `supabase/` | carried from ca7df72: `supabase/tests/contract_templates.sql:121-122`, `:64` | PASS |
+| C5823 | pending state, single request | batch - passed | carried: `contract-import.test.tsx` (round 1 `:129-134`, shifted +10) | PASS |
+| C5824 | 5 failure messages, rows kept | batch - 5 passed | carried: `contract-import.test.tsx` (round 1 `:144-147`, shifted +10) | PASS |
+| C5825 | live pass at 375/768/1440 and a real docx import | not runnable by the Verifier (Playwright not used, as instructed) | the author's record at `.specs/features/contract-import/checks.md:160`, judged in round 2 against the code; unchanged | PASS (author-run, author's record) |
+| C5826 | 44 px classes; no wide fixed width | batch - passed | carried from 4fb8191 | PASS |
+| C5827 | input `.docx,.pdf`, labelled | batch - passed | carried from 4fb8191 | PASS |
+
+## Coverage
+
+Only the row whose authority b76d976 touched was recomputed. All other rows are carried from round 2 (4fb8191), where every member was proven.
+
+| Set (size) | Recomputed from | Member -> proof | Unproven |
+| --- | --- | --- | --- |
+| action statuses (6) | plan Surface | carried from 4fb8191 | - |
+| import variables (8) | plan door 3 | carried | - |
+| whitelist names refused (8) | AD-188 minus door 3 | carried | - |
+| block types (3) | plan door 1 | carried | - |
+| roles (5) | `web/domain/members/index.ts` ROLES + none | carried | - |
+| file kinds (6) | plan Assumptions | carried | - |
+| block bounds (6 edges) | plan AC 2 | carried | - |
+| file-size bounds (2 edges) | plan AC 1, AC 12 | carried | - |
+| editor failure messages (5) | plan AC 21 | carried | - |
+| AC 7 failure causes (4) | plan AC 7 | carried | - |
+| AC 5 schema mismatches | plan AC 5 + door 1 (`{ blocks: [{ type, text }] }`, `additionalProperties: false`), with the request's schema setting it at both levels (`contract-splitter.ts:37` block, `:42` root). Recomputed at 793e693 | not JSON, no `blocks`, empty list, wrong field type, unknown type, out of bounds: C5805 · extra key on a block: C5802 `import.test.ts:44`, C5805 `contract-splitter.test.ts:67` (M-extra killed) | extra property on the answer root (`{ "blocks": [...], "note": "x" }`): still accepted. `contract-splitter.ts:98` reads only `answer.blocks` and checks no other key. No proof covers it. Only the API's structured output prevents it |
+| AC 3 prompt instructions (6) | plan AC 3 | carried from 4fb8191 | - |
+| editor banner lifecycle (2) | plan AC 14, AC 16 | carried from 4fb8191 | - |
+| Landing doors (3) | plan Landing | carried | - |
+| startup configuration (1 assembly) | `web/composition/index.ts:228` | carried | - |
+| screen widths (3) | AGENTS..md Web validation | carried: C5825 author-run record | - |
+
+## Test policy rows
+
+b76d976 touches `domain/contract/import.ts`, which the "Decides, not reached across a boundary" row classifies. Its new branch has an own-layer proof (C5802 `:44`), and the adapter boundary proves it too (C5805 `:67`). That row is met for what was added. The open root-level member sits in `contract-splitter.ts` and is recorded under Coverage, not as a policy row failure. Every other row is carried from round 2.
+
+| Row | Files it classifies | Required proof | Expectation met |
+| --- | --- | --- | --- |
+| Decides, reached across a boundary | `import-actions.ts`, `contract-splitter.ts` | boundary plus the layer beneath | yes - carried from 4fb8191; the root-key gap is under Coverage |
+| Decides, not reached across a boundary | `domain/contract/import.ts`, `import-contract-wording.ts` | own layer | yes - re-judged at 793e693 for `import.ts` (C5802 `:44`); carried for the use case |
+| Instrumentation | port type, container line | C5817 | yes - carried |
+
+## Faults injected
+
+The fault was applied in place in the real tree with `sed`. The two covering files were run (`--pool=vmThreads`), and the file was reverted with `git checkout -- web/domain/contract/import.ts`. `git status --porcelain` was empty before and after. `git stash` was not used.
+
+| Mutation | Location | Killed |
+| --- | --- | --- |
+| M-extra: deleted `if (Object.keys(item).some((key) => key !== "type" && key !== "text")) return null;` | `web/domain/contract/import.ts:37` | yes - C5802 failed at `import.test.ts:44` ("expected [ { type: 'clause', text: 'x' } ] to be null"), and C5805 failed at `contract-splitter.test.ts:74` on the `pageBreakBefore` answer (2 failed, 23 passed) |
+
+Faults M1 to M20 and M-banner are carried from rounds 1 and 2. Their targets are unchanged in fa9e2f0..HEAD.
+
+## Remaining notes, carried and not gating
+
+- The confirmation still comes after the model call (`contract-import-control.tsx`). This meets AC 15 to the letter. It is a design choice for the user.
+- No check pins where the control sits.
+- A timeout does not abort the stream.
+- M9 is an equivalent mutant (a redundant `if (pending) return`).
+
+## Gate
+
+`node node_modules/vitest/vitest.mjs run domain/contract/import.test.ts infrastructure/claude/contract-splitter.test.ts application/use-cases/import-contract-wording.test.ts "app/(app)/templates/contract" composition/contract-import-wiring.test.ts components/templates/contract-import.test.tsx --pool=vmThreads --reporter=verbose` (from `web/`, at 793e693): 9 files, 84 passed, 0 failed. The same batch on the default pool also passed (9 files, 84 passed).
+
+## Ranked gaps
+
+1. AC 5 / door 1, the root of the answer: an answer with an extra top-level property (`{ "blocks": [...], "note": "x" }`) is still accepted (`web/infrastructure/claude/contract-splitter.ts:98`), and no proof covers it. b76d976 closed only the block-level half of round 2's gap. This was round 3 of 3, so it goes to the user. The fix is a root-key refusal plus one C5805 case. Otherwise the owner accepts that the provider enforces the root and amends AC 5 / door 1.
 ```
