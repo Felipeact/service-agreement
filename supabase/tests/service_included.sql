@@ -32,6 +32,12 @@ begin
   values (tests.id(p_name), tests.id('orgA'), tests.id(p_name || ':site'), p_status);
   insert into public.agreement_versions (id, org_id, agreement_id, version_no, snapshot)
   values (tests.id(p_name || ':v1'), tests.id('orgA'), tests.id(p_name), 1, p_snapshot);
+  -- One line covering both of the site's types: since p0-launch-fixes a scope holds only the types a line covers, so
+  -- this keeps "the frozen scope is the site's scope" true for the assertions below.
+  insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
+  values (tests.id(p_name || ':line'), tests.id('orgA'), tests.id(p_name || ':v1'), 1, 'Covers both', '{4,10}', 2, 10000);
+  insert into public.service_line_asset_types (org_id, service_line_id, asset_type_id)
+  values (tests.id('orgA'), tests.id(p_name || ':line'), tests.id('typeA')), (tests.id('orgA'), tests.id(p_name || ':line'), tests.id('boilerA'));
   return tests.id(p_name);
 end $$;
 
@@ -71,6 +77,11 @@ select tests.si_asset('s808', 'typeA', 'RTU-1');
 select tests.si_agr('a810', 'draft');
 insert into public.agreement_versions (id, org_id, agreement_id, version_no)
 values (tests.id('a810:v2'), tests.id('orgA'), tests.id('a810'), 2);
+-- The version that freezes is the highest one, so it carries the covering line too (see si_agr).
+insert into public.service_lines (id, org_id, agreement_version_id, position, description, visit_months, visits_per_year, cost_per_visit_cents)
+values (tests.id('a810:v2:line'), tests.id('orgA'), tests.id('a810:v2'), 1, 'Covers both', '{4,10}', 2, 10000);
+insert into public.service_line_asset_types (org_id, service_line_id, asset_type_id)
+values (tests.id('orgA'), tests.id('a810:v2:line'), tests.id('typeA')), (tests.id('orgA'), tests.id('a810:v2:line'), tests.id('boilerA'));
 select tests.si_agr('a811', 'draft');
 select tests.si_agr('a812accepted', 'sent', '{"schema": 1, "types": [], "takenAt": "2026-01-01T00:00:00+00:00"}');
 select tests.si_agr('a812refused', 'sent', '{"schema": 1, "types": [], "takenAt": "2026-01-01T00:00:00+00:00"}');
