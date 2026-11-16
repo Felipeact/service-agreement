@@ -40,7 +40,7 @@ Everything customer-facing carries the contractor's name, logo and accent colour
 - **Flow:** staff send a pending contract for signature. The customer signs on a branded `/sign/<token>` page with the signing form embedded. An owner or admin then countersigns inside the contract page. The status moves to `completed` only when both have signed.
 - **Provider:** DocuSeal through the API, behind `SignatureProvider`, so the provider can change without touching the app. Our database holds the contract wording and the status; DocuSeal places the signature and date fields (decision 16).
 - **Evidence:** the signed PDF and the audit log (who, when, from where) are stored with the contract, and each automated action is written to the event log. The DocuSeal webhook, signed PDF storage and audit log are still open in Phase 4.
-- **Legal:** at launch the product targets Canada outside Quebec, where e-signature law follows the UECA model. Each tenant owns its contract wording and confirms validity under its province. Starter wording is reviewed by a lawyer before go-live (decision 14).
+- **Legal:** at launch the product targets Canada outside Quebec, where e-signature law follows the UECA model. Each tenant owns its contract wording and confirms validity under its province with its own lawyer. Starter wording is a customizable starting point, not legal advice, and the product does not commission a lawyer review of it (decision 14, amended 2026-11-16).
 - **Cost to us:** DocuSeal's API needs a Pro seat (US$20 a month, or US$200 a year) plus US$0.20 per completed document. A document signed by several parties counts once, and the sandbox is free.
 
 ### Pricing
@@ -206,7 +206,7 @@ Edge cases to design for: payment succeeded but the webhook is late (the success
 
 ## Document templates
 
-Agreement and contract wording becomes tenant-owned data. Today `contractClauses()` returns six hard-coded sentences, and the legal review of them blocks go-live.
+Agreement and contract wording becomes tenant-owned data. Today `contractClauses()` returns six hard-coded sentences. They are a starting point each tenant edits and has its own lawyer check; no product-side legal review blocks go-live (decision 14).
 
 - **Where it lives:** in our database, not in DocuSeal. A template stored in DocuSeal would sit outside the version snapshot, so we could not show which text a signed contract carried. DocuSeal keeps one job: the signature and date fields, drawn by the renderer as text tags.
 - **Blocks:** an ordered list. Text blocks (heading, paragraph, clause list) use merge variables from a fixed whitelist, such as `{{customer.name}}`, `{{term.start}}`, `{{terms.paymentDays}}`, `{{province}}` and `{{tenant.legalName}}`. System blocks (price lines, visit schedule, "Service included", equipment list, signatures) the tenant can move or hide, except the price table and the signature block, which stay.
@@ -329,7 +329,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Block model, merge-variable whitelist and validation; blocks replace `clauses: string[]` in the document models (`.specs/features/contract-templates/`, built 2026-11-12, AD-186: `domain/contract/template.ts`, `ContractDocument.body` replaces `clauses`, the contract PDF draws it; Verifier round 2 PASS, 26 of 26 checks, 27 faults injected and killed over both rounds; the agreement document has no clauses today, so nothing else to replace; the system wording is unchanged word for word)
 - [x] Block editor with live PDF preview, plus clone. **Built 2026-11-12 to 2026-11-13** (`.specs/features/agreement-templates/`, `template-flow/`, `block-editor/`, Verifier PASS on each): the Templates screen, a block editor for agreement templates and a Contract wording editor, each with the live PDF beside it (`POST /templates/preview`, `POST /templates/contract/preview`), Duplicate, Archive, Customize, and Use template opening the New agreement dialog. Schema 2 bodies: headings, paragraphs and clauses with indent and page breaks, movable and hideable sections with options, page header and footer options, a signatures section, sixteen merge variables. The owner's real Enviroware proposal and contract are created as templates in the demo workspace. Not built, deliberately: a per-page header note (the proposal's "(Address) Maintenance" line), italic text, click-on-the-page editing. Task-library wording (Boiler Major and Minor lists, the SUBCONTRACTOR flag) is catalogue data, not template data.
 - [x] Simpler template and contract editors (2026-11-13): layout rows fold to one line and open one at a time, rarely used options sit under "More options", preset lines and document options fold the same way. The data model and validation are unchanged
-- [ ] Starter agreement and contract templates in each pack, province-aware, legally reviewed
+- [ ] Starter agreement and contract templates in each pack, province-aware. No lawyer review: tenants customize and check with their own lawyer (decision 14, amended 2026-11-16)
 - [x] Upload an existing contract and let Claude split it into blocks and variables (2026-11-16, `.specs/features/contract-import/`, AD-191, no migration). On `/templates/contract` an owner or admin attaches a docx or pdf (up to 4 MiB); Claude returns heading, paragraph and clause blocks with only the eight identity variables (never `terms.*` or the province, so the document's own figures stay literal); the rows load unsaved into the editor and the existing save writes the next version. Live run 2026-11-16 with the real Claude call on a docx. Verifier round 1 FAIL on C5825 only (not run then); gaps it found were fixed. Not covered: saving an imported wording live, a pdf live, metering against the AI-import allowance
 
 ### Phase 5.6: Reporting (M20)
@@ -340,11 +340,11 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 
 ### Phase 5.9: Launch, owner actions
 Things only the owner can do. Each one is drawn from an open item above.
-- [ ] Set the Supabase Auth SMTP sender to the verified Resend domain (decision 11; launch blocker)
-- [ ] Apply migration `20261116120000_p0_launch_fixes.sql` to the hosted project, then run the live Scope, Send and Settings checks (code and tests done, `.specs/features/p0-launch-fixes/`)
+- [x] Set the Supabase Auth SMTP sender to the verified Resend domain (decision 11; launch blocker)
+- [x] Apply migration `20261116120000_p0_launch_fixes.sql` to the hosted project, then run the live Scope, Send and Settings checks (code and tests done, `.specs/features/p0-launch-fixes/`)
 - [ ] Verify the hosting region and put it on `/security`; have a lawyer review `/terms`, `/privacy` and `/security`
-- [ ] Apply migration `20261115100000_db_freeze.sql` to the hosted project, then run the freeze check live
-- [ ] Find a lawyer to review the starter agreement and contract wording per province (decision 14; launch blocker)
+- [x] Apply migration `20261115100000_db_freeze.sql` to the hosted project, then run the freeze check live
+- [x] ~~Find a lawyer to review the starter agreement and contract wording per province~~ Dropped 2026-11-16 by the owner: each tenant customizes its wording and checks it with its own lawyer (decision 14). No longer a launch blocker
 - [ ] Find one or two plumbing or electrical pilot contractors, and revisit the price points with them (decision 2)
 - [ ] Stripe go-live settings: webhook endpoint and its secret in Vault, only Cards enabled (test and live), `STRIPE_PUBLISHABLE_KEY` in each environment, `STRIPE_SECRET_KEY` set in production only once provisioning is confirmed
 - [ ] Live runs: a renewal of a canceled test subscription, and an agreement sent by email on production
@@ -406,7 +406,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 11 | SMTP sender | Move Supabase Auth's sender to the verified Resend domain before launch | Otherwise invitations reach only the account owner. Launch blocker |
 | 12 | Template editor | Block editor with variables, live PDF preview | Predictable output; no DOCX-to-PDF step |
 | 13 | Templates per org | **Amended 2026-11-12 by the owner:** an org keeps several agreement templates (a Templates screen with a card list, preview, Use template, Duplicate and Archive); the system template stays the default for an agreement started without one. Contracts keep one template per org | The owner supplied a Templates screen showing several reusable presets; the original rationale (a picker on every new agreement is friction) is met because Use template is opt-in |
-| 14 | Starter contract wording | Claude drafts, a lawyer reviews per province. The tenant owns their wording and the editor says so. **Needs you** for the lawyer | The legal review of the six clauses already blocks go-live |
+| 14 | Starter contract wording | **Amended 2026-11-16 by the owner:** Claude drafts the starter wording; no product-side lawyer review. The tenant owns their wording, customizes it and checks it with their own lawyer, and the editor says so. (Was: a lawyer reviews per province, a launch blocker) | Each client tailors its proposal and contract, so validity under its province is theirs to confirm |
 | 15 | Upload an existing contract | After the editor ships | It depends on the block model |
 | 16 | DocuSeal | API only. Do not use the Pro template builder | Templates live in our database for the audit trail. The API still needs one Pro seat ($20/month) for its keys |
 | 17 | Money reports | Owner and admin see money; estimators see operational reports; viewers none | Least privilege; revenue figures are sensitive |
