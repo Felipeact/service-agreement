@@ -33,6 +33,8 @@ export function validateSplitBlocks(input: unknown): SplitBlock[] | null {
   const blocks: SplitBlock[] = [];
   for (const item of input) {
     if (typeof item !== "object" || item === null) return null;
+    // Door 1 sets additionalProperties false; the app holds the same line instead of trusting the provider alone.
+    if (Object.keys(item).some((key) => key !== "type" && key !== "text")) return null;
     const { type, text } = item as { type?: unknown; text?: unknown };
     if (typeof type !== "string" || !(SPLIT_BLOCK_TYPES as readonly string[]).includes(type)) return null;
     if (typeof text !== "string" || text.trim() === "" || text.length > MAX_TEXT) return null;

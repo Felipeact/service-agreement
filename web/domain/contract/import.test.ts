@@ -41,6 +41,7 @@ describe("validateSplitBlocks bounds", () => {
     expect(validateSplitBlocks([clause("a".repeat(2001))])).toBeNull();
     expect(validateSplitBlocks([{ type: "table", text: "x" }])).toBeNull();
     expect(validateSplitBlocks([{ type: "clause", text: 5 }])).toBeNull();
+    expect(validateSplitBlocks([{ type: "clause", text: "x", indent: 2 }])).toBeNull();
     expect(validateSplitBlocks("clauses")).toBeNull();
     expect(validateSplitBlocks([null])).toBeNull();
   });

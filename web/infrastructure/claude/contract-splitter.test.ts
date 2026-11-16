@@ -64,6 +64,7 @@ describe("claudeContractSplitter", () => {
       { blocks: [] },
       { blocks: [{ type: "clause", text: 5 }] },
       { blocks: [{ type: "table", text: "x" }] },
+      { blocks: [{ type: "clause", text: "x", pageBreakBefore: true }] },
       { blocks: Array.from({ length: 41 }, () => goodBlock) },
       { blocks: [{ type: "clause", text: "a".repeat(2001) }] },
       { blocks: [{ type: "clause", text: "Payable in {{terms.paymentDays}}." }] },
