@@ -201,6 +201,17 @@ do $$ begin
 end $$;
 reset role;
 select set_config('request.jwt.claims', '', true);
+-- C6008 (cascade, version side): deleting a version deletes its exclusion rows.
+select tests.p0_site('p0c');
+select tests.p0_asset('p0c', 'typeA', 'C-1');
+select tests.p0_agr('p0c', 'p0c', 'draft');
+insert into public.agreement_versions (id, org_id, agreement_id, version_no) values (tests.id('p0c:v2'), tests.id('orgA'), tests.id('p0c'), 2);
+insert into public.agreement_scope_exclusions (org_id, agreement_version_id, asset_id) values (tests.id('orgA'), tests.id('p0c:v2'), tests.id('p0c:C-1'));
+do $$ begin
+  delete from public.agreement_versions where id = tests.id('p0c:v2');
+  perform tests.ok('C6008 version cascade', (select count(*) from public.agreement_scope_exclusions where asset_id = tests.id('p0c:C-1')) = 0, 'deleting the version left exclusion rows');
+end $$;
+
 -- C6018 (role): only an owner or admin can stamp the company confirmation; an estimator and a viewer change nothing.
 select tests.act_as('uE');
 do $$ begin
