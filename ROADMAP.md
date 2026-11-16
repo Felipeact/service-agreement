@@ -226,9 +226,9 @@ Tenant reports for the contractor's owner and office, read from data that alread
 - **Aging and speed:** median time per stage and the oldest stuck items.
 - **Losses:** refused, expired and withdrawn grouped by reason, each linking to its agreement.
 - **Renewals:** contracts ending in 30, 60 and 90 days, with value and type (auto or needs negotiation).
-- **Revenue breakdown:** by customer and by serviced-item type, filterable by date range.
+- **Revenue breakdown:** by customer and by serviced-item type, as of today (agreements in term now; amended 2026-11-15, a point-in-time figure has no range).
 - **CSV export** on every table, and a useful empty state for a new tenant.
-- **Rules:** win rate is per agreement, not per version. Automatic renewals (W7) are accepted without a customer decision, so they are excluded from win rate and shown separately.
+- **Rules:** win rate is per agreement, not per version. Automatic renewals (W7) are accepted without a customer decision, so they are excluded from win rate and left out of the figures (an automatic renewal has no customer decision, so it never appears in win rate or losses).
 - **Access:** owners and admins see money; estimators see operational reports; viewers see none (decision 17). No per-estimator ranking in v1.
 - **Not here:** the product's own SaaS metrics (MRR, churn, signups by trade). Stripe and product analytics cover those; onboarding only has to store the trade on the org.
 - **Later (Phase 6):** visit workload per month and invoicing reports, once visit data exists.

@@ -188,18 +188,26 @@ function LossesSection({ part, range, money }: { part: Part<LossRow[]>; range: R
       ) : part.value.length === 0 ? (
         <Empty>No agreements were refused, expired or withdrawn in this range.</Empty>
       ) : (
-        <Rows>
-          {part.value.map((r) => (
-            <Row key={`${r.agreementId}-${r.outcome}`}>
-              <AgreementLink id={r.agreementId} number={r.number} />
-              <span>{r.customer}, {r.site}</span>
-              <span className="font-semibold">{OUTCOME_LABEL[r.outcome]}</span>
-              <span className="text-ink-2">{r.occurred}</span>
-              {money && r.valueCents !== null && <span className="text-ink-2">{formatCad(r.valueCents)} a year</span>}
-              {r.reason && <span className="basis-full text-ink-2">Reason: {r.reason}</span>}
-            </Row>
-          ))}
-        </Rows>
+        (["refused", "expired", "withdrawn"] as const).map((outcome) => {
+          const rows = part.value.filter((r) => r.outcome === outcome);
+          if (rows.length === 0) return null;
+          return (
+            <div key={outcome} className="flex flex-col gap-1">
+              <h3 className="text-[13px] font-semibold">{OUTCOME_LABEL[outcome]} · {rows.length}</h3>
+              <Rows>
+                {rows.map((r) => (
+                  <Row key={`${r.agreementId}-${r.outcome}`}>
+                    <AgreementLink id={r.agreementId} number={r.number} />
+                    <span>{r.customer}, {r.site}</span>
+                    <span className="text-ink-2">{r.occurred}</span>
+                    {money && r.valueCents !== null && <span className="text-ink-2">{formatCad(r.valueCents)} a year</span>}
+                    {r.reason && <span className="basis-full text-ink-2">Reason: {r.reason}</span>}
+                  </Row>
+                ))}
+              </Rows>
+            </div>
+          );
+        })
       )}
     </Section>
   );

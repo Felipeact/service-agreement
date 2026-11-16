@@ -56,6 +56,11 @@ describe("GET /reports/export (reporting Surface)", () => {
     expect(reports.funnel).not.toHaveBeenCalled();
   });
 
+  test("C5741: a start date after today with no end is 400, not the default range", async () => {
+    expect((await get("report=funnel&from=2027-06-16")).status).toBe(400);
+    expect((await get("report=funnel&from=2027-06-15")).status).toBe(200);
+  });
+
   test("C5741: signed out is 401 and nothing is read", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     expect((await get("report=funnel")).status).toBe(401);

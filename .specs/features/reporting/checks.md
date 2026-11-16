@@ -98,6 +98,20 @@ Proof: `cd web && npx vitest run components/shell/nav-items.test.ts -t "C5743"`
 **C5751** - `/reports` as the demo owner shows the headline, funnel, aging, losses, renewals and both revenue tables, and CSV downloads, at 375, 768 and 1440 px with no horizontal scroll, every touch target at least 44 px on mobile and tablet, and no console error (AC 1 to 16)
 Proof: Playwright MCP pass per AGENTS.md (`npm run dev` in `web/`), recorded in the verification report as author-run
 
+### S5 - Added after the first verification round (screen elements and wiring) · ~3k
+
+**C5761** - Lost deals are grouped under Refused, Expired and Withdrawn headings with a count, empty groups are left out, and each row shows its agreement link, date and reason (AC 8)
+Proof: `cd web && npx vitest run "app/(app)/reports/page.test.tsx" -t "C5761"`
+
+**C5762** - The page links the stuck and renewal agreements, lists the sections in the order Headline, Funnel, Speed, Lost, Renewals, Revenue by customer, Revenue by type, lists revenue largest first, prefills the range form and shows "50% dropped off" for 4 created then 2 sent (AC 7, 10, 11)
+Proof: `cd web && npx vitest run "app/(app)/reports/page.test.tsx" -t "C5762"`
+
+**C5763** - `getContainer()` exposes `reports` on the session client, and `renewals()` calls the rpc `report_renewals` (door 3)
+Proof: `cd web && npx vitest run composition/composition.test.ts -t "C5731: getContainer"`
+
+**C5764** - `GET /reports/export?report=funnel&from=<a date after today>` with no `to` answers 400 and `from=<today>` answers 200 (AC 18)
+Proof: `cd web && npx vitest run "app/(app)/reports/export" -t "after today with no end"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -158,4 +172,5 @@ Per the plan: per-estimator performance, SaaS metrics, visit and invoicing repor
 
 - S1 = 8k (migration and recipe), S2 = 3k (domain), S3 = 7k (port, adapter, composition, two routes, nav), S4 = Playwright; about 20k in total across 14 files, under the 150k budget - one builder
 - Mechanism: one builder
+- **After verification round 1:** ROADMAP's revenue line amended to "as of today" and its automatic-renewal line to "left out of the figures" (owner chose the recommendations on 2026-11-15); C5712's claim about aging money is read as the funnel, losses and renewals only (aging has no money column); C5743 is proven by `nav-items.test.ts` (link toggle) together with `nav-gate.test.ts` (four roles); the owner applied the migration.
 - **Settled mid-build:** the export route also answers 503 (added to Surface); `scripts/test-db/runner.test.ts` counts moved from 40 to 41 recipes and 42 to 43 SQL files for the new `reports` recipe; the domain avoids `new Date` because `domain/purity.test.ts` C33 forbids it; the plan's AC 2, 11 and 13 and the `GET /reports` viewer status were amended before any code (pipeline value no longer double-counts an in-term agreement; the two revenue reports are as of today; a viewer on the page is redirected, the export answers 403)

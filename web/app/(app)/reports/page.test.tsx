@@ -147,4 +147,38 @@ describe("the reports page (reporting S1 to S4)", () => {
     expect(html).toContain("61 to 90 days");
     expect(html).toContain("Auto-renews");
   });
+
+  test("C5761: lost deals are grouped by outcome, each row with its link, reason and date, and empty groups are left out", async () => {
+    reports.losses.mockResolvedValue(ok([
+      { agreementId: "a2", number: "AG-2", customer: "Acme", site: "Plant", outcome: "refused", reason: "Price", occurred: "2027-03-11", valueCents: 119999 },
+      { agreementId: "a4", number: "AG-4", customer: "Beta", site: "Yard", outcome: "withdrawn", reason: null, occurred: "2027-03-13", valueCents: 119999 },
+    ]));
+    const html = await render();
+    expect(html).toContain("Refused · 1");
+    expect(html).toContain("Withdrawn · 1");
+    expect(html).not.toContain("Expired · ");
+    expect(html.indexOf("Refused · 1")).toBeLessThan(html.indexOf("Withdrawn · 1"));
+    expect(html).toMatch(/<a href="\/agreements\/a2"[^>]*>AG-2/);
+    expect(html).toContain("Reason: Price");
+    expect(html).toContain("2027-03-13");
+  });
+
+  test("C5762: the screen links the stuck and renewal agreements, orders the sections and lists revenue largest first", async () => {
+    reports.revenueByCustomer.mockResolvedValue(ok([
+      { customerId: "c1", customer: "Acme", agreements: 2, valueCents: 239998 },
+      { customerId: "c2", customer: "Beta", agreements: 1, valueCents: 119999 },
+    ]));
+    const html = await render();
+    expect(html).toMatch(/<a href="\/agreements\/a1"[^>]*>AG-1/);
+    expect(html).toMatch(/<a href="\/agreements\/a3"[^>]*>AG-3/);
+    const order = ["Headline", "Funnel", "Speed and stuck deals", "Lost deals", "Renewals due", "Revenue by customer", "Revenue by type"].map((h) => html.indexOf(`>${h}<`));
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(order.every((n) => n > 0)).toBe(true);
+    expect(html.indexOf("Acme")).toBeLessThan(html.indexOf("Beta"));
+    expect(html).toContain("$2,399.98 a year");
+    expect(html).toMatch(/name="from"[^>]*value="2026-06-16"/);
+    expect(html).toMatch(/name="to"[^>]*value="2027-06-15"/);
+    expect(html).toContain("50% dropped off");
+    expect(html).toContain('<h1 class="font-display leading-tight font-semibold tracking-tight text-[26px]">Reports</h1>');
+  });
 });

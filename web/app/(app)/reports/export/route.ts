@@ -29,7 +29,9 @@ export async function GET(request: Request): Promise<Response> {
   if ((from !== undefined && !isIsoDate(from)) || (to !== undefined && !isIsoDate(to)) || (from !== undefined && to !== undefined && from > to)) {
     return refuse(400, "Dates must be YYYY-MM-DD, with the start on or before the end.");
   }
-  const { range } = parseReportRange({ from, to }, today(clock.now()));
+  const now = today(clock.now());
+  if (from !== undefined && to === undefined && from > now) return refuse(400, "The start date is after today.");
+  const { range } = parseReportRange({ from, to }, now);
 
   const result = await makeReportExport(reports)(key, range, access);
   if (!result.ok) return result.code === "forbidden" ? refuse(403, "Your role cannot download this report.") : refuse(503, "The report could not be read. Try again.");
