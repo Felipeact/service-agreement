@@ -716,6 +716,11 @@ export type AgreementDetail = {
    */
   template?: AgreementTemplateBody;
   /**
+   * The template version the shown version is pinned to; `null` when nobody pinned it, which reads as the system template. Absent in
+   * an older fixture. The picker on a draft selects this one (agreement-template-switch).
+   */
+  templateVersionId?: string | null;
+  /**
    * The live customer link of the shown version, when the agreement is `sent` and the version is the current one:
    * when the customer first opened it, or `null` for not yet. `null` too when there is no live link. The link itself
    * is never readable (customer-portal door 1).
@@ -782,6 +787,11 @@ export interface AgreementStore {
    * new version to that template version and copies its preset lines (agreement-templates AC 24); without it nothing is sent.
    */
   create(siteId: string, templateVersionId?: string): Promise<CreateAgreementResult>;
+  /**
+   * Pins the current version of a draft to another template version (`set_agreement_template`, agreement-template-switch). Only the
+   * pin changes. `locked`: the agreement is no longer a draft; `invalid_template`: not an agreement template of the org or the system.
+   */
+  setTemplate(agreementId: string, templateVersionId: string): Promise<{ ok: true } | { ok: false; code: "forbidden" | "not_found" | "locked" | "invalid_template" | "unavailable" }>;
 }
 
 /** An agreement template as the Templates screen lists it: the template and its latest version (agreement-templates S3). */

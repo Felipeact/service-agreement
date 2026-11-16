@@ -412,6 +412,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         term: { start: shownVersion?.term_start ?? null, months: shownVersion?.term_months ?? 12, end: shownVersion?.term_end ?? null },
         validUntil: shownVersion?.valid_until ?? null,
         template: templateOf(shownVersion),
+        ...(shownVersion && shownVersion.template_version_id !== undefined && { templateVersionId: shownVersion.template_version_id }),
         portalLink: await portalLink(shownVersion?.id, status, current),
         linkEmail: await linkEmail(row.id, status, current),
         ...links,
@@ -422,8 +423,23 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
   };
 }
 
+/** SQLSTATEs of `set_agreement_template` as the port's codes. */
+const TEMPLATE_CODES: Record<string, "forbidden" | "not_found" | "locked" | "invalid_template"> = { "42501": "forbidden", P0002: "not_found", P0001: "locked", "22023": "invalid_template" };
+
 export function supabaseAgreementStore(client: Client): AgreementStore {
   return {
+    async setTemplate(agreementId, templateVersionId) {
+      try {
+        const { error } = await client.rpc("set_agreement_template", { p_agreement_id: agreementId, p_template_version_id: templateVersionId });
+        if (!error) return { ok: true };
+        const code = TEMPLATE_CODES[error.code];
+        if (code) return { ok: false, code };
+        return unavailable("Changing the agreement template", `${error.code} ${error.message}`);
+      } catch (cause) {
+        return unavailable("Changing the agreement template", cause);
+      }
+    },
+
     async create(siteId, templateVersionId) {
       try {
         // The second argument is sent only when a template is used, so a plain New agreement calls the function as it always did.

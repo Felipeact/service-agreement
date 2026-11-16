@@ -295,6 +295,22 @@ describe("service line store", () => {
   });
 });
 
+describe("agreement reader: the pinned template", () => {
+  test.each([
+    ["a pinned version", "tv-9", "tv-9"],
+    ["a version nobody pinned", null, null],
+  ])("C7106: %s gives templateVersionId %j", async (_label, pin, expected) => {
+    const body = { ...SYSTEM_AGREEMENT_BODY, name: "Pinned" };
+    const stub = stubClient({
+      agreements: ok(agreementRow([{ id: "v1", version_no: 1, template_version_id: pin, document_template_versions: pin ? { body } : null }])),
+      service_lines: ok([]),
+    });
+    stub.client.rpc.mockResolvedValue(ok({ schema: 2, types: [] }));
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.templateVersionId).toBe(expected);
+  });
+});
+
 describe("agreement reader: the service scope", () => {
   const SCOPE = {
     schema: 1,

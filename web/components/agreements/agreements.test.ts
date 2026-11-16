@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, AgreementServiceScope, MemberRole, ServiceLineView } from "@/application/ports";
-import type { AgreementStatus, EquipmentChoice } from "@/domain/agreement";
+import { SYSTEM_AGREEMENT_BODY, type AgreementStatus, type EquipmentChoice } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { itemWords } from "@/domain/org-settings";
 import { pipelineStage } from "@/domain/pipeline";
@@ -811,5 +811,35 @@ describe("the activity timeline folds older events", () => {
     expect(text(out)).toContain("Show 2 earlier events");
     expect(out.match(/data-activity=/g)).toHaveLength(8);
     expect(out.indexOf("Event 1<")).toBeLessThan(out.indexOf("Event 8<"));
+  });
+});
+
+describe("the template on the page", () => {
+  /** The `revision` the page hands the PDF preview, found by walking the element tree the view returns. */
+  function previewRevision(a: AgreementDetail): string {
+    const found: string[] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (typeof node !== "object" || node === null || !("props" in node)) return;
+      const element = node as { type: unknown; props: { children?: unknown; revision?: string } };
+      if (element.type === AgreementPdfPreview && typeof element.props.revision === "string") found.push(element.props.revision);
+      walk(element.props.children);
+    };
+    walk(AgreementView({ agreement: a, role: "estimator", actions }));
+    expect(found).toHaveLength(1);
+    return found[0];
+  }
+
+  test("C7112: the preview revision differs when only the template differs, and not when nothing differs", () => {
+    const base = agreement({});
+    const a = previewRevision({ ...base, templateVersionId: "v-one" });
+    expect(previewRevision({ ...base, templateVersionId: "v-two" })).not.toBe(a);
+    expect(previewRevision({ ...base, templateVersionId: "v-one" })).toBe(a);
+  });
+
+  test("C7109: the page names the template of a draft and of a sent agreement", () => {
+    const body = { ...SYSTEM_AGREEMENT_BODY, name: "Quarterly HVAC" } as AgreementDetail["template"];
+    expect(text(view({ ...agreement({ status: "draft" }), template: body }))).toContain("Template: Quarterly HVAC");
+    expect(text(view({ ...agreement({ status: "sent" }), template: body }))).toContain("Template: Quarterly HVAC");
   });
 });

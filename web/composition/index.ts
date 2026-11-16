@@ -292,6 +292,8 @@ export async function getContainer() {
     },
     // Agreement templates are read and written as the member: the definer functions check owner or admin themselves.
     listAgreementTemplates: makeListAgreementTemplates(supabaseAgreementTemplateReader(supabase)),
+    // Every template the member can see (the org's own and the system one): the choice a draft can switch to.
+    readAgreementTemplates: supabaseAgreementTemplateReader(supabase).list,
     saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,
     archiveAgreementTemplate: supabaseAgreementTemplateStore(supabase).archive,
     duplicateAgreementTemplate: makeDuplicateAgreementTemplate(supabaseAgreementTemplateReader(supabase), supabaseAgreementTemplateStore(supabase)),

@@ -9,7 +9,7 @@ import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
-import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, ScopeState, TermState } from "@/components/agreements/state";
+import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 import { linkBase } from "./link-base";
 
@@ -220,6 +220,18 @@ export async function sendAgreementAction(agreementId: string, email?: string, c
     return { status: "unavailable" };
   }
   return issueLink(agreementId, "sent", (ready) => ready.sendAgreement(agreementId));
+}
+
+/** Switches a draft to another template. Only the pin changes: the lines, term and scope stay as they are. */
+export async function setAgreementTemplateAction(agreementId: string, templateVersionId: string): Promise<TemplateState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId) || !isUuid(templateVersionId)) return NOT_FOUND;
+  const done = await container.agreementStore.setTemplate(agreementId, templateVersionId);
+  if (!done.ok) return { status: done.code };
+  revalidatePath(`/agreements/${agreementId}`);
+  revalidatePath("/pipeline");
+  return { status: "saved" };
 }
 
 /** Leaves one asset out of a draft's scope, or puts it back. The asset stays on the site and in other agreements. */

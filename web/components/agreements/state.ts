@@ -10,6 +10,17 @@ export type CreateAgreementState =
   | { status: "open_exists"; agreementId: string; number: string }
   | ({ status: "plan_limit" } & PlanLimitNotice);
 
+/** What `setAgreementTemplateAction` answers: the template was changed, or why not (`locked`: no longer a draft). */
+export type TemplateState = { status: "idle" | "saved" | "locked" | "invalid_template" | Failure };
+
+export const TEMPLATE_MESSAGES = {
+  locked: "This agreement can no longer change its template.",
+  invalid_template: "That template is no longer available. Reload the page.",
+  forbidden: "You don't have permission to change agreements.",
+  not_found: "This agreement no longer exists.",
+  unavailable: "We couldn't change the template. Try again.",
+} as const;
+
 /** What `setScopeExclusionAction` answers: the change was saved, or why not (`locked`: no longer an editable draft). */
 export type ScopeState = { status: "idle" | "saved" | "locked" | Failure };
 
