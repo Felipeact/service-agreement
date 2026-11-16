@@ -25,10 +25,15 @@ const commitTransition = vi.fn();
 const requestHeaders = new Headers({ host: "localhost:3000" });
 const recipientGet = vi.fn<(id: string) => Promise<string | null>>();
 const recipientSet = vi.fn<(id: string, email: string) => Promise<boolean>>();
+const getOrgSettings = vi.fn();
+const uncovered = vi.fn<(id: string) => Promise<{ code: string; name: string; assetCount: number }[]>>();
+const READY = { legalName: "Acme Heating Ltd.", address: "12 Main St, Surrey, BC V3T 1A1", phone: "604-555-2368", companyConfirmedAt: new Date("2026-11-01T00:00:00Z") };
 
 vi.mock("@/composition", () => ({
   getContainer: async () => ({
     currentMember,
+    getOrgSettings,
+    agreementScope: { uncovered },
     agreementRecipient: { get: recipientGet, set: recipientSet },
     sendAgreement: makeSendAgreement({ findById, commitTransition } as unknown as AgreementRepository, { send }, portalTokens),
   }),
@@ -55,6 +60,8 @@ beforeEach(() => {
   send.mockResolvedValue({ ok: true });
   recipientGet.mockResolvedValue("customer@shop.ca");
   recipientSet.mockResolvedValue(true);
+  getOrgSettings.mockResolvedValue(READY);
+  uncovered.mockResolvedValue([]);
 });
 
 describe("sendAgreementAction", () => {
@@ -114,6 +121,40 @@ describe("sendAgreementAction", () => {
     await sendAgreementAction(AGR, "someone@else.ca");
     expect(recipientSet).not.toHaveBeenCalled();
     expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  test("C6010: a site with 3 uncovered types needs confirmation, names them with counts, and nothing is sent", async () => {
+    const types = [
+      { code: "BOILER", name: "Boiler", assetCount: 2 },
+      { code: "CHILLER", name: "Chiller", assetCount: 1 },
+      { code: "BACKFLOW", name: "Backflow preventer", assetCount: 4 },
+    ];
+    uncovered.mockResolvedValue(types);
+    expect(await sendAgreementAction(AGR)).toEqual({ status: "needs_confirmation", uncovered: types });
+    expect(recipientGet).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  test("C6011: the same send with confirmUncovered proceeds and does not ask the scope again", async () => {
+    uncovered.mockResolvedValue([{ code: "BOILER", name: "Boiler", assetCount: 2 }]);
+    const state = await sendAgreementAction(AGR, undefined, true);
+    expect(state.status).toBe("sent");
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(uncovered).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["no settings row", null, ["legalName", "address", "phone"]],
+    ["never confirmed", { ...READY, companyConfirmedAt: null }, ["unconfirmed"]],
+    ["the demo company", { ...READY, legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC V5A 0A0", phone: "604-555-0100" }, ["legalName", "address", "phone"]],
+    ["an empty phone", { ...READY, phone: null }, ["phone"]],
+  ])("C6017: %s answers company_unconfirmed and touches neither the recipient nor the sender", async (_label, settings, problems) => {
+    getOrgSettings.mockResolvedValue(settings);
+    expect(await sendAgreementAction(AGR)).toEqual({ status: "company_unconfirmed", problems });
+    expect(recipientGet).not.toHaveBeenCalled();
+    expect(recipientSet).not.toHaveBeenCalled();
+    expect(uncovered).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 
   test("C902: no service lines answers no_lines and no link is shown", async () => {

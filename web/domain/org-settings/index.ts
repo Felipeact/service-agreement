@@ -1,3 +1,4 @@
+export * from "./company-details";
 import { isTermStart } from "@/domain/agreement/term";
 
 /** Canadian province and territory codes; `org_settings.governing_province` stores one of these (door 4). */

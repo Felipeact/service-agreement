@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { CurrentMember } from "@/application/ports";
 
@@ -44,5 +46,43 @@ describe("the Settings page", () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     await expect(SettingsPage()).rejects.toThrow("NEXT_REDIRECT /login");
     expect(billingLink).not.toHaveBeenCalled();
+  });
+});
+
+describe("the company-details banner", () => {
+  const BANNER = "Confirm your company details before you send agreements";
+  const REAL = {
+    legalName: "Acme Heating Ltd.",
+    address: "12 Main St, Surrey, BC V3T 1A1",
+    phone: "604-555-2368",
+    accentColor: "#1f6f8b",
+    repairDiscountPct: 10,
+    cpiCapPct: 5,
+    cancellationNoticeDays: 30,
+    paymentDays: 30,
+    governingProvince: "BC",
+    taxNote: null,
+    defaultTermMonths: 12,
+    renewalNoticeDays: 30,
+    cpiRenegotiationThresholdPct: 5,
+    renewalCpiPct: null,
+    renewalCpiAsOf: null,
+    proposalValidityDays: 30,
+    itemSingular: "equipment",
+    itemPlural: "equipment",
+  };
+  const html = (settings: Record<string, unknown>) =>
+    renderToStaticMarkup(createElement(SettingsView, { settings: settings as never, role: "owner", action: vi.fn() as never }));
+
+  test.each([
+    ["never confirmed", { ...REAL, companyConfirmedAt: null }],
+    ["confirmed once but the phone is the sample", { ...REAL, phone: "604-555-0100", companyConfirmedAt: new Date() }],
+    ["an empty address", { ...REAL, address: null, companyConfirmedAt: new Date() }],
+  ])("C6020: %s shows the banner", (_label, settings) => {
+    expect(html(settings)).toContain(BANNER);
+  });
+
+  test("C6020: real, confirmed details show no banner", () => {
+    expect(html({ ...REAL, companyConfirmedAt: new Date() })).not.toContain(BANNER);
   });
 });

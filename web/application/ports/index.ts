@@ -6,9 +6,11 @@ import type {
   AgreementTerm,
   AgreementTerms,
   EquipmentChoice,
+  ScopeDraft,
   ScopeType,
   ServiceLineValue,
   TimelineEntry,
+  UncoveredType,
 } from "@/domain/agreement";
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind, ContractWordingBody } from "@/domain/contract";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
@@ -312,7 +314,8 @@ export interface AssetTypeCatalog {
   tradeContext(): Promise<string | null>;
 }
 
-export type OrgSettings = OrgSettingsValue;
+/** The stored settings: the form's value plus when the company details were last confirmed (absent or `null`: never). */
+export type OrgSettings = OrgSettingsValue & { companyConfirmedAt?: Date | null };
 
 export type SaveSettingsResult = { ok: true } | { ok: false; code: "forbidden" | "unavailable" };
 
@@ -699,6 +702,8 @@ export type AgreementDetail = {
    * agreement left draft (service-included door 4).
    */
   serviceScope: AgreementServiceScope;
+  /** While the version is editable: each covered asset with its exclusion, and the site types no line covers. Absent otherwise. */
+  scopeDraft?: ScopeDraft;
   /** The terms the shown version was sent with; `null` while it is editable or when it recorded none (customer-portal door 3). */
   terms: AgreementTerms | null;
   /** The shown version's start, months and end (term-dates door 1). */
@@ -746,6 +751,14 @@ export type LinkEmailView =
   | { status: "pending" };
 
 export type AgreementServiceScope = { source: "live" | "frozen"; takenAt: Date | null; types: ScopeType[] } | { source: "not_recorded" };
+
+/** What a draft's scope leaves out, and the way to change it (p0-launch-fixes doors 1 and 2). */
+export interface AgreementScopeStore {
+  /** The site's active equipment types that no line of the agreement's current version covers. Throws on a database error. */
+  uncovered(agreementId: string): Promise<UncoveredType[]>;
+  /** Leaves one asset out of the agreement's current draft version, or puts it back. `locked`: it is no longer an editable draft. */
+  setExcluded(agreementId: string, assetId: string, excluded: boolean): Promise<{ ok: true } | { ok: false; code: "forbidden" | "locked" | "not_found" | "unavailable" }>;
+}
 
 export interface AgreementReader {
   /**

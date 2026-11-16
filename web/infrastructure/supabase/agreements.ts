@@ -3,6 +3,7 @@ import {
   LIVE_STATUSES,
   TIMELINE_EVENT_TYPES,
   buildTimeline,
+  parseScopeDraft,
   parseServiceScope,
   parseTerms,
   SYSTEM_AGREEMENT_BODY,
@@ -12,6 +13,7 @@ import {
   type AgreementTerms,
   type EquipmentChoice,
   type TimelineSource,
+  type ScopeDraft,
 } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { isUuid } from "@/domain/imports";
@@ -147,14 +149,15 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
    * (service-included door 4, customer-portal door 3).
    */
   async function recorded(
-    siteId: string,
+    agreementId: string,
     versionId: string | undefined,
     editable: boolean,
-  ): Promise<{ serviceScope: AgreementServiceScope; terms: AgreementTerms | null }> {
+  ): Promise<{ serviceScope: AgreementServiceScope; terms: AgreementTerms | null; scopeDraft?: ScopeDraft }> {
     let document: unknown;
     let terms: AgreementTerms | null = null;
     if (editable) {
-      const { data, error } = await client.rpc("site_service_scope", { p_site_id: siteId });
+      // The scope of the current version: the types a line covers, minus exclusions (p0-launch-fixes door 1).
+      const { data, error } = await client.rpc("agreement_service_scope", { p_agreement_id: agreementId });
       if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
       document = data;
     } else {
@@ -167,12 +170,13 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
     }
     const scope = parseServiceScope(document);
     if (!scope) {
-      console.error(`The service scope of ${editable ? `site ${siteId}` : `version ${versionId}`} is not a scope document`);
+      console.error(`The service scope of ${editable ? `agreement ${agreementId}` : `version ${versionId}`} is not a scope document`);
       return { serviceScope: { source: "not_recorded" }, terms };
     }
     return {
       serviceScope: { source: editable ? "live" : "frozen", takenAt: scope.takenAt === null ? null : new Date(scope.takenAt), types: scope.types },
       terms,
+      ...(editable && { scopeDraft: parseScopeDraft(document) }),
     };
   }
 
@@ -377,7 +381,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       const status = row.status as AgreementStatus;
       const current = shownVersion !== undefined && shownVersion === latest;
       const editable = status === "draft" && current;
-      const { serviceScope, terms } = await recorded(row.sites.id, shownVersion?.id, editable);
+      const { serviceScope, terms, scopeDraft } = await recorded(row.id, shownVersion?.id, editable);
       const links = await renewalLinks(row.id, row.renews_agreement_id ?? null);
       const contract = latest?.contracts[0]?.id ? { id: latest.contracts[0].id, status: latest.contracts[0].status as ContractStatus } : null;
       // Only a writer about to generate a contract needs the signer, and only for an accepted agreement that has none (door 6).
@@ -403,6 +407,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         editable,
         equipmentChoices: editable ? await equipmentChoices(row.sites.id, lines.flatMap((line) => line.equipment.map((type) => type.id))) : [],
         serviceScope,
+        ...(scopeDraft && { scopeDraft }),
         terms,
         term: { start: shownVersion?.term_start ?? null, months: shownVersion?.term_months ?? 12, end: shownVersion?.term_end ?? null },
         validUntil: shownVersion?.valid_until ?? null,

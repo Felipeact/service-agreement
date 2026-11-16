@@ -13,6 +13,7 @@ import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
+import { ScopeControls } from "./scope-controls";
 import { ServiceScopeSections } from "./service-scope";
 import { AgreementPdfPreview } from "./agreement-pdf-preview";
 import { LinkControls } from "./link-controls";
@@ -23,7 +24,7 @@ import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "./visit-schedule";
 import type { GenerateContractState } from "./contract-state";
-import type { LineState, LinkState, MoveState, NoteState, TermState } from "./state";
+import type { LineState, LinkState, MoveState, NoteState, ScopeState, TermState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -32,7 +33,9 @@ export type AgreementActions = {
   remove: (lineId: string) => () => Promise<LineState>;
   revise: () => Promise<MoveState>;
   withdraw: () => Promise<MoveState>;
-  send: (email?: string) => Promise<LinkState>;
+  send: (email?: string, confirmUncovered?: boolean) => Promise<LinkState>;
+  /** Leaves an asset out of the draft's scope, or puts it back (p0-launch-fixes). Optional so older fixtures compile. */
+  setExcluded?: (assetId: string, excluded: boolean) => Promise<ScopeState>;
   /** No longer offered on the page (the customer gets the link by email); kept so older callers still type-check. */
   reissue?: () => Promise<LinkState>;
   saveTerm: (formData: FormData) => Promise<TermState>;
@@ -154,7 +157,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         <GenerateContractControl signer={agreement.signer ?? null} term={agreement.term} annualCents={shown.annualCents} action={writer.generate} />
       )}
 
-      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} />}
+      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} words={words} />}
 
       <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status])} />
 
@@ -230,10 +233,15 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
 
       <VisitScheduleSection schedule={visitSchedule(shown.lines, agreement.serviceScope.source === "not_recorded" ? [] : agreement.serviceScope.types)} />
 
+      {agreement.editable && agreement.scopeDraft && (
+        <ScopeControls controls={agreement.scopeDraft.controls} uncovered={agreement.scopeDraft.uncovered} setExcluded={writer?.setExcluded} words={words} />
+      )}
+
       <ServiceScopeSections
         scope={agreement.serviceScope}
         siteId={agreement.site.id}
         canAddEquipment={canWriteRecords(role)}
+        noLinesYet={agreement.editable && shown.lines.length === 0 && (agreement.scopeDraft?.uncovered.length ?? 0) > 0}
         lines={shown.lines}
         words={words}
       />

@@ -9,6 +9,8 @@ type ServiceScopeSectionsProps = {
   siteId: string;
   /** Writers get a way to the site when a live scope has no equipment. */
   canAddEquipment: boolean;
+  /** A draft whose site has equipment but whose lines cover none of it: says so instead of "no equipment on this site" (p0-launch-fixes AC 10). */
+  noLinesYet?: boolean;
   /** The shown version's lines, on the staff page only: a seasonal task none of them visits is flagged (seasonal-tasks AC 14). */
   lines?: readonly ScheduleLine[];
   /** The org's item words; the default when a caller has none (item-vocabulary AC 5). */
@@ -27,7 +29,7 @@ const note = "px-4 py-6 text-center text-[13px] text-ink-2";
 const units = (count: number) => `${count} ${count === 1 ? "unit" : "units"}`;
 
 /** The types, the empty-state note and the recorded-on note both panels share. */
-function scopeParts({ scope, siteId, canAddEquipment, words = DEFAULT_ITEM_WORDS }: ServiceScopeSectionsProps) {
+function scopeParts({ scope, siteId, canAddEquipment, noLinesYet = false, words = DEFAULT_ITEM_WORDS }: ServiceScopeSectionsProps) {
   const types: ScopeType[] = scope.source === "not_recorded" ? [] : scope.types;
   const recorded = scope.source === "frozen" && scope.takenAt ? `As recorded on ${date.format(scope.takenAt)}` : null;
 
@@ -36,6 +38,8 @@ function scopeParts({ scope, siteId, canAddEquipment, words = DEFAULT_ITEM_WORDS
     empty = <p className={note}>Not recorded for this version.</p>;
   } else if (types.length === 0 && scope.source === "frozen") {
     empty = <p className={note}>{`No ${words.plural} ${itemWas(words)} recorded for this version.`}</p>;
+  } else if (types.length === 0 && noLinesYet) {
+    empty = <p className={note}>{`No ${words.plural} ${itemWas(words) === "was" ? "is" : "are"} covered until you add a service line.`}</p>;
   } else if (types.length === 0) {
     empty = (
       <div className={`${note} flex flex-col items-center gap-1`}>

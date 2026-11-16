@@ -1,5 +1,6 @@
 import type { PlanLimitNotice } from "@/domain/billing/plan-limits";
-import type { AgreementTermInput, ServiceLineErrors, ServiceLineInput } from "@/domain/agreement";
+import type { AgreementTermInput, ServiceLineErrors, ServiceLineInput, UncoveredType } from "@/domain/agreement";
+import type { CompanyProblem } from "@/domain/org-settings";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
@@ -8,6 +9,16 @@ export type CreateAgreementState =
   | { status: "idle" | "invalid_template" | Failure }
   | { status: "open_exists"; agreementId: string; number: string }
   | ({ status: "plan_limit" } & PlanLimitNotice);
+
+/** What `setScopeExclusionAction` answers: the change was saved, or why not (`locked`: no longer an editable draft). */
+export type ScopeState = { status: "idle" | "saved" | "locked" | Failure };
+
+export const SCOPE_MESSAGES = {
+  locked: "This version can no longer be changed.",
+  forbidden: "You don't have permission to change agreements.",
+  not_found: "That item or agreement no longer exists.",
+  unavailable: "We couldn't save this. Try again.",
+} as const;
 
 /** What the three line actions answer; `invalid` keeps what was typed. */
 export type LineState =
@@ -30,13 +41,16 @@ export type MoveState = { status: "idle" | "withdrawn" | "conflict" | "invalid_t
 /** What `sendAgreementAction` and `reissueLinkAction` answer: the full link once, or why nothing was written. */
 export type LinkState =
   | { status: "idle" | "no_lines" | "no_term_start" | "conflict" | "needs_email" | "invalid_email" | Failure }
-  | { status: "sent" | "reissued"; url: string };
+  | { status: "sent" | "reissued"; url: string }
+  | { status: "company_unconfirmed"; problems: CompanyProblem[] }
+  | { status: "needs_confirmation"; uncovered: UncoveredType[] };
 
 /** The send and new-link alerts; `conflict` and `no_lines` say what to do next (customer-portal AC 2, 3). */
 export const LINK_MESSAGES = {
   no_lines: "Add at least one service line before sending.",
   no_term_start: "Set the term start date before sending.",
   conflict: "This agreement was changed by someone else. Reload the page.",
+  company_unconfirmed: "Confirm your company details in Settings before sending agreements.",
   needs_email: "Enter the customer's email so we can send the agreement.",
   invalid_email: "That email address doesn't look right. Check it and try again.",
   forbidden: "You don't have permission to send agreements.",

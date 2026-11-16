@@ -312,9 +312,36 @@ describe("agreement reader: the service scope", () => {
     stub.client.rpc.mockResolvedValue(ok(SCOPE));
     const detail = await supabaseAgreementReader(stub.typed).get(AGR);
     expect(stub.client.rpc).toHaveBeenCalledTimes(1);
-    expect(stub.client.rpc).toHaveBeenCalledWith("site_service_scope", { p_site_id: "s1" });
+    expect(stub.client.rpc).toHaveBeenCalledWith("agreement_service_scope", { p_agreement_id: AGR });
     expect(detail?.serviceScope).toEqual({ source: "live", takenAt: null, types: TYPES });
     expect(stub.calls.some((call) => call.table === "agreement_versions")).toBe(false);
+  });
+
+  test("C6012: a sent agreement is read from its stored snapshot as frozen and never asks for the live scope", async () => {
+    const stub = stubClient({
+      agreements: ok(agreementRow(versions, "sent")),
+      service_lines: ok([]),
+      agreement_versions: ok({ snapshot: { ...SCOPE, takenAt: TAKEN } }),
+    });
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(detail?.serviceScope).toEqual({ source: "frozen", takenAt: new Date(TAKEN), types: TYPES });
+    expect(stub.client.rpc).not.toHaveBeenCalledWith("agreement_service_scope", expect.anything());
+    expect(detail?.scopeDraft).toBeUndefined();
+  });
+
+  test("C6013: a draft also carries its controls and uncovered types from the same call", async () => {
+    const stub = stubClient({ agreements: ok(agreementRow(versions)), service_lines: ok([]) });
+    stub.client.rpc.mockResolvedValue(
+      ok({
+        ...SCOPE,
+        uncovered: [{ code: "BOILER", name: "Boiler", assetCount: 2 }],
+        controls: [{ assetId: "a1", typeCode: "RTU", typeName: "Rooftop unit", unitNo: "RTU-1", typeModel: null, location: "Roof", excluded: false }],
+      }),
+    );
+    const detail = await supabaseAgreementReader(stub.typed).get(AGR);
+    expect(stub.client.rpc).toHaveBeenCalledTimes(1);
+    expect(detail?.scopeDraft?.uncovered).toEqual([{ code: "BOILER", name: "Boiler", assetCount: 2 }]);
+    expect(detail?.scopeDraft?.controls).toHaveLength(1);
   });
 
   test.each<[string, string, number | undefined, string]>([

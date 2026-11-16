@@ -14,6 +14,7 @@ import {
   saveTermAction,
   saveVersionNoteAction,
   sendAgreementAction,
+  setScopeExclusionAction,
   updateServiceLineAction,
   withdrawAgreementAction,
 } from "../../agreement-actions";
@@ -51,6 +52,7 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         revise: reviseAgreementAction.bind(null, agreementId),
         withdraw: withdrawAgreementAction.bind(null, agreementId),
         send: sendAgreementAction.bind(null, agreementId),
+        setExcluded: setScopeExclusionAction.bind(null, agreementId),
         saveTerm: saveTermAction.bind(null, agreementId),
         saveNote: saveVersionNoteAction.bind(null, agreementId),
         generate: generateContractAction.bind(null, agreementId),
