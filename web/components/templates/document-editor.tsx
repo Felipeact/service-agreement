@@ -128,9 +128,6 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
         <div className="flex flex-wrap items-center gap-2">
           {extra}
           {details && <HeaderPopover label="Details">{details}</HeaderPopover>}
-          <HeaderPopover label="Header">
-            <HeaderFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />
-          </HeaderPopover>
           <HeaderPopover label="Page settings">
             <PageSettingsFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />
           </HeaderPopover>
@@ -194,7 +191,7 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
             </OptionsCard>
           )}
         />
-        <AddElementDock document={kind} rows={rows} onAdd={add} onVariable={insertField} canInsertVariable={selectedRow?.kind === "block"} />
+        <AddElementDock document={kind} rows={rows} onAdd={add} onVariable={insertField} canInsertVariable={selectedRow?.kind === "block"} header={<HeaderFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />} />
       </div>
     </form>
   );
