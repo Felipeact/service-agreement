@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sections list + page</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;display:flex;font:13px/1.45 Inter,system-ui,sans-serif;color:#101b2c;background:#f3f5f9}
+.rail{width:56px;background:#0f1c2e;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0}
+.rail i{width:34px;height:34px;border-radius:8px;background:#1a2a42}.rail i.on{background:#2563eb}
+.side{width:300px;flex:none;background:#fff;border-right:1px solid #e2e6ec;padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.side h2{font:600 11px/16px Inter;letter-spacing:.06em;text-transform:uppercase;color:#5b6779;margin:0 4px 6px}
+.row{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px;border-radius:8px;border:1px solid transparent}
+.row .g{color:#7d8798;font-size:15px;width:14px}.row b{font-weight:500;flex:1}
+.row.sel{background:#eef2ff;border-color:#2563eb}.row.sel b{color:#2563eb}
+.row.off b{color:#7d8798}
+.sw{width:30px;height:18px;border-radius:9px;background:#2563eb;position:relative}.sw:after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sw.o{background:#c9d0db}.sw.o:after{right:auto;left:2px}
+.lock{font-size:11px;color:#5b6779;background:#e9edf3;border-radius:9999px;padding:2px 8px;font-weight:600}
+.add{margin-top:10px;display:flex;gap:6px}.add span{flex:1;height:34px;border:1px dashed #b9c2d0;border-radius:8px;display:grid;place-items:center;color:#5b6779;font-weight:500}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:60px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #e2e6ec;background:#f3f5f9}
+.top h1{font:600 20px Bricolage Grotesque,Inter;flex:1}.top small{color:#5b6779}
+.btn{height:34px;padding:0 14px;border-radius:8px;display:grid;place-items:center;font-weight:500;background:#fff;border:1px solid #d5dbe4}
+.btn.p{background:#2563eb;color:#fff;border-color:#2563eb}
+.canvas{flex:1;overflow:hidden;display:flex;justify-content:center;padding:28px 0 0}
+.page{width:640px;height:1000px;background:#fff;box-shadow:0 1px 2px rgba(15,28,46,.08),0 12px 32px rgba(15,28,46,.1);padding:44px 52px;display:flex;flex-direction:column;gap:16px;font-size:12px}
+.lh{display:flex;align-items:center;gap:12px;border-bottom:1px solid #e2e6ec;padding-bottom:14px}.lh .lg{width:36px;height:36px;background:#0f1c2e;border-radius:6px}
+.lh b{font-size:14px}.lh span{display:block;color:#5b6779;font-size:11px}
+h3{font:600 22px Inter}.h{font-weight:600;font-size:13px;margin-bottom:4px}
+.blk{position:relative;border-radius:6px;padding:8px 10px;margin:-8px -10px;border:1.5px solid transparent}
+.blk.sel{border-color:#2563eb;background:#fafcff}
+.tb{position:absolute;right:8px;top:-17px;background:#0f1c2e;color:#fff;border-radius:8px;padding:4px 10px;display:flex;gap:12px;font-size:11px}
+.chip{background:#eef2ff;color:#2563eb;border-radius:9999px;padding:1px 8px;font-weight:500;font-size:11px}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid #e2e6ec;text-align:left}td:last-child,th:last-child{text-align:right}th{font-size:11px;color:#5b6779;font-weight:600}
+.mo{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}.mo i{height:20px;border-radius:3px;background:#e9edf3}.mo i.x{background:#2563eb}
+ul{padding-left:16px;display:flex;flex-direction:column;gap:3px}
+</style></head><body>
+<nav class="rail"><i></i><i></i><i></i><i></i><i class="on"></i><i></i></nav>
+<aside class="side">
+ <h2>Sections</h2>
+ <div class="row"><span class="g">⋮⋮</span><b>Cover and intro</b><span class="sw"></span></div>
+ <div class="row sel"><span class="g">⋮⋮</span><b>Service included</b><span class="sw"></span></div>
+ <div class="row"><span class="g">⋮⋮</span><b>Price lines</b><span class="lock">Required</span></div>
+ <div class="row"><span class="g">⋮⋮</span><b>Visit schedule</b><span class="sw"></span></div>
+ <div class="row off"><span class="g">⋮⋮</span><b>Equipment list</b><span class="sw o"></span></div>
+ <div class="row"><span class="g">⋮⋮</span><b>Terms and conditions</b><span class="sw"></span></div>
+ <div class="row"><span class="g">⋮⋮</span><b>Signatures</b><span class="lock">Required</span></div>
+ <div class="add"><span>+ Heading</span><span>+ Text</span><span>+ Clauses</span></div>
+</aside>
+<section class="main">
+ <header class="top"><h1>Commercial HVAC, quarterly</h1><small>Agreement template · saved just now</small><span class="btn">Preview PDF</span><span class="btn p">Save template</span></header>
+ <div class="canvas"><article class="page">
+  <div class="lh"><div class="lg"></div><div><b>Northpoint Mechanical Ltd.</b><span>412 Harbour Rd, Vancouver BC · 604 555 0148</span></div></div>
+  <div class="blk"><h3>Service Agreement</h3><p style="margin-top:6px">Prepared for <span class="chip">Customer name</span> at <span class="chip">Site address</span>. Term <span class="chip">Start date</span> to <span class="chip">End date</span>.</p></div>
+  <div class="blk sel"><div class="tb"><span>↑</span><span>↓</span><span>Hide</span></div><div class="h">Service included</div><ul><li>Rooftop units: filters, belts, coils, controls check</li><li>Make-up air units: burner and damper inspection</li><li>Split systems: refrigerant and condensate review</li></ul></div>
+  <div class="blk"><div class="h">Price lines</div><table><tr><th>Service</th><th>Visits</th><th>Per visit</th><th>Per year</th></tr><tr><td>HVAC maintenance</td><td>4</td><td>$380</td><td>$1,520</td></tr><tr><td>Boiler annual</td><td>1</td><td>$640</td><td>$640</td></tr><tr><td><b>Total</b></td><td></td><td></td><td><b>$2,160/yr</b></td></tr></table></div>
+  <div class="blk"><div class="h">Visit schedule</div><div class="mo"><i class="x"></i><i></i><i></i><i class="x"></i><i></i><i></i><i class="x"></i><i></i><i></i><i class="x"></i><i></i><i></i></div></div>
+ </article></div>
+</section>
+</body></html>

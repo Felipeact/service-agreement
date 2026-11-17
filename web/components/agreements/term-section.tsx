@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { termSummary, type AgreementTerm } from "@/domain/agreement";
+import { isStaleStart, termSummary, type AgreementTerm } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import { messageFor, type TermState } from "./state";
@@ -20,6 +20,8 @@ export function TermSection({ term, action }: TermSectionProps) {
   const values = state.status === "invalid" ? state.values : { start: term.start ?? "", months: String(term.months) };
   const errors = state.status === "invalid" ? state.errors : {};
   const message = messageFor(state.status);
+  // Saved is allowed (a renewal can be keyed after the fact); this only says so, and sending asks again.
+  const pastStart = action !== undefined && term.start !== null && isStaleStart(term.start, new Date());
   return (
     <section aria-label="Term" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
       <div className="flex flex-col gap-1">
@@ -54,6 +56,11 @@ export function TermSection({ term, action }: TermSectionProps) {
             {pending ? "Saving…" : "Save term"}
           </Button>
         </form>
+      )}
+      {pastStart && (
+        <p data-past-start className="text-[13px] font-medium text-attention-fg">
+          This start date is more than 30 days in the past and prints on the agreement. Check it is not a slip, such as 2019 for 2029.
+        </p>
       )}
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">

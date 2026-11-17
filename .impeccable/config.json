@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-16T21:38:13.779Z",
+        "reason": "DESIGN.md sets Inter as the app's body face; the sketches inherit the established system. Decided by DESIGN.md, not asked of the user."
+      }
+    ]
+  }
+}

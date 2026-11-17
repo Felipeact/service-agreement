@@ -28,7 +28,7 @@ export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
   const idOf = new Map(types.map((type) => [type.code, type.id]));
   const siteAssets = (site?.assets ?? []).flatMap((asset) => {
     const assetTypeId = idOf.get(asset.typeCode);
-    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo }] : [];
+    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo, typeModel: asset.typeModel, location: asset.location }] : [];
   });
   const actions = canWriteRecords(member.role)
     ? {
