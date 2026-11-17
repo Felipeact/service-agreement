@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { BillingGateway, CheckoutStarter, WorkspaceEmailCheck } from "@/application/ports";
+import type { BillingGateway, CheckoutStarter, EmailMessage, EmailSendResult, WorkspaceEmailCheck } from "@/application/ports";
 import type { OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupProfileValue } from "@/domain/org-settings/setup";
 import {
@@ -11,10 +11,13 @@ import {
   makeDuplicateAgreementTemplate,
   makeGetContractWording,
   makeInviteMember,
+  makeEnsureStarterTemplates,
   makeListAgreementTemplates,
   makeSaveContractWording,
   makeContractDocuments,
   makeExtractImport,
+  makeSuggestImportTypes,
+  makeImportProgress,
   makeNotify,
   makeReadImport,
   makeReceiveSignatureEvent,
@@ -44,6 +47,7 @@ import { supabaseOrgPlanRecorder } from "@/infrastructure/supabase/org-plan";
 import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
+import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
@@ -266,6 +270,15 @@ export async function getContainer() {
     discardImport: importJobs.discard,
     // The same member-scoped store: the file is downloaded under RLS, never with a service-role key.
     readImport: makeReadImport(importJobs, importParser),
+    importProgress: makeImportProgress(importJobs),
+    suggestImportTypes: makeSuggestImportTypes(supabaseAssetTypeCatalog(supabase), claudeTypeSuggester({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    /** Sends one email through the configured provider; `unavailable` (nothing sent) when email is not set up here. */
+    sendEmail: async (message: EmailMessage): Promise<EmailSendResult> => {
+      const apiKey = process.env.RESEND_API_KEY;
+      const from = process.env.EMAIL_FROM;
+      if (!apiKey || !from) return { ok: false, code: "unavailable" };
+      return resendEmailSender({ apiKey, from }).send(message);
+    },
     extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase), supabaseImportAllowance(supabase)),
     reviewImport: supabaseImportReviewReader(supabase).forJob,
     updateImportRow: importRows.update,
@@ -292,6 +305,7 @@ export async function getContainer() {
     },
     // Agreement templates are read and written as the member: the definer functions check owner or admin themselves.
     listAgreementTemplates: makeListAgreementTemplates(supabaseAgreementTemplateReader(supabase)),
+    ensureStarterTemplates: makeEnsureStarterTemplates(supabaseAgreementTemplateReader(supabase), supabaseAgreementTemplateStore(supabase)),
     // Every template the member can see (the org's own and the system one): the choice a draft can switch to.
     readAgreementTemplates: supabaseAgreementTemplateReader(supabase).list,
     saveAgreementTemplate: supabaseAgreementTemplateStore(supabase).save,

@@ -13,6 +13,7 @@ const container = {
   updateImportRow: vi.fn(),
   skipImportRow: vi.fn(),
   mapImportType: vi.fn(),
+  suggestImportTypes: vi.fn(),
   commitImport: vi.fn(),
   discardImport: vi.fn(),
 };
@@ -141,6 +142,38 @@ describe("skipImportRowAction and mapImportTypeAction", () => {
   test("C621: a type that is not the org's is invalid and maps nothing", async () => {
     expect(await actions.mapImportTypeAction(JOB, form({ rawText: "Widget", assetTypeId: "99999999-9999-4999-8999-999999999999" }))).toEqual({ status: "invalid" });
     expect(container.mapImportType).not.toHaveBeenCalled();
+  });
+});
+
+describe("suggestImportTypesAction", () => {
+  const unmatched = [row({ id: "a", assetTypeId: null, assetTypeRaw: "FCU" }), row({ id: "b", assetTypeId: null, assetTypeRaw: "FCU", position: 2 }), row({ id: "c", assetTypeId: null, assetTypeRaw: "VRV", position: 3 })];
+
+  test("it asks about each distinct unrecognised spelling once, and passes the model's suggestions on without saving any", async () => {
+    container.reviewImport.mockResolvedValue(review([...unmatched, row({ id: "d", position: 4 })]));
+    container.suggestImportTypes.mockResolvedValue({ ok: true, suggestions: [{ key: "fcu", typeId: RTU, confidence: "high" }] });
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "suggested", suggestions: [{ key: "fcu", typeId: RTU, confidence: "high" }] });
+    expect(container.suggestImportTypes).toHaveBeenCalledWith([{ key: "fcu", raw: "FCU" }, { key: "vrv", raw: "VRV" }]);
+    expect(container.mapImportType).not.toHaveBeenCalled();
+  });
+
+  test("nothing unrecognised, no suggestion, an outage, a committed job, a viewer and a bad id each answer plainly", async () => {
+    container.reviewImport.mockResolvedValue(review([row()]));
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "none" });
+    expect(container.suggestImportTypes).not.toHaveBeenCalled();
+
+    container.reviewImport.mockResolvedValue(review(unmatched));
+    container.suggestImportTypes.mockResolvedValue({ ok: true, suggestions: [] });
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "none" });
+    container.suggestImportTypes.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "unavailable" });
+
+    container.reviewImport.mockResolvedValue(review(unmatched, "committed"));
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "idle" });
+    container.reviewImport.mockResolvedValue(null);
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "not_found" });
+    expect(await actions.suggestImportTypesAction("not-a-uuid")).toEqual({ status: "not_found" });
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await actions.suggestImportTypesAction(JOB)).toEqual({ status: "forbidden" });
   });
 });
 

@@ -146,10 +146,10 @@ const STOP_WORDS = new Set(["a", "an", "the", "of", "and", "for", "with"]);
 const ALIASES: Record<string, string> = { dcva: "backflow", rpz: "backflow", rpza: "backflow", dcda: "backflow", pvb: "backflow", bf: "backflow", vrv: "vrf" };
 
 /** Words that qualify a type without changing what it is. Short on purpose: a word is only here when it never names other equipment. */
-const QUALIFIERS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "fired", "inline"]);
+const QUALIFIERS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "fired", "inline", "backup", "standby"]);
 
 /** Words that may stand in brackets after a type name without changing it: the qualifiers and a few plain descriptors. */
-const DESCRIPTORS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "water", "cooled", "air", "roof", "indoor", "outdoor", "new", "old", "spare", "standard"]);
+const DESCRIPTORS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "water", "cooled", "air", "roof", "indoor", "outdoor", "new", "old", "spare", "standard", "backup", "standby"]);
 
 /** "dampers" and "damper" are one word: a trailing plural s goes, except where it belongs to the word ("gas", "glass", "bus"). */
 const singular = (token: string): string => (token.length > 3 && token.endsWith("s") && !/(ss|us|is)$/.test(token) ? token.slice(0, -1) : token);
@@ -378,6 +378,24 @@ export function flagRows(rows: ReviewRow[], siteAssets: { assetTypeId: string; u
     }
   }
   return flags;
+}
+
+/**
+ * What a new user needs to read first, in plain words: how many included rows are ready, how many need a type, and where to
+ * start. `onSite` rows are not counted as ready (the commit leaves them out) and are said apart.
+ */
+export function reviewSummary(counts: { included: number; ready: number; needType: number; onSite: number; unmatchedGroups: number }): { headline: string; next: string | null } {
+  const { included, ready, needType, onSite, unmatchedGroups } = counts;
+  if (included === 0) return { headline: "No rows are included yet.", next: "Include at least one row to add." };
+  const notes: string[] = [];
+  if (onSite > 0) notes.push(`${plural(onSite, "row")} ${onSite === 1 ? "is" : "are"} already on this site and will not be added again`);
+  if (needType === 0 && ready === included) return { headline: `All ${included.toLocaleString("en-CA")} ${included === 1 ? "row is" : "rows are"} ready.`, next: "Check them, then add them to the site." };
+  const headline = `${ready.toLocaleString("en-CA")} of ${included.toLocaleString("en-CA")} rows ${ready === 1 ? "is" : "are"} ready.`;
+  const next =
+    needType > 0
+      ? `${needType.toLocaleString("en-CA")} ${needType === 1 ? "needs" : "need"} a type. Start with ${unmatchedGroups === 1 ? "the group" : "the groups"} below: pick a type once and every row with that wording is fixed.`
+      : "The rest only need a look, marked below.";
+  return { headline, next: [next, ...notes].join(" ") };
 }
 
 export const isBlocking = (flag: ReviewFlag) => flag.kind === "needs_type" || flag.kind === "too_long";

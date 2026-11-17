@@ -109,6 +109,19 @@ async function rememberSpellingOf(client: Client, assetTypeId: string, spelling:
   }
 }
 
+/**
+ * Tells the shared list what this company just taught: the spelling means this type. The database keeps it only when it is short
+ * and carries no digits, and uses it for others only once another company agrees. Never fails the mapping.
+ */
+async function shareSpellingOf(client: Client, assetTypeId: string, spelling: string): Promise<void> {
+  try {
+    const { error } = await client.rpc("record_type_alias", { p_alias: spelling, p_type_id: assetTypeId });
+    if (error) console.error(`Sharing an import spelling failed: ${error.code}`);
+  } catch (cause) {
+    console.error(`Sharing an import spelling failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+}
+
 export function supabaseImportRowStore(client: Client): ImportRowStore {
   /** One row's update as the member; RLS hides other orgs' rows, so no row back is `not_found`. */
   async function updateRow(what: string, rowId: string, values: Database["public"]["Tables"]["import_rows"]["Update"]): Promise<RowWriteResult> {
@@ -164,7 +177,10 @@ export function supabaseImportRowStore(client: Client): ImportRowStore {
           if (error) return failure("Mapping an import spelling", error);
           rows += (data ?? []).length;
         }
-        if (rows > 0) await rememberSpellingOf(client, assetTypeId, rawNormalized);
+        if (rows > 0) {
+          await rememberSpellingOf(client, assetTypeId, rawNormalized);
+          await shareSpellingOf(client, assetTypeId, rawNormalized);
+        }
         return { ok: true, rows };
       } catch (cause) {
         return unavailable("Mapping an import spelling", cause);

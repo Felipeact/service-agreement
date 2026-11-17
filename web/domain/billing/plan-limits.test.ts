@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { PLANS } from "@/domain/billing";
-import { formatTokens, planLimitMessage, remaining } from "./plan-limits";
+import { formatTokens, importsLeftLine, planLimitMessage, remaining } from "./plan-limits";
 
 const MIGRATION = readFileSync(new URL("../../../supabase/migrations/20261112220000_plan_limits.sql", import.meta.url), "utf8");
 
@@ -55,5 +55,16 @@ describe("what is left and the tokens line", () => {
     expect(formatTokens({ input: 21000, output: 30200 })).toBe("51,200 tokens");
     expect(formatTokens({ input: 1, output: 0 })).toBe("1 token");
     expect(formatTokens({ input: 0, output: 0 })).toBe("0 tokens");
+  });
+});
+
+describe("importsLeftLine", () => {
+  test.each([
+    [{ used: 6, limit: 120 }, "114 AI imports left this month"],
+    [{ used: 119, limit: 120 }, "1 AI import left this month"],
+    [{ used: 130, limit: 120 }, "No AI imports left this month"],
+    [{ used: 5, limit: null }, null],
+  ])("%j", (figure, line) => {
+    expect(importsLeftLine(figure)).toBe(line);
   });
 });

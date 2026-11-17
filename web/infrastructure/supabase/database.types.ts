@@ -1553,6 +1553,8 @@ export type Database = {
       }
       portal_record_view: { Args: { p_token_hash: string }; Returns: undefined }
       portal_view: { Args: { p_token_hash: string }; Returns: Json }
+      record_type_alias: { Args: { p_alias: string; p_type_id: string }; Returns: undefined }
+      shared_type_aliases: { Args: never; Returns: { alias: string; type_code: string }[] }
       record_extraction_chunk: {
         Args: {
           p_expected_cursor: number

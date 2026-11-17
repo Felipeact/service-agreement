@@ -20,10 +20,12 @@ type ImportPageViewProps = {
     extract: (jobId: string) => Promise<ExtractState>;
   };
   words?: ItemWords;
+  /** What is left of the month's AI imports, for those who may see usage (owners and admins); absent otherwise. */
+  importsLeft?: string | null;
 };
 
 /** The import page body: the site, the upload form for writers, then the site's jobs. */
-export function ImportPageView({ site, jobs, actions, agreementId, words = DEFAULT_ITEM_WORDS }: ImportPageViewProps) {
+export function ImportPageView({ site, jobs, actions, agreementId, words = DEFAULT_ITEM_WORDS, importsLeft = null }: ImportPageViewProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
@@ -43,6 +45,11 @@ export function ImportPageView({ site, jobs, actions, agreementId, words = DEFAU
       {actions && (
         <section className="flex flex-col gap-3">
           <h2 className="text-[15px] font-semibold">{itemText("Import equipment list", words)}</h2>
+          {importsLeft && (
+            <p data-imports-left="" className="text-[13px] text-ink-2">
+              {importsLeft}. Reading a list uses one, and it carries on in the background if you leave the page.
+            </p>
+          )}
           <ImportUploader start={actions.start} confirm={actions.confirm} read={actions.read} />
         </section>
       )}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { customerEmail, escapeHtml, isReservedAddress, notEmailedWords, staffDecisionEmail, staleEmail, type CustomerEmailInput } from "./index";
+import { customerEmail, escapeHtml, importReadyEmail, importStalledEmail, isReservedAddress, notEmailedWords, staffDecisionEmail, staleEmail, type CustomerEmailInput } from "./index";
 
 const BASE = "https://agreements.northwind.ca";
 const TOKEN = "U-FVzrQONnE0OeSkuG3mDhLni8aAqblTz4-KLseYCj4";
@@ -115,5 +115,31 @@ describe("reserved recipients and reasons", () => {
       expect(phrase.length).toBeGreaterThan(0);
       expect(phrase).not.toContain("_");
     }
+  });
+});
+
+describe("the import emails", () => {
+  const input = { fileName: "Units <2026>.xlsx", siteName: "Harbour Tower", reviewUrl: "https://app.example.test/imports/j1" };
+
+  test("ready: names the file and site, says how many rows need a type, and links to the review", () => {
+    const email = importReadyEmail({ ...input, rows: 97, unmatched: 25 });
+    expect(email.subject).toBe("Your equipment list is ready to review: Units <2026>.xlsx");
+    expect(email.text).toContain("97 rows");
+    expect(email.text).toContain("25 rows still need a type");
+    expect(email.text).toContain("https://app.example.test/imports/j1");
+    expect(email.html).toContain("Units &lt;2026&gt;.xlsx");
+    expect(email.html).not.toContain("<2026>");
+  });
+
+  test("ready: every row typed, and a single row, read naturally", () => {
+    expect(importReadyEmail({ ...input, rows: 3, unmatched: 0 }).text).toContain("every row has a type");
+    expect(importReadyEmail({ ...input, rows: 1, unmatched: 1 }).text).toContain("1 row still needs a type");
+  });
+
+  test("stalled: says nothing was lost and where to continue", () => {
+    const email = importStalledEmail(input);
+    expect(email.subject).toBe("We could not finish reading Units <2026>.xlsx");
+    expect(email.text).toContain("Nothing was lost");
+    expect(email.text).toContain("https://app.example.test/imports/j1");
   });
 });

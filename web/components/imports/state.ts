@@ -27,6 +27,11 @@ export type RowState =
 /** What `mapImportTypeAction` answers. */
 export type MapState = { status: "idle" | "invalid" | "locked" | Failure } | { status: "mapped"; rows: number };
 
+/** What `suggestImportTypesAction` answers: a type for some of the unrecognised spellings, with how sure the model is. */
+export type SuggestState =
+  | { status: "idle" | "none" | "not_found" | Failure }
+  | { status: "suggested"; suggestions: { key: string; typeId: string; confidence: "low" | "medium" | "high" }[] };
+
 /** What `commitImportAction` answers. */
 export type CommitState =
   | { status: "idle" | "nothing_to_add" | "not_ready" | Failure }
@@ -47,7 +52,8 @@ export const REVIEW_MESSAGES = {
 
 /** What `extractImportAction` answers: progress, the finished counts, or why nothing moved. */
 export type ExtractState =
-  | { status: "extracting"; done: number; total: number }
+  /** `background`: the server is finishing the job on its own, so the browser only checks back (it need not stay on the page). */
+  | { status: "extracting"; done: number; total: number; background?: boolean }
   | { status: "extracted"; rows: number; unmatched: number }
   | { status: "not_ready" | "too_large" | Failure }
   | ({ status: "plan_limit" } & PlanLimitNotice);
@@ -65,12 +71,17 @@ type ExtractDeps = {
   onProgress?: (progress: { done: number; total: number }) => void;
 };
 
+/** How long the browser waits between looks at a job the server is extracting. */
+export const BACKGROUND_POLL_MS = 3000;
+
 /** Calls `extract` once per chunk until the job is extracted or something stops it, and returns that last answer. */
 export async function runExtraction(jobId: string, { extract, onProgress }: ExtractDeps): Promise<ExtractState> {
   for (;;) {
     const answer = await extract(jobId);
     if (answer.status !== "extracting") return answer;
     onProgress?.({ done: answer.done, total: answer.total });
+    // The server is doing the work: look again in a few seconds instead of asking for more of it.
+    if (answer.background) await new Promise((resolve) => setTimeout(resolve, BACKGROUND_POLL_MS));
   }
 }
 

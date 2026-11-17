@@ -10,7 +10,7 @@ import type {
   RecordExtractionResult,
   SourceOfResult,
 } from "@/application/ports";
-import { makeExtractImport } from "./extract-import";
+import { makeExtractImport, makeImportProgress } from "./extract-import";
 
 const JOB = "66666666-6666-4666-8666-666666666666";
 const BYTES = new Uint8Array([1, 2, 3]);
@@ -392,5 +392,19 @@ describe("extractImport, synonyms and the trade context (synonyms-as-data)", () 
     await extractImport(JOB);
     expect(extractor.extract).toHaveBeenCalledTimes(1);
     expect(extractor.extract).toHaveBeenCalledWith({ kind: "pdf", bytes: BYTES }, context);
+  });
+});
+
+describe("importProgress", () => {
+  const progressOf = (source: SourceOfResult) => makeImportProgress({ sourceOf: async () => source } as unknown as ImportJobStore);
+
+  test("a running job reports its place, a finished one its counts, and neither does any extraction", async () => {
+    expect(await progressOf(extractingJob(2, 5))(JOB)).toEqual({ ok: true, state: "extracting", done: 2, total: 5 });
+    expect(await progressOf({ ok: true, status: "extracted", contentType: CSV, progress: null, result: { rows: 9, unmatched: 1 }, bytes: null } as SourceOfResult)(JOB)).toEqual({ ok: true, state: "extracted", rows: 9, unmatched: 1 });
+  });
+
+  test("a job that has not started, and one that cannot be read, say so", async () => {
+    expect(await progressOf(parsedJob)(JOB)).toEqual({ ok: false, code: "not_ready" });
+    expect(await progressOf({ ok: false, code: "not_found" } as SourceOfResult)(JOB)).toEqual({ ok: false, code: "not_found" });
   });
 });

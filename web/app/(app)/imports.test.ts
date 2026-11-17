@@ -1,6 +1,6 @@
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { CurrentMember, MemberRole, SiteView } from "@/application/ports";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
@@ -14,6 +14,10 @@ const container = {
   discardImport: vi.fn(),
   readImport: vi.fn(),
   extractImport: vi.fn(),
+  importProgress: vi.fn(),
+  reviewImport: vi.fn(),
+  sendEmail: vi.fn(),
+  loadBillingUsage: vi.fn(async () => null),
 };
 const STORE_METHODS = ["startImport", "confirmImportUpload", "discardImport"] as const;
 
@@ -27,6 +31,10 @@ const redirect = vi.fn((path: string) => {
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 vi.mock("next/navigation", () => ({ notFound, redirect, useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/sites" }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ host: "app.example.test" }) }));
+// `after` only works inside a request: here it keeps the callbacks, and a test runs them when it wants the background work done.
+const afterCallbacks: (() => Promise<void> | void)[] = [];
+vi.mock("next/server", () => ({ after: (callback: () => Promise<void> | void) => void afterCallbacks.push(callback) }));
 
 const actions = await import("./import-actions");
 const { default: ImportPage } = await import("./sites/[siteId]/import/page");
@@ -192,9 +200,71 @@ describe("readImportAction", () => {
     expect(container.readImport).toHaveBeenCalledWith(JOB);
     expect(refresh).toHaveBeenCalledTimes(refreshes);
   });
+
+  test("the rest of a file is finished in the background, and a second request only reports progress meanwhile", async () => {
+    afterCallbacks.length = 0;
+    container.extractImport.mockReset();
+    container.importProgress.mockReset();
+    container.extractImport
+      .mockResolvedValueOnce({ ok: true, state: "extracting", done: 1, total: 3 })
+      .mockResolvedValueOnce({ ok: true, state: "extracting", done: 2, total: 3 })
+      .mockResolvedValueOnce({ ok: true, state: "extracted", rows: 9, unmatched: 1 });
+    container.importProgress.mockResolvedValue({ ok: true, state: "extracting", done: 1, total: 3 });
+
+    expect(await actions.extractImportAction(JOB)).toEqual({ status: "extracting", done: 1, total: 3, background: true });
+    expect(afterCallbacks).toHaveLength(1);
+    // While the background loop owns the job, asking again does no extraction.
+    expect(await actions.extractImportAction(JOB)).toEqual({ status: "extracting", done: 1, total: 3, background: true });
+    expect(container.extractImport).toHaveBeenCalledTimes(1);
+    expect(afterCallbacks).toHaveLength(1);
+
+    container.reviewImport.mockResolvedValue({ job: { originalName: "Units.xlsx", siteName: "Harbour Tower" } });
+    container.sendEmail.mockResolvedValue({ ok: true, providerMessageId: "m1" });
+    await afterCallbacks[0]();
+    expect(container.extractImport).toHaveBeenCalledTimes(3);
+    // The person may have left: they are emailed that it is read, with the counts and a way to the review.
+    expect(container.sendEmail).toHaveBeenCalledTimes(1);
+    const sent = container.sendEmail.mock.calls[0][0];
+    expect(sent.to).toEqual(["e@example.com"]);
+    expect(sent.subject).toBe("Your equipment list is ready to review: Units.xlsx");
+    expect(sent.text).toContain("9 rows");
+    expect(sent.text).toContain(`https://app.example.test/imports/${JOB}`);
+    expect(sent.idempotencyKey).toBe(`import-ready-${JOB}`);
+
+    // Done: the job is free again, and a request for a finished job is answered by the use case, not by a new loop.
+    container.extractImport.mockResolvedValueOnce({ ok: true, state: "extracted", rows: 9, unmatched: 1 });
+    expect(await actions.extractImportAction(JOB)).toEqual({ status: "extracted", rows: 9, unmatched: 1 });
+    expect(afterCallbacks).toHaveLength(1);
+  });
+
+  test("a failure in the background ends the loop and frees the job to be continued", async () => {
+    afterCallbacks.length = 0;
+    container.extractImport.mockReset();
+    container.extractImport.mockResolvedValueOnce({ ok: true, state: "extracting", done: 1, total: 3 }).mockRejectedValueOnce(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    container.reviewImport.mockResolvedValue({ job: { originalName: "Units.xlsx", siteName: "Harbour Tower" } });
+    container.sendEmail.mockReset();
+    container.sendEmail.mockResolvedValue({ ok: true, providerMessageId: "m2" });
+    await actions.extractImportAction(JOB);
+    await afterCallbacks[0]();
+    // Stopped part way: they are told how to carry on.
+    expect(container.sendEmail.mock.calls[0][0].subject).toBe("We could not finish reading Units.xlsx");
+    container.extractImport.mockResolvedValueOnce({ ok: true, state: "extracting", done: 2, total: 3 });
+    expect(await actions.extractImportAction(JOB)).toMatchObject({ status: "extracting", done: 2 });
+    expect(afterCallbacks).toHaveLength(2);
+  });
 });
 
 describe("extractImportAction", () => {
+  beforeEach(() => vi.stubEnv("APP_BASE_URL", ""));
+  // A test that starts a background loop leaves its job marked as running: let each loop end, as the server would, before the next test.
+  afterEach(async () => {
+    container.extractImport.mockReset();
+    container.extractImport.mockResolvedValue({ ok: false, code: "unavailable" });
+    for (const callback of afterCallbacks.splice(0)) await callback();
+    container.extractImport.mockReset();
+  });
+
   test("C534: a viewer is forbidden and nothing is extracted", async () => {
     currentMember.mockResolvedValue(member("viewer"));
     expect(await actions.extractImportAction(JOB)).toEqual({ status: "forbidden" });
@@ -207,7 +277,7 @@ describe("extractImportAction", () => {
   });
 
   test.each([
-    ["extracting", { ok: true, state: "extracting", done: 2, total: 4 }, { status: "extracting", done: 2, total: 4 }, 1],
+    ["extracting", { ok: true, state: "extracting", done: 2, total: 4 }, { status: "extracting", done: 2, total: 4, background: true }, 1],
     ["extracted", { ok: true, state: "extracted", rows: 338, unmatched: 14 }, { status: "extracted", rows: 338, unmatched: 14 }, 1],
     ["not_ready", { ok: false, code: "not_ready" }, { status: "not_ready" }, 0],
     ["too_large", { ok: false, code: "too_large" }, { status: "too_large" }, 0],

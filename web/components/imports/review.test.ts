@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AssetTypeOption, ImportJobStatus, ImportJobView, ImportReview, ImportRowView } from "@/application/ports";
 import { ImportJobList } from "./job-list";
-import { CommitPrompt, MapPrompt, RowEditor } from "./review-controls";
+import { CommitPrompt, MapPrompt, MappingSection, RowEditor } from "./review-controls";
 import { ReviewView, type ReviewActions } from "./review-view";
 import { DiscardPrompt } from "./discard-control";
 import type { CommitState, MapState, RowState } from "./state";
@@ -283,6 +283,23 @@ describe("review controls", () => {
     const map = (state: MapState) =>
       renderToStaticMarkup(createElement(MapPrompt, { spelling: { raw: "Widget", count: 14 }, types: TYPES, state, pending: false, index: 0 }));
     expect(text(map({ status: "mapped", rows: 14 }))).toContain("Applied to 14 rows");
+  });
+
+  test("a suggested type is preselected for its spelling and says how sure the model was", () => {
+    const html = renderToStaticMarkup(
+      createElement(MapPrompt, { spelling: { raw: "FCU", count: 18 }, types: TYPES, state: { status: "idle" }, pending: false, index: 0, suggestion: { typeId: TYPES[0].id, confidence: "low" } }),
+    );
+    expect(html).toMatch(new RegExp(`<option value="${TYPES[0].id}" selected`));
+    expect(text(html)).toContain(`Suggested: ${TYPES[0].name} (low confidence, check it)`);
+    expect(text(renderToStaticMarkup(createElement(MapPrompt, { spelling: { raw: "FCU", count: 18 }, types: TYPES, state: { status: "idle" }, pending: false, index: 0 })))).not.toContain("Suggested:");
+  });
+
+  test("the unrecognised group offers Suggest types to a writer, and nothing to ask for a viewer", () => {
+    const section = (suggest?: () => Promise<never>) =>
+      renderToStaticMarkup(createElement(MappingSection, { spellings: [{ key: "fcu", raw: "FCU", count: 18 }], types: TYPES, map: async () => ({ status: "idle" as const }), suggest }));
+    expect(section(async () => ({ status: "none" }) as never)).toContain(">Suggest types<");
+    expect(section()).not.toContain("Suggest types");
+    expect(section(async () => ({ status: "none" }) as never)).not.toContain("Apply all");
   });
 
   const commit = (state: CommitState, confirming = false) =>

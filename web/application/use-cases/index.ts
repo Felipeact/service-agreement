@@ -56,7 +56,8 @@ export function makeTransitionContract(contracts: ContractRepository) {
 
 export { makeRequestSignInLink, type SignInLinkResult } from "./sign-in";
 export { makeReadImport, outcomeOf, type ReadImportResult } from "./read-import";
-export { makeExtractImport, type ExtractImportResult } from "./extract-import";
+export { makeSuggestImportTypes, type SuggestImportTypesResult, type TypeSuggestionForReview } from "./suggest-import-types";
+export { makeExtractImport, makeImportProgress, type ExtractImportResult } from "./extract-import";
 export { makeReissueLink, makeSendAgreement, type LinkIssueResult } from "./portal-links";
 export {
   makeDecidePortal,
@@ -79,4 +80,4 @@ export { makeReceiveSignatureEvent } from "./signature-webhook";
 export { makeReceiveStripeEvent } from "./stripe-webhook";
 export { makeContractDocuments, makeSendForSignature, makeViewSigning, type SendForSignatureInput, type ViewSigningResult } from "./signing";
 export { makeGetContractWording, makeSaveContractWording, type SaveContractWordingResult } from "./contract-wording";
-export { makeDuplicateAgreementTemplate, makeListAgreementTemplates, type DuplicateTemplateResult, type TemplateListResult } from "./templates";
+export { makeDuplicateAgreementTemplate, makeEnsureStarterTemplates, makeListAgreementTemplates, type DuplicateTemplateResult, type TemplateListResult } from "./templates";

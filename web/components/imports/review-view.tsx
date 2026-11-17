@@ -2,16 +2,18 @@ import Link from "next/link";
 import type { AssetTypeOption, ImportReview, ImportRowView } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, unmatchedSpellings, type ReviewFlag } from "@/domain/imports";
+import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, reviewSummary, unmatchedSpellings, type ReviewFlag } from "@/domain/imports";
 import { DEFAULT_ITEM_WORDS, itemText, itemVerb, type ItemWords } from "@/domain/org-settings";
 import { CommitControl, MappingSection, RowControls } from "./review-controls";
-import type { CommitState, MapState, RowState } from "./state";
+import type { CommitState, MapState, RowState, SuggestState } from "./state";
 
 export type ReviewActions = {
   update: (rowId: string) => (formData: FormData) => Promise<RowState>;
   /** Sets the row's `skipped` to the value given. */
   skip: (rowId: string, skipped: boolean) => () => Promise<RowState>;
   map: (formData: FormData) => Promise<MapState>;
+  /** Asks the model for a type for each unrecognised spelling. */
+  suggest?: () => Promise<SuggestState>;
   commit: () => Promise<CommitState>;
 };
 
@@ -89,6 +91,13 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
   const pager = pageOf(shown.length, page);
   const pageRows = [...shown].sort((a, b) => a.position - b.position).slice((pager.page - 1) * REVIEW_PAGE_ROWS, pager.page * REVIEW_PAGE_ROWS);
   const spellings = writer ? unmatchedSpellings(rows) : [];
+  const summary = reviewSummary({
+    included: included.length,
+    ready: included.filter((row) => flagsOf(row).length === 0).length,
+    needType: included.filter((row) => flagsOf(row).some((flag) => flag.kind === "needs_type")).length,
+    onSite: included.filter((row) => flagsOf(row).some((flag) => flag.kind === "on_site")).length,
+    unmatchedGroups: unmatchedSpellings(rows).length,
+  });
   const filter = (active: boolean) => `inline-flex min-h-11 items-center text-[13px] font-medium lg:min-h-0 ${active ? "text-ink" : "text-action"}`;
 
   return (
@@ -128,6 +137,13 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
       ) : (
         <>
           {writer && (
+            <section aria-label="Where to start" data-review-summary="" className="flex flex-col gap-1 rounded-panel bg-action-tint px-4 py-3">
+              <p className="text-[15px] font-semibold text-ink">{summary.headline}</p>
+              {summary.next && <p className="text-[13px] text-ink">{summary.next}</p>}
+            </section>
+          )}
+
+          {writer && (
             <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
               <CommitControl
                 commit={writer.commit}
@@ -139,7 +155,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
             </section>
           )}
 
-          {writer && <MappingSection spellings={spellings} types={types} map={writer.map} />}
+          {writer && <MappingSection spellings={spellings} types={types} map={writer.map} suggest={writer.suggest} />}
 
           <section className="flex flex-col gap-3">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

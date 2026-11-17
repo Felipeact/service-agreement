@@ -62,6 +62,20 @@ function rowsFor(row: ExtractedRow, chunk: ExtractChunk, refs: Set<string>, type
 }
 
 /**
+ * Where a job's extraction stands, without doing any of it: the progress of one that is running, the counts of one that is done.
+ * What the browser polls while the server finishes the job in the background.
+ */
+export function makeImportProgress(store: ImportJobStore) {
+  return async function importProgress(jobId: string): Promise<ExtractImportResult> {
+    const source = await store.sourceOf(jobId);
+    if (!source.ok) return source;
+    if (source.status === "extracted") return source.result ? { ok: true, state: "extracted", ...source.result } : UNAVAILABLE;
+    if (source.status === "extracting" && source.progress) return { ok: true, state: "extracting", done: source.progress.cursor, total: source.progress.total };
+    return { ok: false, code: "not_ready" };
+  };
+}
+
+/**
  * Takes the next chunk of a read file, has Claude extract its rows, matches each to the org's types and records them.
  * One call does one chunk: the browser calls again until the job is `extracted`, and a stored cursor makes a retry resume.
  * The first chunk of a job asks the plan's AI-import allowance before Claude is called; a job already started never does, so

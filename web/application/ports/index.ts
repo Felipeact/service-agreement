@@ -478,6 +478,15 @@ export type ImportAllowanceResult =
   | { ok: true; allowed: false; plan: string; limit: number; used: number; resetsOn: string }
   | { ok: false; code: WriteFailure };
 
+/** One spelling's suggested type: the catalog code it means (`null` when none fits) and how sure the model is. */
+export type TypeSuggestion = { spelling: string; typeCode: string | null; confidence: "low" | "medium" | "high" };
+export type TypeSuggestResult = { ok: true; suggestions: TypeSuggestion[] } | { ok: false; code: "unavailable" };
+
+/** Matches the spellings a list used that the org's types did not recognise to the org's types. */
+export interface TypeSuggester {
+  suggest(spellings: string[], types: { code: string; name: string }[], tradeContext: string | null): Promise<TypeSuggestResult>;
+}
+
 export interface ImportAllowance {
   /** Whether the org of this job may start another AI import this month. An org with no plan is always allowed. */
   check(jobId: string): Promise<ImportAllowanceResult>;

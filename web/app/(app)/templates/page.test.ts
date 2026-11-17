@@ -10,11 +10,12 @@ import { SYSTEM_CONTRACT_BODY } from "@/domain/contract";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const listAgreementTemplates = vi.fn();
+const ensureStarterTemplates = vi.fn();
 const listAssetTypes = vi.fn();
 const getContractWording = vi.fn(async () => ({ ok: true as const, body: SYSTEM_CONTRACT_BODY, own: false }));
 const listCustomers = vi.fn(async () => []);
 const listActiveSites = vi.fn(async () => []);
-const container = { currentMember, listAgreementTemplates, listAssetTypes, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
+const container = { currentMember, listAgreementTemplates, ensureStarterTemplates, listAssetTypes, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);
@@ -53,6 +54,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   currentMember.mockResolvedValue(member("owner"));
   listAgreementTemplates.mockResolvedValue({ ok: true, templates: TEMPLATES });
+  ensureStarterTemplates.mockResolvedValue({ ok: true, templates: TEMPLATES });
   listAssetTypes.mockResolvedValue([{ id: "ty-1", code: "RTU", name: "Rooftop units" }]);
 });
 
@@ -67,6 +69,7 @@ describe("/templates", () => {
 
   test("C5346: when the list cannot be read the view gets no templates and says so, with a retry link", async () => {
     listAgreementTemplates.mockResolvedValue({ ok: false, code: "unavailable" });
+    ensureStarterTemplates.mockResolvedValue({ ok: false, code: "unavailable" });
     const element = await render();
     expect(element.type).toBe(TemplatesView);
     expect(element.props).toMatchObject({ templates: null });

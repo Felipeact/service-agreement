@@ -6,7 +6,7 @@ import { canWriteRecords } from "@/components/records/state";
 import { PageLoading } from "@/components/shell/page-loading";
 import { getContainer } from "@/composition";
 import { isUuid } from "@/domain/imports";
-import { commitImportAction, mapImportTypeAction, skipImportRowAction, updateImportRowAction } from "../../import-actions";
+import { commitImportAction, mapImportTypeAction, skipImportRowAction, suggestImportTypesAction, updateImportRowAction } from "../../import-actions";
 
 export const metadata: Metadata = { title: "Review rows" };
 
@@ -35,6 +35,7 @@ export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
         update: (rowId: string) => updateImportRowAction.bind(null, rowId),
         skip: (rowId: string, skipped: boolean) => skipImportRowAction.bind(null, rowId, skipped),
         map: mapImportTypeAction.bind(null, jobId),
+        suggest: suggestImportTypesAction.bind(null, jobId),
         commit: commitImportAction.bind(null, jobId),
       }
     : undefined;

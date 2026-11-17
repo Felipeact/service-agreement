@@ -1,4 +1,5 @@
 import { copyName } from "@/domain/agreement";
+import { STARTER_TEMPLATES } from "@/domain/agreement/starter-templates";
 import type { AgreementTemplateReader, AgreementTemplateStore, AgreementTemplateSummary, TemplateFailure } from "@/application/ports";
 
 export type TemplateListResult = { ok: true; templates: AgreementTemplateSummary[] } | { ok: false; code: "unavailable" };
@@ -13,6 +14,22 @@ export function makeListAgreementTemplates(reader: AgreementTemplateReader) {
     if (!read.ok) return read;
     const own = read.templates.filter((template) => !template.system);
     return { ok: true, templates: own.length > 0 ? own : read.templates.filter((template) => template.system) };
+  };
+}
+
+/**
+ * The Templates list for someone who may write templates: a company with none of its own is given the starter templates first, so
+ * its first visit shows something to use and edit. Only when it has none at all, so a deleted starter is never put back; a save
+ * that fails is skipped and the list is whatever is there.
+ */
+export function makeEnsureStarterTemplates(reader: AgreementTemplateReader, store: AgreementTemplateStore) {
+  const list = makeListAgreementTemplates(reader);
+  return async function ensureStarterTemplates(): Promise<TemplateListResult> {
+    const read = await reader.list();
+    if (!read.ok) return read;
+    if (read.templates.some((template) => !template.system)) return list();
+    for (const body of STARTER_TEMPLATES) await store.save(null, body).catch(() => null);
+    return list();
   };
 }
 

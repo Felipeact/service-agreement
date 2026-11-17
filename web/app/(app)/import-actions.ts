@@ -1,13 +1,16 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
+import { importReadyEmail, importStalledEmail } from "@/domain/notifications";
+import { linkBase } from "./link-base";
 import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
-import { flagRows, isBlocking, isUuid, normalized, validateImportFile } from "@/domain/imports";
+import { flagRows, isBlocking, isUuid, normalized, unmatchedSpellings, validateImportFile } from "@/domain/imports";
 import { validateAsset } from "@/domain/records";
 import { canWriteRecords } from "@/components/records/state";
-import type { CommitState, ConfirmState, DiscardState, ExtractState, MapState, ReadState, RowState, StartState } from "@/components/imports/state";
+import type { CommitState, ConfirmState, DiscardState, ExtractState, MapState, SuggestState, ReadState, RowState, StartState } from "@/components/imports/state";
 
 const FORBIDDEN = { status: "forbidden" } as const;
 
@@ -16,7 +19,7 @@ async function writer() {
   const container = await getContainer();
   const member = await container.currentMember();
   if (member.status !== "member") redirect("/login");
-  return canWriteRecords(member.role) ? { container, orgId: member.orgId, role: member.role } : null;
+  return canWriteRecords(member.role) ? { container, orgId: member.orgId, role: member.role, email: member.email } : null;
 }
 
 /**
@@ -63,19 +66,77 @@ export async function readImportAction(jobId: string): Promise<ReadState> {
   return read.outcome;
 }
 
-/** Extracts the next chunk of a read file; the browser calls again until the job is extracted. */
+/** The jobs this server process is finishing in the background; a second request for one only reports where it is. */
+const draining = new Set<string>();
+/** More chunks than any file has, so a loop that never ends still ends. */
+const MAX_BACKGROUND_CHUNKS = 200;
+
+/**
+ * Extracts a read file. The first chunk is done here, so a refusal (the plan's allowance, an unreadable file) comes back at
+ * once; the rest is finished in the background, so the job completes even if the person closes the page. The browser looks
+ * back with the same call, which only reports progress while the background work runs, and picks the job up again (resume)
+ * when the server restarted mid-way.
+ */
 export async function extractImportAction(jobId: string): Promise<ExtractState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
   if (!isUuid(jobId)) return { status: "not_found" };
-  const extracted = await ctx.container.extractImport(jobId);
+  const { importProgress, extractImport, reviewImport, sendEmail } = ctx.container;
+  const extracted = await (draining.has(jobId) ? importProgress(jobId) : extractImport(jobId));
+  if (extracted.ok && extracted.state === "extracting" && !draining.has(jobId)) {
+    draining.add(jobId);
+    // Read now: the request is over by the time the background work ends.
+    const reviewUrl = `${await linkBase()}/imports/${jobId}`;
+    const email = ctx.email;
+    after(async () => {
+      let last: Awaited<ReturnType<typeof extractImport>> | null = null;
+      try {
+        for (let chunk = 0; chunk < MAX_BACKGROUND_CHUNKS; chunk += 1) {
+          last = await extractImport(jobId);
+          if (!last.ok || last.state !== "extracting") break;
+        }
+      } catch (cause) {
+        console.error(`Finishing import ${jobId} in the background failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+        last = { ok: false, code: "unavailable" };
+      } finally {
+        draining.delete(jobId);
+      }
+      await tellAboutImport({ jobId, email, reviewUrl, last, reviewImport, sendEmail });
+    });
+  }
   if (!extracted.ok) {
     if (extracted.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("imports", extracted, audienceOf(ctx.role)) };
     return { status: extracted.code };
   }
   refresh();
-  if (extracted.state === "extracting") return { status: "extracting", done: extracted.done, total: extracted.total };
+  if (extracted.state === "extracting") return { status: "extracting", done: extracted.done, total: extracted.total, background: true };
   return { status: "extracted", rows: extracted.rows, unmatched: extracted.unmatched };
+}
+
+/**
+ * Emails whoever started the import once the background work ends, since they may have left the page: the review when it is
+ * read, a way back in when it stopped. A job a refusal stopped at once (the plan's allowance) never gets here. A failure to
+ * email is logged and costs nothing else.
+ */
+async function tellAboutImport(job: {
+  jobId: string;
+  email: string;
+  reviewUrl: string;
+  last: { ok: true; state: "extracting" | "extracted"; rows?: number; unmatched?: number } | { ok: false } | null;
+  reviewImport: (jobId: string) => Promise<{ job: { originalName: string; siteName: string } } | null>;
+  sendEmail: (message: import("@/application/ports").EmailMessage) => Promise<unknown>;
+}): Promise<void> {
+  try {
+    const found = await job.reviewImport(job.jobId);
+    if (!found || !job.last) return;
+    const common = { fileName: found.job.originalName, siteName: found.job.siteName, reviewUrl: job.reviewUrl };
+    const last = job.last;
+    const done = last.ok && last.state === "extracted";
+    const content = last.ok && last.state === "extracted" ? importReadyEmail({ ...common, rows: last.rows ?? 0, unmatched: last.unmatched ?? 0 }) : importStalledEmail(common);
+    await job.sendEmail({ to: [job.email], fromName: "Service Pacts", idempotencyKey: `import-${done ? "ready" : "stalled"}-${job.jobId}`, ...content });
+  } catch (cause) {
+    console.error(`Emailing about import ${job.jobId} failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
 }
 
 const text = (formData: FormData, name: string) => String(formData.get(name) ?? "");
@@ -121,6 +182,24 @@ export async function mapImportTypeAction(jobId: string, formData: FormData): Pr
   if (!mapped.ok) return { status: mapped.code };
   refresh();
   return { status: "mapped", rows: mapped.rows };
+}
+
+/**
+ * Asks the model which type each unrecognised spelling of the job means. Nothing is saved or changed: the review shows the
+ * suggestions, and the person applies them (one by one or all at once, through `mapImportTypeAction`).
+ */
+export async function suggestImportTypesAction(jobId: string): Promise<SuggestState> {
+  const ctx = await writer();
+  if (!ctx) return FORBIDDEN;
+  if (!isUuid(jobId)) return { status: "not_found" };
+  const review = await ctx.container.reviewImport(jobId);
+  if (!review) return { status: "not_found" };
+  if (review.job.status !== "extracted") return { status: "idle" };
+  const spellings = unmatchedSpellings(review.rows).slice(0, 60);
+  if (spellings.length === 0) return { status: "none" };
+  const answer = await ctx.container.suggestImportTypes(spellings.map(({ key, raw }) => ({ key, raw })));
+  if (!answer.ok) return { status: "unavailable" };
+  return answer.suggestions.length > 0 ? { status: "suggested", suggestions: answer.suggestions } : { status: "none" };
 }
 
 /** Rows that would stop the commit: included, and untyped or over the asset form's limits. */
