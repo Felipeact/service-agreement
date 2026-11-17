@@ -1,0 +1,49 @@
+{
+  "title": "Templates editor: choose the structure",
+  "question": "Same look as the app (navy shell, Action Blue, Inter and Bricolage). Three ways to organise one editor for agreement and contract wording, a page you click on instead of a form. Pick one, steer it, or re-roll.",
+  "options": [
+    {
+      "id": "switchboard",
+      "kind": "assigned",
+      "kicker": "THE ROLL",
+      "label": "Sections list + page",
+      "lineage": "Document outline beside the page",
+      "thesis": "A short list of the document's sections sits beside the page: switch each on or off, drag to reorder, click one to edit it in place.",
+      "palette": ["#f3f5f9", "#ffffff", "#0f1c2e", "#2563eb", "#eef2ff"],
+      "materials": ["white page on cool grey ground", "hairline rows", "blue selection outline"],
+      "viewport": "Slim icon rail, a 280px Sections list (Cover and intro, Service included, Price lines locked, Visit schedule, Equipment list off, Terms, Signatures locked) and the page beside it with the selected section outlined and a small toolbar on it.",
+      "risk": "The list and the page both show structure, so on a phone it must collapse to one of them.",
+      "html": ".impeccable/mocks/decision/switchboard.html",
+      "htmlFrame": "1440x900"
+    },
+    {
+      "id": "dock",
+      "kind": "dealt",
+      "label": "Page + floating dock",
+      "lineage": "Canvas editors with a bottom tool dock",
+      "thesis": "Nothing but the page: a floating dock at the bottom adds anything, and the page gets the whole screen.",
+      "palette": ["#f3f5f9", "#ffffff", "#0f1c2e", "#2563eb"],
+      "materials": ["white page", "dark floating pill dock", "soft layered shadow"],
+      "viewport": "A wide page centred on the grey ground, one block selected with a mini toolbar, and a dark pill dock floating at the bottom: Heading, Text, Clauses, Divider, then Price, Schedule, Equipment, Signature and a Fields chip menu.",
+      "risk": "Least discoverable for a first-time owner, and a floating dock can cover the page's last lines on a short screen.",
+      "html": ".impeccable/mocks/decision/dock.html",
+      "htmlFrame": "1440x900"
+    },
+    {
+      "id": "palette",
+      "kind": "dealt",
+      "label": "Add Element panel + page",
+      "lineage": "Jotform PDF editor, the reference you sent",
+      "thesis": "A short Add Element panel on the left, the page in the middle: click an element and it lands on the page.",
+      "palette": ["#f3f5f9", "#ffffff", "#0f1c2e", "#2563eb", "#1a2a42"],
+      "materials": ["dark navy panel", "white page", "blue selection outline"],
+      "viewport": "A dark Add Element panel with two groups (Writing: Heading, Text, Clauses, Divider, Page break; Document parts: Service included, Price lines, Visit schedule, Equipment list, Signatures) and the page beside it, one block selected, plus a field chips row below.",
+      "risk": "Document parts can only appear once, so the panel must show them as used instead of letting a second one be added.",
+      "html": ".impeccable/mocks/decision/palette.html",
+      "htmlFrame": "1440x900"
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "steer": true,
+  "buildPath": { "value": "code" }
+}
