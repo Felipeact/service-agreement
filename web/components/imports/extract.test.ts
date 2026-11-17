@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), use
 
 const { ImportJobList } = await import("./job-list");
 const { ExtractPrompt } = await import("./extract-control");
-const { runExtraction } = await import("./state");
+const { runExtraction, BACKGROUND_POLL_MS } = await import("./state");
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 
@@ -57,6 +57,23 @@ describe("runExtraction", () => {
     const progressed = script.filter((answer) => answer.status === "extracting");
     expect(onProgress).toHaveBeenCalledTimes(progressed.length);
     if (progressed[0]) expect(onProgress).toHaveBeenNthCalledWith(1, { done: 1, total: 4 });
+  });
+
+  test("an answer the server is finishing in the background is looked at again after a pause, not hurried", async () => {
+    vi.useFakeTimers();
+    try {
+      const answers: ExtractState[] = [{ status: "extracting", done: 1, total: 3, background: true }, { status: "extracting", done: 2, total: 3, background: true }, { status: "extracted", rows: 9, unmatched: 0 }];
+      const extract = vi.fn(async () => answers.shift() as ExtractState);
+      const running = runExtraction("j1", { extract });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(extract).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(BACKGROUND_POLL_MS);
+      expect(extract).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(BACKGROUND_POLL_MS);
+      expect((await running).status).toBe("extracted");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

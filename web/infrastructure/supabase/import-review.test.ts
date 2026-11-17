@@ -159,6 +159,17 @@ describe("ImportRowStore", () => {
       expect(fresh.calls.find((c) => c.table === "asset_types" && c.method === "update")?.args[0]).toEqual({ synonyms: ["roof top", "boiler cond"] });
     });
 
+    test("a mapped spelling is also offered to the shared list, and a refusal there never fails the mapping", async () => {
+      const first = mapped(ok({ synonyms: [] }));
+      await supabaseImportRowStore(first.typed).mapType(JOB, "boiler cond", TYPE);
+      expect(first.client.rpc).toHaveBeenCalledWith("record_type_alias", { p_alias: "boiler cond", p_type_id: TYPE });
+
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const refused = mapped(ok({ synonyms: [] }));
+      refused.client.rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "no" } });
+      expect(await supabaseImportRowStore(refused.typed).mapType(JOB, "boiler cond", TYPE)).toEqual({ ok: true, rows: 1 });
+    });
+
     test("C7007: a refused synonym write never fails the mapping", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const { typed } = mapped(fail("42501"));

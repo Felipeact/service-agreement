@@ -67,6 +67,14 @@ export type OrgUsage = {
 /** What is left of a limit, never below zero; `null` when there is no limit. */
 export const remaining = (figure: UsageFigure): number | null => (figure.limit === null ? null : Math.max(0, figure.limit - figure.used));
 
+/** "114 AI imports left this month", "1 AI import left this month", or "No AI imports left this month"; `null` when the plan has no limit to show. */
+export function importsLeftLine(figure: UsageFigure): string | null {
+  const left = remaining(figure);
+  if (left === null) return null;
+  if (left === 0) return "No AI imports left this month";
+  return `${left} AI ${left === 1 ? "import" : "imports"} left this month`;
+}
+
 const tokenCount = new Intl.NumberFormat("en-CA");
 
 /** "184,200 tokens" for the owner: the AI's reading and writing added together. */

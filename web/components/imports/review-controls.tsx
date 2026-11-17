@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import type { AssetTypeOption } from "@/application/ports";
 import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { fixLine } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
-import { REVIEW_MESSAGES, type CommitState, type MapState, type RowState } from "./state";
+import { REVIEW_MESSAGES, type CommitState, type MapState, type RowState, type SuggestState } from "./state";
 
 function Alert({ message }: { message: string | null }) {
   const words = useItemWords();
@@ -120,14 +120,26 @@ type MapPromptProps = {
   /** Distinguishes the select's id when several spellings show. */
   index: number;
   action?: (formData: FormData) => void;
+  /** The model's suggestion for this spelling: the type it chose is preselected and says how sure the model was. */
+  suggestion?: { typeId: string; confidence: "low" | "medium" | "high" };
 };
 
+const CONFIDENCE_WORDS = { high: "high confidence", medium: "medium confidence", low: "low confidence, check it" } as const;
+
 /** One unrecognised spelling, how many rows say it, and the type to give them all. */
-export function MapPrompt({ spelling, types, state, pending, index, action }: MapPromptProps) {
+export function MapPrompt({ spelling, types, state, pending, index, action, suggestion }: MapPromptProps) {
+  const suggested = suggestion ? types.find((type) => type.id === suggestion.typeId) : undefined;
   return (
     <form action={action} className="flex flex-col gap-2 md:flex-row md:items-end md:gap-3">
       <input type="hidden" name="rawText" value={spelling.raw} />
-      <Select id={`map-${index}`} name="assetTypeId" label={`${spelling.raw} · ${spelling.count} ${spelling.count === 1 ? "row" : "rows"}`} defaultValue="" className="md:w-80">
+      <div className="flex flex-col gap-1 md:w-80">
+      <Select
+        key={suggested?.id ?? "none"}
+        id={`map-${index}`}
+        name="assetTypeId"
+        label={`${spelling.raw} · ${spelling.count} ${spelling.count === 1 ? "row" : "rows"}`}
+        defaultValue={suggested?.id ?? ""}
+      >
         <option value="">Choose a type</option>
         {types.map((type) => (
           <option key={type.id} value={type.id}>
@@ -135,6 +147,8 @@ export function MapPrompt({ spelling, types, state, pending, index, action }: Ma
           </option>
         ))}
       </Select>
+      {suggested && suggestion && <p data-suggestion="" className="text-[12px] text-ink-2">{`Suggested: ${suggested.name} (${CONFIDENCE_WORDS[suggestion.confidence]})`}</p>}
+      </div>
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Applying…" : "Apply"}
@@ -153,34 +167,94 @@ type MapControlProps = Omit<MapPromptProps, "state" | "pending" | "action"> & {
   onMapped?: (rows: number) => void;
 };
 
-export function MapControl({ spelling, types, index, map, onMapped }: MapControlProps) {
+export function MapControl({ spelling, types, index, map, onMapped, suggestion }: MapControlProps) {
   const [state, formAction, pending] = useActionState<MapState, FormData>(async (_, formData) => {
     const answer = await map(formData);
     if (answer.status === "mapped") onMapped?.(answer.rows);
     return answer;
   }, { status: "idle" });
-  return <MapPrompt spelling={spelling} types={types} state={state} pending={pending} index={index} action={formAction} />;
+  return <MapPrompt spelling={spelling} types={types} state={state} pending={pending} index={index} action={formAction} suggestion={suggestion} />;
 }
 
 type MappingSectionProps = {
   spellings: { key: string; raw: string; count: number }[];
   types: AssetTypeOption[];
   map: (formData: FormData) => Promise<MapState>;
+  /** Asks the model for a type for each spelling; absent where nothing can be asked (a viewer). */
+  suggest?: () => Promise<SuggestState>;
 };
+
+const SUGGEST_MESSAGES = {
+  none: "No type fits any of these. Choose one yourself.",
+  unavailable: "We couldn't get suggestions. Try again, or choose the types yourself.",
+} as const;
 
 /**
  * The unrecognised spellings. It stays mounted when the last one is mapped, so "Applied to n rows" survives the
  * refresh that removes the spelling it was applied to.
  */
-export function MappingSection({ spellings, types, map }: MappingSectionProps) {
+export function MappingSection({ spellings, types, map, suggest }: MappingSectionProps) {
   const words = useItemWords();
   const [applied, setApplied] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, { typeId: string; confidence: "low" | "medium" | "high" }>>({});
+  const [note, setNote] = useState<string | null>(null);
+  const [asking, startAsking] = useTransition();
+  const [applyingAll, startApplyingAll] = useTransition();
   if (spellings.length === 0 && applied === null) return null;
+  const suggested = spellings.filter((spelling) => suggestions[spelling.key]);
+
+  function ask() {
+    setNote(null);
+    startAsking(async () => {
+      const answer = await suggest?.();
+      if (!answer) return;
+      if (answer.status === "suggested") {
+        setSuggestions(Object.fromEntries(answer.suggestions.map(({ key, typeId, confidence }) => [key, { typeId, confidence }])));
+      } else {
+        setSuggestions({});
+        setNote(answer.status === "none" ? SUGGEST_MESSAGES.none : SUGGEST_MESSAGES.unavailable);
+      }
+    });
+  }
+
+  /** One spelling after another, so each is its own checked, saved mapping; a refusal stops at that spelling and says so. */
+  function applyAll() {
+    startApplyingAll(async () => {
+      let rows = 0;
+      for (const spelling of suggested) {
+        const formData = new FormData();
+        formData.set("rawText", spelling.raw);
+        formData.set("assetTypeId", suggestions[spelling.key].typeId);
+        const answer = await map(formData);
+        if (answer.status !== "mapped") {
+          setNote(rowMessage(answer) ?? SUGGEST_MESSAGES.unavailable);
+          return;
+        }
+        rows += answer.rows;
+      }
+      setSuggestions({});
+      setApplied(rows);
+    });
+  }
   return (
     <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
       {spellings.length > 0 && <h2 className="text-[15px] font-semibold">{itemText("Equipment types not recognised", words)}</h2>}
+      {spellings.length > 0 && suggest && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={ask} disabled={asking || applyingAll}>
+            {asking ? "Asking…" : suggested.length > 0 ? "Suggest again" : "Suggest types"}
+          </Button>
+          {suggested.length > 0 && (
+            <Button variant="primary" onClick={applyAll} disabled={applyingAll || asking}>
+              {applyingAll ? "Applying…" : `Apply all ${suggested.length} ${suggested.length === 1 ? "suggestion" : "suggestions"}`}
+            </Button>
+          )}
+          <span className="text-[12px] text-ink-2">Suggestions are a starting point: check the ones marked low confidence.</span>
+        </div>
+      )}
+      {note && <p role="alert" className="text-[13px] font-medium text-danger">{note}</p>}
       {spellings.map((spelling, index) => (
-        <MapControl key={spelling.key} spelling={spelling} types={types} index={index} map={map} onMapped={setApplied} />
+        <MapControl key={spelling.key} spelling={spelling} types={types} index={index} map={map} onMapped={setApplied} suggestion={suggestions[spelling.key]} />
       ))}
       {spellings.length === 0 && applied !== null && (
         <p role="status" className="text-[13px] text-ink">{itemText(`Applied to ${applied} ${applied === 1 ? "row" : "rows"}. Every equipment type is recognised.`, words)}</p>

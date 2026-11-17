@@ -131,6 +131,8 @@ describe("matchAssetType: the gaps a tester found", () => {
     ["Registre coupe-feu", "fire"],
     ["Pompe", "pump"],
     ["Boilers", "boiler"],
+    ["Boiler #2 (backup)", "boiler"],
+    ["Boiler 2 standby", "boiler"],
   ])("%s is typed", (raw, id) => {
     expect(matchAssetType(raw, MORE)).toBe(id);
   });

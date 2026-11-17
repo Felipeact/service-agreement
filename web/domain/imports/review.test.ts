@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { flagRows, pageOf, unmatchedSpellings, type ReviewFlag, type ReviewRow } from "./index";
+import { flagRows, pageOf, reviewSummary, unmatchedSpellings, type ReviewFlag, type ReviewRow } from "./index";
 
 const RTU = "type-rtu";
 const MUA = "type-mua";
@@ -144,5 +144,21 @@ describe("spelling list", () => {
       { key: "widget", raw: "Widget", count: 3 },
       { key: "roof top hvac", raw: "Roof top HVAC", count: 2 },
     ]);
+  });
+});
+
+describe("reviewSummary", () => {
+  test("rows that need a type say how many, and point at the groups", () => {
+    expect(reviewSummary({ included: 97, ready: 72, needType: 25, onSite: 0, unmatchedGroups: 4 })).toEqual({
+      headline: "72 of 97 rows are ready.",
+      next: "25 need a type. Start with the groups below: pick a type once and every row with that wording is fixed.",
+    });
+  });
+
+  test("everything ready, a single group, rows already on the site, and nothing included", () => {
+    expect(reviewSummary({ included: 3, ready: 3, needType: 0, onSite: 0, unmatchedGroups: 0 })).toEqual({ headline: "All 3 rows are ready.", next: "Check them, then add them to the site." });
+    expect(reviewSummary({ included: 5, ready: 4, needType: 1, onSite: 0, unmatchedGroups: 1 }).next).toContain("1 needs a type. Start with the group below");
+    expect(reviewSummary({ included: 5, ready: 3, needType: 0, onSite: 2, unmatchedGroups: 0 }).next).toContain("2 rows are already on this site and will not be added again");
+    expect(reviewSummary({ included: 0, ready: 0, needType: 0, onSite: 0, unmatchedGroups: 0 }).headline).toBe("No rows are included yet.");
   });
 });

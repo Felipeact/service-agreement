@@ -419,6 +419,27 @@ describe("record reads for the edit forms", () => {
     await expect(supabaseSiteRegister(stubClient({ assets: fail("XX000") }).typed).asset(ID)).rejects.toThrow("XX000");
   });
 
+  test("the spellings several companies agreed on are added to each type's own, by code, once", async () => {
+    const { typed, client } = stubClient({
+      asset_types: ok([
+        { id: "t1", code: "VRF_OUTDOOR", name: "VRF (outdoor unit)", synonyms: ["vrf condenser"] },
+        { id: "t2", code: "RTU", name: "Rooftop unit", synonyms: [] },
+      ]),
+    });
+    client.rpc.mockResolvedValue(ok([{ alias: "vrv", type_code: "VRF_OUTDOOR" }, { alias: "vrf condenser", type_code: "VRF_OUTDOOR" }, { alias: "toit", type_code: "RTU" }]) as never);
+    const types = await supabaseAssetTypeCatalog(typed).list();
+    expect(types.map((type) => type.synonyms)).toEqual([["vrf condenser", "vrv"], ["toit"]]);
+    expect(client.rpc).toHaveBeenCalledWith("shared_type_aliases");
+  });
+
+  test("without the shared list (a refusal or an outage) the org's own spellings are all there is", async () => {
+    const { typed, client } = stubClient({ asset_types: ok([{ id: "t2", code: "RTU", name: "Rooftop unit", synonyms: ["rooftop"] }]) });
+    client.rpc.mockResolvedValue({ data: null, error: { code: "42883", message: "function does not exist" } } as never);
+    expect((await supabaseAssetTypeCatalog(typed).list())[0].synonyms).toEqual(["rooftop"]);
+    client.rpc.mockRejectedValue(new Error("down"));
+    expect((await supabaseAssetTypeCatalog(typed).list())[0].synonyms).toEqual(["rooftop"]);
+  });
+
   test("C323: asset types are read ordered by name and mapped to id, code, name and spellings", async () => {
     const { typed, calls } = stubClient({
       asset_types: ok([

@@ -2,7 +2,9 @@ import { describe, expect, test, vi } from "vitest";
 import type { AgreementTemplateReader, AgreementTemplateStore, AgreementTemplateSummary } from "@/application/ports";
 import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
 import type { AgreementTemplateBodyV2 } from "@/domain/agreement/template";
-import { makeDuplicateAgreementTemplate, makeListAgreementTemplates } from "./templates";
+import { validateAgreementTemplate } from "@/domain/agreement/template";
+import { STARTER_TEMPLATES } from "@/domain/agreement/starter-templates";
+import { makeDuplicateAgreementTemplate, makeEnsureStarterTemplates, makeListAgreementTemplates } from "./templates";
 
 const summary = (id: string, name: string, system = false): AgreementTemplateSummary => ({
   id,
@@ -61,5 +63,44 @@ describe("a duplicated template", () => {
     const duplicate = makeDuplicateAgreementTemplate(reader([{ ...summary("t-1", "Proposal"), body: V2 }, summary("t-2", "Proposal (copy)")]), { save, archive: vi.fn() });
     await duplicate("t-1");
     expect(save).toHaveBeenCalledWith(null, { ...V2, name: "Proposal (copy 2)" });
+  });
+});
+
+describe("the starter templates", () => {
+  test("each one passes the same checks as a template a person saves, with its own name and visit months", () => {
+    const names = STARTER_TEMPLATES.map((body) => body.name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(3);
+    for (const body of STARTER_TEMPLATES) {
+      expect(validateAgreementTemplate(body).ok, body.name).toBe(true);
+      expect(body.preset.lines.every((line) => line.visitMonths.length > 0)).toBe(true);
+    }
+  });
+
+  test("a company with none of its own is given all of them, once, and then sees them", async () => {
+    const store = { save: vi.fn(async () => ({ ok: true as const, templateId: "t", versionNo: 1 })), archive: vi.fn() } as unknown as AgreementTemplateStore;
+    let own: AgreementTemplateSummary[] = [];
+    const live: AgreementTemplateReader = { list: async () => ({ ok: true, templates: [summary("s", "Standard agreement", true), ...own] }) };
+    (store.save as ReturnType<typeof vi.fn>).mockImplementation(async (_id: string | null, body: { name: string }) => {
+      own = [...own, summary(`o${own.length}`, body.name)];
+      return { ok: true as const, templateId: "t", versionNo: 1 };
+    });
+    const ensure = makeEnsureStarterTemplates(live, store);
+
+    const first = await ensure();
+    expect(first.ok && first.templates.map((template) => template.body.name)).toEqual(STARTER_TEMPLATES.map((body) => body.name));
+    expect(store.save).toHaveBeenCalledTimes(STARTER_TEMPLATES.length);
+
+    await ensure();
+    expect(store.save).toHaveBeenCalledTimes(STARTER_TEMPLATES.length);
+  });
+
+  test("a failed save is skipped, and an unreadable list is unavailable and saves nothing", async () => {
+    const store = { save: vi.fn(async () => ({ ok: false as const, code: "unavailable" as const })), archive: vi.fn() } as unknown as AgreementTemplateStore;
+    const listed = await makeEnsureStarterTemplates(reader([summary("s", "Standard agreement", true)]), store)();
+    expect(listed.ok && listed.templates.map((template) => template.body.name)).toEqual(["Standard agreement"]);
+    const failing: AgreementTemplateReader = { list: async () => ({ ok: false, code: "unavailable" }) };
+    expect(await makeEnsureStarterTemplates(failing, store)()).toEqual({ ok: false, code: "unavailable" });
+    expect(store.save).toHaveBeenCalledTimes(STARTER_TEMPLATES.length);
   });
 });

@@ -399,3 +399,39 @@ export function staffContractSignedEmail(input: StaffContractSignedInput): Email
   const text = [intro, "", `Open the contract: ${href}`].join("\n");
   return { subject, html, text };
 }
+
+export type ImportEmailInput = {
+  fileName: string;
+  siteName: string;
+  /** The job's review page: `<base>/imports/<jobId>`. */
+  reviewUrl: string;
+};
+
+/** "1 row" / "97 rows". */
+const rowsWord = (count: number) => `${count.toLocaleString("en-CA")} ${count === 1 ? "row" : "rows"}`;
+
+/**
+ * The email to whoever started an import that kept running after they left the page: it is read, here is how many rows need a type,
+ * and a button to the review. It names the file and the site, never the list's contents.
+ */
+export function importReadyEmail(input: ImportEmailInput & { rows: number; unmatched: number }): EmailContent {
+  const { fileName, siteName, rows, unmatched, reviewUrl } = input;
+  const subject = `Your equipment list is ready to review: ${fileName}`;
+  const summary =
+    unmatched === 0
+      ? `We read ${rowsWord(rows)} from ${fileName} for ${siteName}, and every row has a type.`
+      : `We read ${rowsWord(rows)} from ${fileName} for ${siteName}. ${rowsWord(unmatched)} still ${unmatched === 1 ? "needs" : "need"} a type, and the review starts with those.`;
+  const html = page([`<p style="margin:0 0 12px">${escapeHtml(summary)}</p>`, button("Review the list", reviewUrl, null), `<p style="margin:0;color:#4b5563">Nothing is added to the site until you review it and press Add.</p>`].join(""));
+  const text = [summary, "", `Review the list: ${reviewUrl}`, "", "Nothing is added to the site until you review it and press Add."].join("\n");
+  return { subject, html, text };
+}
+
+/** The email when a background import stopped before the end: where it stands and the page to continue from. */
+export function importStalledEmail(input: ImportEmailInput): EmailContent {
+  const { fileName, siteName, reviewUrl } = input;
+  const subject = `We could not finish reading ${fileName}`;
+  const summary = `Reading ${fileName} for ${siteName} stopped before the end. Nothing was lost: open the import and press Continue extraction.`;
+  const html = page([`<p style="margin:0 0 12px">${escapeHtml(summary)}</p>`, button("Open the import", reviewUrl, null)].join(""));
+  const text = [summary, "", `Open the import: ${reviewUrl}`].join("\n");
+  return { subject, html, text };
+}

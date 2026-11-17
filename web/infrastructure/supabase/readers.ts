@@ -427,12 +427,30 @@ export function supabaseSiteRegister(client: Client): SiteRegister {
   };
 }
 
+/**
+ * The spellings several companies have agreed mean a type, by that type's code (`shared_type_aliases`). The catalog adds them to the
+ * org's own spellings, so matching reads them like any other. Without them (the database has not got the function yet, or fails) the
+ * org's own spellings are all there is: an import is never held up by it.
+ */
+async function sharedAliases(client: Client): Promise<Map<string, string[]>> {
+  const byCode = new Map<string, string[]>();
+  try {
+    const { data, error } = await client.rpc("shared_type_aliases");
+    if (error || !Array.isArray(data)) return byCode;
+    for (const { alias, type_code } of data) byCode.set(type_code, [...(byCode.get(type_code) ?? []), alias]);
+  } catch {
+    // The shared list is a help, not a need.
+  }
+  return byCode;
+}
+
 export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
   return {
     async list() {
       const { data, error } = await client.from("asset_types").select("id, code, name, synonyms").order("name").limit(ROW_CAP);
       if (error) throw unexpected(error);
-      return data.map(({ id, code, name, synonyms }) => ({ id, code, name, synonyms }));
+      const shared = await sharedAliases(client);
+      return data.map(({ id, code, name, synonyms }) => ({ id, code, name, synonyms: [...synonyms, ...(shared.get(code) ?? []).filter((alias) => !synonyms.includes(alias))] }));
     },
     async tradeContext() {
       // RLS leaves the member's own org; the app has no org switcher (decision 9), so there is one row.
