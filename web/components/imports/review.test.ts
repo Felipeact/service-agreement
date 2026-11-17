@@ -205,8 +205,9 @@ describe("review view", () => {
 
   test("C624: an enabled commit button naming the count and site", () => {
     const three = view(review([row(), row({ confidence: "low" }), row({ unitNo: "RTU-1" })], "extracted"), { site: [{ assetTypeId: RTU, unitNo: "RTU-1" }] });
-    expect(button(three, "Add 3 assets to Brookhaven")).toBeDefined();
-    expect(button(three, "Add 3 assets to Brookhaven")).not.toContain('disabled=""');
+    // The third row is already on the site, so the commit would not add it and the button does not count it.
+    expect(button(three, "Add 2 assets to Brookhaven")).toBeDefined();
+    expect(button(three, "Add 2 assets to Brookhaven")).not.toContain('disabled=""');
     expect(button(view(review([row()])), "Add 1 asset to Brookhaven")).toBeDefined();
   });
 

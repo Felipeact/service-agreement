@@ -82,6 +82,8 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
   const flagsOf = (row: ImportRowView) => flags.get(row.id) ?? [];
   const included = rows.filter((row) => !row.skipped);
   const attention = included.filter((row) => flagsOf(row).length > 0);
+  // The commit never adds a row the site already has, so the button counts only the rest.
+  const addable = included.filter((row) => !flagsOf(row).some((flag) => flag.kind === "on_site")).length;
   const blocking = included.filter((row) => flagsOf(row).some(isBlocking)).length;
   const shown = show === "attention" ? attention : rows;
   const pager = pageOf(shown.length, page);
@@ -129,10 +131,10 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
             <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
               <CommitControl
                 commit={writer.commit}
-                label={addLabel(included.length, job.siteName)}
+                label={addLabel(addable, job.siteName)}
                 siteName={job.siteName}
-                added={included.length}
-                blocked={included.length === 0 ? "Include at least one row to add." : blocking > 0 ? fixLine(blocking) : null}
+                added={addable}
+                blocked={included.length === 0 ? "Include at least one row to add." : addable === 0 ? "Every included row is already on this site." : blocking > 0 ? fixLine(blocking) : null}
               />
             </section>
           )}
