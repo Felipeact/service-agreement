@@ -1,4 +1,4 @@
-import { chunksOf, matchAssetType, splitQuantity } from "@/domain/imports";
+import { chunksOf, matchAssetType, quantityColumn, quantityOf, splitQuantity } from "@/domain/imports";
 import type {
   AssetExtractor,
   AssetTypeCatalog,
@@ -38,13 +38,24 @@ function rowFor(row: ExtractedRow, chunk: ExtractChunk, refs: Set<string>, types
   };
 }
 
+/** The count in the "Qty" column of the file row this row was read from, with the type text as the label; `null` when there is none. */
+function countFromColumn(row: ExtractedRow, chunk: ExtractChunk): { label: string; qty: number } | null {
+  const label = cleaned(row.assetTypeRaw);
+  const ref = cleaned(row.sourceRef);
+  if (chunk.kind !== "rows" || label === null || ref === null) return null;
+  const column = quantityColumn(chunk.header);
+  const source = column === null ? undefined : chunk.rows.find((candidate) => candidate.ref === ref);
+  const qty = source && column !== null ? quantityOf(source.cells[column]) : null;
+  return qty === null ? null : { label, qty };
+}
+
 /**
- * The rows one extracted row stands for. A row with no unit # whose type text carries a count ("VAV boxes (qty 24)") becomes
+ * The rows one extracted row stands for. A row with no unit # whose file row has a count in a "Qty" column, or whose type text carries a count ("VAV boxes (qty 24)", "Fire dampers 40") becomes
  * that many rows, the count removed from the type text and the units numbered 1 to N, never above `medium` confidence so the
  * review looks at them. Anything else is one row (qa-p1-p2 C7005).
  */
 function rowsFor(row: ExtractedRow, chunk: ExtractChunk, refs: Set<string>, types: Awaited<ReturnType<AssetTypeCatalog["list"]>>): ImportRowInput[] {
-  const counted = cleaned(row.unitNo) === null ? splitQuantity(cleaned(row.assetTypeRaw)) : null;
+  const counted = cleaned(row.unitNo) === null ? (countFromColumn(row, chunk) ?? splitQuantity(cleaned(row.assetTypeRaw))) : null;
   if (!counted) return [rowFor(row, chunk, refs, types)];
   const confidence = row.confidence === "high" ? "medium" : row.confidence;
   return Array.from({ length: counted.qty }, (_, i) => rowFor({ ...row, assetTypeRaw: counted.label, unitNo: String(i + 1), confidence }, chunk, refs, types));

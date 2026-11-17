@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { companyDetailsReady } from "@/domain/org-settings";
-import { validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
+import { isStaleStart, validateAgreementTerm, validateServiceLine, validateVersionNote, type ServiceLineInput } from "@/domain/agreement";
 import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
@@ -190,7 +190,7 @@ async function issueLink(
  * the company's details must be its own and confirmed (`company_unconfirmed`), and a site type no line covers must be
  * acknowledged (`needs_confirmation`, answered by sending again with `confirmUncovered`). p0-launch-fixes AC 11, 14-16.
  */
-export async function sendAgreementAction(agreementId: string, email?: string, confirmUncovered = false): Promise<LinkState> {
+export async function sendAgreementAction(agreementId: string, email?: string, confirmUncovered = false, confirmStart = false): Promise<LinkState> {
   const container = await writer();
   if (!container) return FORBIDDEN;
   if (!isUuid(agreementId)) return NOT_FOUND;
@@ -208,6 +208,11 @@ export async function sendAgreementAction(agreementId: string, email?: string, c
     if (!confirmUncovered) {
       const uncovered = await container.agreementScope.uncovered(agreementId);
       if (uncovered.length > 0) return { status: "needs_confirmation", uncovered };
+    }
+    // A start date far in the past is almost always a slip (2019 for 2029), and it prints on the agreement: ask before sending.
+    if (!confirmStart) {
+      const start = (await container.agreementReader.get(agreementId))?.term.start ?? null;
+      if (start !== null && isStaleStart(start, new Date())) return { status: "needs_start_confirmation", start };
     }
     // The customer's contact email is where the agreement goes; without one on file the sender gives it first.
     if (!(await container.agreementRecipient.get(agreementId))) {

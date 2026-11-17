@@ -108,6 +108,26 @@ describe("extractImport: quantity rows", () => {
     expect(rows.every((r) => r.confidence === "medium" && r.assetTypeId === "t-vav")).toBe(true);
   });
 
+  test("a Qty column in the file expands the row it belongs to, and a file without one leaves it alone", async () => {
+    const withQty: ParseResult = { ok: true, parsed: { format: "table", text: "n", tables: [{ source: "Units", header: ["Equipment", "Qty"], rows: [{ ref: "Units!2", cells: ["FCU", "18"] }] }] } };
+    const s = setup({ parse: withQty, types: [{ id: "t-fcu", code: "FCU", name: "Fan coil", synonyms: ["fcu"] }], answer: async () => ({ ok: true as const, rows: [row({ assetTypeRaw: "FCU", unitNo: null })] }) });
+    await s.extractImport(JOB);
+    const rows = rowsRecorded(s.store);
+    expect(rows).toHaveLength(18);
+    expect(rows[17].unitNo).toBe("18");
+    expect(rows.every((r) => r.assetTypeId === "t-fcu")).toBe(true);
+    const without = setup({ parse: tableOf(1), answer: async () => ({ ok: true as const, rows: [row({ assetTypeRaw: "FCU", unitNo: null })] }) });
+    await without.extractImport(JOB);
+    expect(rowsRecorded(without.store)).toHaveLength(1);
+  });
+
+  test("a plural type name with a bare count, \"Fire dampers 40\", is 40 rows", async () => {
+    const s = setup({ parse: tableOf(1), answer: async () => ({ ok: true as const, rows: [row({ assetTypeRaw: "Fire dampers 40", unitNo: null })] }) });
+    await s.extractImport(JOB);
+    expect(rowsRecorded(s.store)).toHaveLength(40);
+    expect(rowsRecorded(s.store)[0].assetTypeRaw).toBe("Fire dampers");
+  });
+
   test.each([
     ["a row that already has a unit #", row({ assetTypeRaw: "VAV box (qty 24)", unitNo: "V-1" })],
     ["a count above fifty", row({ assetTypeRaw: "VAV box (qty 80)", unitNo: null })],

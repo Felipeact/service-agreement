@@ -26,6 +26,7 @@ const requestHeaders = new Headers({ host: "localhost:3000" });
 const recipientGet = vi.fn<(id: string) => Promise<string | null>>();
 const recipientSet = vi.fn<(id: string, email: string) => Promise<boolean>>();
 const getOrgSettings = vi.fn();
+const termStart = vi.fn<() => string | null>();
 const uncovered = vi.fn<(id: string) => Promise<{ code: string; name: string; assetCount: number }[]>>();
 const READY = { legalName: "Acme Heating Ltd.", address: "12 Main St, Surrey, BC V3T 1A1", phone: "604-555-2368", companyConfirmedAt: new Date("2026-11-01T00:00:00Z") };
 
@@ -34,6 +35,7 @@ vi.mock("@/composition", () => ({
     currentMember,
     getOrgSettings,
     agreementScope: { uncovered },
+    agreementReader: { get: async () => ({ term: { start: termStart(), months: 12, end: null } }) },
     agreementRecipient: { get: recipientGet, set: recipientSet },
     sendAgreement: makeSendAgreement({ findById, commitTransition } as unknown as AgreementRepository, { send }, portalTokens),
   }),
@@ -59,6 +61,7 @@ beforeEach(() => {
   findById.mockResolvedValue(record("draft"));
   send.mockResolvedValue({ ok: true });
   recipientGet.mockResolvedValue("customer@shop.ca");
+  termStart.mockReturnValue("2999-01-01");
   recipientSet.mockResolvedValue(true);
   getOrgSettings.mockResolvedValue(READY);
   uncovered.mockResolvedValue([]);
@@ -115,6 +118,19 @@ describe("sendAgreementAction", () => {
     recipientSet.mockResolvedValue(false);
     expect(await sendAgreementAction(AGR, "not-an-email")).toEqual({ status: "invalid_email" });
     expect(send).not.toHaveBeenCalled();
+  });
+
+  test("a start date more than 30 days in the past asks first, sends nothing, and sends when confirmed", async () => {
+    termStart.mockReturnValue("2019-01-01");
+    expect(await sendAgreementAction(AGR)).toEqual({ status: "needs_start_confirmation", start: "2019-01-01" });
+    expect(send).not.toHaveBeenCalled();
+    expect((await sendAgreementAction(AGR, undefined, false, true)).status).toBe("sent");
+  });
+
+  test("a start date in the future, or none recorded, is not asked about", async () => {
+    expect((await sendAgreementAction(AGR)).status).toBe("sent");
+    termStart.mockReturnValue(null);
+    expect((await sendAgreementAction(AGR)).status).toBe("sent");
   });
 
   test("an email already on file is used as it is: the typed one is never written", async () => {

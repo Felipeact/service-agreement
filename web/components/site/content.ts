@@ -151,5 +151,5 @@ export const FAQS: readonly Faq[] = [
 
 export const NOT_IN_PRODUCT = ["Dispatch and GPS", "Payroll", "Project or construction contracts", "A Word-style document editor"] as const;
 
-/** The recorded walkthrough video, when there is one. A file under /public or an https URL; null shows a "coming soon" panel. */
+/** The recorded walkthrough video, when there is one. A file under /public or an https URL; null leaves the video out and says nothing about one. */
 export const DEMO_VIDEO_URL: string | null = null;

@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Demo" };
 export default function DemoPage() {
   return (
     <SiteShell>
-      <PageHero title="See a deal move." text="Walk the six steps from a customer's list to a signed contract, using a fictitious contractor and sample data. A recorded walkthrough is coming." />
+      <PageHero title="See a deal move." text={`Walk the six steps from a customer's list to a signed contract, using a fictitious contractor and sample data.${DEMO_VIDEO_URL ? " Watch the recorded walkthrough, then step through the screens." : ""}`} />
       {DEMO_VIDEO_URL && (
         <section className="bg-ground">
           <Wrap className="pb-14 lg:pb-20">

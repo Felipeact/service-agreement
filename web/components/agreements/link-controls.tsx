@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatTermDate } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type CompanyProblem, type ItemWords } from "@/domain/org-settings";
 import { linkMessageFor, type LinkState } from "./state";
 
@@ -61,6 +62,14 @@ export function SendPrompt({ number, recipient = null, confirming, pending, stat
               <input type="hidden" name="confirmUncovered" value="yes" />
             </div>
           )}
+          {state.status === "needs_start_confirmation" && (
+            <div role="alert" className="flex flex-col gap-1 rounded-control border border-hairline bg-ground px-3 py-2 text-[13px]">
+              <p className="font-medium">{`The start date is ${formatTermDate(state.start)}, which is in the past.`}</p>
+              <p className="text-ink-2">It prints on the agreement. Send anyway, or cancel and change the start date first.</p>
+              <input type="hidden" name="confirmStart" value="yes" />
+              <input type="hidden" name="confirmUncovered" value="yes" />
+            </div>
+          )}
           {!recipient && (
             <label className="flex flex-col gap-1 text-[13px] font-medium">
               Customer email
@@ -76,7 +85,7 @@ export function SendPrompt({ number, recipient = null, confirming, pending, stat
           )}
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" variant="primary" disabled={pending}>
-              {state.status === "needs_confirmation" ? "Send anyway" : "Send"}
+              {state.status === "needs_confirmation" || state.status === "needs_start_confirmation" ? "Send anyway" : "Send"}
             </Button>
             <Button onClick={onCancel}>Cancel</Button>
           </div>
@@ -100,7 +109,7 @@ type LinkControlsProps = {
   /** The customer's contact email on file, or `null` when the sender has to give one. */
   recipient: string | null;
   words?: ItemWords;
-  send: (email?: string, confirmUncovered?: boolean) => Promise<LinkState>;
+  send: (email?: string, confirmUncovered?: boolean, confirmStart?: boolean) => Promise<LinkState>;
 };
 
 /** The send flow: the agreement goes to the customer by email; no link is shown to the sender. */
@@ -108,9 +117,9 @@ export function LinkControls({ number, canSend, recipient, send, words }: LinkCo
   const [sending, setSending] = useState(false);
   const [sendState, sendAction, sendPending] = useActionState<LinkState, FormData | null>(async (_previous, formData) => {
     const typed = formData?.get("email");
-    const result = await send(typeof typed === "string" ? typed : undefined, formData?.get("confirmUncovered") === "yes");
+    const result = await send(typeof typed === "string" ? typed : undefined, formData?.get("confirmUncovered") === "yes", formData?.get("confirmStart") === "yes");
     // A question, not a refusal: the prompt stays open with the list and a button that confirms.
-    if (result.status === "needs_confirmation") setSending(true);
+    if (result.status === "needs_confirmation" || result.status === "needs_start_confirmation") setSending(true);
     return result;
   }, { status: "idle" });
 

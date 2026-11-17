@@ -143,15 +143,72 @@ const STOP_WORDS = new Set(["a", "an", "the", "of", "and", "for", "with"]);
  * "Backflow DCVA 2in" reads as a backflow preventer. Kept small and literal: an alias is only worth adding when the
  * short form means one thing across trades.
  */
-const ALIASES: Record<string, string> = { dcva: "backflow", rpz: "backflow", rpza: "backflow", dcda: "backflow", pvb: "backflow", bf: "backflow" };
+const ALIASES: Record<string, string> = { dcva: "backflow", rpz: "backflow", rpza: "backflow", dcda: "backflow", pvb: "backflow", bf: "backflow", vrv: "vrf" };
 
 /** Words that qualify a type without changing what it is. Short on purpose: a word is only here when it never names other equipment. */
-const QUALIFIERS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric"]);
+const QUALIFIERS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "fired", "inline"]);
 
 /** Words that may stand in brackets after a type name without changing it: the qualifiers and a few plain descriptors. */
 const DESCRIPTORS = new Set(["condensing", "high", "low", "efficiency", "gas", "electric", "water", "cooled", "air", "roof", "indoor", "outdoor", "new", "old", "spare", "standard"]);
 
-const tokensOf = (text: string): string[] => normalized(text).split(" ").filter((token) => token !== "" && !STOP_WORDS.has(token));
+/** "dampers" and "damper" are one word: a trailing plural s goes, except where it belongs to the word ("gas", "glass", "bus"). */
+const singular = (token: string): string => (token.length > 3 && token.endsWith("s") && !/(ss|us|is)$/.test(token) ? token.slice(0, -1) : token);
+
+const tokensOf = (text: string): string[] =>
+  normalized(text)
+    .split(" ")
+    .filter((token) => token !== "" && !STOP_WORDS.has(token))
+    .map(singular);
+
+/**
+ * French wording lists use, as the English the catalog's types are named in. Matched on the list's text with accents and
+ * punctuation taken out; the longest phrase first, so "pompe de puisard" is not read as "pump".
+ */
+const FRENCH: [string, string][] = [
+  ["ventilateur d extraction", "exhaust fan"],
+  ["ventilateur de soufflage", "supply fan"],
+  ["ventilo convecteur", "fan coil"],
+  ["registre coupe feu", "fire damper"],
+  ["aerotherme au gaz", "gas unit heater"],
+  ["aerotherme electrique", "electric unit heater"],
+  ["recuperateur d energie", "energy recovery ventilator"],
+  ["recuperateur de chaleur", "heat recovery ventilator"],
+  ["tour de refroidissement", "cooling tower"],
+  ["echangeur de chaleur", "heat exchanger"],
+  ["separateur d air", "air separator"],
+  ["vase d expansion", "expansion tank"],
+  ["reservoir d expansion", "expansion tank"],
+  ["reservoir de stockage", "storage tank"],
+  ["dispositif antirefoulement", "backflow preventer"],
+  ["clapet anti retour", "backflow preventer"],
+  ["machine a glacons", "ice machine"],
+  ["chambre froide", "walk in cooler"],
+  ["chambre congelee", "walk in freezer"],
+  ["unite de toit", "rooftop unit"],
+  ["unite de traitement d air", "air handling unit"],
+  ["thermopompe eau", "water source heat pump"],
+  ["refroidisseur", "chiller"],
+  ["chaudiere", "boiler"],
+  ["fournaise", "furnace"],
+  ["pompe", "pump"],
+  ["crepine", "wye strainer"],
+];
+
+const stripAccents = (text: string): string => text.normalize("NFD").replace(/\p{M}+/gu, "");
+
+/** The text matching reads: the list's own when it has no French phrase and no "in-line", else its English wording without punctuation. */
+function inEnglish(raw: string): string {
+  const english = englishOf(raw);
+  const plain = stripAccents(raw).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return english !== plain ? english : raw;
+}
+
+/** The list's text with French phrases turned into the English the types use, and "in-line" written as one word. */
+function englishOf(raw: string): string {
+  let flat = stripAccents(raw).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/(^| )in line( |$)/g, "$1inline$2");
+  for (const [french, english] of FRENCH) flat = (" " + flat + " ").replace(" " + french + " ", " " + english + " ").trim();
+  return flat;
+}
 
 /** A list's token is a type word when it is that word, its start ("exh" for exhaust), or its consonant skeleton ("chlr" for chiller). */
 function fitsWord(token: string, word: string): boolean {
@@ -170,7 +227,8 @@ function fitsWord(token: string, word: string): boolean {
  * with the most words winning, else the one type whose first word (five letters or more) the text holds. Blank text, no
  * match and a tie all give `null`: a guess would hide a row the review must see.
  */
-export function matchAssetType(raw: string | null, types: AssetTypeRef[]): string | null {
+export function matchAssetType(rawText: string | null, types: AssetTypeRef[]): string | null {
+  const raw = rawText === null ? null : inEnglish(rawText);
   const wanted = normalized(raw ?? "");
   if (!wanted) return null;
   const direct = new Set(types.filter((t) => normalized(t.code) === wanted || normalized(t.name) === wanted).map((t) => t.id));
@@ -179,6 +237,17 @@ export function matchAssetType(raw: string | null, types: AssetTypeRef[]): strin
     types.filter((t) => t.synonyms.some((synonym) => normalized(synonym) === wanted)).map((t) => t.id),
   );
   if (viaSynonym.size > 0) return viaSynonym.size === 1 ? [...viaSynonym][0] : null;
+
+  // A code in brackets after the spelled-out name ("Energy recovery ventilator (ERV)") names the type, unless the text before it
+  // names another one.
+  const bracketCodes = [...(raw ?? "").matchAll(/[(]([^)]*)[)]/g)].map((found) => normalized(found[1])).filter((word) => word !== "");
+  if (bracketCodes.length > 0) {
+    const exact = (words: string[]) =>
+      new Set(types.filter((t) => words.some((word) => normalized(t.code) === word || normalized(t.name) === word || t.synonyms.some((synonym) => normalized(synonym) === word))).map((t) => t.id));
+    const inBrackets = exact(bracketCodes);
+    const before = exact([normalized((raw ?? "").replace(/[(][^)]*[)]/g, " "))]);
+    if (inBrackets.size === 1 && (before.size === 0 || (before.size === 1 && [...before][0] === [...inBrackets][0]))) return [...inBrackets][0];
+  }
 
   // Sizes and counts ("2in", "4") say nothing about the type. Words inside brackets are a qualifier ("Boiler (condensing)") only when
   // each is a plain descriptor: "Boiler (feed pump)" is a pump, so any other bracketed word leaves the row for the review.
@@ -206,7 +275,13 @@ export function matchAssetType(raw: string | null, types: AssetTypeRef[]): strin
   const top = whole.filter((t) => t.words.length === best);
   if (top.length > 0) return top.length === 1 ? top[0].id : null;
   const byHead = named.filter((t) => t.words[0].length >= 5 && heard.includes(t.words[0]) && unexplained(t.words).length === 0);
-  return byHead.length === 1 ? byHead[0].id : null;
+  if (byHead.length === 1) return byHead[0].id;
+  // A lone short form that is an alias ("vrv" for VRF) names the one type whose first word it stands for.
+  if (spoken.length === 1 && ALIASES[spoken[0]]) {
+    const byAlias = named.filter((t) => t.words[0] === ALIASES[spoken[0]]);
+    return byAlias.length === 1 ? byAlias[0].id : null;
+  }
+  return null;
 }
 
 /** A row that stands for several units: "VAV boxes (qty 24)", "Exhaust fans x6", "24 x VAV boxes". Two to fifty, else a count we do not trust. */
@@ -222,7 +297,30 @@ export function splitQuantity(raw: string | null): { label: string; qty: number 
     const label = text.replace(pattern, " ").replace(/\s+/g, " ").trim();
     if (qty >= 2 && qty <= MAX_ROW_QUANTITY && label !== "") return { label, qty };
   }
+  // A plural type name then a bare number ("Fire dampers 40"): a count, since a unit's number follows a singular name ("Boiler 2").
+  const bare = /^(.*\p{L})s\s+(\d+)$/iu.exec(text);
+  if (bare && !/[sui]$/i.test(bare[1])) {
+    const qty = Number(bare[2]);
+    const label = `${bare[1]}s`.trim();
+    if (qty >= 2 && qty <= MAX_ROW_QUANTITY && label !== "") return { label, qty };
+  }
   return null;
+}
+
+/** The header names a list uses for a count column, as `normalized` writes them. */
+const QUANTITY_HEADERS = new Set(["qty", "quantity", "count", "units", "no of units", "number of units", "nb", "qte", "quantite", "nombre"]);
+
+/** The index of the count column of a table's header, `null` when it has none. */
+export function quantityColumn(header: string[]): number | null {
+  const at = header.findIndex((name) => QUANTITY_HEADERS.has(normalized(name)));
+  return at >= 0 ? at : null;
+}
+
+/** The count a cell holds ("18", "x18", "18 units"), two to fifty, else `null`: one unit, or a number we do not trust. */
+export function quantityOf(cell: string | null | undefined): number | null {
+  const found = /^\s*[x×]?\s*(\d+)\s*(?:units?|pcs|ea)?\s*$/i.exec(cell ?? "");
+  const qty = found ? Number(found[1]) : NaN;
+  return qty >= 2 && qty <= MAX_ROW_QUANTITY ? qty : null;
 }
 
 /** One extracted row as the review needs it. The domain cannot import the ports, so this repeats `ImportRowView`'s fields. */
