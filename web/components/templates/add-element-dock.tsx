@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type DragEvent } from "react";
+import { useState, type DragEvent, type ReactNode } from "react";
 import { useItemWords } from "@/components/shell/item-words";
 import type { SectionKey } from "@/domain/agreement/layout";
 import type { BlockType, TemplateVariable } from "@/domain/contract/template";
@@ -61,6 +61,8 @@ type Props = {
   onVariable: (name: TemplateVariable) => void;
   /** Whether a text block is selected, so a field has somewhere to go. */
   canInsertVariable: boolean;
+  /** The letterhead controls, opened from a Header button at the end of the dock; absent, there is no button. */
+  header?: ReactNode;
 };
 
 /**
@@ -68,9 +70,10 @@ type Props = {
  * It sticks to the bottom of the screen while the page scrolls, and scrolls sideways inside itself when it is wider than the screen.
  * Click or tap an item to add it; on a computer an item can also be dragged onto the page.
  */
-export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVariable }: Props) {
+export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVariable, header }: Props) {
   const words = useItemWords();
   const [fieldsOpen, setFieldsOpen] = useState(false);
+  const [headerOpen, setHeaderOpen] = useState(false);
   const parts = availableParts(rows, document);
 
   const drag = (choice: AddChoice) => ({
@@ -84,6 +87,12 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
 
   return (
     <div className="sticky bottom-3 z-30 mx-auto flex w-fit max-w-full flex-col items-center gap-2">
+      {headerOpen && header && (
+        <div role="group" aria-label="Header" className="flex max-h-[60dvh] w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-2 overflow-y-auto rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card">
+          <p className="text-[11px] font-semibold tracking-wide text-ink-2 uppercase">Header</p>
+          {header}
+        </div>
+      )}
       {fieldsOpen && (
         <div role="group" aria-label="Fields" className="flex max-h-[45dvh] w-[min(34rem,calc(100vw-1.5rem))] flex-col gap-2 overflow-y-auto rounded-panel bg-night p-3 shadow-card">
           <p className="text-[11px] font-semibold tracking-wide text-night-ink uppercase">Insert a field</p>
@@ -137,12 +146,35 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
           </button>
         ))}
         <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-ink-nav" />
-        <button type="button" aria-expanded={fieldsOpen} aria-haspopup="true" onClick={() => setFieldsOpen((was) => !was)} className={`${ITEM} cursor-pointer ${fieldsOpen ? "bg-action text-surface" : ""}`}>
+        <button type="button" aria-expanded={fieldsOpen} aria-haspopup="true" onClick={() => {
+            setFieldsOpen((was) => !was);
+            setHeaderOpen(false);
+          }} className={`${ITEM} cursor-pointer ${fieldsOpen ? "bg-action text-surface" : ""}`}>
           <span aria-hidden="true" className="text-[15px] font-semibold text-surface">
             {"{ }"}
           </span>
           Field
         </button>
+        {header && (
+          <>
+            <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-ink-nav" />
+            <button
+              type="button"
+              aria-expanded={headerOpen}
+              aria-haspopup="true"
+              onClick={() => {
+                setHeaderOpen((was) => !was);
+                setFieldsOpen(false);
+              }}
+              className={`${ITEM} cursor-pointer ${headerOpen ? "bg-action text-surface" : ""}`}
+            >
+              <span aria-hidden="true" className="text-[15px] font-semibold text-surface">
+                ▭
+              </span>
+              Header
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

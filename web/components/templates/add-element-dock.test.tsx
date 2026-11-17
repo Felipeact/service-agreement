@@ -138,3 +138,33 @@ describe("narrow screens and touch", () => {
     expect(small.map((b) => b.textContent)).toEqual([]);
   });
 });
+
+describe("the Header button", () => {
+  const mountWithHeader = () =>
+    act(async () =>
+      root.render(
+        createElement(
+          ItemWordsProvider,
+          { words: { singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" } } as ComponentProps<typeof ItemWordsProvider>,
+          createElement(AddElementDock, { document: "agreement", rows: [], onAdd, onVariable, canInsertVariable: true, header: createElement("p", null, "Header controls") }),
+        ),
+      ),
+    );
+  const panel = () => container.querySelector('[role="group"][aria-label="Header"]');
+
+  test("without header content the dock has no Header button", async () => {
+    await mount("agreement");
+    expect(item("Header")).toBeUndefined();
+  });
+
+  test("Header is the last button, opens its controls above the dock, and closes the Fields list", async () => {
+    await mountWithHeader();
+    expect(panel()).toBeNull();
+    expect(labelOf(items().at(-1) as Element)).toBe("Header");
+    await click(item("Field"));
+    expect(fieldChips().length).toBeGreaterThan(0);
+    await click(item("Header"));
+    expect(panel()?.textContent).toContain("Header controls");
+    expect(fieldChips()).toHaveLength(0);
+  });
+});
