@@ -14,12 +14,17 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
 });
 
+const description = "Recurring service agreements for trade contractors, from the customer's list to signature.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_BASE_URL?.trim() || "http://localhost:3000"),
+  openGraph: { siteName: "Service Pacts", type: "website", locale: "en_CA", title: "Service Pacts", description },
+  twitter: { card: "summary_large_image", title: "Service Pacts", description },
   title: {
     template: "%s · Service Pacts",
     default: "Service Pacts",
   },
-  description: "Recurring service agreements for trade contractors, from the customer's list to signature.",
+  description,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

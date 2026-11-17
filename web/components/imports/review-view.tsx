@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { AssetTypeOption, ImportReview, ImportRowView } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, reviewSummary, unmatchedSpellings, type ReviewFlag } from "@/domain/imports";
+import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, reviewSummary, unmatchedSpellings, type ReviewFlag, type SiteAssetRef } from "@/domain/imports";
 import { DEFAULT_ITEM_WORDS, itemText, itemVerb, type ItemWords } from "@/domain/org-settings";
 import { CommitControl, MappingSection, RowControls } from "./review-controls";
 import type { CommitState, MapState, RowState, SuggestState } from "./state";
@@ -22,7 +22,7 @@ type ReviewViewProps = {
   /** The org's asset types, ordered by name. */
   types: AssetTypeOption[];
   /** The site's current assets, for "Already on this site". */
-  siteAssets: { assetTypeId: string; unitNo: string | null }[];
+  siteAssets: SiteAssetRef[];
   show: "all" | "attention";
   /** The raw `?page` value. */
   page?: string;

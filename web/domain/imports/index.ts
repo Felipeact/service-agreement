@@ -357,9 +357,24 @@ function duplicateKey(assetTypeId: string | null, unitNo: string | null): string
   return assetTypeId && unit ? `${assetTypeId} ${unit}` : null;
 }
 
+/**
+ * An untagged unit (no unit #) is told apart by what else the list says about it: same type, same type/model and same location.
+ * No key when it says nothing but its type, so two bare "Pump" rows are never judged one unit.
+ */
+function untaggedKey(assetTypeId: string | null, typeModel: string | null | undefined, location: string | null | undefined): string | null {
+  const model = normalized(typeModel ?? "");
+  const place = normalized(location ?? "");
+  return assetTypeId && (model || place) ? `${assetTypeId} | ${model} | ${place}` : null;
+}
+
+export type SiteAssetRef = { assetTypeId: string; unitNo: string | null; typeModel?: string | null; location?: string | null };
+
 /** Each row's flags, by row id. A skipped row has none; the first included row of a duplicate key is not flagged. */
-export function flagRows(rows: ReviewRow[], siteAssets: { assetTypeId: string; unitNo: string | null }[]): Map<string, ReviewFlag[]> {
+export function flagRows(rows: ReviewRow[], siteAssets: SiteAssetRef[]): Map<string, ReviewFlag[]> {
   const onSite = new Set(siteAssets.map((asset) => duplicateKey(asset.assetTypeId, asset.unitNo)).filter((key) => key !== null));
+  const untaggedOnSite = new Set(
+    siteAssets.filter((asset) => !normalized(asset.unitNo ?? "")).map((asset) => untaggedKey(asset.assetTypeId, asset.typeModel, asset.location)).filter((key) => key !== null),
+  );
   const firstOf = new Map<string, number>();
   const flags = new Map<string, ReviewFlag[]>();
   for (const row of [...rows].sort((a, b) => a.position - b.position)) {
@@ -375,6 +390,9 @@ export function flagRows(rows: ReviewRow[], siteAssets: { assetTypeId: string; u
       if (first === undefined) firstOf.set(key, row.position);
       else found.push({ kind: "same_as", position: first });
       if (onSite.has(key)) found.push({ kind: "on_site" });
+    } else if (!normalized(row.unitNo ?? "")) {
+      const loose = untaggedKey(row.assetTypeId, row.typeModel, row.location);
+      if (loose !== null && untaggedOnSite.has(loose)) found.push({ kind: "on_site" });
     }
   }
   return flags;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { flagRows, pageOf, reviewSummary, unmatchedSpellings, type ReviewFlag, type ReviewRow } from "./index";
+import { flagRows, pageOf, reviewSummary, unmatchedSpellings, type ReviewFlag, type ReviewRow, type SiteAssetRef } from "./index";
 
 const RTU = "type-rtu";
 const MUA = "type-mua";
@@ -21,7 +21,7 @@ function row(over: Partial<ReviewRow> = {}): ReviewRow {
   };
 }
 
-const flagsOf = (rows: ReviewRow[], site: { assetTypeId: string; unitNo: string | null }[] = []) => {
+const flagsOf = (rows: ReviewRow[], site: SiteAssetRef[] = []) => {
   const flags = flagRows(rows, site);
   return (r: ReviewRow): ReviewFlag[] => flags.get(r.id) ?? [];
 };
@@ -112,6 +112,16 @@ describe("flagger", () => {
     const flags = flagsOf([rtu, mua], [{ assetTypeId: RTU, unitNo: "rtu-2" }]);
     expect(flags(rtu)).toEqual([{ kind: "on_site" }]);
     expect(flags(mua)).toEqual([]);
+  });
+
+  test("an untagged row matching an untagged site asset by type, model and location is on the site", () => {
+    const ptac = row({ unitNo: null, typeModel: "PTAC", location: "Room 4" });
+    const other = row({ unitNo: null, typeModel: "PTAC", location: "Room 5" });
+    const bare = row({ unitNo: null });
+    const flags = flagsOf([ptac, other, bare], [{ assetTypeId: RTU, unitNo: null, typeModel: "ptac", location: "room 4" }]);
+    expect(flags(ptac)).toEqual([{ kind: "on_site" }]);
+    expect(flags(other)).toEqual([]);
+    expect(flags(bare)).toEqual([]);
   });
 
   test("C614: a row with no unit # is never a duplicate", () => {

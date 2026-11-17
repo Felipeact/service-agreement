@@ -246,7 +246,7 @@ export async function commitCleanImportAction(jobId: string): Promise<CommitStat
   const idOf = new Map(types.map((type) => [type.code, type.id]));
   const siteAssets = (site?.assets ?? []).flatMap((asset) => {
     const assetTypeId = idOf.get(asset.typeCode);
-    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo }] : [];
+    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo, typeModel: asset.typeModel, location: asset.location }] : [];
   });
   const flags = flagRows(review.rows, siteAssets);
   if ([...flags.values()].some((found) => found.length > 0)) return { status: "needs_review" };
