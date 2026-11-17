@@ -25,8 +25,38 @@ export type PageHeader = (typeof PAGE_HEADERS)[number];
 export type PageFooter = (typeof PAGE_FOOTERS)[number];
 export type VisitsFormat = (typeof VISITS_FORMATS)[number];
 
-/** The title (merge variables allowed), whether the number, customer, site and term lines print, and the repeated letterhead and footer. */
-export type DocOptions = { title: string; showMeta: boolean; pageHeader: PageHeader; pageFooter: PageFooter };
+export const LOGO_SIZES = ["small", "medium", "large"] as const;
+export const HEADER_ALIGNS = ["left", "center"] as const;
+export type LogoSize = (typeof LOGO_SIZES)[number];
+export type HeaderAlign = (typeof HEADER_ALIGNS)[number];
+
+/** What the letterhead shows and how: the logo and its size, which company details print, and where they sit. */
+export type LetterheadOptions = { logo: boolean; logoSize: LogoSize; align: HeaderAlign; name: boolean; address: boolean; phone: boolean };
+export const LETTERHEAD_FLAGS = ["logo", "name", "address", "phone"] as const satisfies readonly (keyof LetterheadOptions)[];
+
+/** The letterhead every document drew before it could be edited: logo (when the company has one), name, address and phone, on the left. */
+export const DEFAULT_LETTERHEAD: LetterheadOptions = { logo: true, logoSize: "medium", align: "left", name: true, address: true, phone: true };
+
+/**
+ * The title (merge variables allowed), whether the number, customer, site and term lines print, and the repeated letterhead and
+ * footer. `letterhead` is how the header looks; a document without it draws `DEFAULT_LETTERHEAD`.
+ */
+export type DocOptions = { title: string; showMeta: boolean; pageHeader: PageHeader; pageFooter: PageFooter; letterhead?: LetterheadOptions };
+
+/** The letterhead options of a document, the default for the parts it does not say. */
+export const letterheadOf = (doc: Pick<DocOptions, "letterhead">): LetterheadOptions => ({ ...DEFAULT_LETTERHEAD, ...doc.letterhead });
+
+/** Why a letterhead value cannot be stored, `null` when it can. */
+export function letterheadProblem(value: unknown): string | null {
+  if (!isRecordLike(value)) return "The letterhead options must be an object.";
+  const extra = Object.keys(value).filter((key) => ![...LETTERHEAD_FLAGS, "logoSize", "align"].includes(key));
+  if (extra.length > 0) return `The letterhead options have an unknown key: ${extra[0]}.`;
+  for (const flag of LETTERHEAD_FLAGS) if (typeof value[flag] !== "boolean") return `Letterhead ${flag} must be true or false.`;
+  if (!(LOGO_SIZES as readonly unknown[]).includes(value.logoSize)) return "The logo size must be small, medium or large.";
+  if (!(HEADER_ALIGNS as readonly unknown[]).includes(value.align)) return "The letterhead alignment must be left or center.";
+  return null;
+}
+const isRecordLike = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 
 export type PriceColumns = { description: string; visits: string; perVisit: string; perYear: string; total: string };
 export const PRICE_COLUMN_KEYS = ["description", "visits", "perVisit", "perYear", "total"] as const satisfies readonly (keyof PriceColumns)[];
@@ -244,7 +274,7 @@ export function validateLayout(input: { doc: unknown; layout: unknown }, spec: L
   if (!isRecord(doc)) {
     errors.push({ field: "doc", message: "The document options are missing." });
   } else {
-    const extra = unknownKeys(doc, ["title", "showMeta", "pageHeader", "pageFooter"]);
+    const extra = unknownKeys(doc, ["title", "showMeta", "pageHeader", "pageFooter", "letterhead"]);
     if (extra.length > 0) errors.push({ field: "doc", message: `The document options have an unknown key: ${extra[0]}.` });
     if (typeof doc.title === "string" && doc.title.length > MAX_TITLE) {
       errors.push({ field: "doc.title", message: `The title is too long (${doc.title.length} characters, at most ${MAX_TITLE}).` });
@@ -260,6 +290,10 @@ export function validateLayout(input: { doc: unknown; layout: unknown }, spec: L
     }
     if (!(PAGE_FOOTERS as readonly unknown[]).includes(doc.pageFooter)) {
       errors.push({ field: "doc.pageFooter", message: `The page footer must be number or letterhead, not ${String(doc.pageFooter)}.` });
+    }
+    if ("letterhead" in doc && doc.letterhead !== undefined) {
+      const problem = letterheadProblem(doc.letterhead);
+      if (problem !== null) errors.push({ field: "doc.letterhead", message: problem });
     }
   }
 

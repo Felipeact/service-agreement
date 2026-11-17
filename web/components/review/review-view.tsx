@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { TenantLogoImage } from "@/components/ui/tenant-logo";
 import type { PortalView } from "@/application/ports";
 import { portalLayout, portalScope, type PortalDecision } from "@/application/use-cases";
+import { DEFAULT_LETTERHEAD, letterheadOf, type LetterheadOptions } from "@/domain/agreement/layout";
 import { ServiceEquipmentSection, ServiceIncludedSection } from "@/components/agreements/service-scope";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
@@ -205,6 +206,15 @@ function Content({ view }: { view: PortalView }) {
  * The customer's page for one link, branded as the contractor and naming no one else (customer-portal AC 8 to 17).
  * A state with no content shows only its message.
  */
+/** The letterhead the version's template asks for; a version whose template cannot be read keeps the default header. */
+function headerOf(view: PortalView): LetterheadOptions {
+  try {
+    return letterheadOf(portalLayout(view).doc);
+  } catch {
+    return DEFAULT_LETTERHEAD;
+  }
+}
+
 export function ReviewView({ token, view, state, actions, logoUrl = null }: ReviewViewProps) {
   const tenantName = view.tenant?.name ?? "the company";
   const accent = view.tenant?.accent && isAccent(view.tenant.accent) ? view.tenant.accent : NEUTRAL_ACCENT;
@@ -212,6 +222,7 @@ export function ReviewView({ token, view, state, actions, logoUrl = null }: Revi
   const phone = view.tenant?.phone ?? null;
   const decision = view.decision;
   const showsContent = state === "open" || state === "decided" || state === "superseded";
+  const header = headerOf(view);
 
   let message: ReactNode = null;
   if (state === "replaced") {
@@ -242,11 +253,11 @@ export function ReviewView({ token, view, state, actions, logoUrl = null }: Revi
   return (
     <div className="min-h-dvh bg-ground">
       <header className="border-b border-hairline bg-surface">
-        <div className="mx-auto flex max-w-[760px] flex-col gap-0.5 px-4 py-4">
-          {logoUrl && <TenantLogoImage src={logoUrl} name={tenantName} />}
-          <p className="text-[18px] font-bold break-words">{tenantName}</p>
-          {view.tenant?.address && <p className="text-[13px] text-ink-2">{view.tenant.address}</p>}
-          {view.tenant?.phone && <p className="text-[13px] text-ink-2">{view.tenant.phone}</p>}
+        <div className={`mx-auto flex max-w-[760px] flex-col gap-0.5 px-4 py-4 ${header.align === "center" ? "items-center text-center" : ""}`}>
+          {logoUrl && header.logo && <TenantLogoImage src={logoUrl} name={tenantName} size={header.logoSize} centered={header.align === "center"} />}
+          {header.name && <p className="text-[18px] font-bold break-words">{tenantName}</p>}
+          {header.address && view.tenant?.address && <p className="text-[13px] text-ink-2">{view.tenant.address}</p>}
+          {header.phone && view.tenant?.phone && <p className="text-[13px] text-ink-2">{view.tenant.phone}</p>}
         </div>
       </header>
       <main className="mx-auto flex max-w-[760px] flex-col gap-4 px-4 py-6">

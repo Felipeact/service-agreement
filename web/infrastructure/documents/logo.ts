@@ -4,9 +4,12 @@ import type { TenantLogo } from "@/domain/org-settings/logo";
 export const LOGO_MAX_WIDTH = 160;
 export const LOGO_MAX_HEIGHT = 48;
 
+/** The room each logo size the template editor offers gives a logo; `medium` is the box a letterhead always had. */
+export const LOGO_BOXES = { small: { width: 100, height: 32 }, medium: { width: LOGO_MAX_WIDTH, height: LOGO_MAX_HEIGHT }, large: { width: 240, height: 80 } } as const;
+
 /** The size a logo of `width` by `height` is drawn at: its own size, or scaled down to fit the box with the aspect ratio kept. */
-export function logoBox(width: number, height: number): { width: number; height: number } {
-  const scale = Math.min(1, LOGO_MAX_WIDTH / width, LOGO_MAX_HEIGHT / height);
+export function logoBox(width: number, height: number, box: { width: number; height: number } = LOGO_BOXES.medium): { width: number; height: number } {
+  const scale = Math.min(1, box.width / width, box.height / height);
   return { width: Math.round(width * scale * 100) / 100, height: Math.round(height * scale * 100) / 100 };
 }
 

@@ -8,11 +8,13 @@ import { TextArea } from "@/components/ui/text-area";
 import { TextInput } from "@/components/ui/text-input";
 import { useItemWords } from "@/components/shell/item-words";
 import { MONTH_PRESETS, type MonthPreset } from "@/domain/agreement";
-import { PAGE_FOOTERS, PRICE_COLUMN_KEYS, type DocOptions, type PageFooter, type PriceColumns, type VisitsFormat } from "@/domain/agreement/layout";
+import { HEADER_ALIGNS, LOGO_SIZES, PAGE_FOOTERS, PRICE_COLUMN_KEYS, letterheadOf, type DocOptions, type HeaderAlign, type LogoSize, type PageFooter, type PriceColumns, type VisitsFormat } from "@/domain/agreement/layout";
 import type { SectionRow } from "@/domain/agreement/layout-form";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
 import { EMPTY_PRESET_LINE, type TemplateFormLine } from "@/domain/agreement/template-form";
 import { itemText } from "@/domain/org-settings";
+import { LogoField } from "@/components/settings/logo-field";
+import { useLogoActions, type LogoActions } from "./logo-actions";
 import { Switch } from "./switch";
 
 const COLUMN_LABELS: Record<keyof PriceColumns, { label: string; placeholder: string }> = {
@@ -217,6 +219,81 @@ export function PresetLines({ lines, types, errors, onChange }: PresetProps) {
         {full && <span className="text-[12px] text-ink-2">{`A template can have at most ${MAX_PRESET_LINES} lines.`}</span>}
       </div>
     </section>
+  );
+}
+
+const SIZE_LABELS: Record<LogoSize, string> = { small: "Small", medium: "Medium", large: "Large" };
+const ALIGN_LABELS: Record<HeaderAlign, string> = { left: "Left", center: "Centered" };
+
+/**
+ * The company logo, uploaded and saved from the editor. It is the same logo Settings shows, so changing it here changes it for
+ * every template; each change is stored at once, not with the template's Save.
+ */
+function HeaderLogo() {
+  const actions = useLogoActions();
+  return actions ? <HeaderLogoControl actions={actions} /> : null;
+}
+
+function HeaderLogoControl({ actions }: { actions: LogoActions }) {
+  const [path, setPath] = useState<string | null | undefined>(undefined);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void actions.current().then((current) => live && setPath(current ?? ""));
+    return () => {
+      live = false;
+    };
+  }, [actions]);
+  if (path === undefined) return <p className="text-[13px] text-ink-2">Loading the logo…</p>;
+  return (
+    <div className="flex flex-col gap-1">
+      <LogoField
+        key={path ?? ""}
+        storedPath={path ?? ""}
+        readOnly={false}
+        prepare={actions.prepare}
+        fieldName=""
+        readyNote="Saved. It is the same logo as in Settings."
+        serverError={note ?? undefined}
+        onPathChange={(next) => {
+          setNote(null);
+          void actions.save(next).then((result) => {
+            if (!result.ok) setNote(result.error);
+          });
+        }}
+      />
+    </div>
+  );
+}
+
+/** The letterhead at the top of every page this template draws: the logo, which company details print, their size and side. */
+export function HeaderFields({ doc, onChange, errors }: { doc: DocOptions; onChange: (next: DocOptions) => void; errors: Record<string, string> }) {
+  const letterhead = letterheadOf(doc);
+  const set = (patch: Partial<typeof letterhead>) => onChange({ ...doc, letterhead: { ...letterhead, ...patch } });
+  return (
+    <div className="flex flex-col gap-1">
+      <HeaderLogo />
+      <Switch id="header-logo" label="Show the logo" hint="Only when the company has one." checked={letterhead.logo} onChange={(logo) => set({ logo })} error={errors["doc.letterhead"]} />
+      <div className="flex flex-wrap gap-3 pb-1">
+        <Select id="header-logo-size" name="headerLogoSize" label="Logo size" value={letterhead.logoSize} onChange={(event) => set({ logoSize: event.target.value as LogoSize })} className="sm:max-w-[10rem]">
+          {LOGO_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {SIZE_LABELS[size]}
+            </option>
+          ))}
+        </Select>
+        <Select id="header-align" name="headerAlign" label="Align" value={letterhead.align} onChange={(event) => set({ align: event.target.value as HeaderAlign })} className="sm:max-w-[10rem]">
+          {HEADER_ALIGNS.map((align) => (
+            <option key={align} value={align}>
+              {ALIGN_LABELS[align]}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <Switch id="header-name" label="Show the company name" checked={letterhead.name} onChange={(name) => set({ name })} />
+      <Switch id="header-address" label="Show the address" checked={letterhead.address} onChange={(address) => set({ address })} />
+      <Switch id="header-phone" label="Show the phone" checked={letterhead.phone} onChange={(phone) => set({ phone })} />
+    </div>
   );
 }
 

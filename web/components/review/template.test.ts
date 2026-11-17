@@ -48,11 +48,12 @@ describe("the review page's template text", () => {
     for (const always of ["Service lines", "Total per year", "Terms", "Your answer"]) expect(out).toContain(always);
   });
 
-  test("C5331: a view with no template shows what it showed before, and an unreadable one shows nothing", () => {
+  test("C5331: a view with no template, or sent with none pinned, shows what it showed before, and an unreadable one shows nothing", () => {
     const before = render(portalView());
     expect(before).toContain("Visit schedule");
     expect(before).toContain("Service included");
     expect(before).not.toContain("Introduction");
-    expect(() => render(portalView({ template: null }))).toThrow();
+    expect(render(portalView({ template: null }))).toContain("Visit schedule");
+    expect(() => render(portalView({ template: { schema: 99 } as never }))).toThrow();
   });
 });

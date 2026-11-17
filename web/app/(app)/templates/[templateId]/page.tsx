@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { canWriteTemplates } from "@/components/templates/state";
 import { TemplateEditor } from "@/components/templates/template-editor";
+import { LogoActionsProvider } from "@/components/templates/logo-actions";
+import { currentLogoPath, saveLogoPath } from "@/app/logo-actions";
+import { prepareLogoUpload } from "@/app/logo-upload";
 import { PageHeader } from "@/components/shell/page-header";
 import { getContainer } from "@/composition";
 import { layoutFormFromBody } from "@/domain/agreement/template-form";
@@ -29,6 +32,7 @@ export async function EditTemplateForRequest({ templateId }: { templateId: strin
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="Edit template" subtitle={`Saving writes version ${template.versionNo + 1}. Agreements already sent keep the version they used.`} />
+      <LogoActionsProvider actions={{ current: currentLogoPath, save: saveLogoPath, prepare: prepareLogoUpload }}>
       <TemplateEditor
         templateId={template.id}
         initial={layoutFormFromBody(template.body)}
@@ -36,6 +40,7 @@ export async function EditTemplateForRequest({ templateId }: { templateId: strin
         save={saveAgreementTemplateAction}
         orgName={member.orgName}
       />
+      </LogoActionsProvider>
     </div>
   );
 }
