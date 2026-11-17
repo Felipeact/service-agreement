@@ -121,7 +121,7 @@ describe("signing secrets", () => {
 });
 
 const VIEW = {
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" },
   agreement: { number: "AG-1052" },
   signer: { name: "Pat Lee" },
   contractStatus: "pending_signature",
@@ -134,7 +134,7 @@ describe("signing reader", () => {
     const { client, typed } = stubClient({});
     client.rpc.mockResolvedValue({ data: VIEW, error: null });
     expect(await supabaseSigningReader(typed).view(HASH)).toEqual({
-      tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b", logoPath: null },
+      tenant: { name: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b", logoPath: null },
       agreementNumber: "AG-1052",
       signerName: "Pat Lee",
       contractStatus: "pending_signature",

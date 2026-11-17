@@ -10,7 +10,7 @@ import { pngBytes } from "./logo.testing";
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
 const base: AgreementDocument = {
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" },
   words: DEFAULT_ITEM_WORDS,
   number: "AG-1052",
   versionNo: 1,
@@ -51,8 +51,8 @@ const inOrder = (positions: number[]) => positions.every((p, i) => p >= 0 && (i 
 describe("the agreement PDF, rendered", () => {
   test("C858: page 1 starts with the tenant's name, then its address, then its phone", async () => {
     const [first] = await render({});
-    expect(inOrder(indexOfIn(first, "Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100"))).toBe(true);
-    expect(first.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
+    expect(inOrder(indexOfIn(first, "Service Pacts", "100 Sample Street, Burnaby, BC", "604-555-0100"))).toBe(true);
+    expect(first.startsWith("Service Pacts")).toBe(true);
   });
 
   test("C858: a tenant with no address or phone prints no empty or null line", async () => {
@@ -292,7 +292,7 @@ const TEMPLATE: AgreementTemplateBody = {
 };
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -341,7 +341,7 @@ describe("the agreement PDF with a template", () => {
       "Welcome Fernwood Dental.",
       "Service and price",
       "Terms",
-      "Thank you, Kettle Ridge Mechanical Ltd..",
+      "Thank you, Service Pacts.",
       "Page 1 of 1",
     );
     expect(positions.every((position) => position >= 0)).toBe(true);
@@ -393,7 +393,7 @@ describe("the template preview PDF", () => {
 
   test("C5436: the text shows the intro before the price table, a $450.00 row and a $0.00 row, the schedule, the service included, the terms, then the closing text", async () => {
     const all = await renderPreview(PREVIEW_BODY);
-    const positions = indexOfIn(all, "Welcome Sample Customer Ltd..", "Service and price", "Quarterly visit", "$450.00", "Filter check", "$0.00", "Visit schedule", "Service included", "Terms", "Thank you, Kettle Ridge Mechanical Ltd..");
+    const positions = indexOfIn(all, "Welcome Sample Customer Ltd..", "Service and price", "Quarterly visit", "$450.00", "Filter check", "$0.00", "Visit schedule", "Service included", "Terms", "Thank you, Service Pacts.");
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(inOrder(positions)).toBe(true);
   });
@@ -536,7 +536,7 @@ describe("the agreement PDF, layout and options (block-editor)", () => {
     expect(titled).not.toContain("{{");
     const [first] = await draw(v2([price], { title: "" }));
     expect(first).not.toContain("Preventive maintenance service agreement");
-    expect(first.split("\n").slice(0, 5)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100", "AG-1052", "Version 1"]);
+    expect(first.split("\n").slice(0, 5)).toEqual(["Service Pacts", "100 Sample Street, Burnaby, BC", "604-555-0100", "AG-1052", "Version 1"]);
   });
 
   test("C5527: an agreement's block text resolves tenant.address, tenant.phone and term.start in the PDF", async () => {
@@ -561,18 +561,18 @@ describe("the agreement PDF, layout and options (block-editor)", () => {
   test("C5507: with pageHeader every the company name tops each page of a three-page agreement, and with first only the first", async () => {
     const every = await draw(v2([price], { pageHeader: "every" }), longSource());
     expect(every.length).toBeGreaterThanOrEqual(3);
-    for (const page of every) expect(page.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
+    for (const page of every) expect(page.startsWith("Service Pacts")).toBe(true);
     const first = await draw(v2([price], { pageHeader: "first" }), longSource());
     expect(first.length).toBeGreaterThanOrEqual(3);
-    expect(first[0].startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
-    for (const page of first.slice(1)) expect(page).not.toContain("Kettle Ridge Mechanical Ltd.");
+    expect(first[0].startsWith("Service Pacts")).toBe(true);
+    for (const page of first.slice(1)) expect(page).not.toContain("Service Pacts");
   });
 
   test("C5508: with pageFooter letterhead each page ends with the company name, address and phone, and with number with the number and Page n of m", async () => {
     const letterhead = await draw(v2([price], { pageFooter: "letterhead" }), longSource());
     expect(letterhead.length).toBeGreaterThanOrEqual(3);
     for (const page of letterhead) {
-      expect(page.split("\n").slice(-3)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100"]);
+      expect(page.split("\n").slice(-3)).toEqual(["Service Pacts", "100 Sample Street, Burnaby, BC", "604-555-0100"]);
       expect(page).not.toMatch(/Page \d+ of \d+/);
     }
     const number = await draw(v2([price], { pageFooter: "number" }), longSource());

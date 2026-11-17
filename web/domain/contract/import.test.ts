@@ -68,7 +68,7 @@ describe("import variables", () => {
 
 describe("an imported clause with an empty variable", () => {
   const SETTINGS: OrgSettingsValue = {
-    legalName: "Kettle Ridge Mechanical Ltd.",
+    legalName: "Service Pacts",
     address: "",
     phone: "604-555-0100",
     accentColor: "#1f6f8b",
@@ -96,7 +96,7 @@ describe("an imported clause with an empty variable", () => {
   const texts = (document: ReturnType<typeof body>) => (document.layout ?? []).flatMap((item) => (item.kind === "block" ? [item.text] : []));
 
   test("C5812: the clause naming {{tenant.address}} is left out when the tenant has no address, and drawn when it has one", () => {
-    expect(texts(body(null))).toEqual(["Work is done by Kettle Ridge Mechanical Ltd.."]);
-    expect(texts(body("100 Sample Street"))).toEqual(["The contractor is located at 100 Sample Street.", "Work is done by Kettle Ridge Mechanical Ltd.."]);
+    expect(texts(body(null))).toEqual(["Work is done by Service Pacts."]);
+    expect(texts(body("100 Sample Street"))).toEqual(["The contractor is located at 100 Sample Street.", "Work is done by Service Pacts."]);
   });
 });

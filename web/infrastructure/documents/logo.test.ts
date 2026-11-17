@@ -27,7 +27,7 @@ describe("the logo's draw box", () => {
 });
 
 const agreement: AgreementDocument = {
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: null, phone: null, accent: "#1f6f8b" },
   words: DEFAULT_ITEM_WORDS,
   number: "AG-1052",
   versionNo: 1,
@@ -48,7 +48,7 @@ describe("a logo the renderer cannot draw", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const bytes = await reactPdfDocumentRenderer.renderAgreement({ ...agreement, tenant: { ...agreement.tenant, logo: { bytes: corruptPngBytes(100, 40), format: "png" } } });
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("/Subtype /Image");
-    expect(pdfPages(bytes).join("\n")).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(pdfPages(bytes).join("\n")).toContain("Service Pacts");
     expect(error).toHaveBeenCalledTimes(1);
   });
 
@@ -59,7 +59,7 @@ describe("a logo the renderer cannot draw", () => {
     const contract = {
       number: "AG-1052",
       versionNo: 1,
-      contractor: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: "#1f6f8b", logo: { bytes: corruptPngBytes(100, 40), format: "png" as const } },
+      contractor: { name: "Service Pacts", address: null, phone: null, accent: "#1f6f8b", logo: { bytes: corruptPngBytes(100, 40), format: "png" as const } },
       customerName: "Fernwood Dental",
       site: { name: "Main", address: "12 Oak Ave" },
       signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -73,7 +73,7 @@ describe("a logo the renderer cannot draw", () => {
     } as unknown as Parameters<typeof reactPdfContractRenderer.renderContract>[0];
     const bytes = await reactPdfContractRenderer.renderContract(contract);
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("/Subtype /Image");
-    expect(pdfPages(bytes).join("\n")).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(pdfPages(bytes).join("\n")).toContain("Service Pacts");
     expect(error).toHaveBeenCalledTimes(1);
   });
 });

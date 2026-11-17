@@ -16,7 +16,7 @@ vi.mock("@docuseal/react", () => ({
 }));
 
 const EMBED = "https://docuseal.com/s/customer";
-const TENANT = { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" };
+const TENANT = { name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" };
 
 type Shown = Exclude<NonNullable<ViewSigningResult>, { state: "unavailable" }>;
 const shown = (over: Partial<Shown> = {}): Shown => ({
@@ -50,7 +50,7 @@ describe("the signing page fallback", () => {
 describe("the signing page", () => {
   test("C1704: in the open state it shows the tenant, its colour, the contract number, the signer and the embedded form with a completion handler", () => {
     const markup = html(shown());
-    expect(markup).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(markup).toContain("Service Pacts");
     expect(markup).toContain("100 Sample Street, Burnaby, BC");
     expect(markup).toContain("604-555-0100");
     expect(markup).toMatch(/data-accent-rule[^>]*background-color:\s*#1f6f8b/i);
@@ -163,8 +163,8 @@ describe("the signing page, logo", () => {
   test("C3335: with a logo URL the header holds an <img> of it with the company name as alt, and with none there is no <img>", () => {
     const withLogo = renderToStaticMarkup(createElement(SigningView, { result: shown(), logoUrl: URL }));
     expect(withLogo).toMatch(/<img[^>]*src="https:\/\/x\.supabase\.co\/storage\/v1\/object\/public\/logos\/o\/l\.png"/);
-    expect(withLogo).toContain('alt="Kettle Ridge Mechanical Ltd."');
-    expect(withLogo.indexOf("<img")).toBeLessThan(withLogo.indexOf("Kettle Ridge Mechanical Ltd.</p>"));
+    expect(withLogo).toContain('alt="Service Pacts"');
+    expect(withLogo.indexOf("<img")).toBeLessThan(withLogo.indexOf("Service Pacts</p>"));
     expect(html(shown())).not.toContain("<img");
     expect(renderToStaticMarkup(createElement(SigningView, { result: shown(), logoUrl: null }))).not.toContain("<img");
   });

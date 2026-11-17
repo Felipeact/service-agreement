@@ -126,7 +126,7 @@ describe("portal reader, cadence", () => {
   const DOCUMENT = {
     link: { versionNo: 1, current: true, revoked: false, revokedAt: null, firstViewedAt: null },
     agreement: { number: "AG-1046", status: "sent" },
-    tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: null },
+    tenant: { name: "Service Pacts", address: null, phone: null, accent: null },
     customer: { name: "Fernwood Dental" },
     site: { name: "Main" },
     lines: [

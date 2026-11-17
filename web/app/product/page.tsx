@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Product" };
 export default function ProductPage() {
   return (
     <SiteShell>
-      <PageHero title="One job, from list to signature." text="Service Agreement takes a trade contractor from the list of things a customer wants serviced to a signed recurring contract. It does that one job thoroughly." />
+      <PageHero title="One job, from list to signature." text="Service Pacts takes a trade contractor from the list of things a customer wants serviced to a signed recurring contract. It does that one job thoroughly." />
       <section className="bg-surface">
         <Wrap className="flex flex-col gap-8 py-14 lg:py-20">
           <SectionHead title="How a deal moves." text="Six steps, each with an owner. Your team does the first two, the app and the customer do most of the rest." />

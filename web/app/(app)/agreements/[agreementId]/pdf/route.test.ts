@@ -9,7 +9,7 @@ const AGR = "11111111-1111-4111-8111-111111111111";
 const ORG = "22222222-2222-4222-8222-222222222222";
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -172,7 +172,7 @@ describe("GET /agreements/[agreementId]/pdf", () => {
     await call();
     const document = renderAgreement.mock.calls[0][0];
     expect(getOrgSettings).toHaveBeenCalledWith(ORG);
-    expect(document.tenant.name).toBe("Kettle Ridge Mechanical Ltd.");
+    expect(document.tenant.name).toBe("Service Pacts");
     expect(document.number).toBe("AG-1052");
     expect(document.totalCents).toBe(180000);
   });
@@ -250,7 +250,7 @@ describe("the agreement PDF route and the template", () => {
     await call();
     const document = renderAgreement.mock.calls[0][0];
     expect(document.intro).toEqual([{ type: "paragraph", text: "Payment within 45 days for Fernwood Dental." }]);
-    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Service Pacts." }]);
     expect(document.sections).toEqual({ schedule: true, scope: false });
     expect(document.scope).toEqual({ kind: "hidden" });
   });

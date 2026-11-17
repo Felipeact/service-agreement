@@ -192,7 +192,7 @@ describe("sending a contract for signature", () => {
 });
 
 const VIEW: SigningView = {
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" },
   agreementNumber: "AG-1052",
   signerName: "Pat Lee",
   contractStatus: "pending_signature",

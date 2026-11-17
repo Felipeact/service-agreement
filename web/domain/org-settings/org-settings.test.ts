@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { DEFAULT_ITEM_WORDS, PROVINCES, countItems, formatSettingNumber, itemText, itemWords, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
 
 const valid: OrgSettingsInput = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC V5A 0A0",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",

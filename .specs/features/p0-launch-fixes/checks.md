@@ -65,7 +65,7 @@ Proof: `npx vitest run domain/org-settings/company-details.test.ts -t "C6014:"`
 **C6015** - `companyDetailsReady` with real values and `confirmedAt` null returns not ready, problem `unconfirmed` (AC 15)
 Proof: `npx vitest run domain/org-settings/company-details.test.ts -t "C6015:"`
 
-**C6016** - With `confirmedAt` set, `companyDetailsReady` returns not ready for each of 4 placeholders: legal name `Kettle Ridge Mechanical Ltd.`, address `100 Sample Street, Burnaby, BC V5A 0A0`, address `12 Main St, Burnaby, BC V5A 0A0`, phone `604-555-0100`; and returns ready for `Acme Heating Ltd.`, `12 Main St, Surrey, BC V3T 1A1`, `604-555-2368` (AC 16)
+**C6016** - With `confirmedAt` set, `companyDetailsReady` returns not ready for each of 4 placeholders: legal name `Service Pacts`, address `100 Sample Street, Burnaby, BC V5A 0A0`, address `12 Main St, Burnaby, BC V5A 0A0`, phone `604-555-0100`; and returns ready for `Acme Heating Ltd.`, `12 Main St, Surrey, BC V3T 1A1`, `604-555-2368` (AC 16)
 Proof: `npx vitest run domain/org-settings/company-details.test.ts -t "C6016:"`
 
 **C6017** - `sendAgreementAction` with an unready company returns `{status: "company_unconfirmed", problems}` and calls neither the recipient store nor `sendAgreement` (AC 14, AC 15, AC 16)

@@ -4,7 +4,7 @@ import { buildAgreementDocument, DRAFT_MARK, frequencyLabel, NEUTRAL_ACCENT, typ
 import type { AgreementTemplateBody } from "./template";
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -57,7 +57,7 @@ const DRAFT_SOURCE: DocumentSource = { ...SOURCE, editable: true, terms: null };
 describe("buildAgreementDocument", () => {
   test("C858: the header carries the tenant's name, address, phone and accent", () => {
     expect(buildAgreementDocument(SOURCE, SETTINGS).tenant).toEqual({
-      name: "Kettle Ridge Mechanical Ltd.",
+      name: "Service Pacts",
       address: "100 Sample Street, Burnaby, BC",
       phone: "604-555-0100",
       accent: "#1f6f8b",
@@ -66,7 +66,7 @@ describe("buildAgreementDocument", () => {
 
   test("C858: a tenant with no address, phone or accent gets the neutral accent and null fields, never text", () => {
     const { tenant } = buildAgreementDocument(SOURCE, { ...SETTINGS, address: null, phone: null, accentColor: null });
-    expect(tenant).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: NEUTRAL_ACCENT });
+    expect(tenant).toEqual({ name: "Service Pacts", address: null, phone: null, accent: NEUTRAL_ACCENT });
     expect(NEUTRAL_ACCENT).toMatch(/^#[0-9a-f]{6}$/);
     expect(NEUTRAL_ACCENT).not.toBe("#1f6f8b");
   });
@@ -197,7 +197,7 @@ describe("buildAgreementDocument with a template", () => {
   test("C5320: a pinned body's intro and closing text come back rendered with the names filled in", () => {
     const doc = buildAgreementDocument(SOURCE, SETTINGS, TEMPLATE);
     expect(doc.intro).toEqual([{ type: "paragraph", text: "Welcome Fernwood Dental." }]);
-    expect(doc.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(doc.footer).toEqual([{ type: "paragraph", text: "Thank you, Service Pacts." }]);
   });
 
   test("C5320: with no template argument the intro and the closing text are empty", () => {

@@ -24,7 +24,7 @@ const FOREIGN = "6f1c2f0e-0000-4000-8000-000000000002/0b1c2f0e-1111-4222-8333-77
 const REFUSED = "That logo is not one of this company's uploads";
 
 const FIELDS: Record<string, string> = {
-  legalName: "Kettle Ridge Mechanical Ltd.", address: "", phone: "", accentColor: "#1f6f8b", repairDiscountPct: "10", cpiCapPct: "5",
+  legalName: "Service Pacts", address: "", phone: "", accentColor: "#1f6f8b", repairDiscountPct: "10", cpiCapPct: "5",
   cancellationNoticeDays: "30", paymentDays: "30", governingProvince: "BC", taxNote: "", defaultTermMonths: "12", renewalNoticeDays: "30",
   cpiRenegotiationThresholdPct: "5", renewalCpiPct: "", renewalCpiAsOf: "", proposalValidityDays: "30", itemSingular: "equipment", itemPlural: "equipment",
 };
@@ -47,7 +47,7 @@ describe("saveSettingsAction, logo", () => {
   test("C3312: a new valid logoPath is stored with the settings and the previous object is deleted", async () => {
     const state = await saveSettingsAction(idle, form({ logoPath: NEW }));
     expect(state.status).toBe("saved");
-    expect(saveOrgSettings).toHaveBeenCalledWith(ORG, expect.objectContaining({ legalName: "Kettle Ridge Mechanical Ltd.", logoPath: NEW }));
+    expect(saveOrgSettings).toHaveBeenCalledWith(ORG, expect.objectContaining({ legalName: "Service Pacts", logoPath: NEW }));
     expect(remove).toHaveBeenCalledTimes(1);
     expect(remove).toHaveBeenCalledWith(OLD);
   });

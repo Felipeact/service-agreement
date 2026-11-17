@@ -16,7 +16,7 @@ const TERMS: AgreementTerms = {
 };
 
 const PARTIES: ContractParties = {
-  contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+  contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
   customer: { name: "Fernwood Dental" },
   site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
   signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -116,7 +116,7 @@ describe("buildContractDocument", () => {
   const document = buildContractDocument(source(), PARTIES, "#1f6f8b");
 
   test("C1640: the contractor, customer, site and signer come from the parties only", () => {
-    expect(document.contractor).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" });
+    expect(document.contractor).toEqual({ name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.customerName).toBe("Fernwood Dental");
     expect(document.site).toEqual({ name: "Fernwood Dental, Main", address: "12 Oak Ave" });
     expect(document.signer).toEqual({ name: "Pat Lee", email: "pat@example.com" });
@@ -139,7 +139,7 @@ describe("buildContractDocument", () => {
     };
     expect(buildContractDocument(source(), PARTIES, "#1f6f8b", undefined, own).body).toEqual([
       { type: "heading", text: "Our terms" },
-      { type: "paragraph", text: "This contract is between Kettle Ridge Mechanical Ltd. and Fernwood Dental." },
+      { type: "paragraph", text: "This contract is between Service Pacts and Fernwood Dental." },
       { type: "clause", text: "Work is done at Fernwood Dental, Main." },
     ]);
     const system = buildContractDocument(source(), PARTIES, "#1f6f8b").body;

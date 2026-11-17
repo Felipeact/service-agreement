@@ -172,7 +172,7 @@ describe("visitSchedule, seasonal tasks", () => {
 
 describe("buildAgreementDocument, seasonal tasks", () => {
   const SETTINGS: OrgSettingsValue = {
-    legalName: "Kettle Ridge Mechanical Ltd.",
+    legalName: "Service Pacts",
     address: null,
     phone: null,
     accentColor: null,

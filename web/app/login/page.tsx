@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Sign in",
 };
 
-const PRODUCT_NAME = "Service Agreement";
+const PRODUCT_NAME = "Service Pacts";
 
 /** Reads `?error=` at request time; the plain form is the prerendered fallback (door 6). */
 export async function LoginFormForRequest({ searchParams }: Pick<PageProps<"/login">, "searchParams">) {

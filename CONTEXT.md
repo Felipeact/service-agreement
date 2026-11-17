@@ -1,4 +1,4 @@
-# Context: Service Agreement micro-SaaS
+# Context: Service Pacts micro-SaaS
 
 The shared knowledge base for agents. Read this first, before searching the codebase or the internet.
 
@@ -42,7 +42,7 @@ Other sources:
 - **Renewal settings (term-dates):** `org_settings.default_term_months` (1-60, default 12), `renewal_notice_days` (0-365, default 30) and `cpi_renegotiation_threshold_pct` (0-100, default 5), all `not null`. `/settings` shows them under "Renewal"; owners and admins edit them, others see them read-only. A new agreement's version 1 takes the default term months. A sent version freezes the notice days and the threshold into `snapshot.terms` beside the six default terms (AD-088 to AD-094). The next roadmap item (auto-renewal, W7) reads them. Spec: [.specs/features/term-dates/](.specs/features/term-dates/).
 - **Renewal CPI (renewal):** `org_settings.renewal_cpi_pct` (-20 to 100, two decimals) and `renewal_cpi_as_of` (a date), both set or both null. `/settings` shows them as "CPI for renewals" and "As of" under Renewal; estimators and viewers read them as text. W7 uses them: unset, or older than 13 months, means every due agreement goes to a renewal draft (AD-096).
 - **Proposal validity (proposal-expiry):** `org_settings.proposal_validity_days` (1 to 365, default 30), shown on `/settings` as "Proposals valid for (days)" under Default terms; estimators and viewers read it only. Send uses it to date each proposal (AD-104).
-- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Kettle Ridge Mechanical Ltd.`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has 12 agreements (one per site, version 1, mirroring the twelve mock cards; 3 contracts) and no events yet; its owner is attached with `app.demo_owner_email` (see Tenant). The seed has run once on the live project; re-running it changes nothing.
+- **Demo org:** [supabase/seed.sql](supabase/seed.sql) creates the fictitious tenant `Service Pacts`, with fixed id `00000000-0000-4000-8000-00000000de30`. Its address is `100 Sample Street, Burnaby, BC`, its phone `604-555-0100` (the 555-01xx fiction range) and its accent `#1f6f8b`. Its default terms are 10 % repair discount (a placeholder, since the source template leaves it blank), 5 % CPI cap, 30 days' notice, payment in 30 days and BC. It has 12 agreements (one per site, version 1, mirroring the twelve mock cards; 3 contracts) and no events yet; its owner is attached with `app.demo_owner_email` (see Tenant). The seed has run once on the live project; re-running it changes nothing.
 
 ### Customer (M3)
 **What it is:** the client company that owns the equipment and receives the service agreement, for example a property-management firm.
@@ -528,7 +528,7 @@ Newest first. Use one line per completed change: date, what was done, and the ke
 
 - **2026-10-19:** Phase 1 item 2, the equipment catalog, task library and fictitious demo org ([.specs/features/catalog-seed/](.specs/features/catalog-seed/)).
   - Migration `catalog_template` adds the 40-type, 174-task template in `private`, `private.seed_org_catalog(org)`, and the upper-case code check on `asset_types` ([supabase/migrations/20261019191509_catalog_template.sql](supabase/migrations/20261019191509_catalog_template.sql)).
-  - [supabase/seed.sql](supabase/seed.sql) creates the demo org `Kettle Ridge Mechanical Ltd.` with settings, the catalog and 12 customers with contacts, sites and assets. It has run on the live project.
+  - [supabase/seed.sql](supabase/seed.sql) creates the demo org `Service Pacts` with settings, the catalog and 12 customers with contacts, sites and assets. It has run on the live project.
   - Known gap: the seed proof ran after the real seed, so seeding an empty database is not yet proven. It gets proven the next time `seed.sql` runs on a fresh database.
 
 - **2026-10-19:** Phase 1 item 1, the Supabase project and the init migration ([.specs/features/supabase-init/](.specs/features/supabase-init/)).

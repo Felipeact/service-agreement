@@ -76,11 +76,11 @@ describe("the page copy", () => {
     expect(links[0][1]).toContain('href="/login"');
   });
 
-  test("C2410: the title is Pricing, which the root layout's template reads as 'Pricing · Service Agreement'", () => {
+  test("C2410: the title is Pricing, which the root layout's template reads as 'Pricing · Service Pacts'", () => {
     expect(metadata.title).toBe("Pricing");
     const layout = readFileSync(path.join(__dirname, "..", "layout.tsx"), "utf8");
-    expect(layout).toContain('template: "%s · Service Agreement"');
-    expect("%s · Service Agreement".replace("%s", String(metadata.title))).toBe("Pricing · Service Agreement");
+    expect(layout).toContain('template: "%s · Service Pacts"');
+    expect("%s · Service Pacts".replace("%s", String(metadata.title))).toBe("Pricing · Service Pacts");
   });
 
   test("C2411: the page says no 'equipment'", () => {

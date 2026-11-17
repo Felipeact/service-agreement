@@ -21,7 +21,7 @@ Terms:
 - "the builder" is `buildAgreementDocument`; "the document" is its `AgreementDocument` output.
 - "the renderer" is the `@react-pdf/renderer` adapter behind `DocumentRenderer`.
 - "the view" is the agreement view component the page renders.
-- **Fixture agreement** is AG-1052 (`Fernwood Dental`, version 1, 2 service lines, total $3,870.00), built as literal values in tests. **Fixture settings** are legal name `Kettle Ridge Mechanical Ltd.`, address `100 Sample Street, Burnaby, BC`, phone `604-555-0100`, accent `#1f6f8b`, repair discount 10, CPI cap 5, notice 30 days, payment 30 days, province `BC` and a tax note.
+- **Fixture agreement** is AG-1052 (`Fernwood Dental`, version 1, 2 service lines, total $3,870.00), built as literal values in tests. **Fixture settings** are legal name `Service Pacts`, address `100 Sample Street, Burnaby, BC`, phone `604-555-0100`, accent `#1f6f8b`, repair discount 10, CPI cap 5, notice 30 days, payment 30 days, province `BC` and a tax note.
 - **The date format** is the `Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" })` the agreement view already uses for dates. Expected text is computed with that formatter in the test, never typed out. (The plan's "Month D, YYYY" is the `long` style; this check set uses the existing medium style, an assumption the builder records, not a change to a criterion. If the user wants `long`, one constant changes.)
 
 ## Checks
@@ -53,7 +53,7 @@ Proof: `npm test -- components/agreements -t "C857:"`
 
 **C858** - The document's header carries the legal name, the address and the phone from the fixture settings, and the accent `#1f6f8b`. With address and phone `null` the header has the legal name only and no `null` or `undefined` text. With accent `null` the accent is the product's neutral accent, a `#rrggbb` constant, not the tenant's. The legal name is never a literal in the PDF source (AC 8)
 Proof: `npm test -- domain/agreement -t "C858:"`
-Proof: `npm test -- infrastructure/documents -t "C858:"` (rendered: the first page's text starts with `Kettle Ridge Mechanical Ltd.`, then `100 Sample Street, Burnaby, BC`, then `604-555-0100`)
+Proof: `npm test -- infrastructure/documents -t "C858:"` (rendered: the first page's text starts with `Service Pacts`, then `100 Sample Street, Burnaby, BC`, then `604-555-0100`)
 
 **C859** - The rendered text of page 1 contains `AG-1052`, `Version 1`, `Fernwood Dental` and the site name from the fixture (AC 9)
 Proof: `npm test -- infrastructure/documents -t "C859:"`

@@ -8,7 +8,7 @@ import { ContractView } from "./contract-view";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/contracts/con-1" }));
 
 const PARTIES: NonNullable<ContractDetail["parties"]> = {
-  contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+  contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
   customer: { name: "Fernwood Dental" },
   site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
   signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -78,7 +78,7 @@ describe("the contract view", () => {
 
   test("C1630: the parties are shown as frozen, not as the agreement's names", () => {
     const out = text(view(contract(), agreement({ customer: { id: "cust-1", name: "Renamed Customer" }, site: { id: "site-1", name: "Renamed Site" } })));
-    expect(out).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(out).toContain("Service Pacts");
     expect(out).toContain("100 Sample Street, Burnaby, BC");
     expect(out).toContain("12 Oak Ave");
     expect(out).toContain("Fernwood Dental, Main");

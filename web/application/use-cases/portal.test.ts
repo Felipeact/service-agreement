@@ -102,7 +102,7 @@ describe("the link's template", () => {
   test("C5330: the document is built from the frozen version's body", () => {
     const document = portalDocument(portalView({ template: BODY }));
     expect(document?.intro).toEqual([{ type: "paragraph", text: "Welcome Fernwood Dental, payment within 30 days." }]);
-    expect(document?.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document?.footer).toEqual([{ type: "paragraph", text: "Thank you, Service Pacts." }]);
     expect(document?.sections).toEqual({ schedule: false, scope: true });
     expect(document?.schedule).toEqual([]);
   });

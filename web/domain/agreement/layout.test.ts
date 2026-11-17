@@ -44,7 +44,7 @@ describe("layoutOf, a schema 1 body", () => {
 });
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",

@@ -17,7 +17,7 @@ const primary = { backgroundColor: "#1f6f8b", color: "#ffffff" };
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 
 function panel(mode: "choose" | "accept" | "refuse" | "request_changes", state: DecideState = { status: "idle" }, reason = "") {
-  return renderToStaticMarkup(createElement(DecisionPanel, { mode, reason, state, tenantName: "Kettle Ridge Mechanical Ltd.", primary }));
+  return renderToStaticMarkup(createElement(DecisionPanel, { mode, reason, state, tenantName: "Service Pacts", primary }));
 }
 
 describe("the decision panel", () => {
@@ -47,7 +47,7 @@ describe("the decision panel", () => {
 
   test.each(["refuse", "request_changes"] as const)("C921: a missing reason shows the message beside the field in %s", (mode) => {
     const html = panel(mode, { status: "reason_required" });
-    expect(text(html)).toContain("Tell us why so Kettle Ridge Mechanical Ltd. can respond.");
+    expect(text(html)).toContain("Tell us why so Service Pacts can respond.");
     expect(html).toContain('aria-invalid="true"');
     expect(html).toContain('role="alert"');
   });

@@ -20,9 +20,9 @@ describe("the success page", () => {
     expect(text).toContain("We will email a sign-in link to the address you gave at checkout.");
     expect(html()).toMatch(/<a\b[^>]*href="\/login"[^>]*>\s*Sign in\s*<\/a>/);
     expect(metadata.title).toBe("Thanks");
-    // The suffix comes from the root layout's title template, so the rendered title is "Thanks · Service Agreement".
+    // The suffix comes from the root layout's title template, so the rendered title is "Thanks · Service Pacts".
     const layout = readFileSync(path.join(__dirname, "..", "..", "layout.tsx"), "utf8");
-    expect(layout).toContain('template: "%s · Service Agreement"');
+    expect(layout).toContain('template: "%s · Service Pacts"');
     for (const banned of ["equipment", "trusted by", "most popular", "best value", "testimonial", "save"]) {
       expect(text.toLowerCase(), banned).not.toContain(banned);
     }

@@ -12,7 +12,7 @@ vi.mock("@/domain/contract", async (importOriginal) => ({
 }));
 
 const PARTIES = {
-  contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null },
+  contractor: { legalName: "Service Pacts", address: null, phone: null },
   customer: { name: "Fernwood Dental" },
   site: { name: "Main", address: null },
   signer: { name: "Pat Lee", email: "pat@example.com" },

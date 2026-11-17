@@ -5,7 +5,7 @@ import { reactPdfDocumentRenderer } from "./index";
 import { pdfPages } from "./pdf-text.testing";
 
 const base: AgreementDocument = {
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: null, phone: null, accent: "#1f6f8b" },
   words: DEFAULT_ITEM_WORDS,
   number: "AG-1046",
   versionNo: 1,

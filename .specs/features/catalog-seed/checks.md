@@ -68,7 +68,7 @@ Proof: `sql supabase/tests/catalog_seed.sql#C26`
 
 ### S3 - Fictitious demo org · 4 files · ~35 KB · ~9k
 
-**C12** - After the seed, exactly 1 `orgs` row has id `D`, and its `name` is `Kettle Ridge Mechanical Ltd.` (AC 12, door 4)
+**C12** - After the seed, exactly 1 `orgs` row has id `D`, and its `name` is `Service Pacts` (AC 12, door 4)
 Proof: `seed supabase/tests/demo_seed.sql#C12`
 
 **C13** - Org `D`'s `org_settings` has `repair_discount_pct = 10`, `cpi_cap_pct = 5`, `cancellation_notice_days = 30`, `payment_days = 30` and `governing_province = 'BC'`. Each of `legal_name`, `address`, `phone`, `accent_color` and `tax_note` is non-null and non-blank (AC 13)
@@ -99,8 +99,8 @@ Proof: `shell test "$(grep -v '^\s*--' supabase/seed.sql | grep -v '^\s*$' | hea
 **C27** - No migration contains demo data: 0 files in `supabase/migrations/` match `Kettle Ridge` or `00000000-0000-4000-8000-00000000de30` (door 5)
 Proof: `shell ! grep -rlE "Kettle Ridge|00000000-0000-4000-8000-00000000de30" supabase/migrations/`
 
-**C28** - On the remote, after the real seed run, one read-only query returns: 1 org `D` named `Kettle Ridge Mechanical Ltd.`, 40 types, 174 tasks, 12 customers, 12 contacts, 12 sites, between 24 and 96 assets, and 0 memberships, agreements and events for `D` (AC 12-17 on the live project)
-Proof: `mcp execute_sql(project_id, "<count query in demo_seed.sql header comment>"): row => {orgs:1, name:"Kettle Ridge Mechanical Ltd.", types:40, tasks:174, customers:12, contacts:12, sites:12, assets in [24,96], memberships:0, agreements:0, events:0}`
+**C28** - On the remote, after the real seed run, one read-only query returns: 1 org `D` named `Service Pacts`, 40 types, 174 tasks, 12 customers, 12 contacts, 12 sites, between 24 and 96 assets, and 0 memberships, agreements and events for `D` (AC 12-17 on the live project)
+Proof: `mcp execute_sql(project_id, "<count query in demo_seed.sql header comment>"): row => {orgs:1, name:"Service Pacts", types:40, tasks:174, customers:12, contacts:12, sites:12, assets in [24,96], memberships:0, agreements:0, events:0}`
 
 ### S4 - Applied and nothing regressed · 6 files · ~60 KB · ~15k
 
@@ -167,6 +167,6 @@ Proof: `sql supabase/tests/rls_isolation.sql#C35`
   - `seed demo_seed.sql` (C12-C19): `demo_seed: pass`, run by the user in the Supabase SQL Editor from the assembled file (verbatim fixture + seed body + `demo_seed.sql` + seed body + `demo_seed_rerun.sql`). MCP `execute_sql` was declined four times for this call
   - `sql rls_isolation.sql`, `rls_roles.sql`, `domain_constraints.sql`, `events_outbox.sql` (C22, C24): each `<suite>: pass`, run by the user in the SQL Editor as the verbatim updated fixture followed by the suite
   - shell C15, C20, C21, C27: exit 0
-  - mcp C21 `list_migrations`: `init` `20261019174738`, `catalog_template` `20261019191509`. C23 `get_advisors(security)`: one `INFO` lint (`rls_enabled_no_policy` on `public.outbox`, there since supabase-init), 0 `ERROR` or `WARN`. C28: orgs 1, name `Kettle Ridge Mechanical Ltd.`, types 40, tasks 174, customers 12, contacts 12, sites 12, assets 57, memberships 0, agreements 0, events 0
+  - mcp C21 `list_migrations`: `init` `20261019174738`, `catalog_template` `20261019191509`. C23 `get_advisors(security)`: one `INFO` lint (`rls_enabled_no_policy` on `public.outbox`, there since supabase-init), 0 `ERROR` or `WARN`. C28: orgs 1, name `Service Pacts`, types 40, tasks 174, customers 12, contacts 12, sites 12, assets 57, memberships 0, agreements 0, events 0
 - **Evidence accepted by the user (2026-10-19):** verification round 1 failed only because the Verifier's own `execute_sql` for the seed proof came back `{"status":"declined"}`, leaving C13, C14, C15, C16, C18 and C19 resting on the user's SQL Editor run. The user accepted that run (`demo_seed: pass`, same text as the current tree) as the evidence for those checks. Proving the seed on an empty database (round 1 gap 2) stays open, as in the limitation above
 - **Abandoned:** none

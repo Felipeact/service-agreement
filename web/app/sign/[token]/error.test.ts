@@ -10,7 +10,7 @@ describe("the signing page's error boundary", () => {
     expect(markup).toContain("Something went wrong. Try again, or contact the company that sent this link.");
     expect(markup).toContain("Try again");
     expect(markup).not.toContain("secret detail");
-    expect(markup).not.toMatch(/AG-|Service Agreement/);
+    expect(markup).not.toMatch(/AG-|Service Pacts/);
   });
 
   test("C1726: the retry button calls reset once", () => {

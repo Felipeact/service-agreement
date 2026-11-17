@@ -6,7 +6,7 @@ import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
  */
 
 export const SITE = {
-  name: "Service Agreement",
+  name: "Service Pacts",
   tagline: "From service list to signed agreement.",
   description: "Recurring service agreements for trade contractors, from the customer's list to signature.",
   /** The public contact mailbox. Confirm it exists before launch. */

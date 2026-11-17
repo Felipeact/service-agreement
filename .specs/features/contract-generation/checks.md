@@ -36,7 +36,7 @@ Terms:
 - "the roles" are uA (owner), uD (admin), uE (estimator) and uV (viewer) of org A, uB (owner of org B).
 - "the document" is the `ContractDocument` that `buildContractDocument` returns.
 - "the contract fixture" for the UI checks is a `ContractView` for `AG-1052`, version 1, `pending_signature`, with
-  parties: contractor `Kettle Ridge Mechanical Ltd.` (`100 Sample Street, Burnaby, BC`, `604-555-0100`), customer
+  parties: contractor `Service Pacts` (`100 Sample Street, Burnaby, BC`, `604-555-0100`), customer
   `Fernwood Dental`, site `Fernwood Dental, Main` (`12 Oak Ave`), signer `Pat Lee` `pat@example.com`.
 
 ## Checks
@@ -312,7 +312,7 @@ Proof: `npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C1642:"
 governing province and the renewal values null, it contains none of those four sentences (AC 28)
 Proof: `npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C1643:"`
 
-**C1644** - The last page of a PDF long enough for three pages holds both `For the Customer: Pat Lee` and `For Kettle Ridge Mechanical Ltd.`,
+**C1644** - The last page of a PDF long enough for three pages holds both `For the Customer: Pat Lee` and `For Service Pacts`,
 and each is followed by a `Signature` line and a `Date` line on that same page (AC 29)
 Proof: `npx vitest run infrastructure/documents/contract-pdf.test.ts -t "C1644:"`
 

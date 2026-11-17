@@ -8,7 +8,7 @@ const RENEWAL =
   "Renews automatically for another 12 months with the CPI increase, capped at 3%. If CPI is 5% or more, the renewal is renegotiated. Notice is given 30 days before the end date.";
 
 const base: AgreementDocument = {
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: null, phone: null, accent: "#1f6f8b" },
   words: DEFAULT_ITEM_WORDS,
   number: "AG-1052",
   versionNo: 1,

@@ -124,7 +124,7 @@ describe("supabaseMemberDirectory", () => {
 
   test("C18: a membership row becomes the member", async () => {
     const { typed } = stubAuth({ getClaims: claimsReply(claims) }, [
-      { org_id: "o1", role: "owner", orgs: { name: "Kettle Ridge Mechanical Ltd." } },
+      { org_id: "o1", role: "owner", orgs: { name: "Service Pacts" } },
     ]);
 
     expect(await supabaseMemberDirectory(typed).currentMember()).toEqual({
@@ -132,7 +132,7 @@ describe("supabaseMemberDirectory", () => {
       userId: "u1",
       email: "owner@example.com",
       orgId: "o1",
-      orgName: "Kettle Ridge Mechanical Ltd.",
+      orgName: "Service Pacts",
       role: "owner",
       billingRole: "owner",
       frozen: false,
@@ -140,7 +140,7 @@ describe("supabaseMemberDirectory", () => {
   });
 
   test("a frozen workspace gives the member the viewer's read-only role and keeps the real one for billing", async () => {
-    const { typed, rpc } = stubAuth({ getClaims: claimsReply(claims) }, [{ org_id: "o1", role: "owner", orgs: { name: "Kettle Ridge Mechanical Ltd." } }]);
+    const { typed, rpc } = stubAuth({ getClaims: claimsReply(claims) }, [{ org_id: "o1", role: "owner", orgs: { name: "Service Pacts" } }]);
     rpc.mockResolvedValue({ data: true, error: null });
 
     expect(await supabaseMemberDirectory(typed).currentMember()).toMatchObject({ status: "member", role: "viewer", billingRole: "owner", frozen: true });
@@ -148,7 +148,7 @@ describe("supabaseMemberDirectory", () => {
   });
 
   test("a failed freeze read leaves the member's own role, so a database hiccup does not lock anyone out", async () => {
-    const { typed, rpc } = stubAuth({ getClaims: claimsReply(claims) }, [{ org_id: "o1", role: "estimator", orgs: { name: "Kettle Ridge Mechanical Ltd." } }]);
+    const { typed, rpc } = stubAuth({ getClaims: claimsReply(claims) }, [{ org_id: "o1", role: "estimator", orgs: { name: "Service Pacts" } }]);
     rpc.mockResolvedValue({ data: null, error: { code: "XX000" } });
 
     expect(await supabaseMemberDirectory(typed).currentMember()).toMatchObject({ role: "estimator", frozen: false });

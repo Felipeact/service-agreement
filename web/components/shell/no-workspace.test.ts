@@ -10,7 +10,7 @@ const text = (html: string) => html.replace(/<script[\s\S]*?<\/script>/g, "").re
 describe("the no-workspace screen", () => {
   test.each([undefined, "none" as const])("C4219: state %s is exactly today's copy, with Sign out and no extra link", (state) => {
     const html = render(state);
-    expect(text(html)).toBe("Service Agreement No workspace yet Your account isn't part of a company workspace. Ask your company's owner to invite you. Signed in as owner@shop.test Sign out");
+    expect(text(html)).toBe("Service Pacts No workspace yet Your account isn't part of a company workspace. Ask your company's owner to invite you. Signed in as owner@shop.test Sign out");
     expect(html).not.toContain("<a ");
   });
 

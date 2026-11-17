@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 const { saveSettingsAction } = await import("@/app/(app)/settings/actions");
 
 const FIELDS = {
-  legalName: "Kettle Ridge Mechanical Ltd.", address: "", phone: "", accentColor: "", repairDiscountPct: "10", cpiCapPct: "5",
+  legalName: "Service Pacts", address: "", phone: "", accentColor: "", repairDiscountPct: "10", cpiCapPct: "5",
   cancellationNoticeDays: "30", paymentDays: "30", governingProvince: "BC", taxNote: "", defaultTermMonths: "12",
   renewalNoticeDays: "30", cpiRenegotiationThresholdPct: "5", proposalValidityDays: "30", itemSingular: "equipment", itemPlural: "equipment",
 };

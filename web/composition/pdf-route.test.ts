@@ -9,7 +9,7 @@ import { pdfPages } from "@/infrastructure/documents/pdf-text.testing";
 const AGR = "11111111-1111-4111-8111-111111111111";
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: null,
   phone: null,
   accentColor: null,
@@ -75,7 +75,7 @@ describe("the PDF route with the real renderer", () => {
     const body = Buffer.from(await response.arrayBuffer());
     expect(body.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(body.toString("latin1").trimEnd().endsWith("%%EOF")).toBe(true);
-    expect(pdfPages(body)[0]).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(pdfPages(body)[0]).toContain("Service Pacts");
   });
 
   test("C870: a site with 2,000 assets answers 200 through the route, with every row in the PDF", async () => {

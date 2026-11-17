@@ -70,7 +70,7 @@ describe("the portal PDF route", () => {
     await call();
     expect(renderAgreement).toHaveBeenCalledTimes(1);
     const document = renderAgreement.mock.calls[0][0];
-    expect(document.tenant).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" });
+    expect(document.tenant).toEqual({ name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.terms[0]).toEqual({ label: "Repair discount", value: "10%" });
     expect(document.mark).toBeNull();
     expect(document.totalCents).toBe(387000);

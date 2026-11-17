@@ -260,7 +260,7 @@ Proof: `npx vitest run components/sites -t "C141:"`
 **C142** - the settings form rendered with the demo org's values shows ten visible labels - "Legal
 name", "Address", "Phone", "Accent colour", "Repair discount (%)", "CPI cap (%)", "Cancellation
 notice (days)", "Payment terms (days)", "Governing province", "Tax note" - each tied to a control
-holding its value (`Kettle Ridge Mechanical Ltd.`, `100 Sample Street, Burnaby, BC V5A 0A0`,
+holding its value (`Service Pacts`, `100 Sample Street, Burnaby, BC V5A 0A0`,
 `604-555-0100`, `#1f6f8b`, `10`, `5`, `30`, `30`, `BC`, `Prices exclude applicable taxes (GST and PST).`) (AC 33)
 Proof: `npx vitest run components/settings -t "C142:"`
 
