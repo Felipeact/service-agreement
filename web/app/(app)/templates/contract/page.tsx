@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { canWriteTemplates } from "@/components/templates/state";
 import { ContractWordingEditor } from "@/components/templates/contract-wording-editor";
+import { LogoActionsProvider } from "@/components/templates/logo-actions";
+import { currentLogoPath, saveLogoPath } from "@/app/logo-actions";
+import { prepareLogoUpload } from "@/app/logo-upload";
 import { PageHeader } from "@/components/shell/page-header";
 import { getContainer } from "@/composition";
 import { contractFormFromBody } from "@/domain/contract/layout-form";
@@ -28,7 +31,9 @@ export default async function ContractWordingPage() {
         title="Contract wording"
         subtitle={wording.own ? "Saving writes a new version. Contracts already made keep the wording they were made with." : "This is the standard wording. Saving makes it your own; contracts already made keep theirs."}
       />
+      <LogoActionsProvider actions={{ current: currentLogoPath, save: saveLogoPath, prepare: prepareLogoUpload }}>
       <ContractWordingEditor initial={contractFormFromBody(wording.body)} save={saveContractWordingAction} importAction={importContractWordingAction} orgName={member.orgName} />
+      </LogoActionsProvider>
     </div>
   );
 }

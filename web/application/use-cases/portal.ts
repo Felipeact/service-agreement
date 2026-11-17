@@ -64,14 +64,15 @@ export function portalScope(view: PortalView): AgreementServiceScope {
 }
 
 /**
- * The template body the link's version is drawn with: the system body when the view carries none (an older document), else the
- * frozen pin, which must be a readable body. A missing or invalid one throws, so nothing is drawn with other wording
- * (agreement-templates AC 14).
+ * The template body the link's version is drawn with: the system body when the view carries none (an older document) or the
+ * version was sent with no template pinned (`null`, e.g. the company had no template when it sent), else the frozen pin, which
+ * must be a readable body. An invalid one throws, so nothing is drawn with other wording (agreement-templates AC 14). A
+ * customer's page never fails because the sender had no template.
  */
 export function portalTemplate(view: PortalView): AgreementTemplateBody {
-  if (view.template === undefined) return SYSTEM_AGREEMENT_BODY;
+  if (view.template === undefined || view.template === null) return SYSTEM_AGREEMENT_BODY;
   const checked = validateAgreementTemplate(view.template);
-  if (!checked.ok) throw new Error(`The link's template version cannot be read: ${view.template === null ? "it was not found" : checked.reason}`);
+  if (!checked.ok) throw new Error(`The link's template version cannot be read: ${checked.reason}`);
   return checked.body;
 }
 

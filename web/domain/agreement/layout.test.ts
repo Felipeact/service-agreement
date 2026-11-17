@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { OrgSettingsValue } from "../org-settings";
 import { buildAgreementDocument, type DocumentSource } from "./document";
-import { layoutOf, type DocOptions, type LayoutItem } from "./layout";
+import { DEFAULT_LETTERHEAD, letterheadOf, letterheadProblem, layoutOf, validateLayout, type DocOptions, type LayoutItem } from "./layout";
 import { SYSTEM_AGREEMENT_BODY, validateAgreementTemplate, type AgreementTemplateBody, type AgreementTemplateBodyV1 } from "./template";
 
 const DOC: DocOptions = { title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "first", pageFooter: "number" };
@@ -222,5 +222,30 @@ describe("a section title that fills to nothing", () => {
     expect(layout?.[0]).toEqual({ kind: "section", key: "price", options: {} });
     expect(layout?.[1]).toEqual({ kind: "section", key: "equipment", options: {} });
     expect(layout?.[2]).toMatchObject({ options: { title: expect.stringMatching(/^Visits for .+/) } });
+  });
+});
+
+describe("the letterhead options", () => {
+  test("a document without them draws the default letterhead, and what it says overrides the default", () => {
+    expect(letterheadOf({})).toEqual(DEFAULT_LETTERHEAD);
+    expect(letterheadOf({ letterhead: { ...DEFAULT_LETTERHEAD, phone: false } }).phone).toBe(false);
+  });
+
+  test.each<[string, unknown]>([
+    ["not an object", "x"],
+    ["an unknown key", { ...DEFAULT_LETTERHEAD, extra: 1 }],
+    ["a flag that is not a boolean", { ...DEFAULT_LETTERHEAD, name: "yes" }],
+    ["an unknown size", { ...DEFAULT_LETTERHEAD, logoSize: "huge" }],
+    ["an unknown alignment", { ...DEFAULT_LETTERHEAD, align: "right" }],
+  ])("%s is refused", (_label, value) => {
+    expect(letterheadProblem(value)).not.toBeNull();
+  });
+
+  test("a stored letterhead is accepted by the layout validator, a bad one names doc.letterhead", () => {
+    const doc = { title: "T", showMeta: true, pageHeader: "first", pageFooter: "number" };
+    const spec: Parameters<typeof validateLayout>[1] = { sections: ["price"], required: ["price"], noun: "agreement" };
+    const layout = [{ kind: "section", key: "price" }];
+    expect(validateLayout({ doc: { ...doc, letterhead: DEFAULT_LETTERHEAD }, layout }, spec).filter((e) => e.field.startsWith("doc"))).toEqual([]);
+    expect(validateLayout({ doc: { ...doc, letterhead: { ...DEFAULT_LETTERHEAD, align: "right" } }, layout }, spec).map((e) => e.field)).toContain("doc.letterhead");
   });
 });

@@ -1,5 +1,6 @@
 import { BLOCK_TYPES, type BlockType } from "../contract/template";
 import {
+  letterheadProblem,
   MAX_INDENT,
   PAGE_FOOTERS,
   PAGE_HEADERS,
@@ -8,6 +9,7 @@ import {
   type BlockItem,
   type DocOptions,
   type LayoutItem,
+  type LetterheadOptions,
   type PriceColumns,
   type SectionItem,
   type SectionKey,
@@ -165,6 +167,10 @@ export function readLayoutFormState(value: Record<string, unknown>): { ok: true;
   if (typeof doc.showMeta !== "boolean") return bad("doc.showMeta", "This field must be true or false.");
   if (!(PAGE_HEADERS as readonly unknown[]).includes(doc.pageHeader)) return bad("doc.pageHeader", "The page header must be first or every.");
   if (!(PAGE_FOOTERS as readonly unknown[]).includes(doc.pageFooter)) return bad("doc.pageFooter", "The page footer must be number or letterhead.");
+  if (doc.letterhead !== undefined) {
+    const problem = letterheadProblem(doc.letterhead);
+    if (problem !== null) return bad("doc.letterhead", problem);
+  }
   if (!Array.isArray(layout)) return bad("layout", "The layout must be a list.");
 
   const rows: LayoutRow[] = [];
@@ -201,5 +207,5 @@ export function readLayoutFormState(value: Record<string, unknown>): { ok: true;
       return bad(`${at}.kind`, "Each row must be a block or a section.");
     }
   }
-  return { ok: true, state: { doc: { title: doc.title, showMeta: doc.showMeta, pageHeader: doc.pageHeader as DocOptions["pageHeader"], pageFooter: doc.pageFooter as DocOptions["pageFooter"] }, layout: rows } };
+  return { ok: true, state: { doc: { title: doc.title, showMeta: doc.showMeta, pageHeader: doc.pageHeader as DocOptions["pageHeader"], pageFooter: doc.pageFooter as DocOptions["pageFooter"], ...(doc.letterhead !== undefined && { letterhead: doc.letterhead as LetterheadOptions }) }, layout: rows } };
 }

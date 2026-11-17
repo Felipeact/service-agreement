@@ -61,6 +61,17 @@ describe("the agreement PDF, rendered", () => {
     expect(first.split("\n")[1]).toBe("Preventive maintenance service agreement");
   });
 
+  test("the template's letterhead options choose which company details print", async () => {
+    const doc = { title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "first", pageFooter: "number" } as const;
+    const lh = { logo: true, logoSize: "medium", align: "left", name: true, address: true, phone: true } as const;
+    const [bare] = await render({ doc: { ...doc, letterhead: { ...lh, address: false, phone: false } } });
+    expect(bare).toContain("Service Pacts");
+    expect(bare).not.toContain("100 Sample Street");
+    expect(bare).not.toContain("604-555-0100");
+    const [noName] = await render({ doc: { ...doc, letterhead: { ...lh, name: false } } });
+    expect(noName.split("\n")[0]).toBe("100 Sample Street, Burnaby, BC");
+  });
+
   test("C859: page 1 carries the number, the version, the customer and the site", async () => {
     const [first] = await render({ versionNo: 3 });
     for (const expected of ["AG-1052", "Version 3", "Fernwood Dental", "Fernwood Dental, Main"]) expect(first).toContain(expected);

@@ -118,8 +118,12 @@ describe("the link's template", () => {
     expect(portalDocument(portalView())?.intro).toEqual([]);
   });
 
+  test("C5330: a version sent with no template pinned (null) uses the system body instead of failing", () => {
+    expect(portalTemplate(portalView({ template: null }))).toEqual(SYSTEM_AGREEMENT_BODY);
+    expect(portalDocument(portalView({ template: null }))).toBeDefined();
+  });
+
   test.each<[string, unknown]>([
-    ["missing (the database found none)", null],
     ["not an object", "x"],
     ["schema 2", { ...BODY, schema: 2 }],
     ["an unknown variable", { ...BODY, intro: [{ type: "paragraph", text: "{{nope}}" }] }],

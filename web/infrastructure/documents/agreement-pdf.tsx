@@ -2,6 +2,7 @@ import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer"
 import {
   DEFAULT_AGREEMENT_DOC,
   hasSection,
+  letterheadOf,
   legacyLayout,
   type AgreementDocument,
   type IncludedOptions,
@@ -20,7 +21,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
   // existed has no sections: every optional one is drawn).
   const doc = document.doc ?? DEFAULT_AGREEMENT_DOC;
   const layout = document.layout ?? legacyLayout(document.intro ?? [], document.footer ?? [], document.sections ?? { schedule: true, scope: true });
-  const letterhead = <LetterHead name={tenant.name} address={tenant.address} phone={tenant.phone} accent={tenant.accent} logo={tenant.logo} />;
+  const letterhead = <LetterHead name={tenant.name} address={tenant.address} phone={tenant.phone} accent={tenant.accent} logo={tenant.logo} options={letterheadOf(doc)} />;
   const includedDrawn = hasSection(layout, "included");
 
   const draw = (item: LayoutItem, index: number) => {

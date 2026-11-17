@@ -4,7 +4,8 @@ import type { ScheduleRow } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
 import type { TenantLogo } from "@/domain/org-settings/logo";
 import { formatCadExact } from "@/lib/money";
-import { logoBox, logoSize } from "./logo";
+import { logoBox, logoSize, LOGO_BOXES } from "./logo";
+import { DEFAULT_LETTERHEAD, type LetterheadOptions } from "@/domain/agreement/layout";
 
 /** Ordinary words stay whole; a word longer than a column can hold is cut every 12 characters, so it wraps instead of running off the page. */
 Font.registerHyphenationCallback((word) => (word.length <= 20 ? [word] : (word.match(/.{1,12}/gu) ?? [word])));
@@ -42,19 +43,24 @@ export const right = { textAlign: "right" as const };
 
 const units = (count: number) => `${count} ${count === 1 ? "unit" : "units"}`;
 
-/** The tenant's logo (when it has one), name, address and phone over a rule in its accent colour. */
-export function LetterHead({ name, address, phone, accent, logo }: { name: string; address: string | null; phone: string | null; accent: string; logo?: TenantLogo }) {
-  const size = logo ? logoSize(logo) : null;
+/**
+ * The tenant's logo (when it has one), name, address and phone over a rule in its accent colour. `options` is the template's
+ * letterhead: which of the four print, the logo's size and the side they sit on; without it, everything prints on the left.
+ */
+export function LetterHead({ name, address, phone, accent, logo, options = DEFAULT_LETTERHEAD }: { name: string; address: string | null; phone: string | null; accent: string; logo?: TenantLogo; options?: LetterheadOptions }) {
+  const size = logo && options.logo ? logoSize(logo) : null;
+  const centered = options.align === "center";
+  const side = centered ? { alignItems: "center" as const, textAlign: "center" as const } : {};
   return (
-    <View style={{ borderBottomWidth: 2, borderBottomColor: accent, paddingBottom: 8 }}>
+    <View style={{ borderBottomWidth: 2, borderBottomColor: accent, paddingBottom: 8, ...side }}>
       {logo && size && size.width > 0 && size.height > 0 && (
         // A react-pdf Image draws into the PDF; it is not an HTML img and has no alt prop.
         // eslint-disable-next-line jsx-a11y/alt-text
-        <Image src={{ data: Buffer.from(logo.bytes), format: logo.format }} style={{ ...logoBox(size.width, size.height), marginBottom: 6 }} />
+        <Image src={{ data: Buffer.from(logo.bytes), format: logo.format }} style={{ ...logoBox(size.width, size.height, LOGO_BOXES[options.logoSize]), marginBottom: 6 }} />
       )}
-      <Text style={[styles.tenant, { color: accent }]}>{name}</Text>
-      {address && <Text style={styles.muted}>{address}</Text>}
-      {phone && <Text style={styles.muted}>{phone}</Text>}
+      {options.name && <Text style={[styles.tenant, { color: accent }]}>{name}</Text>}
+      {options.address && address && <Text style={styles.muted}>{address}</Text>}
+      {options.phone && phone && <Text style={styles.muted}>{phone}</Text>}
     </View>
   );
 }

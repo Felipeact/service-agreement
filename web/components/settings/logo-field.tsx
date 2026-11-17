@@ -18,12 +18,16 @@ type LogoFieldViewProps = {
   readOnly: boolean;
   onPick?: (file: File) => void;
   onRemove?: () => void;
+  /** The hidden field Save stores; `""` for none, when the control saves itself (the template editor). */
+  fieldName?: string;
+  /** Under a freshly picked logo; the default tells the form's Save to use it. */
+  readyNote?: string;
 };
 
 const NOTE = "PNG or JPEG, up to 1 MB";
 
 /** The logo control as markup. Presentational: `LogoField` owns the state. The hidden `logoPath` is what Save stores. */
-export function LogoFieldView({ path, src, status, error, readOnly, onPick, onRemove }: LogoFieldViewProps) {
+export function LogoFieldView({ path, src, status, error, readOnly, onPick, onRemove, fieldName = "logoPath", readyNote = "Save to use it on your agreements." }: LogoFieldViewProps) {
   const has = path !== "";
   return (
     <div className="flex flex-col gap-2">
@@ -41,7 +45,7 @@ export function LogoFieldView({ path, src, status, error, readOnly, onPick, onRe
           {status === "ready" && <span className="text-[13px] font-medium text-ink">Logo ready</span>}
           {status === "uploading" && <span className="text-[13px] font-medium text-ink">Uploading logo</span>}
           {!has && status === "idle" && <span className="text-[12px] text-ink-2">{NOTE}</span>}
-          {status === "ready" && <span className="text-[12px] text-ink-2">Save to use it on your agreements.</span>}
+          {status === "ready" && <span className="text-[12px] text-ink-2">{readyNote}</span>}
         </div>
       </div>
       {!readOnly && (
@@ -66,7 +70,7 @@ export function LogoFieldView({ path, src, status, error, readOnly, onPick, onRe
               Remove logo
             </button>
           )}
-          <input type="hidden" name="logoPath" value={path} />
+          {fieldName !== "" && <input type="hidden" name={fieldName} value={path} />}
         </div>
       )}
       {error && (
@@ -87,13 +91,17 @@ type LogoFieldProps = {
   onUploadingChange?: (uploading: boolean) => void;
   /** A field error the server returned for `logoPath`. */
   serverError?: string;
+  /** Called with the new key after a pick, `""` after a remove: for a control that saves the logo itself. */
+  onPathChange?: (path: string) => void;
+  fieldName?: string;
+  readyNote?: string;
 };
 
 /**
  * Pick, upload, replace and remove the company logo. The new key is held in a hidden `logoPath` until the form is saved; the
  * caller keys this component by the stored path, so a save starts it fresh. A stored logo is drawn from its public address.
  */
-export function LogoField({ storedPath, readOnly, prepare, onUploadingChange, serverError }: LogoFieldProps) {
+export function LogoField({ storedPath, readOnly, prepare, onUploadingChange, serverError, onPathChange, fieldName, readyNote }: LogoFieldProps) {
   const [path, setPath] = useState(storedPath);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<LogoStatus>("idle");
@@ -116,6 +124,7 @@ export function LogoField({ storedPath, readOnly, prepare, onUploadingChange, se
     setPath(result.path);
     setPreview(URL.createObjectURL(file));
     setStatus("ready");
+    onPathChange?.(result.path);
   }
 
   function remove() {
@@ -123,10 +132,13 @@ export function LogoField({ storedPath, readOnly, prepare, onUploadingChange, se
     setPreview(null);
     setStatus("idle");
     setError(undefined);
+    onPathChange?.("");
   }
 
   return (
     <LogoFieldView
+      fieldName={fieldName}
+      readyNote={readyNote}
       path={path}
       src={preview ?? (path === "" ? null : logoPublicUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", path))}
       status={status}

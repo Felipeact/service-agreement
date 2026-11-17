@@ -1,5 +1,5 @@
 import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer";
-import { hasSection, type IncludedOptions, type LayoutItem, type PriceOptions, type SignatureOptions, type TitleOptions } from "@/domain/agreement";
+import { hasSection, letterheadOf, type IncludedOptions, type LayoutItem, type PriceOptions, type SignatureOptions, type TitleOptions } from "@/domain/agreement";
 import { DEFAULT_CONTRACT_DOC, legacyContractLayout, type ContractDocument, type RenderedBlock } from "@/domain/contract";
 import { renderWithoutLogoOnFailure } from "./logo-fallback";
 import { EquipmentSection, IncludedSection, LayoutBlock, LetterHead, LetterheadFooter, PageFooter, PriceSection, ScheduleSection, styles } from "./pdf-sections";
@@ -73,7 +73,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
   // A document built before layouts existed has none: it draws as the system layout does.
   const doc = document.doc ?? DEFAULT_CONTRACT_DOC;
   const layout = document.layout ?? legacyContractLayout(document.body, true);
-  const letterhead = <LetterHead name={contractor.name} address={contractor.address} phone={contractor.phone} accent={contractor.accent} logo={contractor.logo} />;
+  const letterhead = <LetterHead name={contractor.name} address={contractor.address} phone={contractor.phone} accent={contractor.accent} logo={contractor.logo} options={letterheadOf(doc)} />;
   const includedDrawn = hasSection(layout, "included");
 
   const draw = (item: LayoutItem, index: number) => {

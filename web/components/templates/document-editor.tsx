@@ -8,7 +8,7 @@ import { newBlockRow, newSectionRow, type BlockRow, type LayoutFormState, type L
 import type { TemplateVariable } from "@/domain/contract/template";
 import { insertRow, insertRowAt, insertVariable, moveRow, moveRowTo, partsOf, removeRow, restoreRow, type DragPayload, type EditorDocument, type RemovedRow } from "@/domain/templates/editor-model";
 import { AddElementDock, type AddChoice } from "./add-element-dock";
-import { HeaderPopover, OptionsCard, PageSettingsFields, PartOptions } from "./block-options";
+import { HeaderFields, HeaderPopover, OptionsCard, PageSettingsFields, PartOptions } from "./block-options";
 import { EditorPage } from "./editor-page";
 import { PreviewDialog } from "./preview-dialog";
 
@@ -128,6 +128,9 @@ export function DocumentEditor<V extends LayoutFormState>({ document: kind, orgN
         <div className="flex flex-wrap items-center gap-2">
           {extra}
           {details && <HeaderPopover label="Details">{details}</HeaderPopover>}
+          <HeaderPopover label="Header">
+            <HeaderFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />
+          </HeaderPopover>
           <HeaderPopover label="Page settings">
             <PageSettingsFields doc={values.doc} onChange={(doc) => edit({ ...values, doc })} errors={errors} />
           </HeaderPopover>
