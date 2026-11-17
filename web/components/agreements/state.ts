@@ -54,7 +54,9 @@ export type LinkState =
   | { status: "idle" | "no_lines" | "no_term_start" | "conflict" | "needs_email" | "invalid_email" | Failure }
   | { status: "sent" | "reissued"; url: string }
   | { status: "company_unconfirmed"; problems: CompanyProblem[] }
-  | { status: "needs_confirmation"; uncovered: UncoveredType[] };
+  | { status: "needs_confirmation"; uncovered: UncoveredType[] }
+  /** The start date is more than `STALE_START_DAYS` days before today; sending again with `confirmStart` sends anyway. */
+  | { status: "needs_start_confirmation"; start: string };
 
 /** The send and new-link alerts; `conflict` and `no_lines` say what to do next (customer-portal AC 2, 3). */
 export const LINK_MESSAGES = {

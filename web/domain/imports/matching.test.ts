@@ -105,3 +105,50 @@ describe("splitQuantity", () => {
     expect(splitQuantity(raw)).toBeNull();
   });
 });
+
+describe("matchAssetType: the gaps a tester found", () => {
+  const MORE = [
+    ...TYPES,
+    type("fcu", "FAN_COIL", "Fan coil", ["fcu"]),
+    type("fire", "FIRE_DAMPER", "Fire damper"),
+    type("vrf", "VRF", "VRF (outdoor unit)"),
+    type("erv", "ERV", "ERV", ["energy recovery ventilator"]),
+    type("pump", "PUMP", "Pump", ["circulating pump"]),
+    type("uhg", "UH_GAS", "Unit heater (gas)"),
+    type("uhe", "UH_ELEC", "Unit heater (electric)"),
+  ];
+
+  test.each([
+    ["Fire dampers", "fire"],
+    ["FCU", "fcu"],
+    ["VRV", "vrf"],
+    ["Inline pump", "pump"],
+    ["In-line pump", "pump"],
+    ["Unit heater gas fired", "uhg"],
+    ["Energy recovery ventilator (ERV)", "erv"],
+    ["Ventilateur d'extraction", "exfan"],
+    ["Chaudière", "boiler"],
+    ["Registre coupe-feu", "fire"],
+    ["Pompe", "pump"],
+    ["Boilers", "boiler"],
+  ])("%s is typed", (raw, id) => {
+    expect(matchAssetType(raw, MORE)).toBe(id);
+  });
+
+  test.each(["Sump pump", "Pompe de puisard", "Boiler (feed pump)", "Unit heater"])("%s is still left for the review", (raw) => {
+    expect(matchAssetType(raw, MORE)).toBeNull();
+  });
+});
+
+describe("splitQuantity: a plural with a bare count", () => {
+  test.each([
+    ["Fire dampers 40", "Fire dampers", 40],
+    ["WSHP x6", "WSHP", 6],
+  ])("%s", (raw, label, qty) => {
+    expect(splitQuantity(raw)).toEqual({ label, qty });
+  });
+
+  test.each(["Boiler 2", "Chassis 4", "Fire dampers 1", "Fire dampers 80", "RTU-3"])("%s is one row", (raw) => {
+    expect(splitQuantity(raw)).toBeNull();
+  });
+});

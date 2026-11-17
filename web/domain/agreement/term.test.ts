@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { OrgSettingsValue } from "../org-settings";
 import { buildAgreementDocument, termsOf, type DocumentSource } from "./document";
 import { parseTerms, type AgreementTerms } from "./index";
+import { isStaleStart } from "./term";
 import { formatTermDate, termLine, validateAgreementTerm } from "./term";
 
 const MONTHS_ERROR = "Term must be a whole number of months from 1 to 60";
@@ -144,5 +145,18 @@ describe("the renewal row", () => {
     expect(frozen?.value).toBe(RENEWAL_30_5);
     const old = buildAgreementDocument(source({}), SETTINGS).terms.map((term) => term.label);
     expect(old).not.toContain("Renewal");
+  });
+});
+
+describe("isStaleStart", () => {
+  const now = new Date("2026-11-17T12:00:00Z");
+  test.each([
+    ["2019-01-01", true],
+    ["2026-10-18", false],
+    ["2026-10-17", true],
+    ["2026-11-17", false],
+    ["2027-01-01", false],
+  ])("%s", (start, stale) => {
+    expect(isStaleStart(start, now)).toBe(stale);
   });
 });
