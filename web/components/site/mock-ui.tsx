@@ -92,7 +92,7 @@ export function AgreementMock({ className = "", signed = true }: { className?: s
       <div className="flex flex-col gap-4 rounded-panel bg-surface p-5 text-ink shadow-panel sm:p-6">
         <div className="flex items-start justify-between gap-4 border-b border-hairline pb-3">
           <div>
-            <p className="font-display text-[18px] font-semibold tracking-tight">Service Agreement</p>
+            <p className="font-display text-[18px] font-semibold tracking-tight">Service Pacts</p>
             <p className="text-[12px] text-ink-2">Harbour Point Tower · Jan 1 – Dec 31, 2027 · 12 months</p>
           </div>
           <span className="rounded-full bg-pill-accepted px-2 py-0.5 text-[11px] font-semibold text-pill-accepted-ink">Accepted</span>

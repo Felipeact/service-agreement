@@ -125,7 +125,7 @@ The remote project holds a fictitious tenant the Phase 1 screens can render.
 
 **Acceptance Criteria**
 
-12. WHEN `supabase/seed.sql` has run THEN the system SHALL hold exactly 1 org with id `00000000-0000-4000-8000-00000000de30`, named `Kettle Ridge Mechanical Ltd.`
+12. WHEN `supabase/seed.sql` has run THEN the system SHALL hold exactly 1 org with id `00000000-0000-4000-8000-00000000de30`, named `Service Pacts`
 13. WHEN `supabase/seed.sql` has run THEN the demo org's `org_settings` SHALL have `repair_discount_pct = 10`, `cpi_cap_pct = 5`, `cancellation_notice_days = 30`, `payment_days = 30` and `governing_province = 'BC'`, and non-empty `legal_name`, `address`, `phone`, `accent_color` and `tax_note`
 14. WHEN `supabase/seed.sql` has run THEN the demo org SHALL have 40 `asset_types` and 174 `asset_type_tasks` equal to the template
 15. WHEN `supabase/seed.sql` has run THEN the demo org SHALL have 12 customers whose names are exactly the `customer` values in `web/lib/sample-pipeline.ts`, each with exactly 1 contact and 1 site, and that contact as the site's `site_contact_id`
@@ -171,7 +171,7 @@ The remote matches the repo, and supabase-init still holds.
 | Demo org contents | settings, catalog, 12 customers with a contact, a site and assets each, and no agreements | user chose this option | y |
 | "AHU (Metro Tower)" in the source | excluded, which leaves 40 types | its one task, "Change filters provided by building", is a note for one customer's site, not an equipment type | n |
 | Names and text taken from the source | the source text, with headings in sentence case ("Exhaust Fan" becomes "Exhaust fan", "Walk in cooler" becomes "Walk-in cooler"). "(annually and quarterly)" is dropped from ERV. Two corrections: "Backflow preventor" becomes "Backflow preventer", and the electric unit heater's "hot spot" becomes "hot spots". Bullets otherwise verbatim | the names appear on customer-facing agreements. The PM agreement template already spells it "preventer" | n |
-| Demo company identity | `Kettle Ridge Mechanical Ltd.`, `100 Sample Street, Burnaby, BC V5A 0A0`, phone `604-555-0100`, accent `#1f6f8b` | fictitious, and phone numbers in the `555-01xx` range are reserved for fiction | n |
+| Demo company identity | `Service Pacts`, `100 Sample Street, Burnaby, BC V5A 0A0`, phone `604-555-0100`, accent `#1f6f8b` | fictitious, and phone numbers in the `555-01xx` range are reserved for fiction | n |
 | Demo default terms | repair discount 10 %, CPI cap 5 %, 30 days' notice, payment in 30 days, BC, tax note "Prices exclude applicable taxes (GST and PST)." | from `PM_Service_Agreement_Template.pdf` §3–6. The repair discount there is a blank `[XX]`, so 10 is a placeholder | n |
 | Demo assets | 2–8 per site, with generic make/model strings and locations ("Roof, east side") | enough for the asset-register screen without pretending to be a real building | n |
 | Verification profile | `light` (AGENTS..md declares none) | the skill default, as for supabase-init. `standard` would add fault injection, for example removing `on conflict` to check that AC 8 then fails | n |

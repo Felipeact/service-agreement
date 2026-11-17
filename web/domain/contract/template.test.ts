@@ -18,7 +18,7 @@ const TERMS: AgreementTerms = {
 };
 
 const PARTIES: ContractParties = {
-  contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null },
+  contractor: { legalName: "Service Pacts", address: null, phone: null },
   customer: { name: "Fernwood Dental" },
   site: { name: "Fernwood Dental, Main", address: null },
   signer: null,
@@ -189,7 +189,7 @@ describe("values", () => {
   });
 
   test("C5219: the contract's own words come from the parties", () => {
-    expect(value("tenant.legalName")).toBe("Kettle Ridge Mechanical Ltd.");
+    expect(value("tenant.legalName")).toBe("Service Pacts");
     expect(value("customer.name")).toBe("Fernwood Dental");
     expect(value("site.name")).toBe("Fernwood Dental, Main");
     expect(value("term.label", TERMS, 24)).toBe("24 months");
@@ -199,7 +199,7 @@ describe("values", () => {
 
 describe("the variables of block-editor door 3", () => {
   const FULL_PARTIES: ContractParties = {
-    contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+    contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
     customer: { name: "Fernwood Dental" },
     site: { name: "Fernwood Dental, Main", address: null },
     signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -242,7 +242,7 @@ describe("the variables of block-editor door 3", () => {
 
   test("C5527: an agreement's text resolves them too: the terms, the tenant's address and phone and the start; the signer is no value", () => {
     const values = agreementTemplateValues(WITH_TAX, 12, {
-      tenant: "Kettle Ridge Mechanical Ltd.",
+      tenant: "Service Pacts",
       customer: "Fernwood Dental",
       site: "Main",
       tenantAddress: "100 Sample Street, Burnaby, BC",

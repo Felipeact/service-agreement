@@ -16,8 +16,8 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s · Service Agreement",
-    default: "Service Agreement",
+    template: "%s · Service Pacts",
+    default: "Service Pacts",
   },
   description: "Recurring service agreements for trade contractors, from the customer's list to signature.",
 };

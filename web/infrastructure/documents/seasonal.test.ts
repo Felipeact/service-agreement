@@ -16,7 +16,7 @@ const RTU: ScopeType = {
   assets: [{ unitNo: "RTU-1", typeModel: null, location: null }],
 };
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: null,
   phone: null,
   accentColor: null,

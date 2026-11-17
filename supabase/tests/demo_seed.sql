@@ -22,7 +22,7 @@ language sql immutable as $$ select '00000000-0000-4000-8000-00000000de30'::uuid
 do $$ begin
   perform tests.ok('C12 count', (select count(*) from public.orgs where id = tests.demo()) = 1, 'no single demo org');
   perform tests.ok('C12 name',
-    (select name from public.orgs where id = tests.demo()) = 'Kettle Ridge Mechanical Ltd.', 'demo org name differs');
+    (select name from public.orgs where id = tests.demo()) = 'Service Pacts', 'demo org name differs');
 end $$;
 
 -- C13

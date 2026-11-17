@@ -1,4 +1,4 @@
-# Service Agreement micro-saas.
+# Service Pacts micro-saas.
 
 Most use the skill `/impeccable` for anything related to  UI and UX.
 Use English for all the content of the web site 

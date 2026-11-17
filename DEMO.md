@@ -1,10 +1,10 @@
 # Demo plan
 
-For showing Service Agreement to a contractor. The demo workspace is **Kettle Ridge Mechanical Ltd.** (fictitious), on the **Business plan** (200 live agreements, 120 AI imports, 10 seats). Its Stripe ids are placeholders (`demo_cus_business`, `demo_sub_business`), so the plan, limits and usage are real and Stripe-backed actions are not.
+For showing Service Pacts to a contractor. The demo workspace is **Service Pacts** (fictitious), on the **Business plan** (200 live agreements, 120 AI imports, 10 seats). Its Stripe ids are placeholders (`demo_cus_business`, `demo_sub_business`), so the plan, limits and usage are real and Stripe-backed actions are not.
 
 ## Before the demo (5 minutes)
 
-1. Sign in as the demo owner and open **Settings**. The company details are the sample ones, so **Send is blocked on purpose** and the page shows a banner. Replace the legal name, address and phone with your own (or a believable demo company) and save. Sample values such as `Kettle Ridge`, `Sample Street` and a `555-01xx` phone are refused.
+1. Sign in as the demo owner and open **Settings**. The seed now carries Service Pacts' real details; a workspace that still has sample details (`Kettle Ridge`, `Sample Street`, a `555-01xx` phone) has **Send blocked on purpose** and shows a banner. Replace the legal name, address and phone with your own (or a believable demo company) and save. Sample values such as `Kettle Ridge`, `Sample Street` and a `555-01xx` phone are refused.
 2. Delete or ignore the `ZZ TEST` customer, site and AG-1002 (a completed test contract). Use a fresh customer for the story.
 3. Open `/settings/billing` once to check it reads **Business**.
 4. Have one messy equipment list ready (Excel or CSV is the safest). Use the same file you tested with.

@@ -5,7 +5,7 @@
 A live test of the production app (2026-11-16, fictitious data) found three things that must not reach a real customer.
 
 1. **The agreement promises service nobody priced.** AG-1002 had two service lines, AHU and RTU, at $4,800 a year. Its review page, PDF and signed contract still listed boilers, chillers, backflow assemblies and exhaust fans as "Service included". `site_service_scope` (exists) lists every active asset type on the site, whatever the lines cover. A contractor cannot take "remove the chillers" out of the promise without deleting the assets from the site register.
-2. **Sample company details go to customers.** The review page, emails and PDFs showed "Kettle Ridge Mechanical Ltd., 100 Sample Street, Burnaby, BC V5A 0A0, 604-555-0100". Nothing makes the contractor confirm their own legal name, address and phone before the first send.
+2. **Sample company details go to customers.** The review page, emails and PDFs showed "Service Pacts, 100 Sample Street, Burnaby, BC V5A 0A0, 604-555-0100". Nothing makes the contractor confirm their own legal name, address and phone before the first send.
 3. **No public legal pages.** `/terms`, `/privacy` and `/security` redirect to `/login`, so a customer cannot read what they accept at checkout or sign under.
 
 Evidence is the QA report's P0 list; it gives no volume or date beyond that single test run. When this ships, an agreement promises only what a priced line covers, a contractor can exclude one asset in two clicks, Send refuses until the company details are the contractor's own, and the three legal pages are public and linked.

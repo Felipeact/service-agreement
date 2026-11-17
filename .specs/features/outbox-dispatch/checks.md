@@ -534,4 +534,4 @@ C1052 is reworded so that every status outside the six retry triggers never loop
 
 ### C1049 inbox confirmation (2026-10-30, the user)
 
-The user confirmed that the AG-1048 email, from `agreements@felipeviana.com` with subject "Service agreement AG-1048 from Kettle Ridge Mechanical Ltd.", sent at about 15:55 UTC, arrived in their inbox (not spam). That settles the "delivers 1 email" clause the Verifier's round 4 left unproven.
+The user confirmed that the AG-1048 email, from `agreements@felipeviana.com` with subject "Service agreement AG-1048 from Service Pacts", sent at about 15:55 UTC, arrived in their inbox (not spam). That settles the "delivers 1 email" clause the Verifier's round 4 left unproven.

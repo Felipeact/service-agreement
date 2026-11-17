@@ -1,7 +1,7 @@
 import { Button, buttonClass } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 
-const PRODUCT_NAME = "Service Agreement";
+const PRODUCT_NAME = "Service Pacts";
 
 /** What a signed-in person with no membership is told about their own paid checkout (workspace-pending-state S2). */
 export type NoWorkspaceState = "none" | "pending" | "refused";

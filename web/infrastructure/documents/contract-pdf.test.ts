@@ -28,7 +28,7 @@ const termsBody = (clauses: string[]): RenderedBlock[] =>
 const base: ContractDocument = {
   number: "AG-1052",
   versionNo: 1,
-  contractor: { name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" },
+  contractor: { name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" },
   customerName: "Fernwood Dental",
   site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
   signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -83,7 +83,7 @@ describe("the contract PDF, rendered", () => {
 
   test("C1641: page 1 is headed Service Contract with the number, and prints the parties", async () => {
     const [first] = await pages();
-    expect(first.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
+    expect(first.startsWith("Service Pacts")).toBe(true);
     for (const expected of [
       "Service Contract",
       "AG-1052",
@@ -97,7 +97,7 @@ describe("the contract PDF, rendered", () => {
     ]) {
       expect(first, expected).toContain(expected);
     }
-    expect(inOrder(indexOfIn(first, "Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100", "Service Contract"))).toBe(true);
+    expect(inOrder(indexOfIn(first, "Service Pacts", "100 Sample Street, Burnaby, BC", "604-555-0100", "Service Contract"))).toBe(true);
   });
 
   test("C1641: the contractor's accent colour is the one drawn, and a different accent replaces it", async () => {
@@ -168,7 +168,7 @@ describe("the contract PDF, rendered", () => {
     const customer = last.indexOf("For the Customer: Pat Lee");
     const customerSignature = last.indexOf("Signature", customer);
     const customerDate = last.indexOf("Date", customerSignature);
-    const contractor = last.indexOf("For Kettle Ridge Mechanical Ltd.", customerDate);
+    const contractor = last.indexOf("For Service Pacts", customerDate);
     const contractorSignature = last.indexOf("Signature", contractor);
     const contractorDate = last.indexOf("Date", contractorSignature);
     expect(inOrder([customer, customerSignature, customerDate, contractor, contractorSignature, contractorDate])).toBe(true);
@@ -208,8 +208,8 @@ describe("the DocuSeal tags in the signature blocks", () => {
     expect(at[1]).toBeGreaterThan(at[0]);
     expect(at[2]).toBeGreaterThan(at[1]);
     expect(at[3]).toBeGreaterThan(at[2]);
-    expect(flat.indexOf("ForKettleRidgeMechanicalLtd.")).toBeGreaterThan(at[1]);
-    expect(flat.indexOf("ForKettleRidgeMechanicalLtd.")).toBeLessThan(at[2]);
+    expect(flat.indexOf("ForServicePacts")).toBeGreaterThan(at[1]);
+    expect(flat.indexOf("ForServicePacts")).toBeLessThan(at[2]);
   });
 
   test("C1713: with no hyphen removed a tag still reads verbatim, because it fits its line and the word cut applies only where a word must wrap", async () => {
@@ -224,7 +224,7 @@ describe("the DocuSeal tags in the signature blocks", () => {
     expect(all.length).toBeGreaterThan(1);
     const last = compact([all[all.length - 1]]);
     expect(last).toContain("FortheCustomer:PatLee");
-    expect(last).toContain("ForKettleRidgeMechanicalLtd.");
+    expect(last).toContain("ForServicePacts");
     for (const tag of TAGS) expect(last, tag).toContain(tag);
   });
 });
@@ -347,8 +347,8 @@ describe("the contract PDF, layout and options (block-editor)", () => {
     const all = await draw([price, { kind: "section", key: "included" }, { kind: "section", key: "equipment" }, heading("Last page", { pageBreakBefore: true }), signatures()], { pageHeader: "every", pageFooter: "letterhead" }, long());
     expect(all.length).toBeGreaterThanOrEqual(3);
     for (const page of all) {
-      expect(page.startsWith("Kettle Ridge Mechanical Ltd.")).toBe(true);
-      expect(page.split("\n").slice(-3)).toEqual(["Kettle Ridge Mechanical Ltd.", "100 Sample Street, Burnaby, BC", "604-555-0100"]);
+      expect(page.startsWith("Service Pacts")).toBe(true);
+      expect(page.split("\n").slice(-3)).toEqual(["Service Pacts", "100 Sample Street, Burnaby, BC", "604-555-0100"]);
     }
   });
 
@@ -400,7 +400,7 @@ describe("the contract PDF, layout and options (block-editor)", () => {
     const all = await draw([price, signatures()]);
     const joined = text(all);
     expect(joined).toContain("For the Customer: Pat Lee");
-    expect(joined).toContain("For Kettle Ridge Mechanical Ltd.");
+    expect(joined).toContain("For Service Pacts");
     expect(joined.split("Signature\n").length - 1).toBe(2);
     expect(joined.split("Date\n").length - 1).toBe(2);
     const squeezed = flat(all);
@@ -415,12 +415,12 @@ describe("the contract PDF, layout and options (block-editor)", () => {
   });
 
   test("C5523: the labels and the caption replace the defaults, the caption under each heading", async () => {
-    const joined = text(await draw([price, signatures({ customerLabel: "Client", contractorLabel: "For and on behalf of Kettle Ridge Mechanical Ltd.", caption: "Signed electronically" })]));
+    const joined = text(await draw([price, signatures({ customerLabel: "Client", contractorLabel: "For and on behalf of Service Pacts", caption: "Signed electronically" })]));
     const rows = joined.split("\n");
     const client = rows.indexOf("Client");
     expect(client).toBeGreaterThan(-1);
     expect(rows[client + 1]).toBe("Signed electronically");
-    const contractor = rows.indexOf("For and on behalf of Kettle Ridge Mechanical Ltd.");
+    const contractor = rows.indexOf("For and on behalf of Service Pacts");
     expect(contractor).toBeGreaterThan(client);
     expect(rows[contractor + 1]).toBe("Signed electronically");
     expect(joined).not.toContain("For the Customer");
@@ -441,7 +441,7 @@ describe("the contract PDF, layout and options (block-editor)", () => {
     expect(squeezed.split(tag).length - 1).toBe(1);
     expect(squeezed.split("{{Name;").length - 1).toBe(1);
     const customer = squeezed.indexOf("FortheCustomer:PatLee");
-    const contractor = squeezed.indexOf("ForKettleRidgeMechanicalLtd.");
+    const contractor = squeezed.indexOf("ForServicePacts");
     expect(squeezed.indexOf(tag)).toBeGreaterThan(customer);
     expect(squeezed.indexOf(tag)).toBeLessThan(contractor);
     // The existing four tags are still there.
@@ -465,7 +465,7 @@ describe("the contract PDF, layout and options (block-editor)", () => {
       term: { start: "2027-01-01", months: 12, end: "2027-12-31" },
       validUntil: null,
     };
-    const parties = { contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" }, customer: { name: "Fernwood Dental" }, site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" }, signer: { name: "Pat Lee", email: "pat@example.com" } };
+    const parties = { contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" }, customer: { name: "Fernwood Dental" }, site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" }, signer: { name: "Pat Lee", email: "pat@example.com" } };
     for (const template of [SYSTEM_CONTRACT_BODY, { schema: 1 as const, blocks: [{ type: "paragraph" as const, text: "Org wording for {{customer.name}}." }] }]) {
       const built = buildContractDocument(SOURCE, parties, "#1f6f8b", undefined, template);
       const before: Partial<ContractDocument> = { ...built };

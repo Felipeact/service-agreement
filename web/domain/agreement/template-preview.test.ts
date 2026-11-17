@@ -5,7 +5,7 @@ import { SYSTEM_AGREEMENT_BODY, type AgreementTemplateBody } from "./template";
 import { buildTemplatePreviewDocument, PREVIEW_MARK } from "./template-preview";
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -66,7 +66,7 @@ describe("the template preview document", () => {
   test("C5436: the intro and closing text are the template's, with the sample names filled in", () => {
     const document = build();
     expect(document.intro).toEqual([{ type: "paragraph", text: "Welcome Sample Customer Ltd.." }]);
-    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Service Pacts." }]);
   });
 
   test.each([
@@ -96,7 +96,7 @@ describe("the template preview document", () => {
     const logo: TenantLogo = { bytes: new Uint8Array([1, 2, 3]), format: "png" };
     const words = itemWords("station", "stations");
     const document = buildTemplatePreviewDocument(BODY, SETTINGS, logo, words);
-    expect(document.tenant).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b", logo });
+    expect(document.tenant).toEqual({ name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b", logo });
     expect(document.words).toBe(words);
     expect("logo" in build().tenant).toBe(false);
   });

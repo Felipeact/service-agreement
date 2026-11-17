@@ -145,11 +145,11 @@ Proof: `npx vitest run boundaries -t "C17:"`
 ### S4 - The signed-in member sees their company · 5 files · ~12 KB · ~3k
 
 **C18** - the Supabase `currentMember` returns
-`{ status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Kettle Ridge Mechanical Ltd.", role: "owner" }`
-when the stubbed query returns one row `{ org_id: "o1", role: "owner", orgs: { name: "Kettle Ridge Mechanical Ltd." } }`;
-the `(app)` layout given that member renders markup containing "Kettle Ridge Mechanical Ltd." and
+`{ status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Service Pacts", role: "owner" }`
+when the stubbed query returns one row `{ org_id: "o1", role: "owner", orgs: { name: "Service Pacts" } }`;
+the `(app)` layout given that member renders markup containing "Service Pacts" and
 "owner@example.com"; and live, the demo owner signed in through a real link sees
-"Kettle Ridge Mechanical Ltd." in the sidebar at 1440x900 (AC 16)
+"Service Pacts" in the sidebar at 1440x900 (AC 16)
 Proof: `npx vitest run infrastructure/supabase -t "C18:"`
 Proof: `npx vitest run "app/(app)" -t "C18:"`
 Proof: live - `browser_snapshot` of `/pipeline` after signing in as the demo owner

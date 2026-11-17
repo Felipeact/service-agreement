@@ -10,7 +10,7 @@ const SELF = path.join(__dirname, "settings-menu.test.ts");
 const WEB = path.join(__dirname, "..", "..");
 
 const settings: OrgSettings = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: null,
   phone: null,
   accentColor: null,

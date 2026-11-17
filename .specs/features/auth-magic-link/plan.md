@@ -127,7 +127,7 @@ so the public one is listed here.
 
 **Acceptance Criteria**
 
-16. WHEN the demo owner is signed in THEN the shell SHALL show "Kettle Ridge Mechanical Ltd.", read from `orgs` through PostgREST under RLS with that user's session, and the user's email
+16. WHEN the demo owner is signed in THEN the shell SHALL show "Service Pacts", read from `orgs` through PostgREST under RLS with that user's session, and the user's email
 17. IF a signed-in user has no membership THEN pages under `app/(app)` SHALL show "No workspace yet" with the text "Your account isn't part of a company workspace. Ask your company's owner to invite you." and a Sign out button, and no navigation
 18. IF a user has more than one membership THEN `currentMember` SHALL return the one with the earliest `created_at`
 19. The system SHALL make `currentMember` take the user id from the `getClaims` `sub` claim, and SHALL have no file under `web/` call `auth.getSession`

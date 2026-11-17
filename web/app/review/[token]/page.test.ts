@@ -61,7 +61,7 @@ describe("the open page", () => {
     answer(portalView());
     const page = text(await render());
     for (const expected of [
-      "Kettle Ridge Mechanical Ltd.",
+      "Service Pacts",
       "100 Sample Street, Burnaby, BC",
       "604-555-0100",
       "AG-1052",
@@ -92,7 +92,7 @@ describe("the open page", () => {
   });
 
   test("C909: with address and phone null the page holds no null or undefined text", async () => {
-    answer(portalView({ tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: null, accent: null, words: DEFAULT_ITEM_WORDS } }));
+    answer(portalView({ tenant: { name: "Service Pacts", address: null, phone: null, accent: null, words: DEFAULT_ITEM_WORDS } }));
     const html = await render();
     expect(html).not.toMatch(/null|undefined/);
   });
@@ -144,14 +144,15 @@ describe("the brand", () => {
   test("C912: the legal name heads the page and the accent colours the rule and the primary button", async () => {
     answer(portalView());
     const html = await render();
-    expect(html).toMatch(/<header[^>]*>[\s\S]*Kettle Ridge Mechanical Ltd\.[\s\S]*<\/header>/);
+    expect(html).toMatch(/<header[^>]*>[\s\S]*Service Pacts[\s\S]*<\/header>/);
     expect(html).toMatch(/data-accent-rule="" style="background-color:#1f6f8b"/);
     expect(html).toMatch(/<button[^>]*style="background-color:#1f6f8b;color:#ffffff"[^>]*>Accept<\/button>/);
   });
 
   test("C912: the page names no product", async () => {
-    answer(portalView());
-    expect(await render()).not.toMatch(/Service Agreement/i);
+    // The product and the demo tenant now share a name, so this uses another tenant to tell them apart.
+    answer(portalView({ tenant: { name: "Acme", address: null, phone: null, accent: null, words: DEFAULT_ITEM_WORDS } }));
+    expect(await render()).not.toMatch(/Service Pacts/i);
   });
 
   test("C912: with accent null the neutral accent is used", async () => {
@@ -185,7 +186,7 @@ describe("the states", () => {
     answer(portalView({ link: revokedLink }));
     const html = await render();
     const page = text(html);
-    expect(page).toContain("This link has been replaced. Ask Kettle Ridge Mechanical Ltd. for the new one.");
+    expect(page).toContain("This link has been replaced. Ask Service Pacts for the new one.");
     expect(page).toContain("604-555-0100");
     expect(page).not.toContain("Preventive maintenance visit");
     expect(page).not.toContain("Download PDF");
@@ -204,7 +205,7 @@ describe("the states", () => {
     answer(portalView({ link: olderLink }));
     const html = await render();
     const page = text(html);
-    const notice = "A newer version of this agreement was sent. Ask Kettle Ridge Mechanical Ltd. for its link.";
+    const notice = "A newer version of this agreement was sent. Ask Service Pacts for its link.";
     expect(page).toContain(notice);
     expect(page.indexOf(notice)).toBeLessThan(page.indexOf("Preventive maintenance visit"));
     expect(page).toContain("Download PDF");
@@ -213,7 +214,7 @@ describe("the states", () => {
   });
 
   test.each([
-    ["withdrawn", "Kettle Ridge Mechanical Ltd. withdrawn this agreement."],
+    ["withdrawn", "Service Pacts withdrawn this agreement."],
     ["expired", "This agreement has expired."],
   ] as const)("C916: %s shows its message and the phone, and nothing else", async (status, message) => {
     answer(portalView({ agreement: { number: "AG-1052", status } }));

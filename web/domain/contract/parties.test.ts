@@ -3,7 +3,7 @@ import { parseContractParties } from "./parties";
 
 const FULL = {
   schema: 1,
-  contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+  contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
   customer: { name: "Fernwood Dental" },
   site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
   signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -12,7 +12,7 @@ const FULL = {
 describe("parseContractParties", () => {
   test("C1628: a schema 1 object comes back typed", () => {
     expect(parseContractParties(FULL)).toEqual({
-      contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+      contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
       customer: { name: "Fernwood Dental" },
       site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
       signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -22,12 +22,12 @@ describe("parseContractParties", () => {
   test("C1628: a missing optional key comes back as null", () => {
     const parsed = parseContractParties({
       schema: 1,
-      contractor: { legalName: "Kettle Ridge Mechanical Ltd." },
+      contractor: { legalName: "Service Pacts" },
       customer: { name: "Fernwood Dental" },
       site: { name: "Main" },
     });
     expect(parsed).toEqual({
-      contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: null, phone: null },
+      contractor: { legalName: "Service Pacts", address: null, phone: null },
       customer: { name: "Fernwood Dental" },
       site: { name: "Main", address: null },
       signer: null,

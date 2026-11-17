@@ -9,7 +9,7 @@ import type { TenantLogo } from "@/domain/org-settings/logo";
 const ORG = "22222222-2222-4222-8222-222222222222";
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -91,9 +91,9 @@ describe("POST /templates/preview, the document", () => {
     expect(renderAgreement).toHaveBeenCalledTimes(1);
     const document: AgreementDocument = renderAgreement.mock.calls[0][0];
     expect(document).toMatchObject({ number: "AG-0000", customerName: "Sample Customer Ltd.", siteName: "Sample Site", mark: "TEMPLATE PREVIEW" });
-    expect(document.tenant).toMatchObject({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" });
+    expect(document.tenant).toMatchObject({ name: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.intro).toEqual([{ type: "paragraph", text: "Welcome Sample Customer Ltd.." }]);
-    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Kettle Ridge Mechanical Ltd.." }]);
+    expect(document.footer).toEqual([{ type: "paragraph", text: "Thank you, Service Pacts." }]);
     expect(document.sections).toEqual({ schedule: true, scope: false });
     expect(document.lines).toEqual([
       { description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 },

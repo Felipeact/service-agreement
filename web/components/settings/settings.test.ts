@@ -8,7 +8,7 @@ import { SettingsView } from "./settings-view";
 import { toInput, type SettingsFormState } from "./state";
 
 const settings: OrgSettings = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC V5A 0A0",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -44,7 +44,7 @@ describe("settings form", () => {
   test("C142: ten labelled controls hold the stored values", () => {
     const out = view("owner");
     const expected: [string, string, string][] = [
-      ["legalName", "Legal name", "Kettle Ridge Mechanical Ltd."],
+      ["legalName", "Legal name", "Service Pacts"],
       ["address", "Address", "100 Sample Street, Burnaby, BC V5A 0A0"],
       ["phone", "Phone", "604-555-0100"],
       ["accentColor", "Accent colour", "#1f6f8b"],

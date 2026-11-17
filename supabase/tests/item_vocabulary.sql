@@ -21,7 +21,7 @@ do $$ begin
   perform tests.ok('C2007 fixture org B', tests.iv_words('orgB') = 'equipment/equipment', 'org B does not read equipment/equipment');
   perform tests.ok('C2007 demo org', (
       select s.item_singular || '/' || s.item_plural from public.org_settings s join public.orgs o on o.id = s.org_id
-      where o.name = 'Kettle Ridge Mechanical Ltd.') = 'equipment/equipment', 'the demo org does not read equipment/equipment');
+      where o.name = 'Service Pacts') = 'equipment/equipment', 'the demo org does not read equipment/equipment');
   perform tests.ok('C2007 columns not null',
     (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'org_settings'
        and column_name in ('item_singular', 'item_plural') and is_nullable = 'NO' and column_default like '%equipment%') = 2,

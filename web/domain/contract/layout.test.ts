@@ -151,7 +151,7 @@ describe("validateContractWording", () => {
 });
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street, Burnaby, BC",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -188,7 +188,7 @@ describe("buildContractPreviewDocument", () => {
     expect(document.lines).toHaveLength(1);
     expect(document.lines[0].annualCents).toBe(document.lines[0].visitsPerYear * document.lines[0].costPerVisitCents);
     expect(document.totalCents).toBe(document.lines[0].annualCents);
-    expect(document.contractor).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" });
+    expect(document.contractor).toEqual({ name: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.taxNote).toBe("GST extra");
   });
 
@@ -218,7 +218,7 @@ describe("buildContractPreviewDocument", () => {
 
 describe("buildContractDocument, the layout", () => {
   const PARTIES: ContractParties = {
-    contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100" },
+    contractor: { legalName: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100" },
     customer: { name: "Fernwood Dental" },
     site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
     signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -252,6 +252,6 @@ describe("buildContractDocument, the layout", () => {
     };
     const { doc, layout } = buildContractDocument(SOURCE, PARTIES, null, undefined, template);
     expect(doc?.title).toBe("Agreement effective January 1, 2027");
-    expect(layout?.[0]).toEqual({ kind: "block", type: "paragraph", text: "Kettle Ridge Mechanical Ltd., 100 Sample Street, 604-555-0100. Signed by Pat Lee. GST extra." });
+    expect(layout?.[0]).toEqual({ kind: "block", type: "paragraph", text: "Service Pacts, 100 Sample Street, 604-555-0100. Signed by Pat Lee. GST extra." });
   });
 });

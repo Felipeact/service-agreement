@@ -16,7 +16,7 @@ const PRINCIPLES = [
 export default function AboutPage() {
   return (
     <SiteShell>
-      <PageHero title="Service quotes should not live in spreadsheets." text="Service Agreement is a small, focused product for trade contractors who sell recurring service. It is built by Felipe Viana and is in active development." />
+      <PageHero title="Service quotes should not live in spreadsheets." text="Service Pacts is a small, focused product for trade contractors who sell recurring service. It is built by Felipe Viana and is in active development." />
       <section className="bg-surface">
         <Wrap className="grid gap-8 py-14 lg:grid-cols-[1fr_1.4fr] lg:gap-14 lg:py-20">
           <SectionHead title="Why it exists." />

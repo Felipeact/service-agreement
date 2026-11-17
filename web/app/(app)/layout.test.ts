@@ -43,17 +43,17 @@ describe("(app) layout", () => {
       userId: "u1",
       email: "owner@example.com",
       orgId: "o1",
-      orgName: "Kettle Ridge Mechanical Ltd.",
+      orgName: "Service Pacts",
       role: "owner",
     });
     const html = await renderLayout();
 
-    expect(html).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(html).toContain("Service Pacts");
     expect(html).toContain("owner@example.com");
     expect(html).toContain("page body");
   });
 
-  const owner: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Kettle Ridge Mechanical Ltd.", role: "owner" };
+  const owner: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Service Pacts", role: "owner" };
 
   test("the top bar names today and the bell links to the follow-ups with their count", async () => {
     currentMember.mockResolvedValue(owner);
@@ -90,7 +90,7 @@ describe("(app) layout", () => {
 
 describe("(app) layout, paid workspace state", () => {
   const NO_MEMBERSHIP: CurrentMember = { status: "no_membership", email: "owner@example.com" };
-  const MEMBER: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Kettle Ridge Mechanical Ltd.", role: "owner" };
+  const MEMBER: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Service Pacts", role: "owner" };
 
   test("C4220: no membership asks workspaceState once and shows what it answers", async () => {
     currentMember.mockResolvedValue(NO_MEMBERSHIP);

@@ -14,7 +14,7 @@ const contract = (over: Partial<ContractDetail> = {}): ContractDetail => ({
   number: "AG-1052",
   createdAt: new Date("2026-11-05T18:00:00Z"),
   parties: {
-    contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
+    contractor: { legalName: "Service Pacts", address: "100 Sample Street, Burnaby, BC", phone: "604-555-0100" },
     customer: { name: "Fernwood Dental" },
     site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
     signer: { name: "Pat Lee", email: "pat@customer.ca" },

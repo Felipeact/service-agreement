@@ -1,4 +1,4 @@
-# Roadmap: Service Agreement micro-SaaS
+# Roadmap: Service Pacts micro-SaaS
 
 A multi-tenant SaaS for trades and service businesses that maintain things on a recurring schedule. HVAC and mechanical contractors are the first trade; plumbing, electrical and others follow (see [Trades and packs](#trades-and-packs)). It imports a customer's list of equipment (or other serviced items), builds a recurring service agreement for review, tracks it until the customer accepts or refuses it, then turns the accepted agreement into a contract for e-signature. n8n automates the steps in between.
 
@@ -6,7 +6,7 @@ Tenant branding (legal name, address, phone, logo, terms) comes from each tenant
 
 ## Product overview
 
-The working name is "Service Agreement" (the brand is undecided). This section says what the product is, who buys it, how a deal moves, how signing works and what it costs. It describes the plan, not what is shipped; the phases below say what is built. There are no customers, testimonials or measured results yet, so none are claimed here.
+The working name is "Service Pacts" (the brand is undecided). This section says what the product is, who buys it, how a deal moves, how signing works and what it costs. It describes the plan, not what is shipped; the phases below say what is built. There are no customers, testimonials or measured results yet, so none are claimed here.
 
 ### What it is
 

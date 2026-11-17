@@ -9,7 +9,7 @@ import type { TenantLogo } from "@/domain/org-settings/logo";
 const ORG = "22222222-2222-4222-8222-222222222222";
 
 const SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: "100 Sample Street",
   phone: "604-555-0100",
   accentColor: "#1f6f8b",
@@ -85,7 +85,7 @@ describe("POST /templates/contract/preview, the document", () => {
     expect(renderContract).toHaveBeenCalledTimes(1);
     const document: ContractDocument = renderContract.mock.calls[0][0];
     expect(document).toMatchObject({ number: "AG-0000", customerName: "Sample Customer Ltd.", site: { name: "Sample Site" } });
-    expect(document.contractor).toMatchObject({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100" });
+    expect(document.contractor).toMatchObject({ name: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100" });
     expect(document.signer).toMatchObject({ name: "Sample Signer" });
     expect(document.doc).toEqual({ title: "PREVENTIVE MAINTENANCE SERVICE AGREEMENT", showMeta: false, pageHeader: "every", pageFooter: "letterhead" });
     expect(document.layout?.at(-1)).toMatchObject({ kind: "section", key: "signatures" });

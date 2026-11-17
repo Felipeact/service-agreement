@@ -71,7 +71,7 @@ describe("portal link store", () => {
 const DOCUMENT = {
   link: { versionNo: 2, current: true, revoked: false, revokedAt: null, firstViewedAt: "2026-10-21T10:00:00+00:00" },
   agreement: { number: "AG-1052", status: "accepted" },
-  tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: "604-555-0100", accent: "#1f6f8b" },
+  tenant: { name: "Service Pacts", address: null, phone: "604-555-0100", accent: "#1f6f8b" },
   customer: { name: "Fernwood Dental" },
   site: { name: "Fernwood Dental, Main" },
   lines: [{ description: "Quarterly visit", visitsPerYear: 4, costPerVisitCents: 45000, annualCents: 180000 }],
@@ -126,7 +126,7 @@ describe("portal reader", () => {
     expect(view).toMatchObject({
       link: { versionNo: 2, current: true, revoked: false, revokedAt: null },
       agreement: { number: "AG-1052", status: "accepted" },
-      tenant: { name: "Kettle Ridge Mechanical Ltd.", address: null, phone: "604-555-0100", accent: "#1f6f8b" },
+      tenant: { name: "Service Pacts", address: null, phone: "604-555-0100", accent: "#1f6f8b" },
       customer: { name: "Fernwood Dental" },
       annualCents: 180000,
       terms: { repairDiscountPct: 10, paymentDays: null, governingProvince: "BC" },

@@ -12,7 +12,7 @@ import type { ItemWords } from "@/domain/org-settings";
 import { ItemWordsProvider } from "./item-words";
 import { SidebarNav } from "./sidebar-nav";
 
-const PRODUCT_NAME = "Service Agreement";
+const PRODUCT_NAME = "Service Pacts";
 const SEARCH_SHORTCUT = "/";
 const SIDEBAR_KEY = "sidebar-collapsed";
 

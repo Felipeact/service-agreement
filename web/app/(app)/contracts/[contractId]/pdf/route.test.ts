@@ -28,7 +28,7 @@ const SETTINGS: OrgSettingsValue = {
 };
 
 const PARTIES: NonNullable<ContractDetail["parties"]> = {
-  contractor: { legalName: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100" },
+  contractor: { legalName: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100" },
   customer: { name: "Fernwood Dental" },
   site: { name: "Fernwood Dental, Main", address: "12 Oak Ave" },
   signer: { name: "Pat Lee", email: "pat@example.com" },
@@ -105,7 +105,7 @@ describe("GET /contracts/[contractId]/pdf", () => {
     expect(agreementGet).toHaveBeenCalledWith(AGR, 3);
     expect(getOrgSettings).toHaveBeenCalledWith(ORG);
     const document = renderContract.mock.calls[0][0];
-    expect(document.contractor).toEqual({ name: "Kettle Ridge Mechanical Ltd.", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" });
+    expect(document.contractor).toEqual({ name: "Service Pacts", address: "100 Sample Street", phone: "604-555-0100", accent: "#1f6f8b" });
     expect(document.customerName).toBe("Fernwood Dental");
     expect(document.body.map((block: { text: string }) => block.text)).toContain("Repair work is discounted by 10%.");
   });

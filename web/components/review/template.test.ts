@@ -31,7 +31,7 @@ describe("the review page's template text", () => {
   test("C5331: the intro comes before the price table and the closing text after the terms", () => {
     const out = render(portalView({ template: TEMPLATE }));
     const at = (needle: string) => out.indexOf(needle);
-    const positions = [at("About this agreement"), at("Welcome Fernwood Dental."), at("Total per year"), at("Terms"), at("Thank you, Kettle Ridge Mechanical Ltd.."), at("Download PDF")];
+    const positions = [at("About this agreement"), at("Welcome Fernwood Dental."), at("Total per year"), at("Terms"), at("Thank you, Service Pacts."), at("Download PDF")];
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });

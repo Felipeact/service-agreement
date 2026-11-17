@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy policy"
-      intro="This explains what personal information Service Agreement collects, why, and who else handles it."
+      intro="This explains what personal information Service Pacts collects, why, and who else handles it."
       updated="2026-11-16"
       sections={[
         {

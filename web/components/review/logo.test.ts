@@ -12,8 +12,8 @@ describe("the review page, logo", () => {
   test("C3334: with a logo URL the header holds an <img> of it with the company name as alt, before the name, and with none there is no <img>", () => {
     const withLogo = render(URL);
     expect(withLogo).toMatch(/<img[^>]*src="https:\/\/x\.supabase\.co\/storage\/v1\/object\/public\/logos\/o\/l\.png"/);
-    expect(withLogo).toContain('alt="Kettle Ridge Mechanical Ltd."');
-    expect(withLogo.indexOf("<img")).toBeLessThan(withLogo.indexOf("Kettle Ridge Mechanical Ltd.</p>"));
+    expect(withLogo).toContain('alt="Service Pacts"');
+    expect(withLogo.indexOf("<img")).toBeLessThan(withLogo.indexOf("Service Pacts</p>"));
     expect(render()).not.toContain("<img");
     expect(render(null)).not.toContain("<img");
   });

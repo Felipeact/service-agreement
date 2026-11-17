@@ -45,7 +45,7 @@ The user confirmed three reasons, all of equal weight:
 - **Seed and demo data** use a fictitious company.
 - **Customers never see or build workflows.** The app owns all status; n8n only automates.
 - **Engineering:** SOLID, ports and adapters, money in integer cents. Every change to the web app must pass Playwright validation at 375, 768 and 1440 px wide, with touch targets of at least 44 px (see `AGENTS..md`).
-- **Undecided:** the product name and brand (the working name is "Service Agreement"), plans and pricing (Phase 5), and, for the multi-trade scope, the things only the user can supply: a pilot contractor, a practitioner to review packs, a lawyer for the starter contract wording, and plan price points (see `ROADMAP.md` Decisions). Transactional email runs on Resend (outbox-dispatch, 2026-10-29).
+- **Undecided:** the product name and brand (the working name is "Service Pacts"), plans and pricing (Phase 5), and, for the multi-trade scope, the things only the user can supply: a pilot contractor, a practitioner to review packs, a lawyer for the starter contract wording, and plan price points (see `ROADMAP.md` Decisions). Transactional email runs on Resend (outbox-dispatch, 2026-10-29).
 
 ## Brand Commitments
 

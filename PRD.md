@@ -1,4 +1,4 @@
-# PRD: Service Agreement micro-SaaS
+# PRD: Service Pacts micro-SaaS
 
 Status: living document. Last updated 2026-11-04. Source of truth for delivery state is [ROADMAP.md](ROADMAP.md); for what is built, [CONTEXT.md](CONTEXT.md); for users and positioning, [PRODUCT.md](PRODUCT.md).
 

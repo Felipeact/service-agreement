@@ -9,7 +9,7 @@ import { pdfPages } from "@/infrastructure/documents/pdf-text.testing";
 const AGR = "11111111-1111-4111-8111-111111111111";
 
 let SETTINGS: OrgSettingsValue = {
-  legalName: "Kettle Ridge Mechanical Ltd.",
+  legalName: "Service Pacts",
   address: null,
   phone: null,
   accentColor: null,

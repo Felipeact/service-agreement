@@ -29,7 +29,7 @@ describe("the portal PDF route with the real renderer", () => {
     expect(body.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(body.toString("latin1").trimEnd().endsWith("%%EOF")).toBe(true);
     const text = await textOf(response);
-    expect(text).toContain("Kettle Ridge Mechanical Ltd.");
+    expect(text).toContain("Service Pacts");
     expect(text).toContain("AG-1052");
     expect(text).toContain("10%");
   });

@@ -54,7 +54,7 @@ All proofs run at HEAD from PowerShell, one invocation for the 20 files with `-t
 | C5504 | included before price and the reverse | `-t C5504:` (1) | `agreement-pdf.test.ts:519` `indexOf("Service included")` < `indexOf("Service and price")`, `:521` reverse | PASS |
 | C5505 | showMeta false/true | `-t C5505:` (1) | `agreement-pdf.test.ts:527` absent lines, `:528` title kept, `:530` present when true | PASS |
 | C5506 | title with merge variables, empty draws none | domain `-t C5506:` (1), pdf (1) | `document.test.ts:281` `doc.title` toBe "Maintenance schedule for Fernwood Dental, Main"; `agreement-pdf.test.ts:535,538-539` | PASS |
-| C5507 | pageHeader every on 3 pages, first once | `-t C5507:` (1) | `agreement-pdf.test.ts:545` every page `startsWith("Kettle Ridge Mechanical Ltd.")`, `:549` later pages not.toContain | PASS |
+| C5507 | pageHeader every on 3 pages, first once | `-t C5507:` (1) | `agreement-pdf.test.ts:545` every page `startsWith("Service Pacts")`, `:549` later pages not.toContain | PASS |
 | C5508 | footer letterhead vs number | `-t C5508:` (1) | `agreement-pdf.test.ts:556` last 3 lines equal name, address, phone; `:560` last 2 lines number and "Page i of n" | PASS |
 | C5509 | review page same items, titles, order as PDF | `components/review/layout.test.ts -t C5509:` (3) | `layout.test.ts:43-52` PDF layout list toEqual, `:60-62` positions sorted and `headings(page)` arrayContaining titles | PASS |
 | C5510 | schema 1 / no template print as before | `-t C5510:` (1) | `agreement-pdf.test.ts:581` `pdfPages(built)` toEqual `pdfPages(before)` (before = built minus layout and doc); the old agreement-pdf.test.ts assertions are intact (diff is 256 added lines, 0 removed) | PASS |

@@ -1,17 +1,17 @@
--- Demo data: a fictitious contractor, Kettle Ridge Mechanical Ltd. (.specs/features/catalog-seed/plan.md, door 5).
+-- Demo data: a fictitious contractor, Service Pacts (.specs/features/catalog-seed/plan.md, door 5).
 -- One transaction, safe to run again: every row has a fixed id (door 4) and inserts skip rows that exist.
 -- Customer names match web/lib/sample-pipeline.ts. Emails use example.com and phones the 555-01xx fiction range.
 -- The 12 agreements mirror the pipeline cards of the Phase 0.5 mockups. Its owner is attached only when the session sets app.demo_owner_email (see the end).
 begin;
 
 insert into public.orgs (id, name)
-values ('00000000-0000-4000-8000-00000000de30', 'Kettle Ridge Mechanical Ltd.')
+values ('00000000-0000-4000-8000-00000000de30', 'Service Pacts')
 on conflict (id) do nothing;
 
 insert into public.org_settings (org_id, legal_name, address, phone, accent_color, repair_discount_pct, cpi_cap_pct,
                                  cancellation_notice_days, payment_days, governing_province, tax_note)
-values ('00000000-0000-4000-8000-00000000de30', 'Kettle Ridge Mechanical Ltd.',
-        '100 Sample Street, Burnaby, BC V5A 0A0', '604-555-0100', '#1f6f8b', 10, 5, 30, 30, 'BC',
+values ('00000000-0000-4000-8000-00000000de30', 'Service Pacts',
+        '6500 194 St, Surrey, BC', '778-512-8724', '#1f6f8b', 10, 5, 30, 30, 'BC',
         'Prices exclude applicable taxes (GST and PST).')
 on conflict (org_id) do nothing;
 

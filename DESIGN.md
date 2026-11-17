@@ -1,5 +1,5 @@
 ---
-name: Service Agreement
+name: Service Pacts
 description: Familiar, precise SaaS for trade-contractor estimators, warmed up. The category standard built to the craft of Linear, Stripe, Attio and Jobber, on a navy shell with a display face, stage-tinted wells and authored drawings.
 colors:
   ground: "#f3f5f9"
@@ -125,7 +125,7 @@ components:
     width: "240px"
 ---
 
-# Design System: Service Agreement
+# Design System: Service Pacts
 
 ## Overview
 

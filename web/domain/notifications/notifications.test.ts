@@ -28,7 +28,7 @@ describe("customer emails", () => {
       expect(body).toMatch(/\$3,870\.00[^<\n]*before tax/);
       expect(body).toContain("604-555-0100");
       expect(body).toContain("Northwind Mechanical Ltd.");
-      expect(body).not.toContain("Service Agreement");
+      expect(body).not.toContain("Service Pacts");
       expect(body).not.toContain("felipeviana");
     }
     expect(email.text).toContain(`Review the agreement: ${BASE}/review/${TOKEN}`);
@@ -49,7 +49,7 @@ describe("customer emails", () => {
     expect(email.html).toContain("Harbourview Towers");
     expect(email.html).toMatch(/\$3,870\.00[^<]*before tax/);
     expect(email.html).toContain("604-555-0100");
-    expect(email.text).not.toContain("Service Agreement");
+    expect(email.text).not.toContain("Service Pacts");
   });
 
   test("C1019: names from the database are HTML-escaped", () => {
