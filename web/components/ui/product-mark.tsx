@@ -1,14 +1,10 @@
 /**
- * The product mark: a rounded square holding a service cycle with a tick inside it, an agreement that comes round
- * again and is signed. It is the product's own, so it appears on the app's screens and the sign-in page and never
- * on what the customer sees, which wears the tenant's logo (DESIGN.md, The Tenant Wears the Accent Rule).
+ * The product mark: a rounded square holding two arrows that chase each other round a pact, the Service Pacts logo
+ * (`public/brand/`). It is the product's own, so it appears on the app's screens and the sign-in page and never on
+ * what the customer sees, which wears the tenant's logo (DESIGN.md, The Tenant Wears the Accent Rule). The blue tile
+ * reads on both the light site header and the Night shell.
  */
 export function ProductMark({ className = "size-6" }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={`shrink-0 ${className}`}>
-      <rect width="24" height="24" rx="6" className="fill-action" />
-      <path d="M12 5.75A6.25 6.25 0 1 1 5.75 12" fill="none" className="stroke-surface" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="m9.25 12.1 2 2 3.6-3.9" fill="none" className="stroke-surface" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  // eslint-disable-next-line @next/next/no-img-element -- a small static SVG; next/image adds nothing for it
+  return <img src="/brand/mark-blue.svg" alt="" aria-hidden="true" className={`shrink-0 ${className}`} />;
 }
