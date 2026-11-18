@@ -60,3 +60,29 @@ export function validateNewAgreement(input: NewAgreementInput): NewAgreementVali
   if (!customer || !site || Object.keys(errors).length > 0) return { ok: false, errors };
   return { ok: true, value: version === "" ? { customer, site } : { customer, site, templateVersionId: version } };
 }
+
+/** One equipment type chosen by hand in the New agreement dialog, and how many units of it the site has. */
+export type EquipmentPick = { assetTypeId: string; count: number };
+
+export const MAX_UNITS_PER_TYPE = 99;
+export const MAX_PICKED_UNITS = 500;
+
+/**
+ * The hand-picked equipment, kept only for the org's own types and whole counts from 1 to `MAX_UNITS_PER_TYPE`; a type
+ * named twice is counted once with the larger count. More than `MAX_PICKED_UNITS` units in all is refused.
+ */
+export function validateEquipmentPicks(
+  picks: readonly EquipmentPick[],
+  allowedTypeIds: readonly string[],
+): { ok: true; value: EquipmentPick[] } | { ok: false; error: string } {
+  const allowed = new Set(allowedTypeIds);
+  const byType = new Map<string, number>();
+  for (const pick of picks) {
+    if (!allowed.has(pick.assetTypeId)) return { ok: false, error: "Choose equipment types from the list" };
+    if (!Number.isInteger(pick.count) || pick.count < 1 || pick.count > MAX_UNITS_PER_TYPE) return { ok: false, error: `Each type takes 1 to ${MAX_UNITS_PER_TYPE} units` };
+    byType.set(pick.assetTypeId, Math.max(byType.get(pick.assetTypeId) ?? 0, pick.count));
+  }
+  const value = [...byType].map(([assetTypeId, count]) => ({ assetTypeId, count }));
+  if (value.reduce((sum, pick) => sum + pick.count, 0) > MAX_PICKED_UNITS) return { ok: false, error: `Add at most ${MAX_PICKED_UNITS} units here; import a list for more` };
+  return { ok: true, value };
+}

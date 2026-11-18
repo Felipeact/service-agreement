@@ -382,7 +382,7 @@ describe("composition root", () => {
     const store: AgreementStore = { create: async () => created[0], setTemplate: async () => ({ ok: true }) };
     const added: AddServiceLineResult[] = [{ ok: true, id: "l1" }, { ok: false, code: "locked" }, { ok: false, code: "too_many" }];
     const written: ServiceLineWriteResult[] = [{ ok: true }, { ok: false, code: "locked" }, { ok: false, code: "not_found" }];
-    const lines: ServiceLineStore = { add: async () => added[0], update: async () => written[0], remove: async () => written[0] };
+    const lines: ServiceLineStore = { add: async () => added[0], update: async () => written[0], remove: async () => written[0], setRecommended: async () => written[0] };
     const live: SiteView["liveAgreement"][] = [{ id: "g1", number: "AG-1048", status: "sent" }, null];
     expect(await reader.get("g1")).toBe(detail);
     expect(await store.create("s1")).toEqual({ ok: true, id: "g1" });

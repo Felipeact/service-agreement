@@ -13,6 +13,7 @@ import type {
   UncoveredType,
 } from "@/domain/agreement";
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind, ContractWordingBody } from "@/domain/contract";
+import type { SiteEquipmentType } from "@/domain/agreement/recommend";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { DraftType } from "@/domain/catalog-draft";
@@ -398,6 +399,8 @@ export interface SiteStore {
 export interface AssetStore {
   /** Writes `source = 'manual'`. */
   create(orgId: string, siteId: string, value: AssetValue): Promise<CreateResult>;
+  /** Several units in one insert, all `source = 'manual'` (the New agreement equipment picker); answers how many were written. */
+  createMany(orgId: string, siteId: string, values: AssetValue[]): Promise<{ ok: true; count: number } | { ok: false; code: WriteFailure }>;
   /** Leaves `source` as it is. */
   update(id: string, value: AssetValue): Promise<WriteResult>;
   /** Assets are never deleted (deactivation door 2); a removed one may name the active unit on its site that replaced it. */
@@ -668,6 +671,8 @@ export type ServiceLineView = {
   visitMonths: number[];
   /** The equipment types the line covers, by name (cadence door 2). */
   equipment: { id: string; code: string; name: string }[];
+  /** Proposed by the app from the site's equipment and not yet reviewed (recommended-lines). Absent in older fixtures: not recommended. */
+  recommended?: boolean;
 };
 
 /** What the history of a version records: who acted is a role, or the customer (versioning AC 6). */
@@ -853,6 +858,13 @@ export interface ServiceLineStore {
   add(agreementId: string, value: ServiceLineValue): Promise<AddServiceLineResult>;
   update(lineId: string, value: ServiceLineValue): Promise<ServiceLineWriteResult>;
   remove(lineId: string): Promise<ServiceLineWriteResult>;
+  /** Tags a line as the app's recommendation, or clears the tag once a person kept it (recommended-lines). */
+  setRecommended(lineId: string, recommended: boolean): Promise<ServiceLineWriteResult>;
+}
+
+/** The active equipment on an agreement's site, by type with its unit count (recommended-lines); `null` for no such agreement. */
+export interface SiteEquipmentReader {
+  forAgreement(agreementId: string): Promise<{ siteId: string; types: SiteEquipmentType[] } | null>;
 }
 
 export type AgreementTermWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" | "invalid" };

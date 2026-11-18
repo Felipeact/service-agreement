@@ -59,6 +59,7 @@ export { makeReadImport, outcomeOf, type ReadImportResult } from "./read-import"
 export { makeSuggestImportTypes, type SuggestImportTypesResult, type TypeSuggestionForReview } from "./suggest-import-types";
 export { makeExtractImport, makeImportProgress, type ExtractImportResult } from "./extract-import";
 export { makeReissueLink, makeSendAgreement, type LinkIssueResult } from "./portal-links";
+export { makeRecommendServiceLines, type RecommendLinesResult } from "./recommend-lines";
 export {
   makeDecidePortal,
   makeRecordPortalView,
