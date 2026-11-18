@@ -1,7 +1,9 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { AgreementDetail, LinkEmailView, MemberRole } from "@/application/ports";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
+import { Icon } from "@/components/ui/icons";
 import { StatusPill } from "@/components/ui/status-pill";
 import { labelFor, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
@@ -13,6 +15,7 @@ import { GenerateContractControl } from "./contract-controls";
 import { LineFormControl } from "./line-form";
 import { LineRow } from "./line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
+import { RecommendPanel, ReviewBar } from "./recommend-panel";
 import { ScopeControls } from "./scope-controls";
 import { TemplatePicker, type TemplateChoice } from "./template-picker";
 import { ServiceScopeSections } from "./service-scope";
@@ -23,9 +26,9 @@ import { TermSection } from "./term-section";
 import { VersionCompare } from "./version-compare";
 import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
-import { VisitScheduleSection } from "./visit-schedule";
+import { VisitCalendar } from "./visit-calendar";
 import type { GenerateContractState } from "./contract-state";
-import type { LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "./state";
+import type { KeepState, LineState, LinkState, MoveState, NoteState, RecommendState, ScopeState, TemplateState, TermState } from "./state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -45,6 +48,11 @@ export type AgreementActions = {
   saveNote: (formData: FormData) => Promise<NoteState>;
   /** Optional so a page without contracts (and older fixtures) still compiles; the agreement page always binds it. */
   generate?: () => Promise<GenerateContractState>;
+  /** Adds recommended lines for the site's uncovered equipment (recommended-lines). Optional so older fixtures compile. */
+  recommend?: () => Promise<RecommendState>;
+  /** Keeps one recommended line as it is, or all of them. */
+  keep?: (lineId: string) => () => Promise<KeepState>;
+  keepAll?: () => Promise<KeepState>;
 };
 
 type AgreementViewProps = {
@@ -76,6 +84,7 @@ const NEXT_LINE = { description: "", visitMonths: [], costPerVisit: "", assetTyp
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
 const link = "inline-flex min-h-11 items-center font-medium text-action lg:min-h-0";
+const panel = "rounded-panel border border-hairline bg-surface shadow-card";
 
 /** Whether the link email went out (outbox-dispatch AC 30); no notification yet reads as pending. */
 function deliveryLine(email: LinkEmailView | null): string {
@@ -84,7 +93,36 @@ function deliveryLine(email: LinkEmailView | null): string {
   return "Email pending";
 }
 
-/** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
+/** One step of the send checklist: done or still to do, with a link to where it is done. */
+function Step({ done, children, href }: { done: boolean; children: ReactNode; href?: string }) {
+  return (
+    <li className="flex items-start gap-2.5 text-[13px]">
+      <span
+        aria-hidden="true"
+        className={`mt-px flex size-[18px] shrink-0 items-center justify-center rounded-full ${done ? "bg-stage-completed text-surface" : "border border-field bg-surface"}`}
+      >
+        {done && <Icon name="check" className="size-3" />}
+      </span>
+      <span className={done ? "text-ink-2" : "font-medium text-ink"}>
+        <span className="sr-only">{done ? "Done: " : "To do: "}</span>
+        {href && !done ? (
+          <a href={href} className="-my-3 inline-flex min-h-11 items-center underline decoration-hairline underline-offset-2 hover:decoration-action lg:my-0 lg:min-h-0">
+            {children}
+          </a>
+        ) : (
+          children
+        )}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * The agreement page: who and where, then the work in two columns from desktop. The main column holds what the agreement
+ * says (recommended plan, service lines, the year's visits, term, scope); the side rail holds where it stands (the total,
+ * what is left before it can be sent, the document as the customer gets it, the template). Phones read it top to bottom
+ * with the rail's summary first.
+ */
 export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient, templateChoices }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
@@ -96,35 +134,51 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
   const canSend = writer !== undefined && agreement.editable;
   const firstViewed = agreement.portalLink?.firstViewedAt ?? null;
   const canGenerate = writer?.generate !== undefined && agreement.status === "accepted" && !agreement.contract;
+  const uncovered = agreement.editable ? (agreement.scopeDraft?.uncovered ?? []) : [];
+  const recommended = shown.lines.filter((line) => line.recommended).length;
+  const visits = shown.lines.reduce((sum, line) => sum + line.visitsPerYear, 0);
+  const hasEquipment = agreement.equipmentChoices.length > 0 || (agreement.serviceScope.source !== "not_recorded" && agreement.serviceScope.types.length > 0);
+
+  const versionLine = shown.current ? `Version ${shown.versionNo}` : `Version ${shown.versionNo} of ${latest}, read-only`;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap gap-x-3 text-[13px]">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <nav aria-label="Agreement for" className="flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-2">
           <Link href={`/customers/${agreement.customer.id}`} className={link}>
             {agreement.customer.name}
           </Link>
+          <Icon name="chevron" className="size-3.5" />
           <Link href={`/sites/${agreement.site.id}`} className={link}>
             {agreement.site.name}
           </Link>
           {agreement.renews && (
-            <Link href={`/agreements/${agreement.renews.id}`} className={link}>
-              Renewal of {agreement.renews.number}
-            </Link>
+            <>
+              <span aria-hidden="true" className="px-1">·</span>
+              <Link href={`/agreements/${agreement.renews.id}`} className={link}>
+                Renewal of {agreement.renews.number}
+              </Link>
+            </>
           )}
           {agreement.renewedBy && (
-            <Link href={`/agreements/${agreement.renewedBy.id}`} className={link}>
-              Renewed by {agreement.renewedBy.number}
-            </Link>
+            <>
+              <span aria-hidden="true" className="px-1">·</span>
+              <Link href={`/agreements/${agreement.renewedBy.id}`} className={link}>
+                Renewed by {agreement.renewedBy.number}
+              </Link>
+            </>
           )}
-          {/* A file download, not a page: a plain anchor so the browser saves it. */}
-          <a href={`/agreements/${agreement.id}/pdf?version=${shown.versionNo}`} className={link}>
-            Download PDF
-          </a>
-        </div>
+        </nav>
         <PageHeader
           title={agreement.number}
           badge={agreement.stage ? <StatusPill stage={agreement.stage} label={label} /> : <StatusPill tone="neutral" label={label} />}
+          subtitle={
+            <>
+              {versionLine}
+              {shown.current && agreement.status !== "draft" && ` · ${label}, read-only`}
+              {` · ${formatCadExact(shown.annualCents)}/yr before tax`}
+            </>
+          }
           action={
             canRevise || canWithdraw ? (
               <div className="flex flex-wrap items-start gap-2.5">
@@ -134,144 +188,206 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
             ) : undefined
           }
         />
-        <p className="text-[13px] text-ink-2">
-          {shown.current ? `Version ${shown.versionNo}` : `Version ${shown.versionNo} of ${latest}, read-only`}
-          {shown.current && agreement.status !== "draft" && ` · ${label}, read-only`}
-        </p>
-        {agreement.status === "sent" && shown.current && (
-          <>
-            <p className="text-[13px] text-ink-2">{firstViewed ? `Viewed by the customer on ${date.format(firstViewed)}` : "Not viewed yet"}</p>
-            <p className="break-words text-[13px] text-ink-2">{deliveryLine(agreement.linkEmail)}</p>
-            {agreement.validUntil && <p className="text-[13px] text-ink-2">Valid until {formatTermDate(agreement.validUntil)}</p>}
-          </>
-        )}
-        {agreement.status === "expired" && shown.current && agreement.validUntil && (
-          <p className="text-[13px] text-ink-2">Expired · was valid until {formatTermDate(agreement.validUntil)}</p>
-        )}
-        {agreement.contract && (
-          <p data-contract className="text-[13px] text-ink-2">
-            Contract: {CONTRACT_STATUS_META[agreement.contract.status].label} ·{" "}
-            <Link href={`/contracts/${agreement.contract.id}`} className={link}>
-              Open contract
-            </Link>
-          </p>
-        )}
       </div>
 
       {canGenerate && writer.generate && (
         <GenerateContractControl signer={agreement.signer ?? null} term={agreement.term} annualCents={shown.annualCents} action={writer.generate} />
       )}
 
-      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} words={words} />}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_23rem]">
+        <div className="flex min-w-0 flex-col gap-5 lg:order-1">
+          {lineActions?.recommend && uncovered.length > 0 && (
+            <RecommendPanel uncovered={uncovered} hasLines={shown.lines.length > 0} recommend={lineActions.recommend} words={words} />
+          )}
 
-      {agreement.template && (
-        <TemplatePicker
-          name={agreement.template.name}
-          choices={agreement.editable ? templateChoices?.choices : undefined}
-          selectedVersionId={agreement.editable ? templateChoices?.selected : undefined}
-          change={agreement.editable ? writer?.setTemplate : undefined}
-        />
-      )}
-
-      <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status, agreement.templateVersionId ?? null])} />
-
-      {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
-
-      <TermSection term={agreement.term} action={lineActions?.saveTerm} />
-
-      {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
-
-      {skippedCodes.length > 0 && (
-        <p role="status" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
-          {itemText("These equipment types are not in your catalog and were left off: ", words) + skippedCodes.join(", ")}
-        </p>
-      )}
-
-      <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
-        <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>
-        {shown.lines.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[13px] text-ink-2">No service lines yet.</p>
-        ) : (
-          <>
-            <div
-              data-line-head
-              className="hidden gap-x-3 border-b border-hairline px-4 py-2 text-[12px] font-medium text-ink-2 md:grid md:grid-cols-[minmax(0,3fr)_6rem_8rem_8rem]"
-            >
-              <span>Description</span>
-              <span>Visits per year</span>
-              <span className="text-right">Per visit</span>
-              <span className="text-right">Per year</span>
-            </div>
-            <ul className="divide-y divide-hairline">
-              {shown.lines.map((line) => (
-                <LineRow
-                  key={line.id}
-                  line={line}
-                  choices={agreement.equipmentChoices}
-                  words={words}
-                  actions={lineActions && { update: lineActions.update(line.id), remove: lineActions.remove(line.id) }}
-                />
-              ))}
-            </ul>
-          </>
-        )}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
-          <p className="text-[14px] font-semibold">
-            Total per year <span>{formatCadExact(shown.annualCents)}</span>
-          </p>
-          <p className="text-[12px] text-ink-2">Before tax</p>
-        </div>
-      </section>
-
-      {lineActions && (
-        <section aria-label="Add a line" className="rounded-panel border border-hairline bg-surface px-4 py-3">
-          {agreement.equipmentChoices.length === 0 ? (
-            // A line covers at least one equipment type (cadence AC 13), so the site needs some first.
-            <p className="text-[13px] text-ink-2">
-              <Link href={`/sites/${agreement.site.id}`} className={link}>
-                {`Add ${words.plural} to this site before adding a service line`}
-              </Link>
+          {skippedCodes.length > 0 && (
+            <p role="status" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
+              {itemText("These equipment types are not in your catalog and were left off: ", words) + skippedCodes.join(", ")}
             </p>
-          ) : (
-            <LineFormControl
-              idPrefix="new-line"
-              initial={shown.lines.length === 0 ? FIRST_LINE : NEXT_LINE}
-              choices={agreement.equipmentChoices}
-              words={words}
-              submitLabel="Add line"
-              action={lineActions.add}
+          )}
+
+          {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
+
+          <section aria-label="Service lines" className={`overflow-hidden ${panel}`}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-4 pb-3">
+              <h2 className="font-display text-[16px] font-semibold tracking-tight">Service lines</h2>
+              <p className="text-[12px] text-ink-2">
+                {shown.lines.length === 0 ? "None yet" : `${shown.lines.length} ${shown.lines.length === 1 ? "line" : "lines"} · ${visits} visits a year`}
+              </p>
+            </div>
+            {recommended > 0 && <ReviewBar count={recommended} keepAll={lineActions?.keepAll} />}
+            {shown.lines.length === 0 ? (
+              <p className="border-t border-hairline px-4 py-8 text-center text-[13px] text-ink-2">
+                {lineActions && uncovered.length > 0 ? "No service lines yet. Add the recommended lines above, or add one below." : "No service lines yet."}
+              </p>
+            ) : (
+              <ul className="divide-y divide-hairline border-t border-hairline">
+                {shown.lines.map((line) => (
+                  <LineRow
+                    key={line.id}
+                    line={line}
+                    choices={agreement.equipmentChoices}
+                    words={words}
+                    actions={
+                      lineActions && {
+                        update: lineActions.update(line.id),
+                        remove: lineActions.remove(line.id),
+                        ...(lineActions.keep && { keep: lineActions.keep(line.id) }),
+                      }
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline bg-ground px-4 py-3">
+              <p className="text-[14px] font-semibold">
+                Total per year <span>{formatCadExact(shown.annualCents)}</span>
+              </p>
+              <p className="text-[12px] text-ink-2">Before tax</p>
+            </div>
+            {lineActions && (
+              <div className="border-t border-hairline">
+                {agreement.equipmentChoices.length === 0 ? (
+                  // A line covers at least one equipment type (cadence AC 13), so the site needs some first.
+                  <p className="px-4 py-3 text-[13px] text-ink-2">
+                    <Link href={`/sites/${agreement.site.id}`} className={link}>
+                      {`Add ${words.plural} to this site before adding a service line`}
+                    </Link>
+                  </p>
+                ) : (
+                  <details className="group" open={shown.lines.length === 0 && uncovered.length === 0}>
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-[13px] font-semibold text-action lg:min-h-10 [&::-webkit-details-marker]:hidden">
+                      <Icon name="plus" className="size-4 transition-transform duration-150 group-open:rotate-45" />
+                      Add a line
+                    </summary>
+                    <section aria-label="Add a line" className="border-t border-hairline px-4 py-3">
+                      <LineFormControl
+                        idPrefix="new-line"
+                        initial={shown.lines.length === 0 ? FIRST_LINE : NEXT_LINE}
+                        choices={agreement.equipmentChoices}
+                        words={words}
+                        submitLabel="Add line"
+                        action={lineActions.add}
+                      />
+                    </section>
+                  </details>
+                )}
+              </div>
+            )}
+          </section>
+
+          <VisitCalendar words={words} lines={shown.lines} schedule={visitSchedule(shown.lines, agreement.serviceScope.source === "not_recorded" ? [] : agreement.serviceScope.types)} />
+
+          <div id="term" className="grid scroll-mt-24 gap-5 xl:grid-cols-2">
+            <TermSection term={agreement.term} action={lineActions?.saveTerm} />
+            {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
+          </div>
+
+          {agreement.editable && agreement.scopeDraft && (
+            <ScopeControls controls={agreement.scopeDraft.controls} uncovered={agreement.scopeDraft.uncovered} setExcluded={writer?.setExcluded} words={words} />
+          )}
+
+          <ServiceScopeSections
+            scope={agreement.serviceScope}
+            siteId={agreement.site.id}
+            canAddEquipment={canWriteRecords(role)}
+            noLinesYet={agreement.editable && shown.lines.length === 0 && uncovered.length > 0}
+            lines={shown.lines}
+            words={words}
+          />
+
+          {hasVersionStory(agreement.versions) && (
+            <VersionsSection
+              agreementId={agreement.id}
+              versions={agreement.versions}
+              shownNo={shown.versionNo}
+              sentVersion={agreement.sentVersion}
+              acceptedVersion={agreement.acceptedVersion}
+              comparedNo={agreement.compare?.versionNo ?? null}
             />
           )}
-        </section>
-      )}
 
-      <VisitScheduleSection schedule={visitSchedule(shown.lines, agreement.serviceScope.source === "not_recorded" ? [] : agreement.serviceScope.types)} />
+          {agreement.timeline && agreement.timeline.length > 0 && <ActivitySection timeline={agreement.timeline} />}
+        </div>
 
-      {agreement.editable && agreement.scopeDraft && (
-        <ScopeControls controls={agreement.scopeDraft.controls} uncovered={agreement.scopeDraft.uncovered} setExcluded={writer?.setExcluded} words={words} />
-      )}
+        <aside aria-label="Agreement summary" className="order-first flex flex-col gap-4 lg:sticky lg:top-6 lg:order-2">
+          <section aria-label="Total" className="flex flex-col gap-3 rounded-panel bg-night p-4 text-surface shadow-panel">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[12px] font-medium text-night-ink">Total per year, before tax</p>
+              <p className="font-display text-[30px] leading-tight font-semibold tracking-tight">{formatCadExact(shown.annualCents)}</p>
+            </div>
+            <dl className="grid grid-cols-3 gap-2 border-t border-surface/10 pt-3 text-[12px]">
+              <div>
+                <dt className="text-night-ink">Lines</dt>
+                <dd className="text-[14px] font-semibold">{shown.lines.length}</dd>
+              </div>
+              <div>
+                <dt className="text-night-ink">Visits/yr</dt>
+                <dd className="text-[14px] font-semibold">{visits}</dd>
+              </div>
+              <div>
+                <dt className="text-night-ink">Term</dt>
+                <dd className="text-[14px] font-semibold">{`${agreement.term.months} mo`}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <ServiceScopeSections
-        scope={agreement.serviceScope}
-        siteId={agreement.site.id}
-        canAddEquipment={canWriteRecords(role)}
-        noLinesYet={agreement.editable && shown.lines.length === 0 && (agreement.scopeDraft?.uncovered.length ?? 0) > 0}
-        lines={shown.lines}
-        words={words}
-      />
+          {(canSend || agreement.status !== "draft") && (
+            <section aria-label="Status" className={`flex flex-col gap-3 p-4 ${panel}`}>
+              <h2 className="font-display text-[16px] font-semibold tracking-tight">{canSend ? "Ready to send?" : "Status"}</h2>
+              {canSend && (
+                <ul className="flex flex-col gap-2">
+                  <Step done={hasEquipment} href={`/sites/${agreement.site.id}`}>
+                    {itemText("Equipment on the site", words)}
+                  </Step>
+                  <Step done={shown.lines.length > 0}>At least one service line</Step>
+                  <Step done={recommended === 0}>{recommended === 0 ? "Prices reviewed" : `Review ${recommended} recommended ${recommended === 1 ? "line" : "lines"}`}</Step>
+                  <Step done={agreement.term.start !== null} href="#term">
+                    {agreement.term.start ? `Starts ${formatTermDate(agreement.term.start)}` : "Set the term start date"}
+                  </Step>
+                  <Step done={Boolean(recipient)}>{recipient ? `Goes to ${recipient}` : "Customer email (asked when you send)"}</Step>
+                </ul>
+              )}
+              {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} words={words} />}
+              {agreement.status === "sent" && shown.current && (
+                <div className="flex flex-col gap-1 text-[13px] text-ink-2">
+                  <p>{firstViewed ? `Viewed by the customer on ${date.format(firstViewed)}` : "Not viewed yet"}</p>
+                  <p className="break-words">{deliveryLine(agreement.linkEmail)}</p>
+                  {agreement.validUntil && <p>Valid until {formatTermDate(agreement.validUntil)}</p>}
+                </div>
+              )}
+              {agreement.status === "expired" && shown.current && agreement.validUntil && (
+                <p className="text-[13px] text-ink-2">Expired · was valid until {formatTermDate(agreement.validUntil)}</p>
+              )}
+              {!canSend && agreement.status !== "sent" && agreement.status !== "expired" && <p className="text-[13px] text-ink-2">{`${label}. ${versionLine}.`}</p>}
+              {agreement.contract && (
+                <p data-contract className="text-[13px] text-ink-2">
+                  Contract: {CONTRACT_STATUS_META[agreement.contract.status].label} ·{" "}
+                  <Link href={`/contracts/${agreement.contract.id}`} className={link}>
+                    Open contract
+                  </Link>
+                </p>
+              )}
+            </section>
+          )}
 
-      {hasVersionStory(agreement.versions) && (
-        <VersionsSection
-          agreementId={agreement.id}
-          versions={agreement.versions}
-          shownNo={shown.versionNo}
-          sentVersion={agreement.sentVersion}
-          acceptedVersion={agreement.acceptedVersion}
-          comparedNo={agreement.compare?.versionNo ?? null}
-        />
-      )}
+          <AgreementPdfPreview
+            agreementId={agreement.id}
+            versionNo={shown.versionNo}
+            number={agreement.number}
+            revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status, agreement.templateVersionId ?? null])}
+          />
 
-      {agreement.timeline && agreement.timeline.length > 0 && <ActivitySection timeline={agreement.timeline} />}
+          {agreement.template && (
+            <TemplatePicker
+              name={agreement.template.name}
+              choices={agreement.editable ? templateChoices?.choices : undefined}
+              selectedVersionId={agreement.editable ? templateChoices?.selected : undefined}
+              change={agreement.editable ? writer?.setTemplate : undefined}
+            />
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

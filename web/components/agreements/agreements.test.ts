@@ -91,18 +91,17 @@ describe("the agreement view", () => {
     expect(html).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Harbourview Towers<\/a>/);
     expect(out).toContain("Version 2");
     for (const piece of ["Preventive maintenance visit", "Filter changes", "$892.50", "$150.00", "$3,570.00", "$300.00"]) expect(out, piece).toContain(piece);
-    expect(out).toMatch(/Visits per year: 4 /);
-    expect(out).toMatch(/Visits per year: 2 /);
+    expect(out).toMatch(/Visits per year 4 Per visit \$892\.50 Per year \$3,570\.00/);
+    expect(out).toMatch(/Visits per year 2 Per visit \$150\.00 Per year \$300\.00/);
     expect(out).toContain("Total per year $3,870.00");
     expect(out).toContain("Before tax");
   });
 
-  test("the line columns are headed from md up, where the per-line labels are hidden", () => {
+  test("each line labels its own figures (visits, per visit, per year) as a description list, at every width", () => {
     const html = view(agreement());
-    const head = /<div[^>]*data-line-head[^>]*>.*?<\/div>/.exec(html)?.[0] ?? "";
-    expect(head).toMatch(/class="[^"]*\bhidden\b[^"]*\bmd:grid\b/);
-    expect(text(head).trim()).toBe("Description Visits per year Per visit Per year");
-    expect(view(agreement({ lines: [] }))).not.toContain("data-line-head");
+    const lists = html.match(/<dl[^>]*>.*?<\/dl>/g) ?? [];
+    expect(lists.length).toBeGreaterThanOrEqual(2);
+    expect(text(lists[0] ?? "").trim()).toBe("Visits per year 4 Per visit $892.50 Per year $3,570.00");
   });
 
   test("C715: an empty editable version says so; writers get the add form pre-filled, viewers no form", () => {
@@ -177,7 +176,7 @@ describe("the agreement view", () => {
 });
 
 describe("the agreement view's PDF link", () => {
-  const pdfLink = (html: string) => html.match(/<a href="([^"]*\/pdf[^"]*)"[^>]*>Download PDF<\/a>/)?.[1];
+  const pdfLink = (html: string) => html.match(/<a href="([^"]*\/pdf[^"]*)"[^>]*>(?:<svg.*?<\/svg>)?Download PDF<\/a>/)?.[1];
 
   test.each<[string, Parameters<typeof agreement>[0], MemberRole, string]>([
     ["a draft's current version", { status: "draft" }, "estimator", "/agreements/g1/pdf?version=2"],
@@ -760,12 +759,14 @@ describe("the skipped equipment codes of a template", () => {
 });
 
 describe("the PDF preview on the agreement page", () => {
-  test("it starts closed: a Preview PDF button, no frame and no request until it is asked for", () => {
-    const html = renderToStaticMarkup(createElement(AgreementPdfPreview, { agreementId: "a1", versionNo: 2, revision: "x" }));
-    expect(text(html)).toContain("PDF preview");
-    expect(text(html)).toContain("Preview PDF");
-    expect(html).toContain('aria-expanded="false"');
+  test("a Document card with a Preview button and a Download link, drawn on a canvas: no browser PDF frame", () => {
+    const html = renderToStaticMarkup(createElement(AgreementPdfPreview, { agreementId: "a1", versionNo: 2, revision: "x", number: "AG-1" }));
+    expect(text(html)).toContain("Document");
+    expect(text(html)).toContain("Preview");
+    expect(html).toMatch(/<a href="\/agreements\/a1\/pdf\?version=2"/);
     expect(html).not.toContain("<iframe");
+    // Before the PDF is drawn the preview cannot open, and nothing of the viewer is on the page yet.
+    expect(html).not.toContain("<dialog");
   });
 
   test("every agreement page carries it, beside the existing Download PDF link", () => {
@@ -852,5 +853,51 @@ describe("the template on the page", () => {
     const body = { ...SYSTEM_AGREEMENT_BODY, name: "Quarterly HVAC" } as AgreementDetail["template"];
     expect(text(view({ ...agreement({ status: "draft" }), template: body }))).toContain("Template: Quarterly HVAC");
     expect(text(view({ ...agreement({ status: "sent" }), template: body }))).toContain("Template: Quarterly HVAC");
+  });
+});
+
+describe("recommended lines on the agreement page (recommended-lines)", () => {
+  const withRecommend: AgreementActions = { ...actions, recommend: async () => ({ status: "recommended", added: 2 }), keep: () => async () => ({ status: "kept" }), keepAll: async () => ({ status: "kept" }) };
+  const page = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions: withRecommend }));
+  const uncovered = { scopeDraft: { controls: [], uncovered: [{ code: "MUA", name: "Make-up air unit", assetCount: 2 }, { code: "BOILER", name: "Boiler", assetCount: 1 }] } };
+
+  test("a draft with uncovered equipment offers the recommended lines, naming the units", () => {
+    const out = text(page(agreement({ lines: [], detail: uncovered })));
+    expect(out).toContain("Start from a recommended plan");
+    expect(out).toContain("3 units on site: Make-up air unit (2), Boiler (1).");
+    expect(out).toContain("Add recommended lines");
+    expect(text(page(agreement({ detail: uncovered })))).toContain("2 equipment types have no service line yet");
+  });
+
+  test("no offer without uncovered equipment, for a viewer, or once the agreement is sent", () => {
+    expect(text(page(agreement()))).not.toContain("Add recommended lines");
+    expect(text(page(agreement({ lines: [], detail: uncovered }), "viewer"))).not.toContain("Add recommended lines");
+    expect(text(page(agreement({ status: "sent", detail: uncovered })))).not.toContain("Add recommended lines");
+  });
+
+  test("a recommended line carries the tag and a Keep button, and the list says how many are left to review", () => {
+    const lines = [{ ...LINES[0], recommended: true }, LINES[1]];
+    const html = page(agreement({ lines }));
+    expect(html.match(/data-recommended-tag/g)).toHaveLength(1);
+    expect(has(html, '<svg[^>]*>.*?</svg>Keep')).toBe(true);
+    expect(text(html)).toContain("1 recommended line to review.");
+    expect(text(html)).toContain("Keep all as they are");
+    expect(text(html)).toContain("Review 1 recommended line");
+  });
+
+  test("a sent agreement shows the tag on no line and no review controls", () => {
+    const html = page(agreement({ status: "sent", lines: [{ ...LINES[0], recommended: false }] }));
+    expect(html).not.toContain("data-recommended-tag");
+    expect(text(html)).not.toContain("Keep all");
+  });
+
+  test("the send checklist marks what is done and what is left", () => {
+    const out = text(page(agreement({ detail: { term: { start: "2027-01-01", months: 12, end: "2027-12-31" } } })));
+    expect(out).toContain("Ready to send?");
+    expect(out).toContain("Done: Equipment on the site");
+    expect(out).toContain("Done: At least one service line");
+    expect(out).toContain("Done: Prices reviewed");
+    expect(out).toContain("Done: Starts Jan 1, 2027");
+    expect(out).toContain("To do: Customer email (asked when you send)");
   });
 });

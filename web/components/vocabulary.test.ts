@@ -101,8 +101,9 @@ describe("staff screens, item words", () => {
 
   test("C2015: the New agreement dialog names the item in its intro and its file field", () => {
     const dialog = asStations(createElement(NewAgreementDialog, { customers: [], sites: [], templates: [], actions: { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() } } as unknown as Parameters<typeof NewAgreementDialog>[0]));
-    expect(dialog).toContain("Start with the customer's station list");
-    expect(dialog).toContain("Station list (optional)");
+    expect(dialog).toContain("Upload the customer's station list or pick what is on site");
+    expect(dialog).toContain("Customer's station list");
+    expect(dialog).toContain("Stations on site");
     noEquipment(dialog);
   });
 

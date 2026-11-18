@@ -9,7 +9,7 @@ import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
-import type { CreateAgreementState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
+import type { CreateAgreementState, KeepState, LineState, LinkState, MoveState, NoteState, RecommendState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 import { linkBase } from "./link-base";
 
@@ -81,6 +81,53 @@ export async function updateServiceLineAction(lineId: string, formData: FormData
   revalidatePath("/agreements/[agreementId]", "page");
   revalidatePath("/pipeline");
   return { status: "saved" };
+}
+
+/**
+ * Adds the recommended lines for every equipment type on the site that no line covers yet (recommended-lines). Each is
+ * tagged Recommended until a person keeps or edits it; running it again only fills what is still uncovered.
+ */
+export async function recommendServiceLinesAction(agreementId: string): Promise<RecommendState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  try {
+    const result = await container.recommendServiceLines(agreementId);
+    if (!result.ok) return { status: result.code };
+    revalidatePath(`/agreements/${agreementId}`);
+    revalidatePath("/pipeline");
+    return { status: "recommended", added: result.added };
+  } catch (cause) {
+    console.error(`Recommending service lines failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return { status: "unavailable" };
+  }
+}
+
+/** Keeps a recommended line as it is: the tag goes, the line stays (recommended-lines). */
+export async function keepRecommendedLineAction(lineId: string): Promise<KeepState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(lineId)) return NOT_FOUND;
+  const kept = await container.serviceLineStore.setRecommended(lineId, false);
+  if (!kept.ok) return { status: kept.code };
+  revalidatePath("/agreements/[agreementId]", "page");
+  return { status: "kept" };
+}
+
+/** Keeps every recommended line of the draft as it is (recommended-lines). */
+export async function keepAllRecommendedAction(agreementId: string): Promise<KeepState> {
+  const container = await writer();
+  if (!container) return FORBIDDEN;
+  if (!isUuid(agreementId)) return NOT_FOUND;
+  const agreement = await container.agreementReader.get(agreementId);
+  if (!agreement) return NOT_FOUND;
+  if (!agreement.editable) return { status: "locked" };
+  for (const line of agreement.shown.lines.filter((line) => line.recommended)) {
+    const kept = await container.serviceLineStore.setRecommended(line.id, false);
+    if (!kept.ok) return { status: kept.code };
+  }
+  revalidatePath(`/agreements/${agreementId}`);
+  return { status: "kept" };
 }
 
 export async function removeServiceLineAction(lineId: string): Promise<LineState> {
@@ -205,6 +252,9 @@ export async function sendAgreementAction(agreementId: string, email?: string, c
       confirmedAt: settings?.companyConfirmedAt ?? null,
     });
     if (!ready.ready) return { status: "company_unconfirmed", problems: ready.problems };
+    // A recommended price is the app's guess: a person keeps or edits every such line before the customer sees it.
+    const unreviewed = (await container.agreementReader.get(agreementId))?.shown.lines.filter((line) => line.recommended).length ?? 0;
+    if (unreviewed > 0) return { status: "recommended_unreviewed", count: unreviewed };
     if (!confirmUncovered) {
       const uncovered = await container.agreementScope.uncovered(agreementId);
       if (uncovered.length > 0) return { status: "needs_confirmation", uncovered };

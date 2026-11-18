@@ -9,6 +9,9 @@ import { skippedCodes } from "@/domain/agreement";
 import { isUuid } from "@/domain/imports";
 import {
   addServiceLineAction,
+  keepAllRecommendedAction,
+  keepRecommendedLineAction,
+  recommendServiceLinesAction,
   removeServiceLineAction,
   reviseAgreementAction,
   saveTermAction,
@@ -59,6 +62,9 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         saveTerm: saveTermAction.bind(null, agreementId),
         saveNote: saveVersionNoteAction.bind(null, agreementId),
         generate: generateContractAction.bind(null, agreementId),
+        recommend: recommendServiceLinesAction.bind(null, agreementId),
+        keep: (lineId: string) => keepRecommendedLineAction.bind(null, lineId),
+        keepAll: keepAllRecommendedAction.bind(null, agreementId),
       }
     : undefined;
 

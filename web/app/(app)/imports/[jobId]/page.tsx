@@ -7,6 +7,7 @@ import { PageLoading } from "@/components/shell/page-loading";
 import { getContainer } from "@/composition";
 import { isUuid } from "@/domain/imports";
 import { commitImportAction, mapImportTypeAction, skipImportRowAction, suggestImportTypesAction, updateImportRowAction } from "../../import-actions";
+import { recommendServiceLinesAction } from "../../agreement-actions";
 
 export const metadata: Metadata = { title: "Review rows" };
 
@@ -37,6 +38,7 @@ export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
         map: mapImportTypeAction.bind(null, jobId),
         suggest: suggestImportTypesAction.bind(null, jobId),
         commit: commitImportAction.bind(null, jobId),
+        recommend: recommendServiceLinesAction,
       }
     : undefined;
 

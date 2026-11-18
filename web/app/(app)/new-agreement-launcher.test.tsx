@@ -9,10 +9,12 @@ const container = {
   listCustomers: async () => [{ id: "c1", name: "Harbourview", active: true }],
   listActiveSites: async () => [],
   listAgreementTemplates,
+  listEquipmentTypes: async () => [{ id: "t1", code: "RTU", name: "Rooftop unit", pack: "hvac" }],
 };
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 vi.mock("./import-actions", () => ({ commitCleanImportAction: vi.fn(), confirmImportAction: vi.fn(), extractImportAction: vi.fn(), readImportAction: vi.fn(), startImportAction: vi.fn() }));
-vi.mock("./new-agreement-actions", () => ({ startAgreementAction: vi.fn() }));
+vi.mock("./new-agreement-actions", () => ({ startAgreementAction: vi.fn(), addEquipmentAction: vi.fn() }));
+vi.mock("./agreement-actions", () => ({ recommendServiceLinesAction: vi.fn() }));
 
 const { Banner, Dialog, dialogProps } = await import("./new-agreement-launcher");
 
@@ -36,6 +38,8 @@ describe("the dialog's props", () => {
     expect((await dialogProps()).templates).toEqual(expected);
     expect(launcher.props.templates).toEqual(expected);
     expect(banner.props.templates).toEqual(expected);
+    // The equipment picker gets the org's types with their packs, for picking by hand when there is no list.
+    expect((await dialogProps()).equipmentTypes).toEqual([{ id: "t1", code: "RTU", name: "Rooftop unit", pack: "hvac" }]);
   });
 
   test("C5406: when the templates cannot be listed all three get null, so each still starts a Standard agreement", async () => {

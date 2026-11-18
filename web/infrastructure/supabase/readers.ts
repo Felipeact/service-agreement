@@ -444,6 +444,15 @@ async function sharedAliases(client: Client): Promise<Map<string, string[]>> {
   return byCode;
 }
 
+/** The org's equipment types with the pack each was seeded from, for the New agreement equipment picker (recommended-lines). */
+export function supabaseEquipmentTypeList(client: Client) {
+  return async function listEquipmentTypes(): Promise<{ id: string; code: string; name: string; pack: string | null }[]> {
+    const { data, error } = await client.from("asset_types").select("id, code, name, pack").order("name").limit(ROW_CAP);
+    if (error) throw unexpected(error);
+    return data.map(({ id, code, name, pack }) => ({ id, code, name, pack }));
+  };
+}
+
 export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
   return {
     async list() {

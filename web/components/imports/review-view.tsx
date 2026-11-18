@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, reviewSummary, unmatchedSpellings, type ReviewFlag, type SiteAssetRef } from "@/domain/imports";
 import { DEFAULT_ITEM_WORDS, itemText, itemVerb, type ItemWords } from "@/domain/org-settings";
 import { CommitControl, MappingSection, RowControls } from "./review-controls";
+import { ContinueToAgreement } from "./continue-to-agreement";
 import type { CommitState, MapState, RowState, SuggestState } from "./state";
 
 export type ReviewActions = {
@@ -15,6 +16,8 @@ export type ReviewActions = {
   /** Asks the model for a type for each unrecognised spelling. */
   suggest?: () => Promise<SuggestState>;
   commit: () => Promise<CommitState>;
+  /** Adds the recommended service lines to the agreement the list was sent for (recommended-lines). */
+  recommend?: (agreementId: string) => Promise<{ status: string }>;
 };
 
 type ReviewViewProps = {
@@ -117,9 +120,15 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
               ? `The ${words.plural} ${itemVerb(words, "is", "are")} on the site. Your agreement is ready to build.`
               : `This list is for the agreement you just started. Check the rows, add them to ${job.siteName}, then continue.`}
           </p>
-          <Link href={`/agreements/${agreementId}`} className="inline-flex min-h-11 shrink-0 items-center font-semibold text-action lg:min-h-0">
-            {job.committed ? "Continue to the agreement" : "Skip to the agreement"}
-          </Link>
+          {job.committed && actions?.recommend ? (
+            <ContinueToAgreement agreementId={agreementId} recommend={actions.recommend.bind(null, agreementId)}>
+              Continue to the agreement
+            </ContinueToAgreement>
+          ) : (
+            <Link href={`/agreements/${agreementId}`} className="inline-flex min-h-11 shrink-0 items-center font-semibold text-action lg:min-h-0">
+              {job.committed ? "Continue to the agreement" : "Skip to the agreement"}
+            </Link>
+          )}
         </section>
       )}
 

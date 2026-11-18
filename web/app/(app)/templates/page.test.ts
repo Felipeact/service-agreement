@@ -15,7 +15,8 @@ const listAssetTypes = vi.fn();
 const getContractWording = vi.fn(async () => ({ ok: true as const, body: SYSTEM_CONTRACT_BODY, own: false }));
 const listCustomers = vi.fn(async () => []);
 const listActiveSites = vi.fn(async () => []);
-const container = { currentMember, listAgreementTemplates, ensureStarterTemplates, listAssetTypes, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
+const listEquipmentTypes = vi.fn(async () => []);
+const container = { currentMember, listAgreementTemplates, ensureStarterTemplates, listAssetTypes, listEquipmentTypes, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);

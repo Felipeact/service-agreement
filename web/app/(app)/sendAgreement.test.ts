@@ -27,6 +27,7 @@ const recipientGet = vi.fn<(id: string) => Promise<string | null>>();
 const recipientSet = vi.fn<(id: string, email: string) => Promise<boolean>>();
 const getOrgSettings = vi.fn();
 const termStart = vi.fn<() => string | null>();
+const shownLines = vi.fn<() => { recommended?: boolean }[]>(() => []);
 const uncovered = vi.fn<(id: string) => Promise<{ code: string; name: string; assetCount: number }[]>>();
 const READY = { legalName: "Acme Heating Ltd.", address: "12 Main St, Surrey, BC V3T 1A1", phone: "604-555-2368", companyConfirmedAt: new Date("2026-11-01T00:00:00Z") };
 
@@ -35,7 +36,7 @@ vi.mock("@/composition", () => ({
     currentMember,
     getOrgSettings,
     agreementScope: { uncovered },
-    agreementReader: { get: async () => ({ term: { start: termStart(), months: 12, end: null } }) },
+    agreementReader: { get: async () => ({ term: { start: termStart(), months: 12, end: null }, shown: { lines: shownLines() } }) },
     agreementRecipient: { get: recipientGet, set: recipientSet },
     sendAgreement: makeSendAgreement({ findById, commitTransition } as unknown as AgreementRepository, { send }, portalTokens),
   }),
@@ -65,9 +66,17 @@ beforeEach(() => {
   recipientSet.mockResolvedValue(true);
   getOrgSettings.mockResolvedValue(READY);
   uncovered.mockResolvedValue([]);
+  shownLines.mockReturnValue([]);
 });
 
 describe("sendAgreementAction", () => {
+  test("recommended lines nobody reviewed hold the send: nothing is sent and the count is named", async () => {
+    currentMember.mockResolvedValue(member("estimator"));
+    shownLines.mockReturnValue([{ recommended: true }, { recommended: false }, { recommended: true }]);
+    expect(await sendAgreementAction(AGR)).toEqual({ status: "recommended_unreviewed", count: 2 });
+    expect(send).not.toHaveBeenCalled();
+  });
+
   test.each<MemberRole>(["owner", "admin", "estimator"])("C901: a %s gets 200 ok with <origin>/review/<token> whose token hashes to the stored hash", async (role) => {
     currentMember.mockResolvedValue(member(role));
     const state = await sendAgreementAction(AGR);

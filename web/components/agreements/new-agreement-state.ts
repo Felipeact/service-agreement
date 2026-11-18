@@ -46,6 +46,9 @@ export function startNotice(state: Extract<StartAgreementState, { status: "plan_
 /** What the dialog says after the agreement exists but the equipment list could not be sent. */
 export const LIST_FAILED = "The agreement was created, but we couldn't read the equipment list. You can add it from the agreement's site.";
 
+/** What the dialog says after the agreement exists but the picked equipment could not be added. */
+export const EQUIPMENT_FAILED = "The agreement was created, but we couldn't add the equipment. Add it from the agreement's site.";
+
 export const FILE_HINT = "Excel, CSV, Word or PDF, up to 20 MB";
 
 /** The dialog's start choice for a customer: the only customer when there is just one, otherwise none yet. */
@@ -53,13 +56,15 @@ export function firstCustomerChoice(customers: readonly { id: string }[]): strin
   return customers.length === 0 ? NEW_CHOICE : "";
 }
 
-export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting";
+export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting" | "adding" | "recommending";
 
 const PHASE_TEXT: Record<Exclude<Phase, "idle">, string> = {
   creating: "Creating the agreement…",
   uploading: "Sending the equipment list…",
   reading: "Reading the file…",
   extracting: "Finding the equipment…",
+  adding: "Adding the equipment to the site…",
+  recommending: "Recommending service lines…",
 };
 
 /** The progress line under the form, in the org's words ("Finding the stations… 2 of 5"). */
