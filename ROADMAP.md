@@ -287,6 +287,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Global search across customers, sites and unit numbers
 - [x] A clean equipment list goes straight from New agreement to the agreement page; the review grid opens only when a row needs a person (2026-11-13, `commitCleanImportAction`; typechecked, no test of its own yet). The dialog also closes before it navigates, so it no longer stays open over the new page
 - [x] PDF preview on the agreement page, drawn on demand and redrawn after an edit; phones get "Open in a new tab" (2026-11-13). Versions and Activity redesigned: the version on screen is marked, history and older events fold away (2026-11-13)
+- [x] Recommended service lines from the equipment on site (every trade), tagged Recommended until kept or edited; New agreement without a file (pick by hand or add later); agreement page redesigned with a pdf.js document viewer that works on phones (2026-11-18, migration `20261118100000` to apply)
 
 ### Phase 4: Contract & e-signature
 - [x] Contract generated from the accepted agreement version

@@ -21,6 +21,7 @@
     "mammoth": "1.13.0",
     "motion": "12.23.24",
     "next": "16.4.2",
+    "pdfjs-dist": "5.7.284",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "0.0.1",

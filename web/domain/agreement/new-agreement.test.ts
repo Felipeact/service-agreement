@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { NEW_CHOICE, validateNewAgreement, type NewAgreementInput } from "./new-agreement";
+import { MAX_PICKED_UNITS, MAX_UNITS_PER_TYPE, NEW_CHOICE, validateEquipmentPicks, validateNewAgreement, type NewAgreementInput } from "./new-agreement";
 
 const CUSTOMER = "11111111-1111-4111-8111-111111111111";
 const SITE = "22222222-2222-4222-8222-222222222222";
@@ -67,5 +67,24 @@ describe("validateNewAgreement, the template version", () => {
   test("C5407: a bad version is reported with the other field errors", () => {
     const checked = validateNewAgreement(input({ customer: "", templateVersionId: "nope" }));
     expect(!checked.ok && Object.keys(checked.errors).sort()).toEqual(["customer", "templateVersionId"]);
+  });
+});
+
+describe("validateEquipmentPicks", () => {
+  const T1 = "11111111-1111-4111-8111-111111111111";
+  const T2 = "22222222-2222-4222-8222-222222222222";
+  test("keeps the org's types with whole counts, a repeated type once with its larger count", () => {
+    expect(validateEquipmentPicks([{ assetTypeId: T1, count: 2 }, { assetTypeId: T1, count: 3 }, { assetTypeId: T2, count: 1 }], [T1, T2])).toEqual({
+      ok: true,
+      value: [{ assetTypeId: T1, count: 3 }, { assetTypeId: T2, count: 1 }],
+    });
+  });
+  test("refuses another org's type, a bad count and too many units", () => {
+    expect(validateEquipmentPicks([{ assetTypeId: T2, count: 1 }], [T1]).ok).toBe(false);
+    expect(validateEquipmentPicks([{ assetTypeId: T1, count: 0 }], [T1]).ok).toBe(false);
+    expect(validateEquipmentPicks([{ assetTypeId: T1, count: 1.5 }], [T1]).ok).toBe(false);
+    expect(validateEquipmentPicks([{ assetTypeId: T1, count: MAX_UNITS_PER_TYPE + 1 }], [T1]).ok).toBe(false);
+    const many = Array.from({ length: 6 }, (_, i) => `00000000-0000-4000-8000-00000000000${i}`);
+    expect(validateEquipmentPicks(many.map((id) => ({ assetTypeId: id, count: 99 })), many)).toEqual({ ok: false, error: `Add at most ${MAX_PICKED_UNITS} units here; import a list for more` });
   });
 });

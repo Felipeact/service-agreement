@@ -10,6 +10,7 @@ import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { NoticeText, ProgressLine } from "./new-agreement-text";
+import { EquipmentPicker, type PickableType } from "./equipment-picker";
 import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
@@ -29,6 +30,7 @@ import {
   type NewAgreementInput,
   type Phase,
   type StartAgreementState,
+  EQUIPMENT_FAILED,
 } from "./new-agreement-state";
 
 type Customer = { id: string; name: string };
@@ -41,7 +43,20 @@ export type NewAgreementActions = {
   extractImport: (jobId: string) => Promise<ExtractState>;
   /** Adds a clean list to the site without a review; `needs_review` when something in it needs a person. */
   commitCleanImport?: (jobId: string) => Promise<{ status: string }>;
+  /** Adds hand-picked equipment to the site (no file to upload). */
+  addEquipment?: (siteId: string, picks: { assetTypeId: string; count: number }[]) => Promise<{ status: string }>;
+  /** Adds the recommended service lines for the site's equipment to the new draft (recommended-lines). */
+  recommend?: (agreementId: string) => Promise<{ status: string }>;
 };
+
+/** Where the site's equipment comes from: the customer's list, picked by hand, or added later. */
+type Source = "file" | "pick" | "later";
+
+const SOURCES: { key: Source; label: string }[] = [
+  { key: "file", label: "Upload a list" },
+  { key: "pick", label: "Pick by hand" },
+  { key: "later", label: "Add later" },
+];
 
 type Props = {
   customers: Customer[];
@@ -58,6 +73,8 @@ type Props = {
   onClose?: () => void;
   /** A file already chosen or dropped, taken into the drop zone when the dialog opens. */
   initialFile?: File | null;
+  /** The org's equipment types, for picking equipment by hand when the customer has no list. */
+  equipmentTypes?: PickableType[];
 };
 
 /**
@@ -66,7 +83,7 @@ type Props = {
  * missing, starts the draft, sends the list to the site and carries on to the list's review, so the estimator never
  * leaves the flow to add a customer or a site first.
  */
-export function NewAgreementDialog({ customers, sites, actions, templates, initialTemplateVersionId, open: controlledOpen, onClose, initialFile }: Props) {
+export function NewAgreementDialog({ customers, sites, actions, templates, initialTemplateVersionId, open: controlledOpen, onClose, initialFile, equipmentTypes = [] }: Props) {
   const words = useItemWords();
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -79,6 +96,8 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   const [siteName, setSiteName] = useState("");
   const [address, setAddress] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [source, setSource] = useState<Source>("file");
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [fileError, setFileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [notice, setNotice] = useState<{ text: string; href?: string; linkText?: string } | null>(null);
@@ -93,6 +112,10 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   const newSite = newCustomer || site === NEW_CHOICE;
   const busy = pending || phase !== "idle";
   const chosenTemplate = offered.find((option) => option.versionId === template);
+  const picks = Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .map(([assetTypeId, count]) => ({ assetTypeId, count }));
+  const pickedUnits = picks.reduce((sum, pick) => sum + pick.count, 0);
 
   function open() {
     dialogRef.current?.showModal();
@@ -133,6 +156,8 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     setSiteName("");
     setAddress("");
     setFile(null);
+    setSource("file");
+    setCounts({});
     setFileError(null);
     setErrors({});
     setNotice(null);
@@ -152,6 +177,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
 
   function chooseFile(next: File | null) {
     setFile(next);
+    if (next) setSource("file");
     if (!next) return setFileError(null);
     const checked = validateImportFile({ name: next.name, size: next.size });
     setFileError(checked.ok ? null : checked.message);
@@ -160,7 +186,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    if (file && fileError) return;
+    if (source === "file" && file && fileError) return;
     setErrors({});
     setNotice(null);
 
@@ -197,7 +223,28 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       }
 
       const agreementHref = `/agreements/${started.agreementId}`;
-      if (!file) return go(agreementHref);
+      // Recommended lines are a head start, never a blocker: if they cannot be added the agreement still opens.
+      const recommend = async () => {
+        setPhase("recommending");
+        await actions.recommend?.(started.agreementId).catch(() => null);
+      };
+
+      if (source === "pick" && picks.length > 0 && actions.addEquipment) {
+        setPhase("adding");
+        const added = await actions.addEquipment(started.siteId, picks).catch(() => ({ status: "unavailable" }));
+        if (added.status !== "added") {
+          setNotice({ text: EQUIPMENT_FAILED, href: agreementHref, linkText: "Open the agreement" });
+          setPhase("idle");
+          return setCreated({ siteId: started.siteId });
+        }
+        await recommend();
+        return go(agreementHref);
+      }
+      if (source !== "file" || !file) {
+        // An existing site may already have equipment: recommend from it straight away.
+        if (site !== NEW_CHOICE && !newCustomer) await recommend();
+        return go(agreementHref);
+      }
 
       // The list goes to the site the agreement is on; then it is read and its equipment found.
       let jobId: string | null = null;
@@ -225,7 +272,10 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       // A list with nothing wrong goes straight to the agreement; the review opens only when something needs a person.
       if (extracted.status === "extracted" && actions.commitCleanImport) {
         const committed = await actions.commitCleanImport(jobId).catch(() => ({ status: "needs_review" }));
-        if (committed.status === "committed") return go(agreementHref);
+        if (committed.status === "committed") {
+          await recommend();
+          return go(agreementHref);
+        }
       }
       // Rows found go to the review grid; a list that could not be read through is finished from the site's import page.
       go(
@@ -234,7 +284,13 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     });
   }
 
-  const submitLabel = busy ? "Working…" : file ? "Create agreement and read the list" : "Create agreement";
+  const submitLabel = busy
+    ? "Working…"
+    : source === "file" && file
+      ? "Create agreement and read the list"
+      : source === "pick" && pickedUnits > 0
+        ? `Create agreement with ${pickedUnits} ${pickedUnits === 1 ? "unit" : "units"}`
+        : "Create agreement";
 
   return (
     <>
@@ -258,7 +314,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
               <h2 id="new-agreement-title" className="font-display text-[22px] leading-tight font-semibold tracking-tight">
                 New agreement
               </h2>
-              <p className="text-[13px] text-ink-2">{itemText("Start with the customer's equipment list and the service scope is built from what is on site.", words)}</p>
+              <p className="text-[13px] text-ink-2">{itemText("Upload the customer's equipment list or pick what is on site, and we recommend the service lines, visit schedule and scope.", words)}</p>
             </div>
             <button
               type="button"
@@ -271,17 +327,42 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
             </button>
           </header>
 
-          <FileDropzone
-            id="newAgreementFile"
-            label={itemText("Equipment list (optional)", words)}
-            accept={IMPORT_ACCEPT}
-            hint={FILE_HINT}
-            file={file}
-            sizeLabel={file ? formatFileSize(file.size) : undefined}
-            error={fileError}
-            disabled={busy}
-            onFile={chooseFile}
-          />
+          <fieldset className="flex min-w-0 flex-col gap-3 border-0 p-0" disabled={busy}>
+            <legend className="pb-2 font-display text-[15px] font-semibold tracking-tight">{itemText("Equipment on site", words)}</legend>
+            <div role="radiogroup" aria-label={itemText("Where the equipment comes from", words)} className="grid grid-cols-3 gap-1 rounded-control bg-board p-1">
+              {SOURCES.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={source === option.key}
+                  onClick={() => setSource(option.key)}
+                  className="h-11 rounded-[6px] px-2 text-[12px] font-semibold text-ink-2 transition-[color,background-color,box-shadow] duration-150 hover:text-ink aria-checked:bg-surface aria-checked:text-ink aria-checked:shadow-card sm:text-[13px] lg:h-8"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {source === "file" && (
+              <FileDropzone
+                id="newAgreementFile"
+                label={itemText("Customer's equipment list", words)}
+                accept={IMPORT_ACCEPT}
+                hint={FILE_HINT}
+                file={file}
+                sizeLabel={file ? formatFileSize(file.size) : undefined}
+                error={fileError}
+                disabled={busy}
+                onFile={chooseFile}
+              />
+            )}
+            {source === "pick" && <EquipmentPicker types={equipmentTypes} counts={counts} onChange={setCounts} disabled={busy} words={words} />}
+            {source === "later" && (
+              <p className="rounded-control bg-ground px-3 py-3 text-[13px] text-ink-2">
+                {itemText("No list? Start the agreement now. When equipment is on the site, the agreement recommends service lines for it.", words)}
+              </p>
+            )}
+          </fieldset>
 
           <div className="flex flex-col gap-1.5">
             <Select
@@ -404,7 +485,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
             <Button onClick={close} disabled={busy}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" disabled={busy || Boolean(file && fileError)}>
+            <Button type="submit" variant="primary" disabled={busy || Boolean(source === "file" && file && fileError)}>
               {submitLabel}
             </Button>
           </footer>

@@ -7,7 +7,7 @@ import { ContractWordingCard } from "./contract-wording-card";
 import { TemplateCard, type TemplateCardActions } from "./template-card";
 
 /** What the dialog needs beyond the open state: the same customers, sites, templates and actions the launcher passes. */
-export type UseDialogProps = Pick<ComponentProps<typeof NewAgreementDialog>, "customers" | "sites" | "templates" | "actions">;
+export type UseDialogProps = Pick<ComponentProps<typeof NewAgreementDialog>, "customers" | "sites" | "templates" | "actions" | "equipmentTypes">;
 
 type Props = {
   templates: AgreementTemplateSummary[];
