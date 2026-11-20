@@ -1,0 +1,298 @@
+---
+alwaysApply: true
+---
+
+# Page Structure - Project Standard
+
+This document defines the standard structure for organizing pages in the project, following Next.js App Router best practices.
+
+## 📁 Base Structure
+
+```
+/page-name/
+├── page.tsx                    # Server Component (entry point)
+├── _components/                # Page-specific components
+│   └── content.tsx            # Main Client Component
+├── _actions/                   # Server Actions
+│   └── action-name.ts
+└── _data-access/              # Data Access Layer
+    └── get-data.ts
+```
+
+## 📋 Layer Descriptions
+
+### 1. `page.tsx` - Server Component
+
+- Must **always** be a Server Component
+- Responsible for:
+  - Fetching initial data using `_data-access` functions
+  - Validating authentication/authorization
+  - Passing data to client components
+  - Keeping server-side logic on the server
+
+**Example:**
+
+```typescript
+// page.tsx
+import { ContentComponent } from "./_components/content";
+import { getData } from "./_data-access/get-data";
+
+export default async function Page() {
+  const data = await getData();
+
+  return <ContentComponent data={data} />;
+}
+```
+
+### 2. `_components/` - Page Components
+
+- Contains components specific to this page
+- The `_` prefix marks it as a private folder (does not generate routes)
+- Components can be Client or Server Components as needed
+
+#### `content.tsx` - Main Component
+
+- Usually a **Client Component** (`"use client"`)
+- Used when you need:
+  - Interactivity (onClick, onChange, etc.)
+  - React hooks (useState, useEffect, etc.)
+  - Forms with validation
+  - Animations and transitions
+
+**Example:**
+
+```typescript
+// _components/content.tsx
+"use client";
+
+import { useState } from "react";
+import { updateAction } from "../_actions/update-action";
+
+export function ContentComponent({ data }) {
+  const [state, setState] = useState();
+
+  // Component logic...
+
+  return (
+    <div>
+      {/* Component UI */}
+    </div>
+  );
+}
+```
+
+### 3. `_actions/` - Server Actions
+
+- Contains the page-specific Server Actions
+- Always marked with `"use server"`
+- Responsible for:
+  - Validation with Zod
+  - Database operations
+  - Authentication/Authorization
+  - Returning typed results
+
+**Example:**
+
+```typescript
+// _actions/update-action.ts
+"use server";
+
+import { db } from "@/db";
+import { requireAuth } from "@/lib/session";
+import { z } from "zod";
+
+const schema = z.object({
+  field: z.string().min(3),
+});
+
+export type UpdateInput = z.infer<typeof schema>;
+export type UpdateResult = {
+  success: boolean;
+  message?: string;
+  errors?: Record<string, string[]>;
+};
+
+export async function updateAction(input: UpdateInput): Promise<UpdateResult> {
+  try {
+    const session = await requireAuth();
+
+    const validation = schema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      };
+    }
+
+    // Database operation...
+
+    return {
+      success: true,
+      message: "Updated successfully!",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error while processing",
+    };
+  }
+}
+```
+
+### 4. `_data-access/` - Data Access Layer
+
+- Contains functions for fetching data
+- Always executed on the server
+- Encapsulates database access logic
+- Reusable across different pages
+
+**Example:**
+
+```typescript
+// _data-access/get-data.ts
+import { db } from "@/db";
+import { requireAuth } from "@/lib/session";
+import { eq } from "drizzle-orm";
+import { users } from "@/db/schema";
+
+export async function getUserData() {
+  const session = await requireAuth();
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    // ... other fields
+  };
+}
+```
+
+## 🔄 Data Flow
+
+```
+1. User accesses the page
+   ↓
+2. page.tsx (Server Component)
+   - Fetches data via _data-access
+   - Validates authentication
+   ↓
+3. content.tsx (Client Component)
+   - Receives data via props
+   - Renders interactive UI
+   - User interacts (fills form, clicks button)
+   ↓
+4. _actions (Server Action)
+   - Validates data
+   - Updates database
+   - Returns result
+   ↓
+5. content.tsx
+   - Receives result
+   - Updates UI (toast, form errors, etc.)
+```
+
+## ✅ Best Practices
+
+### Server Components (page.tsx)
+
+- ✅ Fetch data directly
+- ✅ Access server resources
+- ✅ Keep sensitive information on the server
+- ❌ Don't use React hooks
+- ❌ Don't use event handlers
+
+### Client Components (\_components/content.tsx)
+
+- ✅ Use interactivity
+- ✅ Use React hooks
+- ✅ Keep local state
+- ❌ Don't fetch data directly
+- ❌ Don't access the database
+
+### Server Actions (\_actions/)
+
+- ✅ Validate all inputs
+- ✅ Check authentication
+- ✅ Return consistent types
+- ✅ Handle errors properly
+- ❌ Don't return sensitive data
+
+### Data Access (\_data-access/)
+
+- ✅ Encapsulate complex queries
+- ✅ Reuse common logic
+- ✅ Check permissions
+- ✅ Return typed data
+- ❌ Don't expose sensitive data
+
+## 📝 Full Example: `/account`
+
+```
+/account/
+├── page.tsx
+│   └── Server Component
+│       └── Calls getUserData()
+│       └── Renders <AccountContent />
+│
+├── _components/
+│   └── content.tsx
+│       └── Client Component
+│       └── Interactive forms
+│       └── Calls updateAccount()
+│
+├── _actions/
+│   └── update-account.ts
+│       └── Server Action
+│       └── Validates with Zod
+│       └── Updates database
+│
+└── _data-access/
+    └── get-user-data.ts
+        └── Fetches user data
+        └── Checks authentication
+```
+
+## 🎯 When to Create Each Folder?
+
+### `_components/`
+
+- **Always** when the page needs UI
+- Page-specific components
+- Can contain multiple components
+
+### `_actions/`
+
+- When you need to **modify data** (create, update, delete)
+- Operations that require validation
+- Complex business logic
+
+### `_data-access/`
+
+- When you need to **fetch data** from the database
+- Complex or reusable queries
+- Shared data access logic
+
+## 📌 Important Notes
+
+1. **`_` prefix**: Folders prefixed with `_` don't generate routes in Next.js
+2. **Separation of Concerns**: Each layer has a specific responsibility
+3. **Typing**: Always type function inputs and outputs
+4. **Validation**: Use Zod to validate data on the server
+5. **Security**: Always check authentication in actions and data-access
+
+# Attention
+
+- Always pay attention to communication between Server Components and Client Components.
+- Watch out for Hydration issues.
+
+---
+
+**Implementation Reference:** `/src/app/(painel)/dashboard/account/`

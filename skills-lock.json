@@ -1,11 +1,39 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "framer-motion-animator": {
+      "source": "patricio0312rev/skills",
+      "commit": "79ea6af485698b31060b63f0066f712560757b29",
+      "sourceType": "github",
+      "skillPath": "frontend/framer-motion-animator/SKILL.md",
+      "computedHash": "2f47c7af86096e9fe96c15d4e9e0b5e3462dcd549796402366e62343e4884c32"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
+    },
+    "shadcn": {
+      "source": "shadcn-ui/ui",
+      "commit": "45bbf9ba23c9c0f63d38887947e5fb06f59c7da3",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "388962d16c7a4f13aaeee0d8f128e50a87df8553d42ef7988c39c0e1c74a40e8"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
+    },
     "use-railway": {
       "source": "railwayapp/railway-skills",
       "sourceType": "github",
       "skillPath": "plugins/railway/skills/use-railway/SKILL.md",
-      "computedHash": "c76a8c5d1c9f38f386ba21328dda9f91f0cea502cd83a6dbbb34dc7fa62afef6"
+      "computedHash": "032a2a567180cce2943c508b9cc8f209c7a59074e49badd3eee5463384ced2b1"
     }
   }
 }
