@@ -68,7 +68,7 @@ describe("sites list view", () => {
   });
 
   test("C1372: the summary cards count the sites, their assets, the live agreements and the sites ready to quote", () => {
-    const card = (out: string, label: string) => new RegExp(`${label}</span>[\\s\\S]*?text-\\[30px\\][^>]*>([^<]*)<`).exec(out)?.[1];
+    const card = (out: string, label: string) => new RegExp(`${label}</p>[\\s\\S]*?text-\\[28px\\][^>]*>([^<]*)<`).exec(out)?.[1];
     const out = html([row(), row({ id: "s2", assetCount: 5, liveAgreement: { id: "ag1", number: "AG-1", status: "sent" } }), row({ id: "s3", assetCount: 0 })]);
     expect(card(out, "Sites")).toBe("3");
     expect(card(out, "Assets")).toBe("8");

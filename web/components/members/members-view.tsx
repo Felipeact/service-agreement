@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import type { InvitationRow, MemberRole, MemberRow } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { StatCard } from "@/components/ui/stat-card";
+import { MailIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ROLE_LABELS, isExpired } from "@/domain/members";
 import { InvitationControls } from "./invitation-controls";
@@ -26,20 +28,6 @@ type Props = {
     remove: (state: RemoveFormState, formData: FormData) => Promise<RemoveFormState>;
   };
 };
-
-/** One summary card: a small label with its icon over a big figure and a line of context. */
-function Stat({ label, icon, value, note }: { label: string; icon: IconName; value: number; note: string }) {
-  return (
-    <div className="flex flex-col gap-2.5 rounded-panel border border-hairline bg-surface p-5 shadow-card">
-      <div className="flex items-center justify-between text-ink-2">
-        <span className="text-[13px] font-medium">{label}</span>
-        <Icon name={icon} className="size-[18px]" />
-      </div>
-      <span className="font-display text-[30px] leading-none font-medium tracking-tight text-ink">{value}</span>
-      <span className="text-[12px] text-ink-2">{note}</span>
-    </div>
-  );
-}
 
 /** A role as a small pill; the owner stands out in Action Tint, every other role is neutral. */
 function RolePill({ role }: { role: MemberRole }) {
@@ -77,9 +65,9 @@ export function MembersView({ members, invitations, currentUserId, role, orgName
       <PageHeader title="Members" subtitle={`Everyone with access to ${orgName}, and what each of them can do.`} />
 
       <div className={`grid gap-3 lg:gap-4 ${manage && invitations ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"}`}>
-        <Stat label="Members" icon="people" value={members.length} note={`In ${orgName}`} />
-        <Stat label="Owners and admins" icon="gear" value={leaders} note="Can change settings and people" />
-        {manage && invitations && <Stat label="Pending invitations" icon="mail" value={pending} note="Sent, not yet accepted" />}
+        <StatCard label="Members" icon={<UsersIcon />} value={String(members.length)} note={`In ${orgName}`} />
+        <StatCard label="Owners and admins" icon={<ShieldIcon />} value={String(leaders)} note="Can change settings and people" />
+        {manage && invitations && <StatCard label="Pending invitations" icon={<MailIcon />} value={String(pending)} note="Sent, not yet accepted" />}
       </div>
 
       {manage && <InviteForm action={actions.invite} />}

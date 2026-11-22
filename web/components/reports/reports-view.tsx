@@ -42,9 +42,9 @@ export type ReportsViewProps = {
 const STAGE_LABEL = { created: "Created", sent: "Sent", accepted: "Accepted", signed: "Signed" } as const;
 const OUTCOME_LABEL = { refused: "Refused", expired: "Expired", withdrawn: "Withdrawn" } as const;
 
-function Section({ id, title, note, download, range, children }: { id: string; title: string; note?: string; download?: ReportKey; range: ReportRange; children: ReactNode }) {
+function Section({ id, title, note, download, range, children, bare = false }: { id: string; title: string; note?: string; download?: ReportKey; range: ReportRange; children: ReactNode; /** No frame of its own: the section's children are cards already. */ bare?: boolean }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card">
+    <section aria-labelledby={id} className={bare ? "flex flex-col gap-3" : "flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card"}>
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
         <div className="mr-auto min-w-0">
           <h2 id={id} className="font-display text-[16px] font-semibold tracking-tight">
@@ -75,10 +75,10 @@ const Empty = ({ children }: { children: ReactNode }) => <p className="rounded-c
 
 function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 rounded-control bg-ground px-3 py-2.5">
-      <dt className="text-[12px] font-medium text-ink-2">{label}</dt>
-      <dd className="font-display text-[22px] leading-tight font-semibold tracking-tight break-words">{value}</dd>
-      {note && <dd className="text-[12px] text-ink-2">{note}</dd>}
+    <div className="flex min-w-0 flex-col gap-1 rounded-panel border border-hairline bg-surface p-4 shadow-card">
+      <dt className="text-[13px] font-medium text-ink-nav">{label}</dt>
+      <dd className="text-[28px] leading-9 font-semibold tracking-tight break-words tabular-nums">{value}</dd>
+      {note && <dd className="border-t border-hairline pt-2 text-[12px] text-ink-2">{note}</dd>}
     </div>
   );
 }
@@ -100,11 +100,11 @@ const AgreementLink = ({ id, number }: { id: string; number: string }) => (
 function HeadlineSection({ part, range }: { part: Part<Headline>; range: ReportRange }) {
   if (!part) return null;
   return (
-    <Section id="rep-headline" title="Headline" note={`Decisions and signatures from ${range.from} to ${range.to}; revenue and pipeline as of today.`} range={range}>
+    <Section id="rep-headline" title="Headline" note={`Decisions and signatures from ${range.from} to ${range.to}; revenue and pipeline as of today.`} range={range} bare={part.ok}>
       {!part.ok ? (
         <Failed what="The headline" />
       ) : (
-        <dl className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
           <Stat label="Recurring revenue" value={formatCad(part.value.recurringCents)} note="a year, agreements in term" />
           <Stat label="Pipeline value" value={formatCad(part.value.pipelineCents)} note="a year, sent or awaiting a start" />
           <Stat label="Win rate" value={winRate({ accepted: part.value.accepted, refused: part.value.refused, expired: part.value.expired })} note={`${part.value.accepted} accepted, ${part.value.refused} refused, ${part.value.expired} expired`} />

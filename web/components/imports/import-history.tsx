@@ -9,6 +9,8 @@ import { Icon } from "@/components/ui/icons";
 import { Spot } from "@/components/ui/illustrations";
 import { FilterChips, type Chip } from "@/components/ui/list-panel";
 import { Select } from "@/components/ui/select";
+import { StatCard } from "@/components/ui/stat-card";
+import { CheckCircle2Icon, FileUpIcon, TriangleAlertIcon } from "lucide-react";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { ATTENTION, date, outcomeLine, REVIEWABLE, STATUS_LABELS } from "./job-list";
@@ -48,6 +50,7 @@ function importsHref(filter: ImportFilter, status?: ImportFilter["status"]): str
 export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT_ITEM_WORDS }: Props) {
   const filtered = Boolean(filter.status || filter.siteId);
   const attention = rows.filter((job) => ATTENTION.has(job.status)).length;
+  const added = rows.filter((job) => job.status === "committed").length;
   const standing = [`${rows.length} ${rows.length === 1 ? "import" : "imports"}`, attention > 0 ? `${attention} need attention` : null].filter(Boolean).join(" · ");
   const chips: Chip[] = [
     { label: "All", href: importsHref(filter), active: !filter.status },
@@ -58,8 +61,17 @@ export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT
     <div className="flex flex-col gap-4">
       <PageHeader title="Imports" subtitle={rows.length > 0 ? standing : "Turn inconsistent spreadsheets and PDFs into clean, priceable asset schedules."} />
 
+      {rows.length > 0 && (
+        <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-3 lg:gap-4">
+          <StatCard label="Imports" icon={<FileUpIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : "Lists uploaded to sites"} />
+          <StatCard label="Need attention" icon={<TriangleAlertIcon />} value={String(attention)} note={attention === 0 ? "Nothing waiting on a person" : "Open them to review the rows"} />
+          <StatCard label="Added to sites" icon={<CheckCircle2Icon />} value={String(added)} note="Reviewed and committed" />
+        </div>
+      )}
+
       {banner}
 
+      <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3 shadow-card">
       <FilterChips label="Filter by status" chips={chips} />
 
       <form method="get" action="/imports" className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
@@ -79,6 +91,7 @@ export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT
           </Link>
         )}
       </form>
+      </div>
 
       {rows.length === 0 ? (
         filtered ? (

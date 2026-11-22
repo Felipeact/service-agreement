@@ -10,10 +10,11 @@ import type { SiteFilter } from "@/domain/records";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { Icon, type IconName } from "@/components/ui/icons";
 import { Spot } from "@/components/ui/illustrations";
 import { ListPanel, ROW_CLASSES } from "@/components/ui/list-panel";
 import { SearchInput } from "@/components/ui/search-input";
+import { StatCard } from "@/components/ui/stat-card";
+import { BellIcon, FileTextIcon, LayersIcon, MapPinIcon } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { useItemWords } from "@/components/shell/item-words";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -66,20 +67,6 @@ function EquipmentCell({ row }: { row: SiteListRow }) {
   );
 }
 
-/** One summary card: a small label with its icon over a big figure and a line of context. */
-function Stat({ label, icon, value, note }: { label: string; icon: IconName; value: string; note: string }) {
-  return (
-    <div className="flex flex-col gap-2.5 rounded-panel border border-hairline bg-surface p-5 shadow-card">
-      <div className="flex items-center justify-between text-ink-2">
-        <span className="text-[13px] font-medium">{label}</span>
-        <Icon name={icon} className="size-[18px]" />
-      </div>
-      <span className="font-display text-[30px] leading-none font-medium tracking-tight text-ink">{value}</span>
-      <span className="text-[12px] text-ink-2">{note}</span>
-    </div>
-  );
-}
-
 /**
  * The Sites & equipment page body, laid out like Agreements: a header, four summary cards, a segmented control beside the
  * customer picker and a search, then one row per site (sites-page S1, S2). The customer and inactive filters live in the
@@ -107,16 +94,16 @@ export function SitesListView({ rows, customers, filter }: Props) {
     <div className="flex flex-col gap-6">
       <PageHeader title={`Sites & ${words.plural}`} subtitle={`Every site you maintain, the ${words.plural} on it, and the agreement that covers it.`} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <Stat label="Sites" icon="pin" value={String(rows.length)} note={filtered ? "Matching this view" : showing ? "Including inactive" : "Active in your workspace"} />
-        <Stat label="Assets" icon="pipeline" value={assets.toLocaleString("en-CA")} note="Across these sites" />
-        <Stat label="Live agreements" icon="document" value={String(live)} note="Sites under agreement" />
-        <Stat label="Ready to quote" icon="bell" value={String(ready)} note={`${words.Plural}, no agreement yet`} />
+      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+        <StatCard label="Sites" icon={<MapPinIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : showing ? "Including inactive" : "Active in your workspace"} />
+        <StatCard label="Assets" icon={<LayersIcon />} value={assets.toLocaleString("en-CA")} note="Across these sites" />
+        <StatCard label="Live agreements" icon={<FileTextIcon />} value={String(live)} note="Sites under agreement" />
+        <StatCard label="Ready to quote" icon={<BellIcon />} value={String(ready)} note={`${words.Plural}, no agreement yet`} />
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3 shadow-card lg:flex-row lg:items-center lg:justify-between">
         <nav aria-label="Filter by agreement" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:px-0">
-          <div className="inline-flex gap-1 rounded-control bg-board p-1">
+          <div className="inline-flex gap-1">
             {SEGMENTS.map((item) => (
               <button
                 key={item.value}
@@ -124,7 +111,7 @@ export function SitesListView({ rows, customers, filter }: Props) {
                 aria-pressed={segment === item.value}
                 onClick={() => setSegment(item.value)}
                 className={`inline-flex h-11 shrink-0 items-center rounded-[6px] px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
-                  segment === item.value ? "bg-surface font-semibold text-ink shadow-card" : "text-ink-2 hover:text-ink"
+                  segment === item.value ? "bg-ink font-semibold text-surface" : "text-ink-2 hover:bg-board hover:text-ink"
                 }`}
               >
                 {item.label}

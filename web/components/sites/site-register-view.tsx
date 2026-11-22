@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import type { MemberRole, SiteView } from "@/application/ports";
 import type { CreateAgreementState } from "@/components/agreements/state";
 import { ShowInactiveToggle } from "@/components/records/show-inactive";
@@ -14,11 +14,22 @@ import { LinkButton } from "@/components/ui/link-button";
 import { SearchInput } from "@/components/ui/search-input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { statusLabel } from "@/domain/agreement";
+import { initialsOf } from "@/lib/initials";
 import { itemVerb } from "@/domain/org-settings";
 import { filterAssets, groupAssets } from "./assets";
 import { NewAgreementControl } from "./new-agreement";
 
 const value = (text: string | null) => text ?? "-";
+
+/** One cell of the site's title block: a small label over a figure. */
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 px-4 py-3 sm:px-5">
+      <dt className="text-[12px] font-medium text-ink-2">{label}</dt>
+      <dd className="truncate text-[20px] leading-7 font-semibold tracking-tight tabular-nums">{children}</dd>
+    </div>
+  );
+}
 
 type SiteRegisterViewProps = {
   site: SiteView;
@@ -95,6 +106,22 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
             ) : undefined
           }
         />
+        <div className="flex flex-col overflow-hidden rounded-panel border border-hairline bg-surface shadow-card md:flex-row">
+          <div className="flex items-center gap-3 border-b border-hairline bg-night px-4 py-3 text-surface sm:px-5 md:w-56 md:shrink-0 md:border-r md:border-b-0 md:py-4">
+            <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-action text-[15px] font-semibold shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
+              {initialsOf(site.name)}
+            </span>
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="text-[12px] text-night-ink">{site.active ? "Active site" : "Inactive site"}</span>
+              <span className="truncate text-[14px] font-semibold">{site.name}</span>
+            </span>
+          </div>
+          <dl className="grid flex-1 grid-cols-3 divide-x divide-hairline">
+            <Fact label={words.Plural}>{total}</Fact>
+            <Fact label="Types">{groupAssets(site.assets.filter((asset) => asset.active)).length}</Fact>
+            <Fact label="Agreement">{site.liveAgreement ? site.liveAgreement.number : "None"}</Fact>
+          </dl>
+        </div>
         <p className="text-[13px] text-ink-2">
           {value(site.address)} · Site contact: {value(site.contactName)} · Approver: {value(site.approverName ?? null)}
         </p>
