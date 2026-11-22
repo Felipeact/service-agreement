@@ -217,7 +217,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
           const partial = added?.status === "unavailable" && added.added > 0 ? ` ${added.added} of ${pickedTotal(picked)} were added; add only the rest from the site.` : "";
           setNotice({ text: itemText(`The agreement was created, but the equipment could not be added.${partial || " Add it from the site."}`, words), href: agreementHref, linkText: "Open the agreement" });
           setPhase("idle");
-          return setCreated((earlier) => ({ customerId: started.customerId, siteId: started.siteId }));
+          return setCreated({ customerId: started.customerId, siteId: started.siteId });
         }
         return go(agreementHref);
       }
@@ -241,7 +241,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       if (sent.status !== "parsed" || !jobId) {
         setNotice({ text: uploadMessage(sent) ?? LIST_FAILED, href: agreementHref, linkText: "Open the agreement" });
         setPhase("idle");
-        return setCreated((earlier) => ({ customerId: started.customerId, siteId: started.siteId }));
+        return setCreated({ customerId: started.customerId, siteId: started.siteId });
       }
 
       setPhase("extracting");
