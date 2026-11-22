@@ -1,10 +1,17 @@
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 
-/** What the Customers page reads: the signed-in member's role and the customers RLS lets them see. Signed out goes to /login. */
-export async function loadCustomers() {
-  const { currentMember, listCustomers } = await getContainer();
+/** The signed-in member's role. Signed out goes to /login. */
+export async function loadMemberRole() {
+  const { currentMember } = await getContainer();
   const member = await currentMember();
   if (member.status !== "member") redirect("/login");
-  return { role: member.role, customers: await listCustomers() };
+  return member.role;
+}
+
+/** What the Customers page reads: the signed-in member's role and the customers RLS lets them see. Signed out goes to /login. */
+export async function loadCustomers() {
+  const { listCustomers } = await getContainer();
+  const role = await loadMemberRole();
+  return { role, customers: await listCustomers() };
 }

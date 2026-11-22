@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import type { SearchGroup, SearchResults, SearchSite } from "@/application/ports";
-import { SearchView } from "./search-view";
+import { SearchView } from "./content";
 
 const none = { hits: [], more: false };
 const group = <T>(hits: T[], more = false): SearchGroup<T> => ({ hits, more });
