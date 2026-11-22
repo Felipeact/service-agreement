@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AssetForm } from "@/components/records/asset-form";
-import { DeactivateControl, ReactivateControl, replacementOptions } from "@/components/records/active-control";
+import { DeactivateControl, ReactivateControl } from "@/components/records/active-control";
+import { replacementOptions } from "@/components/records/state";
 import { RecordPage } from "@/components/records/record-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
 import { getContainer } from "@/composition";

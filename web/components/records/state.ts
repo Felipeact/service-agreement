@@ -1,4 +1,4 @@
-import type { MemberRole, SiteView } from "@/application/ports";
+import type { AssetView, MemberRole, SiteView } from "@/application/ports";
 import type { FieldErrors } from "@/domain/records";
 
 /** What a record form shows after a submit; `invalid` and the failures keep what was typed. */
@@ -54,6 +54,16 @@ export function shownValues<Input>(state: RecordFormState<Input>, initial: Input
 
 export function fieldErrors<Input>(state: RecordFormState<Input>): FieldErrors<keyof Input & string> {
   return state.status === "invalid" ? state.errors : {};
+}
+
+/** Another active unit on the asset's site, offered as its replacement (deactivation AC 2). */
+export type ReplacementOption = { id: string; label: string };
+
+/** The units still in service on the asset's site, never the asset itself, as `<CODE> <unit>`. */
+export function replacementOptions(siteAssets: AssetView[], assetId: string): ReplacementOption[] {
+  return siteAssets
+    .filter((other) => other.active && other.id !== assetId)
+    .map((other) => ({ id: other.id, label: [other.typeCode, other.unitNo].filter(Boolean).join(" ") }));
 }
 
 // Here and not in active-control.tsx: a server page calls it, and a function of a "use client" file cannot be called there.

@@ -41,6 +41,8 @@ export function FormAlert({ status }: { status: string }) {
 type RecordFormProps = {
   /** The form action; absent in tests that only render markup. */
   action?: (formData: FormData) => void;
+  /** Instead of `action`: a submit handler, for a form that validates in the browser first (React Hook Form). */
+  onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
   status: string;
   pending: boolean;
   submitLabel: string;
@@ -49,9 +51,9 @@ type RecordFormProps = {
 };
 
 /** Fields, the failure alert, then Save and Cancel. Presentational: the caller owns the state. */
-export function RecordForm({ action, status, pending, submitLabel, cancelHref, children }: RecordFormProps) {
+export function RecordForm({ action, onSubmit, status, pending, submitLabel, cancelHref, children }: RecordFormProps) {
   return (
-    <form action={action} noValidate className="flex max-w-xl flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-5">
       <div className="flex flex-col gap-3">{children}</div>
       <FormAlert status={status} />
       <div className="flex flex-wrap items-center gap-3">
