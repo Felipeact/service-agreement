@@ -23,7 +23,7 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
       data-card
       data-amount-cents={card.annualCents ?? 0}
       style={{ "--i": index } as CSSProperties}
-      className="settle group relative block overflow-hidden rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card xl:max-[1600px]:p-3.5 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
+      className="settle group relative block overflow-hidden rounded-card border border-surface bg-surface p-4 text-ink shadow-card xl:max-[1600px]:p-3.5 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
     >
       {followUp && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-attention-fg" />}
       <div className="flex items-center justify-between gap-2">

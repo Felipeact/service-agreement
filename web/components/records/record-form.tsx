@@ -50,17 +50,19 @@ type RecordFormProps = {
   children: ReactNode;
 };
 
-/** Fields, the failure alert, then Save and Cancel. Presentational: the caller owns the state. */
+/** The fields in a framed card, the failure alert under them, then a footer bar with Cancel and Save. Presentational: the caller owns the state. */
 export function RecordForm({ action, onSubmit, status, pending, submitLabel, cancelHref, children }: RecordFormProps) {
   return (
-    <form action={action} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-5">
-      <div className="flex flex-col gap-3">{children}</div>
-      <FormAlert status={status} />
-      <div className="flex flex-wrap items-center gap-3">
+    <form action={action} onSubmit={onSubmit} noValidate className="flex max-w-2xl flex-col rounded-panel border border-hairline bg-surface shadow-card">
+      <div className="flex flex-col gap-4 p-4 sm:p-6">
+        {children}
+        <FormAlert status={status} />
+      </div>
+      <div className="flex flex-col-reverse gap-2 rounded-b-panel border-t border-hairline bg-ground/60 p-4 sm:flex-row sm:justify-end sm:px-6">
+        <LinkButton href={cancelHref}>Cancel</LinkButton>
         <Button type="submit" variant="primary" disabled={pending}>
           {pending ? "Saving…" : submitLabel}
         </Button>
-        <LinkButton href={cancelHref}>Cancel</LinkButton>
       </div>
     </form>
   );

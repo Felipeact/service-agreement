@@ -1,8 +1,8 @@
-import { InfoIcon, StarIcon, UserIcon } from "lucide-react";
+import { CalendarClockIcon, InfoIcon, StarIcon } from "lucide-react";
 import { CountUp } from "@/components/motion/count-up";
 import { StatCard } from "@/components/ui/stat-card";
-import { StatusPill } from "@/components/ui/status-pill";
 import { formatCad } from "@/lib/money";
+import { EXPIRING_WINDOW_DAYS, type ExpiringAgreement } from "@/domain/pipeline";
 import { FRESH_UNDER_DAYS, type PipelineStats } from "@/lib/pipeline-stats";
 
 const formatCount = (value: number) => String(value);
@@ -10,10 +10,11 @@ const dealsIn = (count: number) => `${count} ${count === 1 ? "agreement" : "agre
 
 /**
  * The four figures an estimator opens the Pipeline for (docs/DESIGN.md "Service Pact Summary Cards"): money in play, how
- * many deals are open and how fresh, what was signed this month, and what is being drafted. The figures come from
+ * many deals are open and how fresh, what was signed this month, and what ends soon. The figures come from
  * `pipelineStats`; nothing here computes.
  */
-export function PipelineSummary({ stats }: { stats: PipelineStats }) {
+export function PipelineSummary({ stats, expiring = [] }: { stats: PipelineStats; expiring?: ExpiringAgreement[] }) {
+  const expiringCents = expiring.reduce((sum, row) => sum + row.annualCents, 0);
   const unpriced = stats.openCents === 0 && stats.openCount > 0;
   return (
     <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4">
@@ -58,16 +59,16 @@ export function PipelineSummary({ stats }: { stats: PipelineStats }) {
           }
         />
       </div>
-      <div data-summary="progress">
+      <div data-summary="expiring">
         <StatCard
-          label="Deals in Progress"
-          icon={<UserIcon />}
-          value={<CountUp value={stats.inProgress.count} format={formatCount} />}
-          indicator={<StatusPill stage="in_progress" filled label="Active" />}
+          label="Expiring Soon"
+          icon={<CalendarClockIcon />}
+          value={<CountUp value={expiring.length} format={formatCount} />}
+          unit="ending"
           note={
             <>
-              <span>{stats.inProgress.averageVisits === null ? "No priced deals" : `${stats.inProgress.averageVisits} visits/yr average`}</span>
-              <span>{stats.inProgress.siteCount} {stats.inProgress.siteCount === 1 ? "site" : "sites"}</span>
+              <span>{expiring.length === 0 ? `Nothing ends in ${EXPIRING_WINDOW_DAYS} days` : `${formatCad(expiringCents)}/yr at stake`}</span>
+              <span>within {EXPIRING_WINDOW_DAYS} days</span>
             </>
           }
         />

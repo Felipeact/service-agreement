@@ -108,7 +108,7 @@ export function CustomersView({ customers, initialQuery = "", role, showInactive
                 <span className="flex items-start gap-3 p-5 pb-4">
                   <Initials name={customer.name} large />
                   <span className="min-w-0 flex-1 text-[16px] leading-snug font-semibold tracking-tight break-words text-ink">
-                    <Link href={`/customers/${customer.id}`} className="relative z-10 hover:text-action">
+                    <Link href={`/customers/${customer.id}`} className="relative z-10 inline-flex min-h-11 items-center hover:text-action lg:min-h-0">
                       {customer.name}
                     </Link>
                   </span>

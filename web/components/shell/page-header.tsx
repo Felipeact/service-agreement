@@ -20,10 +20,10 @@ export function PageHeader({ title, badge, subtitle, controls, action, large = f
     <header className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-2.5">
       <div className="flex flex-col gap-0.5 md:mr-auto">
         <div className="flex items-center gap-2.5">
-          <h1 className={`tracking-[-0.02em] ${large ? "text-[28px] leading-9 font-bold lg:text-[36px] lg:leading-11" : "text-[22px] leading-7 font-semibold md:text-[28px] md:leading-9"}`}>{title}</h1>
+          <h1 className={`tracking-[-0.02em] ${large ? "text-[28px] leading-9 font-extrabold lg:text-[36px] lg:leading-11" : "text-[24px] leading-8 font-bold md:text-[30px] md:leading-9"}`}>{title}</h1>
           {badge}
         </div>
-        {subtitle && <p className="text-[13px] text-ink-2">{subtitle}</p>}
+        {subtitle && <p className="text-[14px] text-ink-nav">{subtitle}</p>}
       </div>
       {(controls || action) && (
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">

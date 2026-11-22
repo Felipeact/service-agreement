@@ -27,14 +27,14 @@ const card = (patch: { canWrite?: boolean; canUse?: boolean; template?: Agreemen
   renderToStaticMarkup(createElement(TemplateCard, { template: patch.template ?? TEMPLATE, canWrite: patch.canWrite ?? true, canUse: patch.canUse ?? true, now: NOW, actions }));
 
 describe("a template card", () => {
-  test("[C35] the parts come in order: icon tile, menu, name, description, divider, frequency and updated-ago, then Use template", () => {
+  test("[C35] the parts come in order: page thumbnail, menu, name, description, divider, frequency and updated-ago, then Use template", () => {
     const html = card();
     const at = (needle: string) => {
       const index = html.indexOf(needle);
       expect(index, needle).toBeGreaterThan(-1);
       return index;
     };
-    const order = [at("<svg"), at('aria-label="Actions for Standard commercial HVAC PM"'), at("Standard commercial HVAC PM</h3>"), at("Quarterly inspection and maintenance"), at("<hr"), at(">Quarterly</span>"), at("Updated 2 weeks ago"), at("Use template")];
+    const order = [at("data-template-thumb"), at('aria-label="Actions for Standard commercial HVAC PM"'), at("Standard commercial HVAC PM</h3>"), at("Quarterly inspection and maintenance"), at("<hr"), at(">Quarterly</span>"), at("Updated 2 weeks ago"), at("Use template")];
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 

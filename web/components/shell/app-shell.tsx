@@ -75,7 +75,7 @@ function SidebarFooter({ plan, email, role, signOut }: { plan?: PlanQuotaFigure 
   );
 }
 
-/** Fixed Night sidebar on desktop (the app's one search lives in it); a Night top bar with a navigation drawer below 1024px. */
+/** A white sidebar floating on the pale ground on desktop (the app's one search lives in it); a frosted top bar with a navigation drawer below 1024px. */
 export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen, reports, role, plan, counts }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -155,25 +155,26 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
   return (
     <div
       className={`min-h-dvh lg:grid lg:transition-[grid-template-columns] lg:duration-300 lg:ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
-        collapsed ? "lg:grid-cols-[0px_minmax(0,1fr)]" : "lg:grid-cols-[240px_minmax(0,1fr)]"
+        collapsed ? "lg:grid-cols-[0px_minmax(0,1fr)]" : "lg:grid-cols-[280px_minmax(0,1fr)]"
       }`}
     >
-      <aside id="app-sidebar" inert={collapsed} className="sticky top-0 hidden h-dvh min-w-0 overflow-hidden bg-night lg:block">
+      <aside id="app-sidebar" inert={collapsed} className="sticky top-0 z-20 hidden h-dvh min-w-0 overflow-hidden lg:block">
         {/* Fixed width inside the shrinking column, so the content slides and fades rather than reflowing. */}
         <div
-          className={`relative flex h-full w-[240px] flex-col overflow-hidden px-3 pt-5 pb-4 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
+          className={`relative h-full w-[280px] p-3 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
             collapsed ? "-translate-x-6 opacity-0 duration-150" : "translate-x-0 opacity-100 duration-300"
           }`}
         >
+          <div className="flex h-full flex-col overflow-hidden rounded-panel border border-hairline bg-surface px-3 pt-4 pb-3 shadow-card">
           <div className="flex items-center justify-between px-2.5 pb-2.5">
-            <span className="text-[11px] font-semibold tracking-[0.05em] text-night-ink uppercase">Navigation</span>
+            <span className="text-[12px] font-semibold text-ink-2">Navigation</span>
             <button
               type="button"
               aria-label="Hide sidebar"
               aria-expanded={!collapsed}
               aria-controls="app-sidebar"
               onClick={toggleSidebar}
-              className="inline-flex size-7 items-center justify-center rounded-control text-night-ink transition-colors duration-150 hover:bg-surface/10 hover:text-surface"
+              className="inline-flex size-7 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink"
             >
               <Icon name="sidebar" className="size-4" />
             </button>
@@ -188,31 +189,31 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               name="q"
               placeholder="Search"
               maxLength={SEARCH_MAX}
-              tone="night"
               shortcut={SEARCH_SHORTCUT}
             />
           </form>
           <SidebarNav words={words} reports={reports} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} />} />
+          </div>
         </div>
       </aside>
 
-      <div className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-night px-2 lg:hidden">
+      <div className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-hairline bg-surface/80 px-2 backdrop-blur-md lg:hidden">
         <button
           ref={menuButtonRef}
           type="button"
           aria-label="Open navigation"
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen(true)}
-          className="inline-flex size-11 items-center justify-center rounded-control text-surface transition-colors duration-150 hover:bg-surface/10"
+          className="inline-flex size-11 items-center justify-center rounded-control text-ink transition-colors duration-150 hover:bg-board"
         >
           <Icon name="menu" />
         </button>
-        <ProductMark className="size-6" />
-        <span className="font-display text-[16px] font-semibold tracking-tight text-surface">{PRODUCT_NAME}</span>
+        <ProductMark className="size-7 rounded-lg shadow-md shadow-action/20" />
+        <span className="font-display text-[17px] font-bold tracking-tight text-ink">{PRODUCT_NAME}</span>
         <Link
           href="/pipeline?followups=1"
           aria-label={followUps > 0 ? `${followUps} need follow-up` : "Follow-ups: none due"}
-          className="relative ml-auto inline-flex size-11 items-center justify-center rounded-control text-surface transition-colors duration-150 hover:bg-surface/10"
+          className="relative ml-auto inline-flex size-11 items-center justify-center rounded-control text-ink transition-colors duration-150 hover:bg-board"
         >
           <Icon name="bell" className="size-[18px]" />
           {followUps > 0 && <span aria-hidden="true" className="badge-pop absolute top-2 right-2 size-2 rounded-full bg-danger" />}
@@ -220,7 +221,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
         <Link
           href="/search"
           aria-label="Search"
-          className="inline-flex size-11 items-center justify-center rounded-control text-surface transition-colors duration-150 hover:bg-surface/10"
+          className="inline-flex size-11 items-center justify-center rounded-control text-ink transition-colors duration-150 hover:bg-board"
         >
           <Icon name="search" className="size-[18px]" />
         </Link>
@@ -240,10 +241,10 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               role="dialog"
               aria-modal="true"
               aria-label="Navigation"
-              className="absolute inset-y-0 left-0 flex w-[272px] flex-col overflow-y-auto bg-night px-3 pt-2 pb-4 shadow-panel"
-              initial={{ x: -272 }}
+              className="absolute inset-y-0 left-0 flex w-[288px] flex-col overflow-y-auto bg-surface px-3 pt-2 pb-4 shadow-panel"
+              initial={{ x: -288 }}
               animate={{ x: 0, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } }}
-              exit={{ x: -272, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
+              exit={{ x: -288, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
             >
               <div className="flex items-center justify-between gap-2 pb-3">
                 <div className="min-w-0 flex-1">
@@ -254,7 +255,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
                   type="button"
                   aria-label="Close navigation"
                   onClick={closeDrawer}
-                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-night-ink transition-colors duration-150 hover:bg-surface/10 hover:text-surface"
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink"
                 >
                   <Icon name="close" />
                 </button>
@@ -265,8 +266,14 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
         )}
       </AnimatePresence>
 
-      <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-        <header className="sticky top-0 z-10 hidden h-12 items-center gap-3 border-b border-hairline bg-surface px-8 lg:flex">
+      <div className="relative isolate min-w-0 lg:col-start-2 lg:row-start-1">
+        {/* The public hero's soft blue and cyan wash and faint grid, behind the top of every page. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] overflow-hidden">
+          <div className="absolute -top-40 left-[6%] size-[440px] rounded-full bg-action/10 blur-[100px]" />
+          <div className="absolute -top-32 right-[8%] size-[400px] rounded-full bg-cyan-400/10 blur-[110px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.03)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_35%,transparent_100%)]" />
+        </div>
+        <header className="sticky top-0 z-10 hidden h-16 items-center gap-3 bg-ground/70 px-8 backdrop-blur-md lg:flex">
           <button
             type="button"
             aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
@@ -286,7 +293,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               type="button"
               disabled
               title="Coming soon"
-              className="inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-purple-600/20 bg-purple-600/10 px-3 text-[12px] font-medium text-purple-600 shadow-card disabled:cursor-not-allowed"
+              className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3.5 text-[12px] font-semibold text-violet-700 disabled:cursor-not-allowed"
             >
               <SparklesIcon aria-hidden="true" className="size-3.5" />
               Ask AI
@@ -308,7 +315,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
             )}
           </div>
         )}
-        <main className="px-4 py-6 md:px-6 lg:px-8 lg:py-7">{words ? <ItemWordsProvider words={words}>{children}</ItemWordsProvider> : children}</main>
+        <main className="px-4 py-6 md:px-6 lg:px-8 lg:pt-3 lg:pb-10">{words ? <ItemWordsProvider words={words}>{children}</ItemWordsProvider> : children}</main>
       </div>
     </div>
   );

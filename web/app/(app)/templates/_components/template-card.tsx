@@ -7,6 +7,7 @@ import { derivedFrequency } from "@/domain/agreement";
 import { formatCad } from "@/lib/money";
 import { updatedAgo } from "@/lib/relative-time";
 import { ArchiveControl } from "./archive-control";
+import { TemplateThumb } from "./template-thumb";
 import { CustomizeControl } from "./customize-control";
 import { DuplicateControl } from "./duplicate-control";
 import type { ArchiveTemplateState, CustomizeTemplateState, DuplicateTemplateState } from "./state";
@@ -75,11 +76,13 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
   const yearlyCents = priced ? lines.reduce((sum, line) => sum + (line.costPerVisitCents ?? 0) * line.visitMonths.length, 0) : null;
   return (
     <article data-template={id} className="flex h-full flex-col gap-3 rounded-panel border border-hairline bg-surface p-5 shadow-card">
-      <div className="flex items-start justify-between gap-2">
-        <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-control bg-action-tint text-action">
-          <Icon name="template" className="size-5" />
-        </span>
-        {canWrite && <CardMenu template={template} actions={actions} />}
+      <div className="relative">
+        <TemplateThumb body={body} />
+        {canWrite && (
+          <div className="absolute top-1.5 right-1.5">
+            <CardMenu template={template} actions={actions} />
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-1">
         <h3 className="text-[16px] leading-snug font-semibold tracking-tight">{body.name}</h3>
@@ -87,11 +90,11 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
       </div>
       {lines.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-          <span className="inline-flex items-center gap-1 rounded-md bg-board px-2 py-0.5 text-ink">
+          <span className="inline-flex items-center gap-1 rounded-full bg-board px-2 py-0.5 text-ink">
             {lines.length} {lines.length === 1 ? "service line" : "service lines"}
           </span>
-          {yearlyCents !== null && <span className="inline-flex items-center rounded-md border border-pill-completed-border bg-pill-completed px-2 py-0.5 text-pill-completed-ink">{formatCad(yearlyCents)} / yr</span>}
-          {body.preset.termMonths !== null && <span className="inline-flex items-center rounded-md bg-action-tint px-2 py-0.5 text-action">{body.preset.termMonths} month term</span>}
+          {yearlyCents !== null && <span className="inline-flex items-center rounded-full border border-pill-completed-border bg-pill-completed px-2 py-0.5 text-pill-completed-ink">{formatCad(yearlyCents)} / yr</span>}
+          {body.preset.termMonths !== null && <span className="inline-flex items-center rounded-full bg-action-tint px-2 py-0.5 text-action">{body.preset.termMonths} month term</span>}
         </div>
       )}
       <hr className="border-hairline" />

@@ -8,7 +8,7 @@
    the "shadcn roles" group at the end aliases them for the shadcn/ui components. */
 @theme {
   /* Canvas, surfaces and lines (DESIGN.md "Core Canvas & Structure"). */
-  --color-ground: #f8fafc;
+  --color-ground: #f6f8fe;
   --color-surface: #ffffff;
   --color-board: #f1f5f9;
   --color-hairline: #e2e8f0;
@@ -45,6 +45,10 @@
   --color-tint-in-progress: #eff6ff;
   --color-tint-sent: #fffbeb;
   --color-tint-accepted: #f5f3ff;
+  --color-tint-completed: #effcf6;
+  --color-tint-refused: #fef5f5;
+  /* Expiring soon is not a stage: an orange well, apart from Sent's amber. */
+  --color-tint-expiring: #fff6ec;
 
   /* The pill that names a stage: DESIGN.md's fill and border, with a darker ink than the spec's brand hue so 11px text keeps 6:1. */
   --color-pill-in-progress: #eff6ff;
@@ -90,12 +94,15 @@
   --color-input: var(--color-field);
   --color-ring: var(--color-action);
 
-  /* Buttons, inputs and menus are 4px; cards, modals and panels are 8px (DESIGN.md "Shapes"). */
-  --radius-control: 4px;
-  --radius-panel: 8px;
+  /* The public site's softer geometry (DESIGN.md "Shapes"): buttons, inputs and menus 8px, cards 12px, panels, columns and modals 16px. */
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
 
   /* Layer 1 cards, Layer 2 menus and popovers, Layer 3 modals and drawers (DESIGN.md "Elevation & Depth"). */
   --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  /* The public hero's framed panel: the floating sidebar and the menus. */
+  --shadow-float: 0 20px 40px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05);
   --shadow-lift: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-panel: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
 }

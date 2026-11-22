@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import type { OrgSettingsErrors, OrgSettingsInput } from "@/domain/org-settings";
 import type { UseFormRegister } from "react-hook-form";
 import { PROVINCES } from "@/domain/org-settings";
@@ -47,15 +47,22 @@ const SECTIONS = [
   { id: "renewal", label: "Renewal" },
 ] as const;
 
-/** One menu item: the section in view is tinted; the others are plain. */
+/** One tab: the section shown is tinted; the others are plain. 44px tall on a phone. */
 function menuClass(active: boolean): string {
-  return `flex h-9 items-center rounded-control px-3 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-action-tint text-action" : "text-ink-nav hover:bg-board hover:text-ink"}`;
+  return `flex h-11 items-center gap-1.5 rounded-control px-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-9 ${active ? "bg-action-tint font-semibold text-action" : "text-ink-nav hover:bg-board hover:text-ink"}`;
 }
 
+/** The fields each section holds, so a tab can say it has something to fix. */
+const SECTION_FIELDS: Record<(typeof SECTIONS)[number]["id"], readonly (keyof OrgSettingsInput)[]> = {
+  company: ["legalName", "phone", "address", "itemSingular", "itemPlural", "accentColor", "logoPath"],
+  terms: ["repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "proposalValidityDays", "governingProvince", "taxNote"],
+  renewal: ["defaultTermMonths", "renewalNoticeDays", "cpiRenegotiationThresholdPct", "renewalCpiPct", "renewalCpiAsOf"],
+};
+
 /** A section of the form: a white card with a heading, a line saying what the section is for, and its fields. */
-function Card({ id, title, text, children }: { id: string; title: string; text: string; children: ReactNode }) {
+function Card({ id, title, text, children, shown }: { id: string; title: string; text: string; children: ReactNode; shown: boolean }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 flex flex-col gap-5 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
+    <section id={id} aria-labelledby={`${id}-title`} className={`scroll-mt-24 flex-col gap-5 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6 ${shown ? "flex" : "hidden"}`}>
       <div className="flex flex-col gap-1">
         <h2 id={`${id}-title`} className="font-display text-[18px] font-semibold tracking-tight">
           {title}
@@ -95,33 +102,11 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
   const errors: OrgSettingsErrors = { ...(state.status === "invalid" ? state.errors : {}), ...liveErrors };
   const field = (name: keyof OrgSettingsInput) => (register ? register(name) : { name });
   const [active, setActive] = useState<string>("company");
-  const clickedAt = useRef(0);
   const choose = (id: string, event: MouseEvent) => {
-    clickedAt.current = event.timeStamp;
+    event.preventDefault();
     setActive(id);
   };
-  const sectionIds: string[] = SECTIONS.map((section) => section.id);
-
-  // The menu marks the section in view; a click marks it at once. Members is another page, so it is never marked here.
-  useEffect(() => {
-    const seen = new Map<string, boolean>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) seen.set(entry.target.id, entry.isIntersecting);
-        // A click wins while the page scrolls to it: a short last section never reaches the band.
-        if (performance.now() - clickedAt.current < 1500) return;
-        const current = sectionIds.find((id) => seen.get(id));
-        if (current) setActive(current);
-      },
-      { rootMargin: "-15% 0px -65% 0px" },
-    );
-    for (const id of sectionIds) {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    }
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const hasProblem = (id: (typeof SECTIONS)[number]["id"]) => SECTION_FIELDS[id].some((name) => Boolean(errors[name]));
 
   const [brand, setBrand] = useState({ name: values.legalName, accent: values.accentColor, address: values.address, phone: values.phone });
 
@@ -136,14 +121,20 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
   );
 
   return (
-    <form action={action} onSubmit={onSubmit} onInput={onInput} noValidate className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
-      <nav aria-label="Settings sections" className="sticky top-24 hidden self-start lg:flex lg:flex-col lg:gap-0.5">
+    <form action={action} onSubmit={onSubmit} onInput={onInput} noValidate className="flex flex-col gap-5">
+      <nav aria-label="Settings sections" className="relative -mx-4 flex items-center gap-1 overflow-x-auto px-4 md:mx-0 md:px-0">
         {SECTIONS.map((section) => (
           <a key={section.id} href={`#${section.id}`} onClick={(event) => choose(section.id, event)} className={menuClass(active === section.id)} aria-current={active === section.id ? "location" : undefined}>
             {section.label}
+            {hasProblem(section.id) && (
+              <span className="inline-flex items-center">
+                <span aria-hidden="true" className="size-2 rounded-full bg-danger" />
+                <span className="sr-only"> has a field to fix</span>
+              </span>
+            )}
           </a>
         ))}
-        <Link href="/members" className={`mt-2 justify-between ${menuClass(false)}`}>
+        <Link href="/members" className={`ml-auto justify-between ${menuClass(false)}`}>
           Members
           <Icon name="chevron" className="size-3.5" />
         </Link>
@@ -156,7 +147,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
       </nav>
 
       <div className="flex max-w-3xl flex-col gap-5">
-        <Card id="company" title="Company" text="Your legal details and the colour customers see on their agreements.">
+        <Card shown={active === "company"} id="company" title="Company" text="Your legal details and the colour customers see on their agreements.">
           <LogoField key={values.logoPath ?? ""} storedPath={values.logoPath ?? ""} readOnly={readOnly} prepare={prepareLogo} onUploadingChange={setUploading} serverError={errors.logoPath} />
           <BrandPreview {...brand} />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -182,7 +173,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
           </div>
         </Card>
 
-        <Card id="terms" title="Default terms" text="What a new agreement starts with. Each one can be changed on the agreement itself.">
+        <Card shown={active === "terms"} id="terms" title="Default terms" text="What a new agreement starts with. Each one can be changed on the agreement itself.">
           <div className="grid gap-4 sm:grid-cols-2">
             {text("repairDiscountPct", "Repair discount (%)", { inputMode: "decimal" })}
             {text("cpiCapPct", "CPI cap (%)", { inputMode: "decimal" })}
@@ -208,7 +199,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
           </div>
         </Card>
 
-        <Card id="renewal" title="Renewal" text="How long a term runs, when to warn a customer, and the price index renewals follow.">
+        <Card shown={active === "renewal"} id="renewal" title="Renewal" text="How long a term runs, when to warn a customer, and the price index renewals follow.">
           <div className="grid gap-4 sm:grid-cols-2">
             {text("defaultTermMonths", "Default term (months)", { inputMode: "numeric" })}
             {text("renewalNoticeDays", "Renewal notice (days)", { inputMode: "numeric" })}

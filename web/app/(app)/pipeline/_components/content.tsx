@@ -134,7 +134,7 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
               <button
                 type="button"
                 onClick={() => setFollowUpOnly(true)}
-                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-purple-600 px-3.5 text-[13px] font-medium whitespace-nowrap text-white shadow-card transition-colors duration-150 hover:bg-purple-700 lg:h-[38px]"
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-control bg-violet-600 px-3.5 text-[13px] font-medium whitespace-nowrap text-white shadow-card transition-colors duration-150 hover:bg-violet-700 lg:h-[38px]"
               >
                 <SparklesIcon className="size-3.5" aria-hidden="true" />
                 Insights ({stats.followUpCount})
@@ -149,13 +149,13 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
         <EmptyPanel title="No agreements yet" text={itemText("Add the customer and site, import the equipment list, review the rows, then send a priced agreement. It appears here by stage, with its age.", words)} art={<RooftopScene className="w-56 text-ink-2" />} />
       ) : (
         <>
-          <PipelineSummary stats={stats} />
+          <PipelineSummary stats={stats} expiring={expiring} />
 
           <section aria-labelledby="board-title" className="flex flex-col gap-4">
             <h2 id="board-title" className="sr-only">
               Deal pipeline
             </h2>
-            <div className="flex flex-wrap items-end gap-x-2.5 gap-y-3 rounded-xl border border-hairline bg-surface p-3 shadow-card">
+            <div className="flex flex-wrap items-end gap-x-2.5 gap-y-3 rounded-panel border border-hairline bg-surface p-3 shadow-card">
               <div className="relative w-full sm:w-[240px]">
                 <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-ink-2" />
                 <input
@@ -164,7 +164,7 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
                   placeholder="Search deal name or company..."
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  className="h-11 w-full rounded-lg border border-hairline bg-ground pr-3 pl-8 text-[12px] text-ink placeholder:text-ink-2 focus:border-action focus:ring-1 focus:ring-action focus:outline-none lg:h-[34px]"
+                  className="h-11 w-full rounded-control border border-field bg-surface pr-3 pl-8 text-[12px] text-ink placeholder:text-ink-2 focus:border-action focus:ring-1 focus:ring-action focus:outline-none lg:h-[34px]"
                 />
               </div>
               <button

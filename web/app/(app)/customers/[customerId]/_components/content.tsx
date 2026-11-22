@@ -83,12 +83,12 @@ export function CustomerDetailView({
       </div>
 
       <div className="flex flex-col overflow-hidden rounded-panel border border-hairline bg-surface shadow-card md:flex-row">
-        <div className="flex items-center gap-3 border-b border-hairline bg-night px-4 py-3 text-surface sm:px-5 md:w-56 md:shrink-0 md:border-r md:border-b-0 md:py-4">
-          <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-action text-[15px] font-semibold shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
+        <div className="flex items-center gap-3 border-b border-hairline bg-action-tint px-4 py-3 text-ink sm:px-5 md:w-56 md:shrink-0 md:border-r md:border-b-0 md:py-4">
+          <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-action text-[15px] font-bold text-surface shadow-md shadow-action/25">
             {initialsOf(customer.name)}
           </span>
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-[12px] text-night-ink">{customer.active ? "Active customer" : "Inactive customer"}</span>
+            <span className="text-[12px] text-ink-2">{customer.active ? "Active customer" : "Inactive customer"}</span>
             <span className="truncate text-[14px] font-semibold">{customer.name}</span>
           </span>
         </div>

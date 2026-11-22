@@ -22,7 +22,7 @@ function ExpiringCard({ row, today, index }: { row: ExpiringAgreement; today: st
       href={`/agreements/${row.id}`}
       data-expiring
       style={{ "--i": index } as CSSProperties}
-      className="settle block rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
+      className="settle block rounded-card border border-surface bg-surface p-4 text-ink shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
     >
       <div className="flex items-center justify-between gap-2">
         <StatusPill tone="attention" label={`Ends ${formatTermDate(row.termEnd)}`} />
@@ -50,7 +50,7 @@ function ExpiringCard({ row, today, index }: { row: ExpiringAgreement; today: st
 export function ExpiringColumn({ rows, today, className = "" }: { rows: ExpiringAgreement[]; today: string; className?: string }) {
   const total = rows.reduce((sum, row) => sum + row.annualCents, 0);
   return (
-    <section data-column="expiring" id="panel-expiring" aria-labelledby="column-expiring" className={`flex-col gap-2.5 rounded-panel border border-hairline bg-board p-3 xl:p-2.5 ${className}`}>
+    <section data-column="expiring" id="panel-expiring" aria-labelledby="column-expiring" className={`flex-col gap-2.5 rounded-panel bg-tint-expiring p-3 xl:p-2.5 ${className}`}>
       <ColumnHeader
         id="column-expiring"
         title={

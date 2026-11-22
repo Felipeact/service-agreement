@@ -24,6 +24,7 @@ import { VersionCompare } from "./version-compare";
 import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
+import { ProgressSteps } from "./progress-steps";
 import type { GenerateContractState } from "@/components/agreements/contract-state";
 import type { LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 
@@ -158,21 +159,14 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         )}
       </div>
 
+      {agreement.stage && <ProgressSteps stage={agreement.stage} />}
+
       {canGenerate && writer.generate && (
         <GenerateContractControl signer={agreement.signer ?? null} term={agreement.term} annualCents={shown.annualCents} action={writer.generate} />
       )}
 
-      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} words={words} />}
-
-      {agreement.template && (
-        <TemplatePicker
-          name={agreement.template.name}
-          choices={agreement.editable ? templateChoices?.choices : undefined}
-          selectedVersionId={agreement.editable ? templateChoices?.selected : undefined}
-          change={agreement.editable ? writer?.setTemplate : undefined}
-        />
-      )}
-
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-4">
       <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status, agreement.templateVersionId ?? null])} />
 
       {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
@@ -260,6 +254,19 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         words={words}
       />
 
+        </div>
+        <aside aria-label="Send and history" className="flex min-w-0 flex-col gap-4">
+      {writer && canSend && <LinkControls number={agreement.number} canSend={canSend} recipient={recipient ?? null} send={writer.send} words={words} />}
+
+      {agreement.template && (
+        <TemplatePicker
+          name={agreement.template.name}
+          choices={agreement.editable ? templateChoices?.choices : undefined}
+          selectedVersionId={agreement.editable ? templateChoices?.selected : undefined}
+          change={agreement.editable ? writer?.setTemplate : undefined}
+        />
+      )}
+
       {hasVersionStory(agreement.versions) && (
         <VersionsSection
           agreementId={agreement.id}
@@ -272,6 +279,8 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
       )}
 
       {agreement.timeline && agreement.timeline.length > 0 && <ActivitySection timeline={agreement.timeline} />}
+        </aside>
+      </div>
     </div>
   );
 }

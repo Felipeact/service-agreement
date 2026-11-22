@@ -19,14 +19,14 @@ type StatCardProps = {
 };
 
 /**
- * An overview stat card (docs/DESIGN.md "Service Pact Summary Cards"): 16px padding, 1px hairline, 8px radius.
+ * An overview stat card (docs/DESIGN.md "Service Pact Summary Cards"): 16px padding, 1px hairline, 16px radius.
  * Presentational only; the page computes the figure.
  */
 export function StatCard({ label, value, unit, note, indicator, icon, className }: StatCardProps) {
   return (
     <div data-slot="stat-card" className={cn("flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card", className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[13px] font-medium text-ink-nav">{label}</p>
+        <p className="text-[13px] font-medium text-ink-2">{label}</p>
         {icon && (
           <span aria-hidden="true" className="text-ink-2 [&_svg]:size-4">
             {icon}
@@ -34,7 +34,7 @@ export function StatCard({ label, value, unit, note, indicator, icon, className 
         )}
       </div>
       <div className="flex items-end justify-between gap-2">
-        <p className="flex items-baseline gap-1.5 text-[28px] leading-9 font-semibold tracking-tight text-ink">
+        <p className="flex items-baseline gap-1.5 text-[28px] leading-9 font-bold tracking-tight text-ink">
           {value}
           {unit && <span className="text-xs font-medium text-ink-2">{unit}</span>}
         </p>

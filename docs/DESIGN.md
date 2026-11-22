@@ -153,7 +153,7 @@ The palette leverages a crisp, hyper-legible light mode framework with high cont
 
 ### Core Canvas & Structure
 - **Canvas Base:** `#FFFFFF` serves as the primary card and table surface.
-- **Canvas Sub-layer:** `#F8FAFC` anchors the overarching viewport background and page headers.
+- **Canvas Sub-layer:** `#F6F8FE` (the pale blue of the public site's hero) anchors the overarching viewport background and page headers, under a faint blue and cyan wash and 32px grid at the top of every page.
 - **Surface Muted:** `#F1F5F9` is reserved for table header tracks, disabled states, and nested section bars.
 - **Border Default:** `#E2E8F0` provides crisp structural demarcation without visual distraction.
 - **Border Strong:** `#CBD5E1` delineates active inputs, active table rows, and dividers.
@@ -208,11 +208,12 @@ Depth is produced through subtle structural hierarchy, crisp 1px borders, and sh
 - **Surface Transitions:** Active, selected, or drag-hover records shed shadows entirely in favor of an inset primary boundary (`2px solid #2563EB`) or a surface tone switch to `#F8FAFC`.
 
 ## Shapes
-A clean, soft geometry (`roundedness: 1`) provides professional restraint. Components use slight corner radials (`0.25rem` / 4px) to retain structural authority without feeling rigid.
+The staff app takes the public site's softer geometry (2026-11-22, the chosen "Floating Panel" design). Controls use `0.5rem` / 8px, cards `0.75rem` / 12px, and panels, board columns, the floating sidebar and modals `1rem` / 16px.
 
 ### Specific Geometry Assignments
-- **Input Fields, Dropdowns, and Buttons:** `0.25rem` (4px). Keeps interactive zones sharp, functional, and consistent with administrative tooling.
-- **Cards, Modals, and Surface Panels:** `rounded-lg` (`0.5rem` / 8px). Defines parent grouping borders cleanly.
+- **Input Fields, Dropdowns, and Buttons:** `--radius-control`, 8px.
+- **Cards on a board or in a list:** `--radius-card`, 12px, with a white border so they lift off a tinted column.
+- **Panels, Board Columns, Modals, and the Sidebar:** `--radius-panel`, 16px. Defines parent grouping borders cleanly.
 - **Status Badges & Value Counts:** Strictly pill-shaped (`9999px`) to maintain unmistakable differentiation between actionable button interfaces and passive state identifiers.
 
 ## Components
@@ -246,7 +247,8 @@ A clean, soft geometry (`roundedness: 1`) provides professional restraint. Compo
 - **Prefix / Suffix Adornments:** CAD currency prefix (`$`) and interval suffixes (`/mo`, `/yr`) styled in `#64748B` using `#F1F5F9` container tracks.
 
 ### App Shell
-- **Sidebar:** dark navy (`night`, `#0B1424`) with a workspace switcher, `⌘K` search, nav items with count badges, a plan-quota card and the account footer, as in the pipeline and agreements mockups. Content sits on the light canvas. This is the one dark surface in the staff app; below 1024px it becomes a drawer.
+- **Sidebar:** a white panel (16px radius, hairline border, `shadow-card`) that floats 12px in from the edge on the pale canvas, like the public site's framed panels. It holds the workspace card, search, nav items with count badges (the current page is a pale-blue pill that glides between items), the plan-quota card and the account footer. The quota card is the one saturated block: a blue gradient with a white bar. Below 1024px it becomes a white drawer under a frosted top bar. The Night shell tokens remain for the public site and the sign-in page only.
+- **Board columns:** each stage's hue at about 8% (`tint-*` tokens), no border; Expiring soon, which is not a stage, is orange (`tint-expiring`). Titles are extrabold and tight, as on the public site.
 - **Input borders:** the `field` token (`#7D8798`) is used instead of Hairline on form controls to hold 3:1 non-text contrast (WCAG 1.4.11). Dividers and cards stay Hairline.
 
 ### Navigation Bar & Tabs

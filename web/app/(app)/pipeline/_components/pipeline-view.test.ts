@@ -193,9 +193,9 @@ describe("PipelineView: follow-up", () => {
     expect(html).toMatch(/2 need follow-up/);
   });
 
-  test("the four cards read Pipeline Value, Total Deals Active, Deals Won (This Month) and Deals in Progress", () => {
+  test("the four cards read Pipeline Value, Total Deals Active, Deals Won (This Month) and Expiring Soon", () => {
     const html = render([card()]);
-    for (const label of ["Pipeline Value", "Total Deals Active", "Deals Won (This Month)", "Deals in Progress"]) expect(html).toContain(label);
+    for (const label of ["Pipeline Value", "Total Deals Active", "Deals Won (This Month)", "Expiring Soon"]) expect(html).toContain(label);
   });
 
   test("the page is titled Sales Pipeline with a Live pill, and the board has a Kanban View and a List View that opens the agreements list", () => {

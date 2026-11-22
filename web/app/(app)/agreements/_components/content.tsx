@@ -129,7 +129,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
         <StatCard label="Contract Pipeline" icon={<TrendingUpIcon />} value={formatCad(openCents)} unit="ARR" note={`${formatCad(wonCents)}/yr accepted`} />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3 shadow-card xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card xl:flex-row xl:items-center xl:justify-between">
         <nav aria-label="Filter by status" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0">
           <div className="inline-flex gap-1">
             {segments.map((segment) => (
@@ -137,8 +137,8 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
                 key={segment.label}
                 href={segment.href}
                 aria-current={segment.active ? "true" : undefined}
-                className={`inline-flex h-11 shrink-0 items-center rounded-[6px] px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
-                  segment.active ? "bg-ink font-semibold text-surface" : "text-ink-2 hover:bg-board hover:text-ink"
+                className={`inline-flex h-11 shrink-0 items-center rounded-control px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
+                  segment.active ? "bg-action-tint font-semibold text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"
                 }`}
               >
                 {segment.label}

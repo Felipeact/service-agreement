@@ -10,7 +10,7 @@ type StageMeta = {
   shortLabel: string;
   /** Background utility for the stage dot. */
   dotClass: string;
-  /** The column well: a quiet neutral for every stage (docs/DESIGN.md); the stage dot and pill carry the colour. */
+  /** The column well: the stage's hue at about 8%, so the stage reads by colour at a glance (docs/DESIGN.md). */
   wellClass: string;
   /** The tinted pill a list row wears to name its stage: the stage's soft ground with its own darker ink. */
   pillClass: string;
@@ -27,7 +27,7 @@ export const STAGE_META: Record<PipelineStage, StageMeta> = {
     label: STAGE_LABELS.in_progress,
     shortLabel: "In progress",
     dotClass: "bg-stage-in-progress",
-    wellClass: "border border-hairline bg-board",
+    wellClass: "bg-tint-in-progress",
     pillClass: "border border-pill-in-progress-border bg-pill-in-progress text-pill-in-progress-ink",
     emptyText: "No drafts in progress",
     emptySpot: "clipboard",
@@ -36,7 +36,7 @@ export const STAGE_META: Record<PipelineStage, StageMeta> = {
     label: STAGE_LABELS.sent,
     shortLabel: "Sent to customer",
     dotClass: "bg-stage-sent",
-    wellClass: "border border-hairline bg-board",
+    wellClass: "bg-tint-sent",
     pillClass: "border border-pill-sent-border bg-pill-sent text-pill-sent-ink",
     emptyText: "Nothing is waiting on a customer",
     emptySpot: "envelope",
@@ -45,7 +45,7 @@ export const STAGE_META: Record<PipelineStage, StageMeta> = {
     label: STAGE_LABELS.accepted,
     shortLabel: "Accepted",
     dotClass: "bg-stage-accepted",
-    wellClass: "border border-hairline bg-board",
+    wellClass: "bg-tint-accepted",
     pillClass: "border border-pill-accepted-border bg-pill-accepted text-pill-accepted-ink",
     emptyText: "Nothing is waiting on a signature",
     emptySpot: "signature",
@@ -54,7 +54,7 @@ export const STAGE_META: Record<PipelineStage, StageMeta> = {
     label: STAGE_LABELS.completed,
     shortLabel: "Completed",
     dotClass: "bg-stage-completed",
-    wellClass: "border border-hairline bg-board",
+    wellClass: "bg-tint-completed",
     pillClass: "border border-pill-completed-border bg-pill-completed text-pill-completed-ink",
     emptyText: "No signed contracts yet",
     totalNote: "signed",
@@ -63,7 +63,7 @@ export const STAGE_META: Record<PipelineStage, StageMeta> = {
     label: STAGE_LABELS.refused,
     shortLabel: "Refused",
     dotClass: "bg-stage-refused",
-    wellClass: "border border-hairline bg-board",
+    wellClass: "bg-tint-refused",
     pillClass: "border border-pill-refused-border bg-pill-refused text-pill-refused-ink",
     emptyText: "No refused or expired agreements",
     totalNote: "not won",

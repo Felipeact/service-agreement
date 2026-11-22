@@ -71,7 +71,7 @@ export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT
 
       {banner}
 
-      <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3 shadow-card">
+      <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card">
       <FilterChips label="Filter by status" chips={chips} />
 
       <form method="get" action="/imports" className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">

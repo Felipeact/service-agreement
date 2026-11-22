@@ -15,16 +15,16 @@ export type PlanQuotaFigure = {
 
 /**
  * "Active agreements 4 / 50" with a bar, above the account row in the sidebar (docs/DESIGN.md "App Shell").
- * The bar turns amber at 80% and red once the limit is reached. Colour never carries the meaning alone: the count is text.
+ * The one saturated block in the sidebar. The bar turns amber at 80% and red once the limit is reached. Colour never carries the meaning alone: the count is text.
  */
 export function PlanQuota({ planName, used, limit, canManage }: PlanQuotaFigure) {
   const share = limit > 0 ? Math.min(1, used / limit) : 0;
   const full = isFull({ used, limit });
-  const barColour = full ? "bg-stage-refused" : share >= 0.8 ? "bg-stage-sent" : "bg-action";
+  const barColour = full ? "bg-red-300" : share >= 0.8 ? "bg-amber-300" : "bg-surface";
   return (
-    <div className="rounded-panel border border-night-line bg-night-raised p-3" data-slot="plan-quota">
+    <div className="rounded-xl bg-linear-to-br from-action to-action-press p-3 text-surface shadow-md shadow-action/25" data-slot="plan-quota">
       <div className="flex items-baseline justify-between gap-2 text-[12px]">
-        <span className="font-medium text-night-ink">Active agreements</span>
+        <span className="font-medium text-blue-100">Active agreements</span>
         <span className="font-semibold text-surface">
           {used} / {limit}
         </span>
@@ -32,10 +32,10 @@ export function PlanQuota({ planName, used, limit, canManage }: PlanQuotaFigure)
       <Progress
         value={Math.round(share * 100)}
         aria-label="Active agreements used"
-        className="mt-2 h-1.5 bg-night-line"
+        className="mt-2 h-1.5 bg-surface/25"
         indicatorClassName={barColour}
       />
-      <div className="mt-2 flex items-center justify-between text-[12px] text-night-ink">
+      <div className="mt-2 flex items-center justify-between text-[12px] text-blue-100">
         <span>{planName} plan</span>
         {canManage && (
           <Link href={BILLING_HREF} className="inline-flex min-h-11 items-center font-semibold text-surface underline-offset-2 hover:underline lg:min-h-0">

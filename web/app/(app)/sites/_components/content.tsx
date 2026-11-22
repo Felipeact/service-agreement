@@ -101,7 +101,7 @@ export function SitesListView({ rows, customers, filter }: Props) {
         <StatCard label="Ready to quote" icon={<BellIcon />} value={String(ready)} note={`${words.Plural}, no agreement yet`} />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3 shadow-card lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card lg:flex-row lg:items-center lg:justify-between">
         <nav aria-label="Filter by agreement" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:px-0">
           <div className="inline-flex gap-1">
             {SEGMENTS.map((item) => (
@@ -111,7 +111,7 @@ export function SitesListView({ rows, customers, filter }: Props) {
                 aria-pressed={segment === item.value}
                 onClick={() => setSegment(item.value)}
                 className={`inline-flex h-11 shrink-0 items-center rounded-[6px] px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
-                  segment === item.value ? "bg-ink font-semibold text-surface" : "text-ink-2 hover:bg-board hover:text-ink"
+                  segment === item.value ? "bg-action-tint font-semibold text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"
                 }`}
               >
                 {item.label}
