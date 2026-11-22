@@ -1,4 +1,6 @@
 import type { ComponentProps } from "react";
+import { FIELD_CLASS } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type SelectProps = Omit<ComponentProps<"select">, "id"> & {
   id: string;
@@ -20,7 +22,7 @@ export function Select({ id, label, error, className = "", children, ...props }:
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={`h-11 w-full rounded-control border bg-surface px-3 text-[13px] text-ink disabled:opacity-60 lg:h-[34px] ${error ? "border-danger" : "border-field"}`}
+        className={cn(FIELD_CLASS, "h-11 lg:h-[34px]", error && "border-danger")}
         {...props}
       >
         {children}
