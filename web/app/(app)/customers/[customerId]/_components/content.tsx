@@ -5,6 +5,7 @@ import { ShowInactiveToggle } from "@/components/records/show-inactive";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkButton } from "@/components/ui/link-button";
+import { SectionPanel } from "@/components/ui/section-panel";
 import { StatusPill } from "@/components/ui/status-pill";
 import { initialsOf } from "@/lib/initials";
 import { formatCad } from "@/lib/money";
@@ -14,17 +15,9 @@ type SectionProps = { title: string; empty: string; isEmpty: boolean; action?: R
 
 function Section({ title, empty, isEmpty, action, children }: SectionProps) {
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold">{title}</h2>
-        {action}
-      </div>
-      {isEmpty ? (
-        <p className="rounded-panel border border-hairline bg-surface px-4 py-6 text-center text-[13px] text-ink-2">{empty}</p>
-      ) : (
-        <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">{children}</ul>
-      )}
-    </section>
+    <SectionPanel id={`customer-${title.toLowerCase()}`} title={title} action={action || undefined} flush>
+      {isEmpty ? <p className="px-4 py-6 text-center text-[13px] text-ink-2">{empty}</p> : <ul className="divide-y divide-hairline">{children}</ul>}
+    </SectionPanel>
   );
 }
 
@@ -100,42 +93,21 @@ export function CustomerDetailView({
         </dl>
       </div>
 
-      <Section
-        title="Contacts"
-        empty="No contacts yet"
-        isEmpty={customer.contacts.length === 0}
-        action={canWrite && <LinkButton href={`/customers/${customer.id}/contacts/new`}>Add contact</LinkButton>}
-      >
-        {customer.contacts.map((contact) => (
-          <li key={contact.id} className={ROW}>
-            <span className="flex items-center gap-3 font-semibold md:w-56">
-              <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-board text-[12px] font-semibold text-ink-2">
-                {initialsOf(contact.name)}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex min-w-0 flex-col gap-6 xl:order-1">
+      <Section title="Agreements" empty="No agreements yet" isEmpty={customer.agreements.length === 0}>
+        {customer.agreements.map((agreement) => (
+          <li key={agreement.id}>
+            <Link href={`/agreements/${agreement.id}`} data-agreement-row className={`${ROW} min-h-11 text-ink hover:bg-ground`}>
+              <span className="font-semibold md:w-56">{agreement.siteName}</span>
+              <span className="text-ink-2 md:w-40">
+                {agreement.number ?? "Unnumbered"} · v{agreement.versionNo}
               </span>
-              <span>
-              {contact.name}
-              {(contact.roles ?? []).length > 0 && (
-                <span className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] font-medium text-ink-2">
-                  {(contact.roles ?? []).map((role) => (
-                    <span key={role.kind === "billing" ? "billing" : `${role.kind}:${role.site}`}>
-                      {role.kind === "billing" ? "Billing" : `${role.kind === "approver" ? "Approver" : "Site"} · ${role.site}`}
-                    </span>
-                  ))}
-                </span>
+              <StatusPill stage={agreement.stage} label={STAGE_META[agreement.stage].label} />
+              {agreement.annualCents !== undefined && (
+                <span className="font-semibold md:ml-auto">{formatCad(agreement.annualCents)}/yr</span>
               )}
-              </span>
-            </span>
-            <span className="text-ink-2 md:w-72">
-              <ContactLink href={`mailto:${contact.email}`} text={contact.email} />
-            </span>
-            <span className="text-ink-2">
-              <ContactLink href={`tel:${contact.phone}`} text={contact.phone} />
-            </span>
-            {canWrite && (
-              <Link href={`/contacts/${contact.id}/edit`} aria-label={`Edit ${contact.name}`} className={EDIT_LINK}>
-                Edit
-              </Link>
-            )}
+            </Link>
           </li>
         ))}
       </Section>
@@ -167,23 +139,50 @@ export function CustomerDetailView({
           </li>
         ))}
       </Section>
-
-      <Section title="Agreements" empty="No agreements yet" isEmpty={customer.agreements.length === 0}>
-        {customer.agreements.map((agreement) => (
-          <li key={agreement.id}>
-            <Link href={`/agreements/${agreement.id}`} data-agreement-row className={`${ROW} min-h-11 text-ink hover:bg-ground`}>
-              <span className="font-semibold md:w-56">{agreement.siteName}</span>
-              <span className="text-ink-2 md:w-40">
-                {agreement.number ?? "Unnumbered"} · v{agreement.versionNo}
+      </div>
+      <div className="min-w-0 xl:order-2">
+      <Section
+        title="Contacts"
+        empty="No contacts yet"
+        isEmpty={customer.contacts.length === 0}
+        action={canWrite && <LinkButton href={`/customers/${customer.id}/contacts/new`}>Add contact</LinkButton>}
+      >
+        {customer.contacts.map((contact) => (
+          <li key={contact.id} className="flex flex-col gap-1 px-4 py-3">
+            <span className="flex items-center gap-3 font-semibold">
+              <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-board text-[12px] font-semibold text-ink-2">
+                {initialsOf(contact.name)}
               </span>
-              <StatusPill stage={agreement.stage} label={STAGE_META[agreement.stage].label} />
-              {agreement.annualCents !== undefined && (
-                <span className="font-semibold md:ml-auto">{formatCad(agreement.annualCents)}/yr</span>
+              <span>
+              {contact.name}
+              {(contact.roles ?? []).length > 0 && (
+                <span className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] font-medium text-ink-2">
+                  {(contact.roles ?? []).map((role) => (
+                    <span key={role.kind === "billing" ? "billing" : `${role.kind}:${role.site}`}>
+                      {role.kind === "billing" ? "Billing" : `${role.kind === "approver" ? "Approver" : "Site"} · ${role.site}`}
+                    </span>
+                  ))}
+                </span>
               )}
-            </Link>
+              </span>
+            </span>
+            <span className="text-ink-2">
+              <ContactLink href={`mailto:${contact.email}`} text={contact.email} />
+            </span>
+            <span className="text-ink-2">
+              <ContactLink href={`tel:${contact.phone}`} text={contact.phone} />
+            </span>
+            {canWrite && (
+              <Link href={`/contacts/${contact.id}/edit`} aria-label={`Edit ${contact.name}`} className={EDIT_LINK}>
+                Edit
+              </Link>
+            )}
           </li>
         ))}
       </Section>
+
+      </div>
+      </div>
     </div>
   );
 }

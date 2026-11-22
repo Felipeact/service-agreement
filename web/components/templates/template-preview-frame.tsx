@@ -92,7 +92,7 @@ export function TemplatePreviewFrame<V = TemplateFormInput>({ values, endpoint =
   return (
     <section aria-label="Preview" className="flex min-w-0 flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card xl:sticky xl:top-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h2 className="font-display text-[16px] font-semibold tracking-tight">Preview</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight">Preview</h2>
         <div role="status" aria-live="polite" className="flex min-h-5 flex-wrap items-center gap-x-3 text-[13px] text-ink-2">
           {shown === "updating" && <span>{PREVIEW_MESSAGES.updating}</span>}
           {shown === "invalid" && <span>{PREVIEW_MESSAGES.invalid}</span>}

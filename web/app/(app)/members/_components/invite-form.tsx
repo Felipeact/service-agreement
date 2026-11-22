@@ -40,7 +40,7 @@ export function InviteFields({
           <Icon name="plus" />
         </span>
         <div className="flex flex-col">
-          <h2 className="font-display text-[18px] leading-tight font-semibold tracking-tight">Invite someone</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight">Invite someone</h2>
           <p className="text-[13px] text-ink-2">They get an email with a link to join. No password needed.</p>
         </div>
       </div>

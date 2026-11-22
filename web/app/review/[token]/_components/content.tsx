@@ -32,7 +32,7 @@ type ReviewViewProps = {
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
 const panel = "overflow-hidden rounded-panel border border-hairline bg-surface";
-const heading = "border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold";
+const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 
 const DECIDED = {
   accepted: "You accepted this agreement",

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { LinkButton } from "@/components/ui/link-button";
+import { SectionPanel } from "@/components/ui/section-panel";
 import { TextInput } from "@/components/ui/text-input";
 import {
   dropOff,
@@ -42,24 +43,29 @@ export type ReportsViewProps = {
 const STAGE_LABEL = { created: "Created", sent: "Sent", accepted: "Accepted", signed: "Signed" } as const;
 const OUTCOME_LABEL = { refused: "Refused", expired: "Expired", withdrawn: "Withdrawn" } as const;
 
-function Section({ id, title, note, download, range, children, bare = false }: { id: string; title: string; note?: string; download?: ReportKey; range: ReportRange; children: ReactNode; /** No frame of its own: the section's children are cards already. */ bare?: boolean }) {
-  return (
-    <section aria-labelledby={id} className={bare ? "flex flex-col gap-3" : "flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card"}>
-      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <div className="mr-auto min-w-0">
-          <h2 id={id} className="font-display text-[16px] font-semibold tracking-tight">
+function Section({ id, title, note, download, range, children, bare = false }: { id: string; title: string; note?: string; download?: ReportKey; range: ReportRange; children: ReactNode; /** The headline's own cards are the panels, so it has no frame. */ bare?: boolean }) {
+  const action = download ? (
+    <LinkButton href={`/reports/export?report=${download}&from=${range.from}&to=${range.to}`} prefetch={false} variant="secondary" download>
+      Download CSV
+    </LinkButton>
+  ) : undefined;
+  if (bare) {
+    return (
+      <section aria-labelledby={id} className="flex flex-col gap-3">
+        <div className="min-w-0">
+          <h2 id={id} className="text-[15px] font-semibold tracking-tight">
             {title}
           </h2>
           {note && <p className="text-[12px] text-ink-2">{note}</p>}
         </div>
-        {download && (
-          <LinkButton href={`/reports/export?report=${download}&from=${range.from}&to=${range.to}`} prefetch={false} variant="secondary" download>
-            Download CSV
-          </LinkButton>
-        )}
-      </div>
-      {children}
-    </section>
+        {children}
+      </section>
+    );
+  }
+  return (
+    <SectionPanel id={id} title={title} note={note} action={action}>
+      <div className="flex flex-col gap-3">{children}</div>
+    </SectionPanel>
   );
 }
 
@@ -266,6 +272,9 @@ function RevenueSection({ id, title, note, download, range, part, label }: { id:
               <span className="font-semibold">{r.name}</span>
               {r.extra && <span className="text-ink-2">{r.extra}</span>}
               <span className="ml-auto">{formatCadExact(r.valueCents)} a year</span>
+              <span aria-hidden="true" className="order-last h-2 basis-full overflow-hidden rounded-full bg-board">
+                <span className="block h-full rounded-full bg-action" style={{ width: `${Math.max(2, (r.valueCents / Math.max(1, ...part.value.map((row) => row.valueCents))) * 100)}%` }} />
+              </span>
             </Row>
           ))}
         </Rows>
@@ -306,6 +315,7 @@ export function ReportsView({ range, notice, empty, headline, funnel, aging, los
       ) : (
         <>
           <HeadlineSection part={headline} range={range} />
+          <div className="grid items-start gap-4 xl:grid-cols-2">
           <FunnelSection part={funnel} range={range} money={money} />
           <AgingSection part={aging} range={range} />
           <LossesSection part={losses} range={range} money={money} />
@@ -328,6 +338,7 @@ export function ReportsView({ range, notice, empty, headline, funnel, aging, los
             label="type"
             part={named(revenueByType, (r) => ({ name: r.type, valueCents: r.valueCents }))}
           />
+          </div>
         </>
       )}
     </div>

@@ -76,7 +76,7 @@ export function VersionCompare({ fromNo, toNo, from, to, words = DEFAULT_ITEM_WO
   const diff = diffVersions(from.map(toDiffLine), to.map(toDiffLine));
   return (
     <section aria-label="Comparison" className="overflow-hidden rounded-panel border border-hairline bg-surface">
-      <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">{`Changes from version ${fromNo} to version ${toNo}`}</h2>
+      <h2 className="border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">{`Changes from version ${fromNo} to version ${toNo}`}</h2>
       {diff.lines.length === 0 ? (
         <p className="px-4 py-6 text-center text-[13px] text-ink-2">No differences</p>
       ) : (

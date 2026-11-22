@@ -64,7 +64,7 @@ function Card({ id, title, text, children, shown }: { id: string; title: string;
   return (
     <section id={id} aria-labelledby={`${id}-title`} className={`scroll-mt-24 flex-col gap-5 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6 ${shown ? "flex" : "hidden"}`}>
       <div className="flex flex-col gap-1">
-        <h2 id={`${id}-title`} className="font-display text-[18px] font-semibold tracking-tight">
+        <h2 id={`${id}-title`} className="text-[15px] font-semibold tracking-tight">
           {title}
         </h2>
         <p className="text-[13px] text-ink-2">{text}</p>
@@ -88,7 +88,7 @@ function BrandPreview({ name, accent, address, phone }: { name: string; accent: 
         {initialsOf(name || "Your company")}
       </span>
       <div className="flex min-w-0 flex-col">
-        <span className="truncate font-display text-[16px] font-semibold tracking-tight">{name.trim() || "Your company"}</span>
+        <span className="truncate text-[15px] font-semibold tracking-tight">{name.trim() || "Your company"}</span>
         <span className="truncate text-[12px] text-ink-2">{[address.trim(), phone.trim()].filter(Boolean).join(" · ") || "Address and phone appear here"}</span>
         <span className="pt-1 text-[12px] text-ink-2">How customers see you on the review page, agreements and emails.</span>
       </div>

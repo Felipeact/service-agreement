@@ -16,7 +16,7 @@ export function EmptyPanel({ title, text, art, children }: EmptyPanelProps) {
     <Empty className="flex-none gap-3 rounded-panel border border-solid border-hairline bg-surface px-4 py-12 shadow-card">
       {art && <EmptyMedia className="mb-0 text-ink-2">{art}</EmptyMedia>}
       <EmptyHeader className="max-w-none gap-1">
-        <EmptyTitle className="font-display text-[16px] font-semibold tracking-tight text-ink">{title}</EmptyTitle>
+        <EmptyTitle className="text-[15px] font-semibold tracking-tight text-ink">{title}</EmptyTitle>
         {text && <EmptyDescription className="text-[13px] text-ink-2">{text}</EmptyDescription>}
       </EmptyHeader>
       {children}

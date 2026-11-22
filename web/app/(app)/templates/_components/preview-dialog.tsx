@@ -50,7 +50,7 @@ export function PreviewDialog<V>({ values, endpoint, canDraw, frameTitle }: Prop
         <div role="dialog" aria-modal="true" aria-label="PDF preview" className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
           <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col gap-3 overflow-y-auto rounded-panel bg-surface p-4 shadow-card">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-[18px] font-semibold tracking-tight">Preview PDF</h2>
+              <h2 className="text-[15px] font-semibold tracking-tight">Preview PDF</h2>
               <button type="button" ref={closer} onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>

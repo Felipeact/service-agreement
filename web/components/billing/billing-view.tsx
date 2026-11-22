@@ -31,7 +31,7 @@ const CARD = "flex flex-col gap-4 rounded-panel border border-hairline bg-surfac
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className={CARD}>
-      <h2 className="font-display text-[18px] font-semibold tracking-tight">{title}</h2>
+      <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
       {children}
     </section>
   );

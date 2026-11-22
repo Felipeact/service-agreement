@@ -62,7 +62,7 @@ export function AgreementPdfPreview({ agreementId, versionNo, revision }: Props)
   return (
     <section aria-label="PDF preview" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <h2 className="font-display text-[16px] font-semibold tracking-tight">PDF preview</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight">PDF preview</h2>
         <div role="status" aria-live="polite" className="flex min-h-5 flex-wrap items-center gap-x-3 text-[13px] text-ink-2">
           {open && status === "drawing" && <span>{PDF_PREVIEW_MESSAGES.drawing}</span>}
           {open && status === "unavailable" && (

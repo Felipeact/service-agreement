@@ -38,7 +38,7 @@ export function VersionsSection({ agreementId, versions, shownNo, sentVersion, a
   const latest = versions[0]?.versionNo;
   return (
     <section aria-label="Versions" className="flex flex-col gap-2">
-      <h2 className="font-display text-[16px] font-semibold tracking-tight">Versions</h2>
+      <h2 className="text-[15px] font-semibold tracking-tight">Versions</h2>
       <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
         {versions.map((version) => {
           const viewing = version.versionNo === shownNo;

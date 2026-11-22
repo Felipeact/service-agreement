@@ -23,7 +23,7 @@ export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
     <section aria-labelledby="recent-imports-title" className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col">
-          <h2 id="recent-imports-title" className="text-[18px] leading-7 font-semibold tracking-tight">
+          <h2 id="recent-imports-title" className="text-[15px] font-semibold tracking-tight">
             {itemText("Recent Equipment Imports", words)}
           </h2>
           <p className="text-[13px] text-ink-2">Messy contractor CSVs structured into automated priceable asset inventories.</p>

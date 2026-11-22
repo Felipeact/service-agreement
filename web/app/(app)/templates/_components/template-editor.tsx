@@ -62,7 +62,7 @@ export function TemplateEditor({ templateId, initial, types, save, orgName = "Yo
             placeholder="Name this template"
             onChange={(event) => setValues({ ...values, name: event.target.value })}
             aria-invalid={errors.name ? true : undefined}
-            className={`min-h-11 w-full rounded-control border bg-transparent px-2 font-display text-[18px] font-semibold tracking-tight text-ink placeholder:text-ink-2 hover:border-hairline focus:bg-surface lg:min-h-9 ${errors.name ? "border-danger" : "border-transparent"}`}
+            className={`min-h-11 w-full rounded-control border bg-transparent px-2 text-[15px] font-semibold tracking-tight text-ink placeholder:text-ink-2 hover:border-hairline focus:bg-surface lg:min-h-9 ${errors.name ? "border-danger" : "border-transparent"}`}
           />
           {errors.name && <p className="px-2 text-[12px] font-medium text-danger">{errors.name}</p>}
         </div>

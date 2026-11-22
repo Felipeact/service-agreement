@@ -150,7 +150,7 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
       ) : (
         groups.map((group) => (
           <section key={group.code} aria-label={group.heading} className="overflow-hidden rounded-panel border border-hairline bg-surface">
-            <h2 className="flex items-center gap-2 border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">
+            <h2 className="flex items-center gap-2 border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">
               {group.heading}
               <span className="font-medium text-ink-2">{group.count}</span>
             </h2>

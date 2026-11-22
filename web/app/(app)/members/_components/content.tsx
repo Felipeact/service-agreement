@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { StatCard } from "@/components/ui/stat-card";
 import { MailIcon, ShieldIcon, UsersIcon } from "lucide-react";
+import { SectionPanel } from "@/components/ui/section-panel";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ROLE_LABELS, isExpired } from "@/domain/members";
 import { InvitationControls } from "./invitation-controls";
@@ -44,7 +45,7 @@ function RolePill({ role }: { role: MemberRole }) {
 /** A round tile with the first two letters of an email, standing in for a photo. */
 function Avatar({ email, icon }: { email: string; icon?: IconName }) {
   return (
-    <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-board font-display text-[13px] font-semibold text-ink-nav">
+    <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-action-tint font-display text-[13px] font-bold text-action-press">
       {icon ? <Icon name={icon} className="size-[18px]" /> : email.slice(0, 2).toUpperCase()}
     </span>
   );
@@ -52,7 +53,7 @@ function Avatar({ email, icon }: { email: string; icon?: IconName }) {
 
 /** A panel of rows, each a person or an invitation, on the Card shadow. */
 function Rows({ children }: { children: ReactNode }) {
-  return <ul className="flex flex-col divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface shadow-card">{children}</ul>;
+  return <ul className="flex flex-col divide-y divide-hairline">{children}</ul>;
 }
 
 /** The Members page body: who is in the org, and for owners and admins the invitations and every control (members-page S1-S4). */
@@ -72,8 +73,7 @@ export function MembersView({ members, invitations, currentUserId, role, orgName
 
       {manage && <InviteForm action={actions.invite} />}
 
-      <section aria-label="Members" className="flex flex-col gap-3">
-        <h2 className="font-display text-[18px] font-semibold tracking-tight">People in {orgName}</h2>
+      <SectionPanel id="members-people" title={`People in ${orgName}`} flush>
         <Rows>
           {members.map((member) => {
             const own = member.userId === currentUserId;
@@ -106,13 +106,12 @@ export function MembersView({ members, invitations, currentUserId, role, orgName
             );
           })}
         </Rows>
-      </section>
+      </SectionPanel>
 
       {manage && invitations && (
-        <section aria-label="Pending invitations" className="flex flex-col gap-3">
-          <h2 className="font-display text-[18px] font-semibold tracking-tight">Pending invitations</h2>
+        <SectionPanel id="members-pending" title="Pending invitations" flush>
           {invitations.length === 0 ? (
-            <p className="rounded-panel border border-dashed border-field bg-surface px-5 py-6 text-center text-[13px] text-ink-2">No pending invitations.</p>
+            <p className="px-5 py-6 text-center text-[13px] text-ink-2">No pending invitations.</p>
           ) : (
             <Rows>
               {invitations.map((invitation) => (
@@ -137,7 +136,7 @@ export function MembersView({ members, invitations, currentUserId, role, orgName
               ))}
             </Rows>
           )}
-        </section>
+        </SectionPanel>
       )}
     </div>
   );

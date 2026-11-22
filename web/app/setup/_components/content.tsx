@@ -45,7 +45,7 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
   if (groups.length === 0) {
     return (
       <section aria-labelledby="catalog-title" className={CARD}>
-        <h2 id="catalog-title" className="font-display text-[18px] font-semibold tracking-tight">
+        <h2 id="catalog-title" className="text-[15px] font-semibold tracking-tight">
           What we set up
         </h2>
         <p className="text-[13px] font-medium text-ink">No types yet</p>
@@ -58,7 +58,7 @@ export function CatalogReview({ groups, words }: { groups: SetupCatalogGroup[]; 
   return (
     <section aria-labelledby="catalog-title" className={CARD}>
       <div className="flex flex-col gap-1">
-        <h2 id="catalog-title" className="font-display text-[18px] font-semibold tracking-tight">
+        <h2 id="catalog-title" className="text-[15px] font-semibold tracking-tight">
           What we set up
         </h2>
         <p className="text-[13px] text-ink-2">Your starter catalog, with a checklist for each type.</p>
@@ -105,7 +105,7 @@ export function SetupView({ settings, groups, words, action, initialState = IDLE
 
       <form action={formAction} noValidate className="flex flex-col gap-6">
         <section aria-labelledby="profile-title" className={CARD}>
-          <h2 id="profile-title" className="font-display text-[18px] font-semibold tracking-tight">
+          <h2 id="profile-title" className="text-[15px] font-semibold tracking-tight">
             Company
           </h2>
           <LogoField key={values.logoPath ?? ""} storedPath={values.logoPath ?? ""} readOnly={false} prepare={prepareLogo} onUploadingChange={setUploading} serverError={errors.logoPath} />

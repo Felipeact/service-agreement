@@ -55,7 +55,7 @@ export function ActivitySection({ timeline }: { timeline: TimelineEntry[] }) {
   const earlier = timeline.slice(VISIBLE);
   return (
     <section aria-label="Activity" className="flex flex-col gap-3">
-      <h2 className="font-display text-[16px] font-semibold tracking-tight">Activity</h2>
+      <h2 className="text-[15px] font-semibold tracking-tight">Activity</h2>
       <ol className="flex flex-col">
         {shown.map((entry, index) => (
           <Entry key={`${entry.type}-${index}`} entry={entry} last={index === shown.length - 1 && earlier.length === 0} />

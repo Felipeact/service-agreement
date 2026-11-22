@@ -30,7 +30,7 @@ export function StarterTemplates({ settings }: { settings: OrgSettingsValue }) {
   return (
     <section aria-labelledby="starter-title" className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
       <div className="flex flex-col gap-1">
-        <h2 id="starter-title" className="font-display text-[18px] font-semibold tracking-tight">
+        <h2 id="starter-title" className="text-[15px] font-semibold tracking-tight">
           {STARTER_COPY.title}
         </h2>
         <p className="text-[13px] text-ink-2">{STARTER_COPY.saved}</p>

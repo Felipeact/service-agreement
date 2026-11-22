@@ -15,7 +15,7 @@ type ScopeControlsProps = {
 };
 
 const panel = "overflow-hidden rounded-panel border border-hairline bg-surface";
-const heading = "border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold";
+const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 
 const unitLabel = (control: ScopeControl) => [control.unitNo ?? "No unit #", control.typeModel, control.location].filter(Boolean).join(" · ");
 const count = (n: number) => `${n} ${n === 1 ? "unit" : "units"}`;

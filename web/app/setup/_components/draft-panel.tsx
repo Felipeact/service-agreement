@@ -125,7 +125,7 @@ export function DraftPanel({ draftAction, acceptAction, initialDraft, initialPen
     return (
       <section aria-labelledby="draft-title" className={CARD}>
         <div className="flex flex-col gap-1">
-          <h2 id="draft-title" className="font-display text-[18px] font-semibold tracking-tight">
+          <h2 id="draft-title" className="text-[15px] font-semibold tracking-tight">
             Review your draft
           </h2>
           <p className="text-[13px] text-ink-2">
@@ -145,7 +145,7 @@ export function DraftPanel({ draftAction, acceptAction, initialDraft, initialPen
   return (
     <section aria-labelledby="draft-title" className={CARD}>
       <div className="flex flex-col gap-1">
-        <h2 id="draft-title" className="font-display text-[18px] font-semibold tracking-tight">
+        <h2 id="draft-title" className="text-[15px] font-semibold tracking-tight">
           Draft your catalog
         </h2>
         <p className="text-[13px] text-ink-2">

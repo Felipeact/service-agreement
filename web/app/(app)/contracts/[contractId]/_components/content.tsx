@@ -108,7 +108,7 @@ export function ContractView({ contract, agreement, signing }: ContractViewProps
       </section>
 
       <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
-        <h2 className="border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold">Service lines</h2>
+        <h2 className="border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">Service lines</h2>
         {shown.lines.length === 0 ? (
           <p className="px-4 py-6 text-center text-[13px] text-ink-2">No service lines.</p>
         ) : (
