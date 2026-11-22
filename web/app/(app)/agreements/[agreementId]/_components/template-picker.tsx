@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { TEMPLATE_MESSAGES, type TemplateState } from "./state";
+import { TEMPLATE_MESSAGES, type TemplateState } from "@/components/agreements/state";
 
 export type TemplateChoice = { versionId: string; name: string };
 

@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 const { SitesListView } = await import("@/app/(app)/sites/_components/content");
 const { SiteRegisterView } = await import("@/app/(app)/sites/[siteId]/_components/content");
 const { SearchView } = await import("./search/search-view");
-const { PipelineView } = await import("./kanban/pipeline-view");
+const { PipelineView } = await import("@/app/(app)/pipeline/_components/content");
 const { ImportBanner } = await import("./imports/import-banner");
 const { ImportUploadFields } = await import("./imports/import-upload");
 const { ExtractPrompt } = await import("./imports/extract-control");

@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, ServiceLineView } from "@/application/ports";
 import type { ScheduleRow, ScopeType } from "@/domain/agreement";
-import { AgreementView, type AgreementActions } from "./agreement-view";
-import { VisitScheduleSection } from "./visit-schedule";
+import { AgreementView, type AgreementActions } from "./content";
+import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 

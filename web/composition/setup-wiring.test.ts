@@ -41,7 +41,7 @@ describe("the container's setup store", () => {
   });
 
   test("C2821: the Pipeline page and the setup page read the setup store from getContainer()", () => {
-    expect(readFileSync(path.join(webRoot, "app/(app)/pipeline/page.tsx"), "utf8")).toMatch(/container\.setupPending\(/);
+    expect(readFileSync(path.join(webRoot, "app/(app)/pipeline/_data-access/pipeline.ts"), "utf8")).toMatch(/container\.setupPending\(/);
     expect(readFileSync(path.join(webRoot, "app/setup/page.tsx"), "utf8")).toMatch(/setupPending[\s\S]*= await getContainer\(\)|await getContainer\(\)/);
     expect(readFileSync(path.join(webRoot, "app/setup/page.tsx"), "utf8")).toMatch(/setupPending, getOrgSettings, setupCatalog/);
   });

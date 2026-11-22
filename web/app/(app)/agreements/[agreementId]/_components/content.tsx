@@ -10,12 +10,12 @@ import { notEmailedWords } from "@/domain/notifications";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 import { GenerateContractControl } from "./contract-controls";
-import { LineFormControl } from "./line-form";
-import { LineRow } from "./line-row";
+import { LineFormControl } from "@/components/agreements/line-form";
+import { LineRow } from "@/components/agreements/line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
 import { ScopeControls } from "./scope-controls";
 import { TemplatePicker, type TemplateChoice } from "./template-picker";
-import { ServiceScopeSections } from "./service-scope";
+import { ServiceScopeSections } from "@/components/agreements/service-scope";
 import { AgreementPdfPreview } from "./agreement-pdf-preview";
 import { LinkControls } from "./link-controls";
 import { NoteSection } from "./note-section";
@@ -23,9 +23,9 @@ import { TermSection } from "./term-section";
 import { VersionCompare } from "./version-compare";
 import { ActivitySection } from "./activity-section";
 import { VersionsSection, hasVersionStory } from "./versions-section";
-import { VisitScheduleSection } from "./visit-schedule";
-import type { GenerateContractState } from "./contract-state";
-import type { LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "./state";
+import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
+import type { GenerateContractState } from "@/components/agreements/contract-state";
+import type { LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {

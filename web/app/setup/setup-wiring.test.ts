@@ -24,7 +24,7 @@ describe("who redirects to /setup", () => {
     const hits = [...sources(path.join(webRoot, "app")), ...sources(path.join(webRoot, "components"))]
       .filter((file) => REDIRECT_TO_SETUP.test(readFileSync(file, "utf8")))
       .map((file) => path.relative(webRoot, file).replaceAll("\\", "/"));
-    expect(hits).toEqual(["app/(app)/pipeline/page.tsx"]);
+    expect(hits).toEqual(["app/(app)/pipeline/_data-access/pipeline.ts"]);
   });
 });
 

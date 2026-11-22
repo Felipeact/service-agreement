@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { ScopeControl, UncoveredType } from "@/domain/agreement";
 import { ScopeControls } from "./scope-controls";
 import { SendPrompt } from "./link-controls";
-import { ServiceScopeSections } from "./service-scope";
+import { ServiceScopeSections } from "@/components/agreements/service-scope";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 

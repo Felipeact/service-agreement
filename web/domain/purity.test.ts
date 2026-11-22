@@ -60,7 +60,7 @@ const ITEM_COPY_ALLOWED = [
 
 /** Strings that stay literal because they are a default or a table row, spoken in the org's words where they are shown. */
 const ITEM_COPY_LITERALS = [
-  "components/agreements/version-compare.tsx: Equipment",
+  "app/(app)/agreements/[agreementId]/_components/version-compare.tsx: Equipment",
   "components/imports/review-view.tsx: Equipment type",
   "components/shell/nav-items.ts: Sites & equipment",
   "components/agreements/new-agreement-state.ts: Sending the equipment list…",

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { messageFor, type MoveState } from "./state";
+import { messageFor, type MoveState } from "@/components/agreements/state";
 
 function Alert({ state }: { state: MoveState }) {
   const message = messageFor(state.status);

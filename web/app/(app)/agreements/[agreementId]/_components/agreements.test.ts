@@ -6,16 +6,16 @@ import { SYSTEM_AGREEMENT_BODY, type AgreementStatus, type EquipmentChoice } fro
 import type { ContractStatus } from "@/domain/contract";
 import { itemWords } from "@/domain/org-settings";
 import { pipelineStage } from "@/domain/pipeline";
-import { AgreementView, type AgreementActions } from "./agreement-view";
+import { AgreementView, type AgreementActions } from "./content";
 import { AgreementPdfPreview } from "./agreement-pdf-preview";
-import { LineForm } from "./line-form";
-import { RemovePrompt } from "./line-row";
+import { LineForm } from "@/components/agreements/line-form";
+import { RemovePrompt } from "@/components/agreements/line-row";
 import { GenerateContractControl, GenerateContractPrompt } from "./contract-controls";
-import { CONTRACT_MESSAGES } from "./contract-state";
+import { CONTRACT_MESSAGES } from "@/components/agreements/contract-state";
 import { SendPrompt } from "./link-controls";
 import { RevisePrompt, WithdrawPrompt } from "./move-controls";
 import { VersionCompare } from "./version-compare";
-import type { LineState, MoveState } from "./state";
+import type { LineState, MoveState } from "@/components/agreements/state";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 

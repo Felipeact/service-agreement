@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, CurrentMember, MemberRole } from "@/application/ports";
-import type { AgreementActions } from "@/components/agreements/agreement-view";
+import type { AgreementActions } from "./_components/content";
 
 const AGR = "11111111-1111-4111-8111-111111111111";
 const CON = "66666666-6666-4666-8666-666666666666";

@@ -3,10 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, ServiceLineView } from "@/application/ports";
 import type { EquipmentChoice, ServiceLineInput } from "@/domain/agreement";
-import { AgreementView, type AgreementActions } from "./agreement-view";
-import { LineForm } from "./line-form";
-import { LineRow } from "./line-row";
-import type { LineState } from "./state";
+import { AgreementView, type AgreementActions } from "./content";
+import { LineForm } from "@/components/agreements/line-form";
+import { LineRow } from "@/components/agreements/line-row";
+import type { LineState } from "@/components/agreements/state";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 

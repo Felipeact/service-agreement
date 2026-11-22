@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import type { ScopeControl, UncoveredType } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
-import { SCOPE_MESSAGES, type ScopeState } from "./state";
+import { SCOPE_MESSAGES, type ScopeState } from "@/components/agreements/state";
 
 type ScopeControlsProps = {
   controls: readonly ScopeControl[];

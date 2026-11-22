@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { isStaleStart, termSummary, type AgreementTerm } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
-import { messageFor, type TermState } from "./state";
+import { messageFor, type TermState } from "@/components/agreements/state";
 
 type TermSectionProps = {
   term: AgreementTerm;

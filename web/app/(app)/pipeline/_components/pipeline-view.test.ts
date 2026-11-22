@@ -4,7 +4,7 @@ import { createElement, type FunctionComponent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { PipelineCard } from "@/application/ports";
-import { PipelineView } from "./pipeline-view";
+import { PipelineView } from "./content";
 import { KanbanCard } from "./kanban-card";
 import { ItemWordsProvider } from "@/components/shell/item-words";
 import { DEFAULT_ITEM_WORDS, itemWords, type ItemWords } from "@/domain/org-settings";

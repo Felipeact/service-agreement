@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { MAX_NOTE_LENGTH } from "@/domain/agreement";
 import { Button } from "@/components/ui/button";
-import { messageFor, type NoteState } from "./state";
+import { messageFor, type NoteState } from "@/components/agreements/state";
 
 type NoteSectionProps = {
   /** The note the current version has now, or `null`. */

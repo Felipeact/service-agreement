@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { ExpiringAgreement } from "@/domain/pipeline";
 import type { PipelineCard } from "@/application/ports";
 import { ExpiringView } from "./expiring-view";
-import { PipelineView } from "./pipeline-view";
+import { PipelineView } from "./content";
 
 // LiveRefresh asks for the router; a static render has none mounted.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }), usePathname: () => "/pipeline" }));

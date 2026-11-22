@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AgreementListRow, MemberRole } from "@/application/ports";
 import type { AgreementFilter } from "@/domain/agreement";
-import { AgreementsListView } from "./agreements-list";
+import { AgreementsListView } from "./content";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 

@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatTermDate } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type CompanyProblem, type ItemWords } from "@/domain/org-settings";
-import { linkMessageFor, type LinkState } from "./state";
+import { linkMessageFor, type LinkState } from "@/components/agreements/state";
 
 const PROBLEM_WORDS: Record<CompanyProblem, string> = {
   legalName: "legal name",
