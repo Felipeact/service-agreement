@@ -254,16 +254,6 @@ export function EquipmentSection({
   );
 }
 
-/** "Service included" and the org item heading ("Equipment" by default), or the sentence that the version never recorded them. */
-export function ScopeSections({ scope, accent, words = DEFAULT_ITEM_WORDS }: { scope: DocumentScope; accent: string; words?: ItemWords }) {
-  return (
-    <>
-      <IncludedSection scope={scope} accent={accent} words={words} />
-      <EquipmentSection scope={scope} accent={accent} words={words} />
-    </>
-  );
-}
-
 const INDENT = 16;
 
 /** A text block of a layout: a heading of level 1 in the title style and any other heading in the section style, everything else as body text; indented by its level and starting a page when it says so. */

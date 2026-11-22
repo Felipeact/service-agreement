@@ -47,11 +47,6 @@ export function cancelHrefFor(kind: RecordFormKind, ids: { customerId?: string; 
   return `/customers/${ids.customerId}`;
 }
 
-/** The values a form shows: what was typed after a failed submit, otherwise the record's own. */
-export function shownValues<Input>(state: RecordFormState<Input>, initial: Input): Input {
-  return "values" in state ? state.values : initial;
-}
-
 export function fieldErrors<Input>(state: RecordFormState<Input>): FieldErrors<keyof Input & string> {
   return state.status === "invalid" ? state.errors : {};
 }

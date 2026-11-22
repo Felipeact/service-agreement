@@ -24,20 +24,19 @@ export type PipelineStats = {
   inProgress: { count: number; averageVisits: number | null; siteCount: number };
 };
 
-/** The day of the month in a `YYYY-MM-DD` business day; 0 when the text is not one (nothing then counts as this month). */
-function dayOfMonth(today: string): number {
-  const match = /^\d{4}-\d{2}-(\d{2})$/.exec(today);
-  return match ? Number(match[1]) : 0;
+/** The `YYYY-MM` of a `YYYY-MM-DD` business day; `null` when the text is not one (nothing then counts as this month). */
+function monthOf(day: string | undefined): string | null {
+  return day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day.slice(0, 7) : null;
 }
 
 /**
- * The four figures at the top of the Pipeline. A card's `ageDays` is the whole days since its last status change, so a
- * closed card with `ageDays` below the day of the month closed this month (the first of the month is day 1, age 0).
+ * The four figures at the top of the Pipeline. A closed card closed this month when the business day of its last status
+ * change (`changedOn`) is in the same month as `today`.
  */
 export function pipelineStats(cards: PipelineCard[], today: string): PipelineStats {
   const open = cards.filter((card) => !isClosedStage(card.stage));
-  const day = dayOfMonth(today);
-  const closedThisMonth = cards.filter((card) => isClosedStage(card.stage) && card.ageDays < day);
+  const month = monthOf(today);
+  const closedThisMonth = cards.filter((card) => isClosedStage(card.stage) && month !== null && monthOf(card.changedOn) === month);
   const signed = closedThisMonth.filter((card) => card.stage === "completed");
 
   const inProgress = cards.filter((card) => card.stage === "in_progress");

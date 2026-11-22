@@ -16,6 +16,7 @@ import {
   type SignatureOptions,
   type VisitsFormat,
 } from "./layout";
+import { isRecord } from "../guards";
 
 /**
  * The block editor's form state (block-editor Landing row 7): the document options and one row per layout item, every option held
@@ -152,7 +153,6 @@ export function messagesByRow(errors: Record<string, string> | readonly LayoutFi
   return byRow;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const SECTION_KEYS: readonly string[] = ["price", "schedule", "included", "equipment", "terms", "signatures"];
 
 /**

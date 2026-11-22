@@ -6,6 +6,7 @@ const row = (patch: Partial<AgreementListRow> = {}): AgreementListRow => ({
   id: "a1",
   number: "AG-1001",
   status: "sent",
+  stage: "sent",
   site: "Harbourview Towers",
   customer: 'Harbourview "Strata", Ltd',
   versionNo: 2,

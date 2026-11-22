@@ -9,7 +9,7 @@ import { formatTermDate } from "@/domain/agreement/term";
 import { contrastText, isAccent } from "@/domain/portal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { initialsOf } from "@/components/ui/list-panel";
+import { initialsOf } from "@/lib/initials";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { LogoField } from "@/components/settings/logo-field";

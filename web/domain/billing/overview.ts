@@ -1,4 +1,5 @@
 import { formatTermDate } from "@/domain/agreement/term";
+import { isHttps } from "../guards";
 import type { PlanKey } from "./index";
 
 /** The roles that may see and change billing: the ones `org_billing_select` admits (billing-page Assumptions). */
@@ -80,15 +81,6 @@ export type InvoiceRow = { id: string; number: string; day: string; amount: stri
 
 /** The newest invoices shown, at most this many. */
 export const INVOICE_LIMIT = 12;
-
-const isHttps = (url: string | null): url is string => {
-  if (!url) return false;
-  try {
-    return new URL(url).protocol === "https:";
-  } catch {
-    return false;
-  }
-};
 
 export function formatInvoiceAmount(minorUnits: number, currency: string): string {
   return new Intl.NumberFormat("en-CA", { style: "currency", currency: currency.toUpperCase() }).format(minorUnits / 100);

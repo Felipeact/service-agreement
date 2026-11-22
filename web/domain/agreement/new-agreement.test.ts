@@ -78,6 +78,10 @@ describe("validatePickedEquipment", () => {
       items: [{ assetTypeId: "rtu", quantity: 5 }, { assetTypeId: "boiler", quantity: 1 }],
     });
   });
+  test("a type picked twice that adds past 99 gets its own message, not the 200-unit one", () => {
+    const result = validatePickedEquipment([{ assetTypeId: "rtu", quantity: 60 }, { assetTypeId: "rtu", quantity: 60 }], TYPES);
+    expect(!result.ok && result.message).toContain("at most 99 units");
+  });
   test.each([
     [[], "Pick at least one"],
     [null, "Pick at least one"],

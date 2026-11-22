@@ -13,7 +13,7 @@ type Failure = "forbidden" | "not_found" | "unavailable";
  */
 export type StartAgreementState =
   | { status: "idle" | Failure; customerId?: string; siteId?: string }
-  | { status: "started"; agreementId: string; siteId: string }
+  | { status: "started"; agreementId: string; siteId: string; customerId: string }
   | { status: "invalid"; errors: Partial<Record<NewAgreementField, string>> }
   /** The database refused the chosen template version; the ids are only those this call created, so a retry reuses them. */
   | { status: "invalid_template"; customerId?: string; siteId?: string }

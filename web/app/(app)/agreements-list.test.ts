@@ -34,9 +34,9 @@ beforeEach(() => {
 });
 
 describe("/agreements", () => {
-  test("C1356: the parsed filter and the Vancouver business day go to the lister, and the view renders", async () => {
+  test("C1356: the site and expiring filters and the Vancouver business day go to the lister (the status tab is applied to that one read), and the view renders", async () => {
     const out = await render({ status: "sent", site: SITE, expiring: "1" });
-    expect(listAgreements).toHaveBeenCalledWith({ status: "sent", siteId: SITE, expiring: true }, "2027-12-01");
+    expect(listAgreements).toHaveBeenCalledWith({ siteId: SITE, expiring: true }, "2027-12-01");
     expect(out).toContain("Agreements");
     expect(out).toContain("No agreements match");
   });

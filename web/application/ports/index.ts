@@ -107,6 +107,8 @@ export type PipelineCard = {
   versionNo: number;
   /** Whole days since the last status change. */
   ageDays: number;
+  /** The business day (`YYYY-MM-DD`) of the last status change; closed cards are counted into a month by it. */
+  changedOn?: string;
   attention?: string;
   visitsPerYear?: number;
   annualCents?: number;
@@ -125,6 +127,8 @@ export type AgreementListRow = {
   id: string;
   number: string | null;
   status: AgreementStatus;
+  /** The pipeline stage the status and contract put it in. */
+  stage: PipelineStage | null;
   site: string;
   customer: string;
   versionNo: number;

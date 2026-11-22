@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { firstNameFromEmail, greetingFor, greetingLine } from "./greeting";
+import { firstNameFromEmail, greetingFor } from "./greeting";
 
 // The time zone is passed as UTC so the cases do not depend on the zone's daylight-saving rules.
 describe("greetingFor", () => {
@@ -28,15 +28,5 @@ describe("firstNameFromEmail", () => {
 
   test.each(["felipetiburcioviana@gmail.com", "x@y.com", "123@y.com", "", "not-an-email"])("%j gives no name", (email) => {
     expect(firstNameFromEmail(email)).toBeNull();
-  });
-});
-
-describe("greetingLine", () => {
-  test("adds the name when there is one", () => {
-    expect(greetingLine(new Date("2027-12-01T09:00:00Z"), "jamie.walsh@x.com", "UTC")).toBe("Good morning, Jamie");
-  });
-
-  test("stays plain when the email holds no name", () => {
-    expect(greetingLine(new Date("2027-12-01T09:00:00Z"), "felipetiburcioviana@gmail.com", "UTC")).toBe("Good morning");
   });
 });

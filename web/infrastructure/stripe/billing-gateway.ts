@@ -3,18 +3,18 @@ import { EXTRA_SEAT_CENTS, PLANS, PLAN_KEYS, type PlanKey } from "@/domain/billi
 import type { BillingOverview, CardSummary, InvoiceSummary } from "@/domain/billing/overview";
 import { INVOICE_LIMIT } from "@/domain/billing/overview";
 import { STRIPE_TIMEOUT_MS, STRIPE_VERSION, encodeForm, errorCode } from "./http";
+import { isRecord } from "@/domain/guards";
 
 const API = "https://api.stripe.com/v1";
 
 type Json = Record<string, unknown>;
 type Answer = { ok: true; body: Json } | { ok: false; status: number | null };
 
-const isObject = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null);
 const num = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
 function cardOf(paymentMethod: unknown): CardSummary | null {
-  if (!isObject(paymentMethod) || !isObject(paymentMethod.card)) return null;
+  if (!isRecord(paymentMethod) || !isRecord(paymentMethod.card)) return null;
   const { brand, last4, exp_month: expMonth, exp_year: expYear } = paymentMethod.card;
   if (typeof brand !== "string" || typeof last4 !== "string" || typeof expMonth !== "number" || typeof expYear !== "number") return null;
   return { brand, last4, expMonth, expYear };
@@ -27,12 +27,12 @@ type Tagged = { id: string; kind: "plan" | "seat"; plan: PlanKey | null; quantit
  * product carries. Items without an expanded, tagged product are left out, so an item is never guessed.
  */
 function taggedItems(subscription: Json): Tagged[] {
-  const items = isObject(subscription.items) && Array.isArray(subscription.items.data) ? subscription.items.data : [];
+  const items = isRecord(subscription.items) && Array.isArray(subscription.items.data) ? subscription.items.data : [];
   return items.flatMap((raw): Tagged[] => {
-    if (!isObject(raw)) return [];
+    if (!isRecord(raw)) return [];
     const id = text(raw.id);
-    const product = isObject(raw.price) ? raw.price.product : null;
-    if (!id || !isObject(product) || !isObject(product.metadata)) return [];
+    const product = isRecord(raw.price) ? raw.price.product : null;
+    if (!id || !isRecord(product) || !isRecord(product.metadata)) return [];
     const kind = product.metadata.sa_kind;
     if (kind !== "plan" && kind !== "seat") return [];
     const planValue = product.metadata.sa_plan;
@@ -42,7 +42,7 @@ function taggedItems(subscription: Json): Tagged[] {
 }
 
 function invoiceOf(raw: unknown): InvoiceSummary | null {
-  if (!isObject(raw)) return null;
+  if (!isRecord(raw)) return null;
   const id = text(raw.id);
   const created = num(raw.created);
   const total = num(raw.total);
@@ -74,7 +74,7 @@ export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: 
         signal: controller.signal,
       });
       const json: unknown = await response.json().catch(() => null);
-      if (response.status === 200 && isObject(json)) return { ok: true, body: json };
+      if (response.status === 200 && isRecord(json)) return { ok: true, body: json };
       if (tolerate404 && response.status === 404) return { ok: false, status: 404 };
       const code = errorCode(json);
       console.error(`Stripe ${what} failed: HTTP ${response.status}${code ? `, ${code}` : ""}`);
@@ -118,8 +118,8 @@ export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: 
         return unavailable;
       }
 
-      const items = isObject(sub.items) && Array.isArray(sub.items.data) ? sub.items.data : [];
-      const firstItem = isObject(items[0]) ? items[0] : {};
+      const items = isRecord(sub.items) && Array.isArray(sub.items.data) ? sub.items.data : [];
+      const firstItem = isRecord(items[0]) ? items[0] : {};
       const periodEnd = num(firstItem.current_period_end);
       const cancelAt = num(sub.cancel_at);
       const endsAt = cancelAt ?? (sub.cancel_at_period_end === true ? periodEnd : null);
@@ -128,7 +128,7 @@ export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: 
       // Without the customer record the card may be misreported, so a failed customer read is only tolerated when the subscription has its own card.
       if (!customer.ok && !subscriptionCard) return unavailable;
       const tagged = taggedItems(sub);
-      const customerDefault = customer.ok && isObject(customer.body.invoice_settings) ? customer.body.invoice_settings.default_payment_method : null;
+      const customerDefault = customer.ok && isRecord(customer.body.invoice_settings) ? customer.body.invoice_settings.default_payment_method : null;
       const card = subscriptionCard ?? cardOf(customerDefault);
 
       const list = invoices.ok && Array.isArray(invoices.body.data) ? invoices.body.data : null;

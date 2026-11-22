@@ -148,7 +148,7 @@ describe("the dialog's answer to a rejected template", () => {
     expect(pick("newAgreementTemplate").value).toBe(V1);
     expect(pick("newAgreementTemplate").disabled).toBe(false);
 
-    start.mockResolvedValueOnce({ status: "started", agreementId: "ag-1", siteId: SITE });
+    start.mockResolvedValueOnce({ status: "started", agreementId: "ag-1", siteId: SITE, customerId: CUSTOMER });
     await change(pick("newAgreementTemplate"), V2);
     await act(async () => container.querySelector("form")!.requestSubmit());
     expect(start).toHaveBeenLastCalledWith(expect.objectContaining({ templateVersionId: V2 }));
@@ -156,7 +156,7 @@ describe("the dialog's answer to a rejected template", () => {
   });
 
   test("C5404: choosing Standard agreement sends an empty version, which the action treats as none", async () => {
-    const start = vi.fn(async (): Promise<StartAgreementState> => ({ status: "started", agreementId: "ag-2", siteId: SITE }));
+    const start = vi.fn(async (): Promise<StartAgreementState> => ({ status: "started", agreementId: "ag-2", siteId: SITE, customerId: CUSTOMER }));
     await act(async () => root.render(createElement(NewAgreementDialog, props([QUARTERLY], { actions: actions(start) }) as never)));
     await change(pick("newAgreementCustomer"), CUSTOMER);
     await change(pick("newAgreementSite"), SITE);

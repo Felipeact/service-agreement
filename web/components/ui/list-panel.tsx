@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { initialsOf } from "@/lib/initials";
 import type { ReactNode } from "react";
 
 /**
@@ -25,12 +26,6 @@ export function ListPanel({ columns, headings, children, footer }: { columns: st
 
 /** Row hover and focus treatment shared by the list pages; a row is a link or holds links. */
 export const ROW_CLASSES = "transition-colors duration-150 hover:bg-action-tint/50";
-
-/** The first letters of a name's first two words, for the tile that stands in for a logo on a customer row. */
-export function initialsOf(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  return (words[0]?.[0] ?? "?").toUpperCase() + (words[1]?.[0] ?? "").toUpperCase();
-}
 
 /** A rounded tile with a name's initials in the display face; the same Action Tint for everyone, so colour never implies rank. */
 export function Initials({ name, large = false }: { name: string; large?: boolean }) {

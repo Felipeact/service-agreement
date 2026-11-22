@@ -1,5 +1,6 @@
 import { BLOCK_TYPES, fillVariables, MAX_TEXT, unknownVariable, type BlockType, type TemplateValues } from "../contract/template";
 import type { AgreementTemplateBody } from "./template";
+import { isRecord, isWhole, unknownKeys } from "../guards";
 
 /**
  * The layout of a document (block-editor door 1): the ordered list of items drawn between the title block and the page footer,
@@ -188,9 +189,6 @@ export type LayoutError = { field: string; message: string };
 /** What a document's layout may hold: its section keys and those that must appear exactly once. */
 export type LayoutSpec = { sections: readonly SectionKey[]; required: readonly SectionKey[]; noun: "agreement" | "contract" };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-const unknownKeys = (value: Record<string, unknown>, allowed: readonly string[]) => Object.keys(value).filter((key) => !allowed.includes(key));
-const isWhole = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value);
 
 const OPTION_KEYS: Record<SectionKey, readonly string[]> = {
   price: ["title", "columns", "visitsFormat"],

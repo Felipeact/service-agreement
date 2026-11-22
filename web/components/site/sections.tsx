@@ -5,7 +5,7 @@ import { ShaderCanvas } from "@/components/motion/shader-canvas";
 import { RooftopScene } from "@/components/ui/illustrations";
 import { LinkButton } from "@/components/ui/link-button";
 import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
-import { FAQS, FEATURES, STEPS, TRADE_PAGES, type Faq } from "./content";
+import { FAQS, STEPS, TRADE_PAGES, type Faq } from "./content";
 
 /** The one content width of the public site. */
 export function Wrap({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -76,19 +76,6 @@ export function StepsGrid({ detailed = false, onDark = false }: { detailed?: boo
         </Reveal>
       ))}
     </ol>
-  );
-}
-
-export function FeatureGrid() {
-  return (
-    <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-      {FEATURES.map((feature, i) => (
-        <Reveal as="li" key={feature.title} index={i % 4} className="flex flex-col gap-1.5 border-t border-hairline pt-4">
-          <h3 className="font-display text-[16px] font-semibold tracking-tight">{feature.title}</h3>
-          <p className="text-[15px] text-pretty text-ink-2">{feature.text}</p>
-        </Reveal>
-      ))}
-    </ul>
   );
 }
 

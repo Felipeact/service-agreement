@@ -248,8 +248,3 @@ export function itemText(text: string, words: ItemWords): string {
     return article + (first === "E" ? capitalise(word) : word) + (tail ?? "");
   });
 }
-
-/** "1 station", "0 stations", "2 stations". */
-export function countItems(count: number, words: ItemWords): string {
-  return `${count} ${count === 1 ? words.singular : words.plural}`;
-}

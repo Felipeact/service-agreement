@@ -68,7 +68,8 @@ const VARIABLE = /\{\{([^{}]*)\}\}/g;
 const isVariable = (name: string): name is TemplateVariable => (TEMPLATE_VARIABLES as readonly string[]).includes(name);
 const isBlockType = (type: unknown): type is BlockType => (BLOCK_TYPES as readonly unknown[]).includes(type);
 
-const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
+/** `1 day`, `30 days`. */
+export const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 const possessiveDays = (count: number) => `${count} ${count === 1 ? "day's" : "days'"}`;
 const percent = (value: number) => `${formatSettingNumber(value)}%`;
 const provinceName = (code: string) => (code in PROVINCE_NAMES ? PROVINCE_NAMES[code as keyof typeof PROVINCE_NAMES] : code);

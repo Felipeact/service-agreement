@@ -6,8 +6,6 @@ import type { UseFormRegister } from "react-hook-form";
 import { TAP } from "@/components/motion/variants";
 import type { LoginState } from "./state";
 
-export const LINK_INVALID_NOTICE = "That sign-in link has expired or was already used. Request a new one.";
-
 type Notice = { title: string; detail?: string };
 
 const NOTICES: Partial<Record<LoginState["status"], Notice>> = {

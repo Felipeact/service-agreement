@@ -83,8 +83,7 @@ export function validatePickedEquipment(items: unknown, allowedTypeIds: readonly
     totals.set(assetTypeId, (totals.get(assetTypeId) ?? 0) + quantity);
   }
   const merged = [...totals].map(([assetTypeId, quantity]) => ({ assetTypeId, quantity }));
-  if (merged.some((item) => item.quantity > 99) || merged.reduce((sum, item) => sum + item.quantity, 0) > MAX_PICKED_UNITS) {
-    return { ok: false, message: `Add at most ${MAX_PICKED_UNITS} units at a time.` };
-  }
+  if (merged.some((item) => item.quantity > 99)) return { ok: false, message: "Each type can have at most 99 units; a type picked twice is added up." };
+  if (merged.reduce((sum, item) => sum + item.quantity, 0) > MAX_PICKED_UNITS) return { ok: false, message: `Add at most ${MAX_PICKED_UNITS} units at a time.` };
   return { ok: true, items: merged };
 }

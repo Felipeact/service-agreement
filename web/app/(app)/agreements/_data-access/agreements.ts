@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import { STATUS_FILTER_VALUES, type AgreementFilter } from "@/domain/agreement";
+import { matchesStage, statusCounts, type AgreementFilter } from "@/domain/agreement";
 import { today } from "@/lib/business-day";
 
 /**
@@ -13,9 +13,9 @@ export async function loadAgreements(filter: AgreementFilter) {
   if (member.status !== "member") redirect("/login");
   const now = clock.now();
   const day = today(now);
-  const rows = await listAgreements(filter, day);
-  const scope = { ...(filter.siteId && { siteId: filter.siteId }), ...(filter.expiring && { expiring: true }) };
-  const counted = await Promise.all(STATUS_FILTER_VALUES.map(async (status) => [status, (await listAgreements({ ...scope, status }, day)).length] as const));
-  const all = filter.status ? (await listAgreements(scope, day)).length : rows.length;
-  return { role: member.role, rows, counts: { all, ...Object.fromEntries(counted) }, now };
+  // One read under the site and expiring filters; the open tab's rows and every tab's count come from it.
+  const scoped = await listAgreements({ ...(filter.siteId && { siteId: filter.siteId }), ...(filter.expiring && { expiring: true }) }, day);
+  const { status } = filter;
+  const rows = status ? scoped.filter((row) => matchesStage(status, row.status, row.stage)) : scoped;
+  return { role: member.role, rows, counts: statusCounts(scoped), now };
 }

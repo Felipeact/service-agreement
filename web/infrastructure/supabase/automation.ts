@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AutomationCallbacks, CallbackFailure, ClaimResult, NotificationMessage } from "@/application/ports";
 import { isContractRefusal } from "@/domain/notifications";
 import type { Database, Json } from "./database.types";
+import { isRecord } from "@/domain/guards";
 
 type Client = SupabaseClient<Database>;
 
@@ -9,7 +10,6 @@ type Client = SupabaseClient<Database>;
 const FAILURES: Record<string, CallbackFailure> = { "42501": "unauthorized", "22023": "malformed", P0002: "not_found" };
 
 type Raw = Record<string, unknown>;
-const isRecord = (value: unknown): value is Raw => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
 
 function tenant(value: unknown) {

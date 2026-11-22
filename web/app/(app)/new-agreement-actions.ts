@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
+import { isUuid } from "@/domain/imports";
 import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { validateNewAgreement, validatePickedEquipment, type NewAgreementInput, type PickedEquipment } from "@/domain/agreement/new-agreement";
 import type { StartAgreementState } from "@/components/agreements/new-agreement-state";
@@ -46,7 +47,7 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
 
   // Standard agreement pins nothing, so the store is called as it always was.
   const agreement = templateVersionId ? await container.agreementStore.create(siteId, templateVersionId) : await container.agreementStore.create(siteId);
-  if (agreement.ok) return { status: "started", agreementId: agreement.id, siteId };
+  if (agreement.ok) return { status: "started", agreementId: agreement.id, siteId, customerId };
   if (agreement.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", agreement, audienceOf(member.role)) };
   if (agreement.code === "open_exists") return { status: "open_exists", agreementId: agreement.agreementId, number: agreement.number };
   if (agreement.code === "invalid_template") {
@@ -61,13 +62,18 @@ export type AddEquipmentState = { status: "added"; count: number } | { status: "
 
 /**
  * Adds the equipment picked by hand in the New agreement dialog to the agreement's site: one asset per unit, of the chosen
- * type, with no unit number yet. The org comes from the member; the types are checked against the org's own catalog.
+ * type, with no unit number yet. The org comes from the member; the site and the types are checked against it. A failure part
+ * way answers how many units were already added, so the dialog never invites a retry that would add them twice.
  */
 export async function addEquipmentAction(siteId: string, items: PickedEquipment[]): Promise<AddEquipmentState> {
   const container = await getContainer();
   const member = await container.currentMember();
   if (member.status !== "member") redirect("/login");
   if (!canWriteRecords(member.role)) return { status: "forbidden" };
+
+  // The site comes from the client: it must be a real, active site of the member's org before anything is written under it.
+  const site = isUuid(siteId) ? await container.siteRegister(siteId) : null;
+  if (!site || !site.active || !site.customerActive) return { status: "invalid", message: "That site is not available." };
 
   const checked = validatePickedEquipment(items, (await container.listAssetTypes()).map((type) => type.id));
   if (!checked.ok) return { status: "invalid", message: checked.message };

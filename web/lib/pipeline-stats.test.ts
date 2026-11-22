@@ -15,7 +15,7 @@ const card = (patch: Partial<PipelineCard>): PipelineCard => ({
   ...patch,
 });
 
-/** The 21st: a card closed within the last 20 days closed this month. */
+/** A card closed this month when its `changedOn` is in 2027-11. */
 const TODAY = "2027-11-21";
 
 describe("pipelineStats", () => {
@@ -50,9 +50,9 @@ describe("pipelineStats", () => {
   test("won this month: completed cards changed on or after the first, with their money", () => {
     const stats = pipelineStats(
       [
-        card({ id: "1", stage: "completed", ageDays: 20, annualCents: 100_00 }),
-        card({ id: "2", stage: "completed", ageDays: 0, annualCents: 50_00 }),
-        card({ id: "3", stage: "completed", ageDays: 21, annualCents: 999_00 }),
+        card({ id: "1", stage: "completed", changedOn: "2027-11-01", annualCents: 100_00 }),
+        card({ id: "2", stage: "completed", changedOn: "2027-11-21", annualCents: 50_00 }),
+        card({ id: "3", stage: "completed", changedOn: "2027-10-31", annualCents: 999_00 }),
       ],
       TODAY,
     );
@@ -62,17 +62,22 @@ describe("pipelineStats", () => {
 
   test("win rate is signed over everything closed this month, refused and expired included; null when nothing closed", () => {
     const closed = [
-      card({ id: "1", stage: "completed", ageDays: 2 }),
-      card({ id: "2", stage: "completed", ageDays: 5 }),
-      card({ id: "3", stage: "refused", ageDays: 6 }),
-      card({ id: "4", stage: "refused", ageDays: 40 }),
+      card({ id: "1", stage: "completed", changedOn: "2027-11-19" }),
+      card({ id: "2", stage: "completed", changedOn: "2027-11-16" }),
+      card({ id: "3", stage: "refused", changedOn: "2027-11-15" }),
+      card({ id: "4", stage: "refused", changedOn: "2027-10-12" }),
     ];
     expect(pipelineStats(closed, TODAY).winRate).toBe(67);
     expect(pipelineStats([card({ id: "5" })], TODAY).winRate).toBeNull();
   });
 
+  test("a card closed late on the 31st is last month's on the 2nd, whatever its age in hours", () => {
+    const stats = pipelineStats([card({ stage: "completed", ageDays: 1, changedOn: "2027-10-31", annualCents: 100_00 })], "2027-11-02");
+    expect(stats.signedCount).toBe(0);
+  });
+
   test("a business day that is not a date counts nothing as this month", () => {
-    const stats = pipelineStats([card({ stage: "completed", ageDays: 0, annualCents: 100_00 })], "");
+    const stats = pipelineStats([card({ stage: "completed", changedOn: "2027-11-21", annualCents: 100_00 })], "");
     expect(stats.signedCount).toBe(0);
     expect(stats.winRate).toBeNull();
   });

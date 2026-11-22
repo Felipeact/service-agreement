@@ -5,7 +5,7 @@ import {
   agreementTemplateValues,
   blocksToText,
   derivedFrequency,
-  previewSummary,
+  presetLabel,
   renderAgreementTemplate,
   skippedCodes,
   SYSTEM_AGREEMENT_BODY,
@@ -136,50 +136,12 @@ describe("derivedFrequency", () => {
   });
 });
 
-describe("previewSummary", () => {
-  const body: AgreementTemplateBody = {
-    ...GOOD,
-    intro: [
-      { type: "heading", text: "Welcome" },
-      { type: "clause", text: "One." },
-    ],
-    footer: [
-      { type: "clause", text: "Two." },
-      { type: "clause", text: "Three." },
-      { type: "paragraph", text: "Thanks." },
-    ],
-    sections: { schedule: true, scope: true },
-    preset: {
-      termMonths: 12,
-      lines: [
-        { description: "A", visitMonths: [3], assetTypeCodes: ["RTU", "NOPE"], costPerVisitCents: null },
-        { description: "B", visitMonths: [4], assetTypeCodes: ["RTU", "BOILER"], costPerVisitCents: 100 },
-        { description: "C", visitMonths: [5], assetTypeCodes: [], costPerVisitCents: 100 },
-      ],
-    },
-  };
-
-  test("C5327: reads the sections and clauses from the body", () => {
-    const summary = previewSummary(body, {});
-    expect(summary.sections).toBe("2 sections");
-    expect(summary.clauses).toBe("3 clauses");
-  });
-
-  test("C5327: names equipment in the org's type names and a code with no type as the code", () => {
-    expect(previewSummary(body, { RTU: "Rooftop unit", BOILER: "Boiler" }).equipmentTypes).toEqual(["Rooftop unit", "NOPE", "Boiler"]);
-  });
-
-  test("C5327: reads '3 lines · 12 months term' or 'No preset lines'", () => {
-    expect(previewSummary(body, {}).preset).toBe("3 lines · 12 months term");
-    expect(previewSummary(GOOD, {}).preset).toBe("1 line · 12 months term");
-    expect(previewSummary({ ...body, preset: { termMonths: 24, lines: [] } }, {}).preset).toBe("No preset lines");
-  });
-
-  test("C5327: a preset with lines and no term reads the lines only; one section reads in the singular", () => {
-    expect(previewSummary({ ...body, preset: { ...body.preset, termMonths: null }, sections: { schedule: false, scope: true } }, {})).toMatchObject({
-      preset: "3 lines",
-      sections: "1 section",
-    });
+describe("presetLabel", () => {
+  test("C5327: reads '3 lines · 12 months term', '3 lines' for no term, or 'No preset lines'", () => {
+    expect(presetLabel(3, 12)).toBe("3 lines · 12 months term");
+    expect(presetLabel(1, 12)).toBe("1 line · 12 months term");
+    expect(presetLabel(3, null)).toBe("3 lines");
+    expect(presetLabel(0, 24)).toBe("No preset lines");
   });
 });
 
