@@ -11,7 +11,7 @@ vi.mock("react", async (importOriginal) => {
 });
 
 const react = await import("react");
-const { MembersView } = await import("./members-view");
+const { MembersView } = await import("./content");
 const { InviteFields } = await import("./invite-form");
 const { RemoveControl, RemovePrompt, RoleFields } = await import("./member-controls");
 

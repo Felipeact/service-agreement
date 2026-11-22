@@ -54,7 +54,7 @@ const ITEM_COPY_ALLOWED = [
   "components/agreements/new-agreement-state.ts",
   // outside the feature: the product's own login copy (roadmap Phase 4.5 item 6) and the settings help that names the example word
   "app/login/page.tsx",
-  "components/settings/settings-fields.tsx",
+  "app/(app)/settings/_components/settings-fields.tsx",
   "components/ui/illustrations.tsx",
 ];
 

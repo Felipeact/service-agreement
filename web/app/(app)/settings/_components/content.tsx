@@ -9,7 +9,7 @@ import { companyDetailsReady, validateOrgSettings } from "@/domain/org-settings"
 import { useRecordForm } from "@/components/records/use-record-form";
 import { domainSchema, text } from "@/lib/forms/domain-schema";
 import { SettingsFields } from "./settings-fields";
-import { canEditSettings, toInput, type SettingsFormState } from "./state";
+import { canEditSettings, toInput, type SettingsFormState } from "@/components/settings/state";
 
 type SettingsViewProps = {
   /** `null` when the org has no settings row. */

@@ -5,7 +5,7 @@ import type { OrgSettings } from "@/application/ports";
 import { itemWords } from "@/domain/org-settings";
 import { SetupView } from "@/components/setup/setup-view";
 import { LogoFieldView } from "./logo-field";
-import { SettingsFields } from "./settings-fields";
+import { SettingsFields } from "@/app/(app)/settings/_components/settings-fields";
 import { toInput } from "./state";
 
 vi.mock("next/link", () => ({ default: ({ children, href }: { children: unknown; href: string }) => createElement("a", { href }, children as never) }));

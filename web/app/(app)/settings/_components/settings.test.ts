@@ -4,8 +4,8 @@ import { describe, expect, test } from "vitest";
 import type { MemberRole, OrgSettings } from "@/application/ports";
 import { PROVINCES } from "@/domain/org-settings";
 import { SettingsFields } from "./settings-fields";
-import { SettingsView } from "./settings-view";
-import { toInput, type SettingsFormState } from "./state";
+import { SettingsView } from "./content";
+import { toInput, type SettingsFormState } from "@/components/settings/state";
 
 const settings: OrgSettings = {
   legalName: "Service Pacts",

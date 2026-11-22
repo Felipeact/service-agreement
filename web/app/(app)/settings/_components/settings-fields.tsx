@@ -12,9 +12,9 @@ import { Icon } from "@/components/ui/icons";
 import { initialsOf } from "@/components/ui/list-panel";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
-import { LogoField } from "./logo-field";
+import { LogoField } from "@/components/settings/logo-field";
 import type { LogoUploadAnswer } from "@/app/logo-upload";
-import type { SettingsFormState } from "./state";
+import type { SettingsFormState } from "@/components/settings/state";
 
 type SettingsFieldsProps = {
   values: OrgSettingsInput;

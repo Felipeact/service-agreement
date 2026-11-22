@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import type { OrgSettings } from "@/application/ports";
-import { SettingsView } from "./settings-view";
+import { SettingsView } from "./content";
 
 const SELF = path.join(__dirname, "settings-menu.test.ts");
 const WEB = path.join(__dirname, "..", "..");

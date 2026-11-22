@@ -10,7 +10,7 @@ import {
   type RemoveFormState,
   type RevokeFormState,
   type SetRoleFormState,
-} from "@/components/members/state";
+} from "./_components/state";
 
 const text = (formData: FormData, name: string) => String(formData.get(name) ?? "");
 
