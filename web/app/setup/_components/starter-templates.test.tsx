@@ -11,7 +11,7 @@ import { itemWords } from "@/domain/org-settings";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const { SetupView } = await import("./setup-view");
+const { SetupView } = await import("./content");
 const { StarterTemplates } = await import("./starter-templates");
 
 const settings: OrgSettings = {

@@ -5,7 +5,7 @@ import type { OrgSettings } from "@/application/ports";
 import { itemWords } from "@/domain/org-settings";
 import { groupSetupCatalog } from "@/domain/org-settings/setup";
 import { DraftPanel } from "./draft-panel";
-import { CatalogReview, SetupView } from "./setup-view";
+import { CatalogReview, SetupView } from "./content";
 import { toSetupInput } from "./state";
 
 const settings: OrgSettings = {

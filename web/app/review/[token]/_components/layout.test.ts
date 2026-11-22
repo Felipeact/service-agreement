@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { portalView } from "@/application/portal-view.testing";
 import type { PortalView } from "@/application/ports";
 import { portalDocument } from "@/application/use-cases";
-import { ReviewView } from "./review-view";
+import { ReviewView } from "./content";
 
 const html = (view: PortalView) =>
   renderToStaticMarkup(createElement(ReviewView, { token: "t", view, state: "open", actions: { decide: async () => ({ status: "idle" as const }), record: async () => undefined } }));

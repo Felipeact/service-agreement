@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { portalView } from "@/application/portal-view.testing";
 import type { PortalView } from "@/application/ports";
 import { itemWords } from "@/domain/org-settings";
-import { ReviewView } from "./review-view";
+import { ReviewView } from "./content";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { OrgSettings } from "@/application/ports";
 import { itemWords } from "@/domain/org-settings";
-import { SetupView } from "@/components/setup/setup-view";
+import { SetupView } from "@/app/setup/_components/content";
 import { LogoFieldView } from "./logo-field";
 import { SettingsFields } from "@/app/(app)/settings/_components/settings-fields";
 import { toInput } from "./state";

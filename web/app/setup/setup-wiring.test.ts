@@ -37,9 +37,9 @@ describe("the setup screen's failure states", () => {
   });
 
   test("C2819: the page only reads: it never calls a store write, so a failed read stamps nothing", () => {
-    const page = read("app/setup/page.tsx");
-    expect(page).not.toMatch(/saveSetupProfile|skipSetup/);
-    expect(page).toMatch(/setupCatalog\(\)/);
+    const reads = read("app/setup/_data-access/setup.ts");
+    expect(read("app/setup/page.tsx") + reads).not.toMatch(/saveSetupProfile|skipSetup/);
+    expect(reads).toMatch(/setupCatalog\(\)/);
   });
 });
 
