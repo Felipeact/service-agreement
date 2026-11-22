@@ -65,6 +65,6 @@ type FormProps = {
 /** The customer form: checked in the browser first, then sent to the server action, which checks it again. */
 export function CustomerForm({ initial, action, contacts = [], ...props }: FormProps) {
   const schema = domainSchema({ name: text(), billingContactId: text().optional() }, (input) => validateCustomer(input, contacts.map((contact) => contact.id)));
-  const { state, pending, register, onSubmit, errors } = useRecordForm<CustomerInput>({ schema, initial, action });
+  const { state, pending, register, onSubmit, errors } = useRecordForm<CustomerInput, CustomerFormState>({ schema, initial, action });
   return <CustomerFields values={initial} state={state} contacts={contacts} pending={pending} onSubmit={onSubmit} register={register} errors={errors} {...props} />;
 }

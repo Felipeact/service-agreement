@@ -47,6 +47,6 @@ const contactSchema = domainSchema({ name: text(), email: text(), phone: text() 
 
 /** The contact form: checked in the browser first, then sent to the server action, which checks it again. */
 export function ContactForm({ initial, action, ...props }: FormProps) {
-  const { state, pending, register, onSubmit, errors } = useRecordForm<ContactInput>({ schema: contactSchema, initial, action });
+  const { state, pending, register, onSubmit, errors } = useRecordForm<ContactInput, ContactFormState>({ schema: contactSchema, initial, action });
   return <ContactFields values={initial} state={state} pending={pending} onSubmit={onSubmit} register={register} errors={errors} {...props} />;
 }

@@ -65,6 +65,6 @@ export function AssetForm({ initial, action, types, ...props }: FormProps) {
   const schema = domainSchema({ assetTypeId: text(), unitNo: text(), typeModel: text(), location: text() }, (input) =>
     validateAsset(input, types.map((type) => type.id)),
   );
-  const { state, pending, register, onSubmit, errors } = useRecordForm<AssetInput>({ schema, initial, action });
+  const { state, pending, register, onSubmit, errors } = useRecordForm<AssetInput, AssetFormState>({ schema, initial, action });
   return <AssetFields values={initial} state={state} types={types} pending={pending} onSubmit={onSubmit} register={register} errors={errors} {...props} />;
 }

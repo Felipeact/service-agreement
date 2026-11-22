@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import type { OrgSettingsErrors, OrgSettingsInput } from "@/domain/org-settings";
+import type { UseFormRegister } from "react-hook-form";
 import { PROVINCES } from "@/domain/org-settings";
 import { formatTermDate } from "@/domain/agreement/term";
 import { contrastText, isAccent } from "@/domain/portal";
@@ -22,6 +23,11 @@ type SettingsFieldsProps = {
   readOnly: boolean;
   /** The form action; absent in tests that only render markup. */
   action?: (formData: FormData) => void;
+  /** The browser-side form (React Hook Form); without it the fields are plain and post through `action`. */
+  onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+  register?: UseFormRegister<OrgSettingsInput>;
+  /** Messages from the browser's check; they win over the server's. */
+  liveErrors?: OrgSettingsErrors;
   /** The org has a subscription the member may manage, so the menu lists Billing under Members. */
   billingNav?: boolean;
   /** `prepareLogoUpload`: the server half of a logo upload (tenant-logo). */
@@ -84,9 +90,10 @@ function BrandPreview({ name, accent, address, phone }: { name: string; accent: 
 }
 
 /** The company profile and default-terms form. Presentational: the caller owns the state. */
-export function SettingsFields({ values, state, pending, readOnly, action, billingNav = false, prepareLogo, initialUploading = false }: SettingsFieldsProps) {
+export function SettingsFields({ values, state, pending, readOnly, action, onSubmit, register, liveErrors, billingNav = false, prepareLogo, initialUploading = false }: SettingsFieldsProps) {
   const [uploading, setUploading] = useState(initialUploading);
-  const errors: OrgSettingsErrors = state.status === "invalid" ? state.errors : {};
+  const errors: OrgSettingsErrors = { ...(state.status === "invalid" ? state.errors : {}), ...liveErrors };
+  const field = (name: keyof OrgSettingsInput) => (register ? register(name) : { name });
   const [active, setActive] = useState<string>("company");
   const clickedAt = useRef(0);
   const choose = (id: string, event: MouseEvent) => {
@@ -125,11 +132,11 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
   }
 
   const text = (name: keyof OrgSettingsInput, label: string, extra: { inputMode?: "decimal" | "numeric" | "tel" } = {}) => (
-    <TextInput id={name} name={name} label={label} defaultValue={values[name]} error={errors[name]} readOnly={readOnly} {...extra} />
+    <TextInput id={name} label={label} defaultValue={values[name]} error={errors[name]} readOnly={readOnly} {...extra} {...field(name)} />
   );
 
   return (
-    <form action={action} onInput={onInput} noValidate className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
+    <form action={action} onSubmit={onSubmit} onInput={onInput} noValidate className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
       <nav aria-label="Settings sections" className="sticky top-24 hidden self-start lg:flex lg:flex-col lg:gap-0.5">
         {SECTIONS.map((section) => (
           <a key={section.id} href={`#${section.id}`} onClick={(event) => choose(section.id, event)} className={menuClass(active === section.id)} aria-current={active === section.id ? "location" : undefined}>
@@ -184,11 +191,11 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
             {text("proposalValidityDays", "Proposals valid for (days)", { inputMode: "numeric" })}
             <Select
               id="governingProvince"
-              name="governingProvince"
               label="Governing province"
               defaultValue={values.governingProvince}
               error={errors.governingProvince}
               disabled={readOnly}
+              {...field("governingProvince")}
             >
               <option value="">Not set</option>
               {PROVINCES.map((code) => (
@@ -223,11 +230,11 @@ export function SettingsFields({ values, state, pending, readOnly, action, billi
               {text("renewalCpiPct", "CPI for renewals", { inputMode: "decimal" })}
               <TextInput
                 id="renewalCpiAsOf"
-                name="renewalCpiAsOf"
                 label="As of"
                 type="date"
                 defaultValue={values.renewalCpiAsOf}
                 error={errors.renewalCpiAsOf}
+                {...field("renewalCpiAsOf")}
               />
             </div>
           )}

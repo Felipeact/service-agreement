@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
 import type { MemberRole, OrgSettings } from "@/application/ports";
+import type { OrgSettingsInput } from "@/domain/org-settings";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import type { LogoUploadAnswer } from "@/app/logo-upload";
-import { companyDetailsReady } from "@/domain/org-settings";
+import { companyDetailsReady, validateOrgSettings } from "@/domain/org-settings";
+import { useRecordForm } from "@/components/records/use-record-form";
+import { domainSchema, text } from "@/lib/forms/domain-schema";
 import { SettingsFields } from "./settings-fields";
 import { canEditSettings, toInput, type SettingsFormState } from "./state";
 
@@ -22,12 +24,23 @@ type SettingsViewProps = {
   prepareLogo?: (file: { type: string; size: number }) => Promise<LogoUploadAnswer>;
 };
 
-const IDLE: SettingsFormState = { status: "idle" };
+const FIELDS = [
+  "legalName", "address", "phone", "accentColor", "repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "governingProvince", "taxNote",
+  "defaultTermMonths", "renewalNoticeDays", "cpiRenegotiationThresholdPct", "renewalCpiPct", "renewalCpiAsOf", "proposalValidityDays", "itemSingular", "itemPlural",
+] as const;
+
+/** Every settings field is text; the domain validator judges them, in the browser here and again on the server. */
+const settingsSchema = domainSchema(Object.fromEntries(FIELDS.map((name) => [name, text()])) as Record<(typeof FIELDS)[number], ReturnType<typeof text>>, (input) =>
+  validateOrgSettings(input),
+);
 
 function SettingsForm({ settings, role, action, billingNav, logoPath = "", prepareLogo }: SettingsViewProps & { settings: OrgSettings; billingNav: boolean }) {
-  const [state, formAction, pending] = useActionState(action, IDLE);
-  const values = state.status === "idle" ? { ...toInput(settings), logoPath } : state.values;
-  return <SettingsFields values={values} state={state} pending={pending} readOnly={!canEditSettings(role)} action={formAction} billingNav={billingNav} prepareLogo={prepareLogo} />;
+  const initial = { ...toInput(settings), logoPath };
+  const { state, pending, register, onSubmit, errors } = useRecordForm<OrgSettingsInput, SettingsFormState>({ schema: settingsSchema, initial, action });
+  const values = state.status === "idle" ? initial : state.values;
+  return (
+    <SettingsFields values={values} state={state} pending={pending} readOnly={!canEditSettings(role)} onSubmit={onSubmit} register={register} liveErrors={errors} billingNav={billingNav} prepareLogo={prepareLogo} />
+  );
 }
 
 /** The Settings page body. */

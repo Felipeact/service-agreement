@@ -74,6 +74,6 @@ export function SiteForm({ initial, action, contacts, ...props }: FormProps) {
   const schema = domainSchema({ name: text(), address: text(), siteContactId: text(), approverContactId: text().optional() }, (input) =>
     validateSite(input, contacts.map((contact) => contact.id)),
   );
-  const { state, pending, register, onSubmit, errors } = useRecordForm<SiteInput>({ schema, initial, action });
+  const { state, pending, register, onSubmit, errors } = useRecordForm<SiteInput, SiteFormState>({ schema, initial, action });
   return <SiteFields values={initial} state={state} contacts={contacts} pending={pending} onSubmit={onSubmit} register={register} errors={errors} {...props} />;
 }
