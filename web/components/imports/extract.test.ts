@@ -111,7 +111,7 @@ describe("the job list during and after extraction", () => {
   ])("C543: %i rows with %i unmatched read %j", (rows, unmatched, line) => {
     const out = viewerList([job({ status: "extracted", extraction: { status: "extracted", rows, unmatched } })]);
 
-    expect(out).toMatch(/<span data-tone="neutral"[^>]*>Extracted<\/span>/);
+    expect(out).toMatch(/<span[^>]*data-tone="neutral"[^>]*>Extracted<\/span>/);
     expect(out).toContain(`>${line}<`);
   });
 });

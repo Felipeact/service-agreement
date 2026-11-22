@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 type EmptyPanelProps = {
   title: string;
@@ -9,16 +10,16 @@ type EmptyPanelProps = {
   children?: ReactNode;
 };
 
-/** The white, hairline-bordered panel every list shows when it has nothing to list. */
+/** The white, hairline-bordered panel every list shows when it has nothing to list: the shadcn `Empty`, in the Field Protocol card. */
 export function EmptyPanel({ title, text, art, children }: EmptyPanelProps) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-panel border border-hairline bg-surface px-4 py-12 text-center shadow-card">
-      {art && <div className="text-ink-2">{art}</div>}
-      <div className="flex flex-col gap-1">
-        <p className="font-display text-[16px] font-semibold tracking-tight">{title}</p>
-        {text && <p className="text-[13px] text-ink-2">{text}</p>}
-      </div>
+    <Empty className="flex-none gap-3 rounded-panel border border-solid border-hairline bg-surface px-4 py-12 shadow-card">
+      {art && <EmptyMedia className="mb-0 text-ink-2">{art}</EmptyMedia>}
+      <EmptyHeader className="max-w-none gap-1">
+        <EmptyTitle className="font-display text-[16px] font-semibold tracking-tight text-ink">{title}</EmptyTitle>
+        {text && <EmptyDescription className="text-[13px] text-ink-2">{text}</EmptyDescription>}
+      </EmptyHeader>
       {children}
-    </div>
+    </Empty>
   );
 }

@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
 
 type StatusPillProps = {
@@ -18,13 +20,9 @@ const TONE_CLASSES = {
 export function StatusPill({ label, stage, tone, filled }: StatusPillProps) {
   if (stage && filled) {
     return (
-      <span
-        data-stage-pill={stage}
-        title={STAGE_META[stage].label}
-        className={`inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] leading-4 font-semibold whitespace-nowrap ${STAGE_META[stage].pillClass}`}
-      >
+      <Badge data-stage-pill={stage} title={STAGE_META[stage].label} className={cn("h-[22px] rounded-full px-2.5 text-[11px] leading-4 font-semibold", STAGE_META[stage].pillClass)}>
         {label}
-      </span>
+      </Badge>
     );
   }
   if (stage) {
@@ -36,11 +34,8 @@ export function StatusPill({ label, stage, tone, filled }: StatusPillProps) {
     );
   }
   return (
-    <span
-      data-tone={tone}
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] leading-4 font-semibold ${TONE_CLASSES[tone!]}`}
-    >
+    <Badge data-tone={tone} className={cn("h-auto rounded-full px-2 py-0.5 text-[11px] leading-4 font-semibold", TONE_CLASSES[tone!])}>
       {label}
-    </span>
+    </Badge>
   );
 }
