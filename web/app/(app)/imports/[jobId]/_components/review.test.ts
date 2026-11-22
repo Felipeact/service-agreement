@@ -2,11 +2,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { AssetTypeOption, ImportJobStatus, ImportJobView, ImportReview, ImportRowView } from "@/application/ports";
-import { ImportJobList } from "./job-list";
+import { ImportJobList } from "@/components/imports/job-list";
 import { CommitPrompt, MapPrompt, MappingSection, RowEditor } from "./review-controls";
-import { ReviewView, type ReviewActions } from "./review-view";
-import { DiscardPrompt } from "./discard-control";
-import type { CommitState, MapState, RowState } from "./state";
+import { ReviewView, type ReviewActions } from "./content";
+import { DiscardPrompt } from "@/components/imports/discard-control";
+import type { CommitState, MapState, RowState } from "@/components/imports/state";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/imports" }));
 

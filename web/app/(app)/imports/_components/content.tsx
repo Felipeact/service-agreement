@@ -13,7 +13,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { CheckCircle2Icon, FileUpIcon, TriangleAlertIcon } from "lucide-react";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
-import { ATTENTION, date, outcomeLine, REVIEWABLE, STATUS_LABELS } from "./job-list";
+import { ATTENTION, date, outcomeLine, REVIEWABLE, STATUS_LABELS } from "@/components/imports/job-list";
 
 const LINK = "inline-flex min-h-11 items-center text-action hover:underline lg:min-h-0";
 

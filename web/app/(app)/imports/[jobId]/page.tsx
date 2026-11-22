@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ReviewView } from "@/components/imports/review-view";
 import { canWriteRecords } from "@/components/records/state";
 import { PageLoading } from "@/components/shell/page-loading";
-import { getContainer } from "@/composition";
 import { isUuid } from "@/domain/imports";
 import { commitImportAction, mapImportTypeAction, skipImportRowAction, suggestImportTypesAction, updateImportRowAction } from "../../import-actions";
+import { ReviewView } from "./_components/content";
+import { loadReview } from "./_data-access/review";
 
 export const metadata: Metadata = { title: "Review rows" };
 
@@ -16,21 +15,9 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 
 /** Reads the job, its rows and `?show` / `?page` at request time. */
 export async function ReviewForRequest({ jobId, searchParams }: ReviewProps) {
-  if (!isUuid(jobId)) notFound();
-  const { currentMember, reviewImport, listAssetTypes, siteRegister, getItemWords } = await getContainer();
-  const member = await currentMember();
-  if (member.status !== "member") redirect("/login");
-  const review = await reviewImport(jobId);
-  if (!review) notFound();
-  const [types, site, params, words] = await Promise.all([listAssetTypes(), siteRegister(review.job.siteId), searchParams, getItemWords(member.orgId)]);
-
-  // The register lists assets by type code; the flags compare type ids.
-  const idOf = new Map(types.map((type) => [type.code, type.id]));
-  const siteAssets = (site?.assets ?? []).flatMap((asset) => {
-    const assetTypeId = idOf.get(asset.typeCode);
-    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo, typeModel: asset.typeModel, location: asset.location }] : [];
-  });
-  const actions = canWriteRecords(member.role)
+  const { role, review, types, siteAssets, words } = await loadReview(jobId);
+  const params = await searchParams;
+  const actions = canWriteRecords(role)
     ? {
         update: (rowId: string) => updateImportRowAction.bind(null, rowId),
         skip: (rowId: string, skipped: boolean) => skipImportRowAction.bind(null, rowId, skipped),

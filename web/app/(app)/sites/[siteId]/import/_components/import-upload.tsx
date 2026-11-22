@@ -7,7 +7,7 @@ import { itemText } from "@/domain/org-settings";
 import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
 import { FileDropzone } from "@/components/ui/file-dropzone";
-import { uploadFile, uploadMessage, type ConfirmState, type ReadState, type StartState, type UploadState } from "./state";
+import { uploadFile, uploadMessage, type ConfirmState, type ReadState, type StartState, type UploadState } from "@/components/imports/state";
 
 type FieldsProps = {
   state: UploadState;

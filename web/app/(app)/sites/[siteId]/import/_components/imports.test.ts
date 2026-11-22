@@ -5,12 +5,12 @@ import type { ImportJobView } from "@/application/ports";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/sites/s1/import" }));
 
-const { ImportPageView } = await import("./import-page-view");
+const { ImportPageView } = await import("./content");
 const { ImportUploadFields } = await import("./import-upload");
-const { ImportJobList } = await import("./job-list");
-const { DiscardPrompt } = await import("./discard-control");
-const { uploadFile, uploadMessage } = await import("./state");
-const { ReadFilePrompt } = await import("./read-file-control");
+const { ImportJobList } = await import("@/components/imports/job-list");
+const { DiscardPrompt } = await import("@/components/imports/discard-control");
+const { uploadFile, uploadMessage } = await import("@/components/imports/state");
+const { ReadFilePrompt } = await import("@/components/imports/read-file-control");
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 

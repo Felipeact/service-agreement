@@ -8,7 +8,7 @@ import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { fixLine } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
-import { REVIEW_MESSAGES, type CommitState, type MapState, type RowState, type SuggestState } from "./state";
+import { REVIEW_MESSAGES, type CommitState, type MapState, type RowState, type SuggestState } from "@/components/imports/state";
 
 function Alert({ message }: { message: string | null }) {
   const words = useItemWords();

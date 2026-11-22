@@ -3,8 +3,8 @@ import type { ImportJobView } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { ImportUploader } from "./import-upload";
-import { ImportJobList } from "./job-list";
-import type { ConfirmState, DiscardState, ExtractState, ReadState, StartState } from "./state";
+import { ImportJobList } from "@/components/imports/job-list";
+import type { ConfirmState, DiscardState, ExtractState, ReadState, StartState } from "@/components/imports/state";
 
 type ImportPageViewProps = {
   site: { id: string; name: string };

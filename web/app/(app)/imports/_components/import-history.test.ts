@@ -5,7 +5,7 @@ import type { ImportHistoryRow, ImportJobStatus } from "@/application/ports";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/imports" }));
 
-const { ImportHistoryView } = await import("./import-history");
+const { ImportHistoryView } = await import("./content");
 
 const SITE = "00000000-0000-4000-8000-0000000000a1";
 const CUSTOMER = "00000000-0000-4000-8000-0000000000c1";
