@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, SparklesIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -8,9 +8,9 @@ import { Icon } from "@/components/ui/icons";
 import { ProductMark } from "@/components/ui/product-mark";
 import { SearchInput } from "@/components/ui/search-input";
 import { SEARCH_MAX } from "@/domain/records";
-import { initialsOf } from "@/lib/initials";
 import { PlanQuota, type PlanQuotaFigure } from "./plan-quota";
-import { SidebarAccount, roleLabel } from "./sidebar-account";
+import { SidebarAccount } from "./sidebar-account";
+import { UserMenu } from "./user-menu";
 import { WorkspaceCard } from "./workspace-card";
 import type { ItemWords } from "@/domain/org-settings";
 import { ItemWordsProvider } from "./item-words";
@@ -81,6 +81,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const topSearchRef = useRef<HTMLInputElement>(null);
   // Desktop only: the sidebar slides away to give the work the full width. The choice is remembered per browser.
   const [collapsed, setCollapsed] = useState(false);
 
@@ -130,6 +131,26 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [collapsed]);
+
+  // Ctrl or Cmd + K jumps to the top bar's search and Ctrl or Cmd + B hides or shows the sidebar, as the mockup's hints say.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "k") {
+        const field = [topSearchRef.current, searchRef.current].find((node) => node && node.offsetParent !== null);
+        if (!field) return;
+        event.preventDefault();
+        field.focus();
+        field.select();
+      } else if (key === "b" && window.matchMedia("(min-width: 1024px)").matches) {
+        event.preventDefault();
+        toggleSidebar();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  });
 
   return (
     <div
@@ -257,7 +278,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
             <Icon name="sidebar" />
           </button>
           <form method="get" action="/search" role="search" className="w-full max-w-xl flex-1">
-            <SearchInput label="Search" name="q" placeholder="Search contacts, deals, or tasks..." maxLength={SEARCH_MAX} shortcut="⌘S" />
+            <SearchInput ref={topSearchRef} label="Search" name="q" placeholder="Search contacts, deals, or tasks..." maxLength={SEARCH_MAX} shortcut="⌘K" />
           </form>
           <div className="ml-auto flex items-center gap-3">
             {todayLabel && <span className="hidden text-[12px] text-ink-2 2xl:inline">{todayLabel}</span>}
@@ -271,16 +292,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               Ask AI
             </button>
             <FollowUpBell count={followUps} />
-            <div className="flex items-center gap-2.5 border-l border-hairline pl-3">
-              <span aria-hidden="true" className="inline-flex size-8 items-center justify-center rounded-full bg-action text-[12px] font-semibold text-surface shadow-card">
-                {initialsOf(email)}
-              </span>
-              <div className="flex flex-col leading-tight">
-                <span className="max-w-[180px] truncate text-[12px] font-semibold text-ink" title={email}>{email.split("@")[0]}</span>
-                <span className="text-[11px] text-ink-2">{roleLabel(role) ?? "Workspace"}</span>
-              </div>
-              <ChevronDownIcon aria-hidden="true" className="size-4 text-ink-2" />
-            </div>
+            <UserMenu email={email} role={role} orgName={orgName} canManageBilling={Boolean(plan?.canManage)} signOut={signOut} />
           </div>
         </header>
         {frozen && (

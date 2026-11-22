@@ -24,6 +24,21 @@ const list = (rows: AgreementListRow[], filter: AgreementFilter = {}, role: Memb
   renderToStaticMarkup(createElement(AgreementsListView, { rows, filter, role })).replace(/&#x27;/g, "'");
 
 describe("agreements list", () => {
+  test("a long list shows 25 rows a page with Previous and Next, and says which rows these are", () => {
+    const many = Array.from({ length: 60 }, (_, i) => row({ id: `a${i}`, number: `AG-${2000 + i}` }));
+    const html = list(many);
+    expect(html.match(/data-agreement-row|href="\/agreements\/a\d+"/g)?.length).toBe(25);
+    expect(html).toContain(">1-25<");
+    expect(html).toMatch(/<button[^>]*>Next<\/button>/);
+    expect(html).toMatch(/<button[^>]*\sdisabled=""[^>]*>Previous<\/button>/);
+  });
+
+  test("a short list has no pager", () => {
+    const html = list([row()]);
+    expect(html).not.toContain("Previous");
+    expect(html).not.toContain("Next</button>");
+  });
+
   test("C1353: a row links to its agreement and shows number, site, customer, status, version and total", () => {
     const html = list([row()]);
     expect(html).toMatch(/<a[^>]*href="\/agreements\/a1"/);

@@ -9,7 +9,7 @@ import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { BellIcon, FileTextIcon, MailIcon, TrendingUpIcon } from "lucide-react";
+import { BellIcon, DownloadIcon, FileTextIcon, MailIcon, TrendingUpIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icons";
 import { Spot } from "@/components/ui/illustrations";
 import { LinkButton } from "@/components/ui/link-button";
@@ -20,6 +20,9 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
 import { formatCad } from "@/lib/money";
+
+/** Agreements on one page of the list; the status tabs and the search still work across all of them. */
+export const PAGE_SIZE = 25;
 
 const COLUMNS = "md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_7.5rem_6.5rem_7.5rem_1.25rem]";
 
@@ -72,9 +75,13 @@ function ageDays(row: AgreementListRow, now: Date): number {
 export function AgreementsListView({ rows, filter, role, newAgreement: newAgreementSlot, now = new Date(), counts }: Props) {
   const words = useItemWords();
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
   const needle = query.trim().toLowerCase();
   const filtered = Boolean(filter.status || filter.siteId || filter.expiring);
-  const shown = needle ? rows.filter((row) => [row.number ?? "", row.site, row.customer].some((text) => text.toLowerCase().includes(needle))) : rows;
+  const matches = needle ? rows.filter((row) => [row.number ?? "", row.site, row.customer].some((text) => text.toLowerCase().includes(needle))) : rows;
+  const pages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE));
+  const at = Math.min(page, pages - 1);
+  const shown = matches.slice(at * PAGE_SIZE, (at + 1) * PAGE_SIZE);
 
   const stageOf = (row: AgreementListRow): PipelineStage | null => pipelineStage(row.status);
   const isStale = (row: AgreementListRow) => {
@@ -103,7 +110,17 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Agreements" badge={<span className="inline-flex h-6 items-center rounded-md border border-hairline bg-board px-2 text-[12px] font-medium text-ink-2">{activeCount} active</span>} subtitle="Lifecycle oversight, commercial milestones, and countersignature statuses." action={newAgreement || undefined} />
+      <PageHeader title="Agreements" badge={<span className="inline-flex h-6 items-center rounded-md border border-hairline bg-board px-2 text-[12px] font-medium text-ink-2">{activeCount} active</span>} subtitle="Lifecycle oversight, commercial milestones, and countersignature statuses." action={
+          <>
+            {rows.length > 0 && (
+              <LinkButton href={agreementsHref(filter, filter.status, filter.expiring).replace("/agreements", "/agreements/export")} prefetch={false} variant="secondary" download>
+                <DownloadIcon aria-hidden="true" className="size-4" />
+                Export
+              </LinkButton>
+            )}
+            {newAgreement || undefined}
+          </>
+        } />
 
       <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4">
         <StatCard label="Total Agreements" icon={<FileTextIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : "Across all active accounts"} />
@@ -141,7 +158,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
             <Icon name="calendar" className="size-4" />
             Expiring soon
           </Link>
-          <SearchInput label="Search agreements" placeholder="Search agreements, sites, or customers…" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 md:w-60 md:flex-none" />
+          <SearchInput label="Search agreements" placeholder="Search agreements, sites, or customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} className="min-w-0 flex-1 md:w-60 md:flex-none" />
         </div>
       </div>
 
@@ -173,9 +190,23 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
           columns={COLUMNS}
           headings={["Agreement & Site", "Customer", "Stage / Status", <span key="value" className="block text-right">Annual Value</span>, "Term End / Age", ""]}
           footer={
-            <>
-              Showing <span className="font-semibold text-ink">{shown.length}</span> of <span className="font-semibold text-ink">{rows.length}</span> {rows.length === 1 ? "agreement" : "agreements"}
-            </>
+            <span className="flex flex-wrap items-center justify-between gap-3">
+              <span>
+                Showing{" "}
+                <span className="font-semibold text-ink">{pages > 1 ? `${at * PAGE_SIZE + 1}-${at * PAGE_SIZE + shown.length}` : shown.length}</span> of{" "}
+                <span className="font-semibold text-ink">{needle ? matches.length : rows.length}</span> {(needle ? matches.length : rows.length) === 1 ? "agreement" : "agreements"}
+              </span>
+              {pages > 1 && (
+                <span className="flex items-center gap-2">
+                  <Button onClick={() => setPage(at - 1)} disabled={at === 0}>
+                    Previous
+                  </Button>
+                  <Button onClick={() => setPage(at + 1)} disabled={at >= pages - 1}>
+                    Next
+                  </Button>
+                </span>
+              )}
+            </span>
           }
         >
           {shown.map((row) => {
