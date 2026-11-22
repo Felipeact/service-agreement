@@ -5,7 +5,7 @@ import { describe, expect, test, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 import type { CustomerSummary, SiteListRow } from "@/application/ports";
 import type { SiteFilter } from "@/domain/records";
-const { SitesListView } = await import("./sites-list");
+const { SitesListView } = await import("./content");
 
 const CUSTOMER = "00000000-0000-4000-8000-0000000000c1";
 

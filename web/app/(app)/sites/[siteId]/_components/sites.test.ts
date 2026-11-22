@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import type { AssetView, MemberRole, SiteView } from "@/application/ports";
 import { filterAssets, groupAssets } from "./assets";
-import { SiteRegisterView } from "./site-register-view";
+import { SiteRegisterView } from "./content";
 
 let counter = 0;
 const asset = (patch: Partial<AssetView> = {}): AssetView => ({

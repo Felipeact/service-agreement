@@ -7,8 +7,8 @@ import { ItemWordsProvider } from "@/components/shell/item-words";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/sites" }));
 
-const { SitesListView } = await import("./sites/sites-list");
-const { SiteRegisterView } = await import("./sites/site-register-view");
+const { SitesListView } = await import("@/app/(app)/sites/_components/content");
+const { SiteRegisterView } = await import("@/app/(app)/sites/[siteId]/_components/content");
 const { SearchView } = await import("./search/search-view");
 const { PipelineView } = await import("./kanban/pipeline-view");
 const { ImportBanner } = await import("./imports/import-banner");
@@ -20,7 +20,7 @@ const { ImportHistoryView } = await import("./imports/import-history");
 const { ImportPageView } = await import("./imports/import-page-view");
 const { ReviewView } = await import("./imports/review-view");
 const { NewAgreementDialog } = await import("./agreements/new-agreement-dialog");
-const { SitesLoading, ImportLoading } = await import("./sites/loading-titles");
+const { SitesLoading, ImportLoading } = await import("@/app/(app)/sites/_components/loading-titles");
 const { phaseLine } = await import("./agreements/new-agreement-state");
 const { NoticeText, ProgressLine } = await import("./agreements/new-agreement-text");
 const { LIST_FAILED } = await import("./agreements/new-agreement-state");

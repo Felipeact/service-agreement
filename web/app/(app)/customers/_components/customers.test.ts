@@ -2,9 +2,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import type { CustomerDetail, CustomerSummary, MemberRole } from "@/application/ports";
-import { CustomerDetailView } from "./customer-detail-view";
+import { CustomerDetailView } from "../[customerId]/_components/content";
 import { filterCustomers } from "./filter";
-import { CustomersView } from "./customers-view";
+import { CustomersView } from "./content";
 
 const summary = (id: string, name: string, patch: Partial<CustomerSummary> = {}): CustomerSummary => ({
   id,
