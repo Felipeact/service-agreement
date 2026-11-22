@@ -6,7 +6,7 @@ import { DEFAULT_LETTERHEAD, letterheadOf, type LetterheadOptions } from "@/doma
 import { ServiceEquipmentSection, ServiceIncludedSection } from "@/components/agreements/service-scope";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { buttonClass } from "@/components/ui/button";
-import { NEUTRAL_ACCENT, termLine, termsOf, typeFrequencies, visitSchedule, type BlockItem, type IncludedOptions, type LayoutItem, type PriceOptions, type TitleOptions } from "@/domain/agreement";
+import { NEUTRAL_ACCENT, termLine, termsOf, typeFrequencies, visitSchedule, type BlockItem, type IncludedOptions, type LayoutItem, type PriceOptions, type TableItem, type TitleOptions } from "@/domain/agreement";
 import { formatTermDate } from "@/domain/agreement/term";
 import { contrastText, isAccent, type PortalState } from "@/domain/portal";
 import { formatCadExact } from "@/lib/money";
@@ -62,6 +62,43 @@ function Phone({ phone }: { phone: string | null }) {
 }
 
 const INDENT_CLASS = ["", "ml-4", "ml-8", "ml-12"] as const;
+const ALIGN_CLASS = { left: "text-left", center: "text-center", right: "text-right" } as const;
+
+/** A free-text table of the template, with the header row in the company's accent colour when it has one. */
+function TemplateTable({ item }: { item: TableItem }) {
+  const head = item.header ? item.rows[0] : undefined;
+  const body = item.header ? item.rows.slice(1) : item.rows;
+  return (
+    <div className="overflow-x-auto rounded-panel border border-hairline bg-surface">
+      <table className="w-full min-w-[320px] text-left text-[14px]">
+        {head && (
+          <thead className="border-b border-hairline bg-ground">
+            <tr>
+              {head.map((cell, column) => (
+                <th key={column} scope="col" className="px-4 py-2 text-[13px] font-semibold">
+                  {cell}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody className="divide-y divide-hairline">
+          {body.map((row, index) => (
+            <tr key={index}>
+              {row.map((cell, column) => (
+                <td key={column} className="px-4 py-2.5 align-top break-words">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const blockStyleClass = (style: BlockItem["style"]) => [style?.align ? ALIGN_CLASS[style.align] : "", style?.bold ? "font-bold" : "", style?.italic ? "italic" : ""].filter(Boolean).join(" ");
 
 /** The template's text blocks as plain paragraphs, headings in the section-heading size (level 1 larger): the same blocks the PDF draws. */
 function TemplateText({ label, blocks }: { label: string; blocks: BlockItem[] }) {
@@ -71,11 +108,11 @@ function TemplateText({ label, blocks }: { label: string; blocks: BlockItem[] })
       {blocks.map((block, index) => {
         const indent = INDENT_CLASS[block.indent ?? 0];
         return block.type === "heading" ? (
-          <h2 key={index} className={`${block.level === 1 ? "text-[18px] font-bold" : "text-[15px] font-semibold"} break-words ${indent}`.trim()}>
+          <h2 key={index} className={`${block.level === 1 ? "text-[18px] font-bold" : "text-[15px] font-semibold"} break-words ${indent} ${blockStyleClass(block.style)}`.trim()}>
             {block.text}
           </h2>
         ) : (
-          <p key={index} className={`text-[14px] break-words whitespace-pre-line ${indent}`.trim()}>
+          <p key={index} className={`text-[14px] break-words whitespace-pre-line ${indent} ${blockStyleClass(block.style)}`.trim()}>
             {block.text}
           </p>
         );
@@ -196,7 +233,7 @@ function Content({ view }: { view: PortalView }) {
       return;
     }
     flush();
-    out.push(drawSection(item, index));
+    out.push(item.kind === "table" ? <TemplateTable key={`table-${index}`} item={item} /> : drawSection(item, index));
   });
   flush();
   return <>{out}</>;

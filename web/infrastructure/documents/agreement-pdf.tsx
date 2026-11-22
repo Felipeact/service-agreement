@@ -1,5 +1,6 @@
 import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer";
 import {
+  accentOf,
   DEFAULT_AGREEMENT_DOC,
   hasSection,
   letterheadOf,
@@ -11,31 +12,35 @@ import {
   type TitleOptions,
 } from "@/domain/agreement";
 import { renderWithoutLogoOnFailure } from "./logo-fallback";
-import { EquipmentSection, IncludedSection, LayoutBlock, LetterHead, LetterheadFooter, PageFooter, PriceSection, ScheduleSection, styles } from "./pdf-sections";
+import { EquipmentSection, IncludedSection, LayoutBlock, LayoutTable, LetterHead, LetterheadFooter, PageFooter, PriceSection, ScheduleSection, pageFamily, styles } from "./pdf-sections";
 
 /** The agreement as a Letter-size document. Built-in Helvetica only, so no font file travels with it. */
 export function AgreementPdf({ document }: { document: AgreementDocument }) {
   const { tenant } = document;
-  const accent = { color: tenant.accent };
   // A document built before layouts existed has none: it draws as the system layout does (and a document built before templates
   // existed has no sections: every optional one is drawn).
   const doc = document.doc ?? DEFAULT_AGREEMENT_DOC;
+  // The template's own colour wins over the company's; either way one colour runs through the whole page.
+  const color = accentOf(doc, tenant.accent);
+  const accent = { color };
+  const font = doc.theme?.font;
   const layout = document.layout ?? legacyLayout(document.intro ?? [], document.footer ?? [], document.sections ?? { schedule: true, scope: true });
-  const letterhead = <LetterHead name={tenant.name} address={tenant.address} phone={tenant.phone} accent={tenant.accent} logo={tenant.logo} options={letterheadOf(doc)} />;
+  const letterhead = <LetterHead name={tenant.name} address={tenant.address} phone={tenant.phone} accent={color} logo={tenant.logo} options={letterheadOf(doc)} />;
   const includedDrawn = hasSection(layout, "included");
 
   const draw = (item: LayoutItem, index: number) => {
-    if (item.kind === "block") return <LayoutBlock key={index} item={item} accent={tenant.accent} />;
+    if (item.kind === "block") return <LayoutBlock key={index} item={item} accent={color} font={font} />;
+    if (item.kind === "table") return <LayoutTable key={index} item={item} accent={color} font={font} />;
     switch (item.key) {
       case "price": {
         const options: PriceOptions = item.options ?? {};
         return (
-          <PriceSection key={index} lines={document.lines} totalCents={document.totalCents} accent={tenant.accent} title={options.title} columns={options.columns} visitsFormat={options.visitsFormat} />
+          <PriceSection key={index} lines={document.lines} totalCents={document.totalCents} accent={color} title={options.title} columns={options.columns} visitsFormat={options.visitsFormat} />
         );
       }
       case "schedule": {
         const options: TitleOptions = item.options ?? {};
-        return <ScheduleSection key={index} schedule={document.schedule} accent={tenant.accent} title={options.title} />;
+        return <ScheduleSection key={index} schedule={document.schedule} accent={color} title={options.title} />;
       }
       case "included": {
         const options: IncludedOptions = item.options ?? {};
@@ -43,7 +48,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
           <IncludedSection
             key={index}
             scope={document.scope}
-            accent={tenant.accent}
+            accent={color}
             words={document.words}
             title={options.title}
             showFrequency={options.showFrequency}
@@ -54,7 +59,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
       }
       case "equipment": {
         const options: TitleOptions = item.options ?? {};
-        return <EquipmentSection key={index} scope={document.scope} accent={tenant.accent} words={document.words} title={options.title} sayNotRecorded={!includedDrawn} />;
+        return <EquipmentSection key={index} scope={document.scope} accent={color} words={document.words} title={options.title} sayNotRecorded={!includedDrawn} />;
       }
       case "terms":
         return (
@@ -79,7 +84,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
 
   return (
     <Document title={`${document.number} version ${document.versionNo}`} author={tenant.name}>
-      <Page size="LETTER" style={styles.page}>
+      <Page size="LETTER" style={[styles.page, { fontFamily: pageFamily(font) }]}>
         {document.mark && (
           <Text fixed style={styles.mark}>
             {document.mark}

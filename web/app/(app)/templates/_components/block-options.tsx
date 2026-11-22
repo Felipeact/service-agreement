@@ -8,7 +8,7 @@ import { TextArea } from "@/components/ui/text-area";
 import { TextInput } from "@/components/ui/text-input";
 import { useItemWords } from "@/components/shell/item-words";
 import { MONTH_PRESETS, type MonthPreset } from "@/domain/agreement";
-import { HEADER_ALIGNS, LOGO_SIZES, PAGE_FOOTERS, PRICE_COLUMN_KEYS, letterheadOf, type DocOptions, type HeaderAlign, type LogoSize, type PageFooter, type PriceColumns, type VisitsFormat } from "@/domain/agreement/layout";
+import { HEADER_ALIGNS, LOGO_SIZES, PAGE_FOOTERS, PRICE_COLUMN_KEYS, THEME_ACCENTS, THEME_ACCENT_KEYS, THEME_FONTS, letterheadOf, type DocOptions, type ThemeAccent, type ThemeFont, type HeaderAlign, type LogoSize, type PageFooter, type PriceColumns, type VisitsFormat } from "@/domain/agreement/layout";
 import type { SectionRow } from "@/domain/agreement/layout-form";
 import { MAX_DESCRIPTION, MAX_PRESET_LINES } from "@/domain/agreement/template";
 import { EMPTY_PRESET_LINE, type TemplateFormLine } from "@/domain/agreement/template-form";
@@ -298,6 +298,52 @@ export function HeaderFields({ doc, onChange, errors }: { doc: DocOptions; onCha
 }
 
 /** The three document options and nothing else (template-editor-v2 AC 21): the number, customer and site lines, the letterhead, the footer. */
+const FONT_LABELS: Record<ThemeFont, string> = { sans: "Sans serif (clean)", serif: "Serif (classic)" };
+
+/** The document's colour and type: six accent colours, or the company's own, and a body face. Headings stay bold sans. */
+export function ThemeFields({ doc, onChange }: { doc: DocOptions; onChange: (next: DocOptions) => void }) {
+  const theme = doc.theme ?? {};
+  const setTheme = (patch: { accent?: ThemeAccent | undefined; font?: ThemeFont | undefined }) => {
+    const next = { ...theme, ...patch };
+    if (next.accent === undefined) delete next.accent;
+    if (next.font === undefined || next.font === "sans") delete next.font;
+    const rest = { ...doc };
+    delete rest.theme;
+    onChange(Object.keys(next).length > 0 ? { ...rest, theme: next } : rest);
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <fieldset>
+        <legend className="mb-1.5 text-[13px] font-medium">Colour</legend>
+        <div className="flex flex-wrap gap-2">
+          <label className="relative">
+            <input type="radio" name="theme-accent" checked={theme.accent === undefined} onChange={() => setTheme({ accent: undefined })} className="peer sr-only" />
+            <span className="flex min-h-11 items-center rounded-control border border-hairline px-3 text-[12px] font-semibold peer-checked:border-action peer-checked:bg-action-tint peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action lg:min-h-9">
+              Company colour
+            </span>
+          </label>
+          {THEME_ACCENT_KEYS.map((key) => (
+            <label key={key} className="relative">
+              <input type="radio" name="theme-accent" checked={theme.accent === key} onChange={() => setTheme({ accent: key })} className="peer sr-only" />
+              <span className={`flex size-11 items-center justify-center rounded-full ring-2 ring-transparent ring-offset-2 peer-checked:ring-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-action lg:size-9`} style={{ backgroundColor: THEME_ACCENTS[key] }}>
+                <span className="sr-only">{key}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-[12px] text-ink-2">Headings, the letterhead rule and table headings print in this colour.</p>
+      </fieldset>
+      <Select id="theme-font" name="themeFont" label="Text face" value={theme.font ?? "sans"} onChange={(event) => setTheme({ font: event.target.value as ThemeFont })}>
+        {THEME_FONTS.map((font) => (
+          <option key={font} value={font}>
+            {FONT_LABELS[font]}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
 export function PageSettingsFields({ doc, onChange, errors }: { doc: DocOptions; onChange: (next: DocOptions) => void; errors: Record<string, string> }) {
   const set = (patch: Partial<DocOptions>) => onChange({ ...doc, ...patch });
   return (

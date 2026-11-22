@@ -3,11 +3,12 @@
 import { useEffect, useState, type DragEvent, type KeyboardEvent, type MutableRefObject, type ReactNode } from "react";
 import { useItemWords } from "@/components/shell/item-words";
 import { MAX_INDENT, PRICE_COLUMN_KEYS, type DocOptions, type PriceColumns } from "@/domain/agreement/layout";
-import { messagesByRow, type BlockRow, type LayoutRow, type SectionRow } from "@/domain/agreement/layout-form";
+import { messagesByRow, type BlockRow, type LayoutRow, type SectionRow, type TableRow } from "@/domain/agreement/layout-form";
 import type { TemplateFormLine } from "@/domain/agreement/template-form";
 import { itemText, type ItemWords } from "@/domain/org-settings";
 import { canMove, DRAG_TYPE, dropPosition, isRequired, readDragPayload, variableLabel, type DragPayload, type EditorDocument } from "@/domain/templates/editor-model";
 import { partName } from "./add-element-dock";
+import { TableEditor, TablePreview } from "./table-editor";
 
 const BLOCK_NAME = { heading: "Heading", paragraph: "Text", clause: "Clause" } as const;
 const DEFAULT_COLUMNS: PriceColumns = { description: "Description", visits: "Visits per year", perVisit: "Per visit", perYear: "Per year", total: "Total per year" };
@@ -154,7 +155,7 @@ type Props = {
   errors: Record<string, string>;
   onSelect: (index: number | null) => void;
   onTitle: (title: string) => void;
-  onPatch: (index: number, patch: Partial<BlockRow> | Partial<SectionRow>) => void;
+  onPatch: (index: number, patch: Partial<BlockRow> | Partial<SectionRow> | Partial<TableRow>) => void;
   onMove: (index: number, by: -1 | 1) => void;
   onDelete: (index: number) => void;
   /** Where the selected text block's field reports itself, so a field chip can read its caret. */
@@ -257,7 +258,7 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
         {rows.map((row, index) => {
           const isSelected = selected === index;
           const messages = byRow.get(index) ?? [];
-          const name = row.kind === "block" ? BLOCK_NAME[row.type] : partName(row.key, words);
+          const name = row.kind === "block" ? BLOCK_NAME[row.type] : row.kind === "table" ? "Table" : partName(row.key, words);
           const at = (suffix: string) => errors[`layout.${index}.${suffix}`];
           const frame = `rounded-control border-[1.5px] p-3 ${messages.length > 0 ? "border-danger" : isSelected ? "border-action bg-action-tint/40" : "border-transparent hover:border-hairline"}`;
           const select = () => onSelect(index);
@@ -324,6 +325,21 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
                         )}
                       </>
                     )}
+                    {row.kind === "block" && (
+                      <>
+                        {(["left", "center", "right"] as const).map((align) => (
+                          <button key={align} type="button" className={TOOL} aria-label={`Align ${align}`} aria-pressed={(row.style?.align ?? "left") === align} onClick={() => onPatch(index, { style: { ...row.style, align } })}>
+                            {align === "left" ? "⇠" : align === "center" ? "↔" : "⇢"}
+                          </button>
+                        ))}
+                        <button type="button" className={`${TOOL} font-bold`} aria-label="Bold" aria-pressed={row.style?.bold === true} onClick={() => onPatch(index, { style: { ...row.style, bold: !row.style?.bold } })}>
+                          B
+                        </button>
+                        <button type="button" className={`${TOOL} italic`} aria-label="Italic" aria-pressed={row.style?.italic === true} onClick={() => onPatch(index, { style: { ...row.style, italic: !row.style?.italic } })}>
+                          I
+                        </button>
+                      </>
+                    )}
                     {required ? (
                       <span className="ml-auto inline-flex min-h-8 items-center rounded-full bg-board px-2.5 text-[11px] font-semibold text-ink-2">Required</span>
                     ) : (
@@ -332,7 +348,9 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
                       </button>
                     )}
                   </div>
-                  {row.kind === "block" ? (
+                  {row.kind === "table" ? (
+                    <TableEditor row={row} id={`table-${index}`} onChange={(change) => onPatch(index, change)} />
+                  ) : row.kind === "block" ? (
                     <textarea
                       id={`block-${index}-text`}
                       aria-label={`${name} text`}
@@ -349,12 +367,12 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
                         }
                       }}
                       style={{ paddingLeft: `${0.5 + row.indent * 1.5}rem` }}
-                      className={`w-full resize-y rounded-control border border-field bg-surface px-2 py-1.5 text-ink ${row.type === "heading" ? (row.level === 1 ? "text-[18px] font-semibold" : "text-[15px] font-semibold") : "text-[13px]"}`}
+                      className={`w-full resize-y rounded-control border border-field bg-surface px-2 py-1.5 text-ink ${row.style?.bold ? "font-bold" : ""} ${row.style?.italic ? "italic" : ""} ${row.style?.align === "center" ? "text-center" : row.style?.align === "right" ? "text-right" : ""} ${row.type === "heading" ? (row.level === 1 ? "text-[18px] font-semibold" : "text-[15px] font-semibold") : "text-[13px]"}`}
                     />
                   ) : (
                     <>
-                      <PartSample row={row} lines={presetLines} words={words} />
-                      {options?.(index, row)}
+                      <PartSample row={row as SectionRow} lines={presetLines} words={words} />
+                      {options?.(index, row as SectionRow)}
                     </>
                   )}
                   {messages.length > 0 && (
@@ -370,7 +388,9 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
                 </div>
               ) : (
                 <div role="button" tabIndex={0} aria-label={`Select ${name} ${index + 1}`} onClick={select} onKeyDown={onKey} className={`${frame} flex cursor-pointer flex-col gap-1 ${row.kind === "section" ? "bg-ground/60" : ""}`}>
-                  {row.kind === "block" ? (
+                  {row.kind === "table" ? (
+                    <TablePreview row={row} />
+                  ) : row.kind === "block" ? (
                     <p
                       style={{ paddingLeft: `${row.indent * 1.5}rem` }}
                       className={`whitespace-pre-wrap text-ink ${row.type === "heading" ? (row.level === 1 ? "text-[18px] font-semibold" : "text-[15px] font-semibold") : "text-[13px]"} ${row.text.trim() === "" ? "text-ink-2" : ""}`}
@@ -378,7 +398,7 @@ export function EditorPage({ document, orgName, doc, rows, presetLines, selected
                       {row.text.trim() === "" ? `Empty ${name.toLowerCase()}. Click to write.` : <WithChips text={row.text} />}
                     </p>
                   ) : (
-                    <PartSample row={row} lines={presetLines} words={words} />
+                    <PartSample row={row as SectionRow} lines={presetLines} words={words} />
                   )}
                   {required && <span className="self-start rounded-full bg-board px-2.5 py-0.5 text-[11px] font-semibold text-ink-2">Required</span>}
                   {messages.length > 0 && (

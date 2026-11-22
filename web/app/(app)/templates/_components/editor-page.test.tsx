@@ -71,15 +71,15 @@ describe("the page", () => {
   test("[C3] a selected text block's toolbar has Move up, Move down, Delete, both indents and Page break, and Size 1 and 2 for a heading only", async () => {
     await mountAgreement();
     await selectItem(container, 0);
-    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Size 1", "Size 2", "Delete"]);
+    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Size 1", "Size 2", "Align left", "Align center", "Align right", "Bold", "Italic", "Delete"]);
     await selectItem(container, 1);
-    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Delete"]);
+    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Align left", "Align center", "Align right", "Bold", "Italic", "Delete"]);
   });
 
   test("[C3] a clause's toolbar has the indents and Page break, and no Size", async () => {
     await mountContract();
     await selectItem(container, 1);
-    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Delete"]);
+    expect(toolbar(container)).toEqual(["Move up", "Move down", "Indent less", "Indent more", "Page break before", "Align left", "Align center", "Align right", "Bold", "Italic", "Delete"]);
   });
 
   test("[C3] Indent more raises the indent up to 3 and Indent less lowers it, each disabled at its end", async () => {

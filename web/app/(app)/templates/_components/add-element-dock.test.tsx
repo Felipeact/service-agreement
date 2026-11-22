@@ -40,7 +40,7 @@ const fieldChips = () => [...container.querySelectorAll('[role="group"][aria-lab
 describe("the dock", () => {
   test("[C11] a Writing group with Heading, Text and Clause, the parts, then a Field button, in that order", async () => {
     await mount("agreement");
-    expect(items().map(labelOf)).toEqual(["Heading", "Text", "Clause", "Price lines", "Visit schedule", "Service included", "Equipment", "Terms", "Field"]);
+    expect(items().map(labelOf)).toEqual(["Heading", "Text", "Clause", "Table", "Price lines", "Visit schedule", "Service included", "Equipment", "Terms", "Field"]);
   });
 
   test("[C11] choosing a writing item asks for a block of that type", async () => {
@@ -53,9 +53,9 @@ describe("the dock", () => {
 
   test("[C12] the agreement's parts in order, and the contract's", async () => {
     await mount("agreement");
-    expect(items().map(labelOf).slice(3, 8)).toEqual(["Price lines", "Visit schedule", "Service included", "Equipment", "Terms"]);
+    expect(items().map(labelOf).slice(4, 9)).toEqual(["Price lines", "Visit schedule", "Service included", "Equipment", "Terms"]);
     await mount("contract");
-    expect(items().map(labelOf).slice(3, 8)).toEqual(["Price lines", "Visit schedule", "Service included", "Equipment", "Signatures"]);
+    expect(items().map(labelOf).slice(4, 9)).toEqual(["Price lines", "Visit schedule", "Service included", "Equipment", "Signatures"]);
   });
 
   test("[C12] the equipment part takes the org's own word", async () => {

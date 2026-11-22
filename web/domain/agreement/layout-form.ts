@@ -6,7 +6,9 @@ import {
   PAGE_HEADERS,
   PRICE_COLUMN_KEYS,
   VISITS_FORMATS,
+  TEXT_ALIGNS,
   type BlockItem,
+  type BlockStyle,
   type DocOptions,
   type LayoutItem,
   type LetterheadOptions,
@@ -14,6 +16,7 @@ import {
   type SectionItem,
   type SectionKey,
   type SignatureOptions,
+  type TableItem,
   type VisitsFormat,
 } from "./layout";
 import { isRecord } from "../guards";
@@ -23,7 +26,10 @@ import { isRecord } from "../guards";
  * as the member typed it, so a half-typed label or an empty text is kept and flagged instead of lost.
  */
 
-export type BlockRow = { kind: "block"; type: BlockType; text: string; level: 1 | 2; indent: 0 | 1 | 2 | 3; pageBreakBefore: boolean };
+export type BlockRow = { kind: "block"; type: BlockType; text: string; level: 1 | 2; indent: 0 | 1 | 2 | 3; pageBreakBefore: boolean; style?: BlockStyle };
+
+/** A table row holds the cells as typed; the validator judges the size and the variables. */
+export type TableRow = { kind: "table"; header: boolean; rows: string[][] };
 
 /** A section row holds the options of every section; the ones its key has no use for stay at their empty value and are not stored. */
 export type SectionRow = {
@@ -41,7 +47,7 @@ export type SectionRow = {
   nameField: boolean;
 };
 
-export type LayoutRow = BlockRow | SectionRow;
+export type LayoutRow = BlockRow | SectionRow | TableRow;
 
 /** The part of a form both documents share. */
 export type LayoutFormState = { doc: DocOptions; layout: LayoutRow[] };
@@ -53,6 +59,11 @@ const EMPTY_COLUMNS: PriceColumns = { description: "", visits: "", perVisit: "",
 
 export function newBlockRow(type: BlockType): BlockRow {
   return { kind: "block", type, text: "", level: 2, indent: 0, pageBreakBefore: false };
+}
+
+/** A new table: a header row over one row of two cells, ready to type into. */
+export function newTableRow(): TableRow {
+  return { kind: "table", header: true, rows: [["", ""], ["", ""]] };
 }
 
 export function newSectionRow(key: SectionKey): SectionRow {
@@ -72,8 +83,9 @@ export function newSectionRow(key: SectionKey): SectionRow {
 }
 
 function rowFromItem(item: LayoutItem): LayoutRow[] {
+  if (item.kind === "table") return [{ kind: "table", header: item.header, rows: item.rows.map((row) => [...row]) }];
   if (item.kind === "block") {
-    return [{ kind: "block", type: item.type, text: item.text, level: item.level ?? 2, indent: item.indent ?? 0, pageBreakBefore: item.pageBreakBefore === true }];
+    return [{ kind: "block", type: item.type, text: item.text, level: item.level ?? 2, indent: item.indent ?? 0, pageBreakBefore: item.pageBreakBefore === true, ...(item.style && { style: { ...item.style } }) }];
   }
   const row = newSectionRow(item.key);
   const options = (item.key === "terms" ? undefined : item.options) as Record<string, unknown> | undefined;
@@ -96,9 +108,25 @@ function rowFromItem(item: LayoutItem): LayoutRow[] {
 /** The rows of a layout, one for each item (and a heading row for the title of a schema 1 contract's signatures). */
 export const rowsFromLayout = (layout: readonly LayoutItem[]): LayoutRow[] => layout.flatMap(rowFromItem);
 
+/** The style worth storing: only what differs from the plain look, `undefined` when nothing does. */
+function styleOf(style: BlockStyle | undefined): BlockStyle | undefined {
+  if (!style) return undefined;
+  const kept: BlockStyle = {};
+  if (style.align && style.align !== "left") kept.align = style.align;
+  if (style.bold) kept.bold = true;
+  if (style.italic) kept.italic = true;
+  return Object.keys(kept).length > 0 ? kept : undefined;
+}
+
 function itemFromRow(row: LayoutRow): LayoutItem {
+  if (row.kind === "table") {
+    const table: TableItem = { kind: "table", header: row.header, rows: row.rows.map((cells) => cells.map((cell) => cell.trim())) };
+    return table;
+  }
   if (row.kind === "block") {
     const item: BlockItem = { kind: "block", type: row.type, text: row.text.trim() };
+    const style = styleOf(row.style);
+    if (style) item.style = style;
     if (row.type === "heading" && row.level === 1) item.level = 1;
     if (row.indent > 0) item.indent = row.indent;
     if (row.pageBreakBefore) item.pageBreakBefore = true;
@@ -183,7 +211,19 @@ export function readLayoutFormState(value: Record<string, unknown>): { ok: true;
       if (raw.level !== 1 && raw.level !== 2) return bad(`${at}.level`, "The heading level must be 1 or 2.");
       if (typeof raw.indent !== "number" || !Number.isInteger(raw.indent) || raw.indent < 0 || raw.indent > MAX_INDENT) return bad(`${at}.indent`, `The indent must be 0 to ${MAX_INDENT}.`);
       if (typeof raw.pageBreakBefore !== "boolean") return bad(`${at}.pageBreakBefore`, "The page break must be true or false.");
-      rows.push({ kind: "block", type: raw.type as BlockType, text: raw.text, level: raw.level, indent: raw.indent as BlockRow["indent"], pageBreakBefore: raw.pageBreakBefore });
+      const row: BlockRow = { kind: "block", type: raw.type as BlockType, text: raw.text, level: raw.level, indent: raw.indent as BlockRow["indent"], pageBreakBefore: raw.pageBreakBefore };
+      if (raw.style !== undefined) {
+        const style = raw.style;
+        if (!isRecord(style)) return bad(`${at}.style`, "The style must be an object.");
+        if (style.align !== undefined && !(TEXT_ALIGNS as readonly unknown[]).includes(style.align)) return bad(`${at}.style.align`, "Align left, center or right.");
+        if ((style.bold !== undefined && typeof style.bold !== "boolean") || (style.italic !== undefined && typeof style.italic !== "boolean")) return bad(`${at}.style`, "Bold and italic must be true or false.");
+        row.style = { ...(style.align !== undefined && { align: style.align as BlockStyle["align"] }), ...(style.bold !== undefined && { bold: style.bold as boolean }), ...(style.italic !== undefined && { italic: style.italic as boolean }) };
+      }
+      rows.push(row);
+    } else if (raw.kind === "table") {
+      if (typeof raw.header !== "boolean") return bad(`${at}.header`, "The header row must be true or false.");
+      if (!Array.isArray(raw.rows) || raw.rows.some((cells) => !Array.isArray(cells) || cells.some((cell) => typeof cell !== "string"))) return bad(`${at}.rows`, "A table is a list of rows of text.");
+      rows.push({ kind: "table", header: raw.header, rows: (raw.rows as string[][]).map((cells) => [...cells]) });
     } else if (raw.kind === "section") {
       if (typeof raw.key !== "string" || !SECTION_KEYS.includes(raw.key)) return bad(`${at}.key`, "This section is not one this product has.");
       const row = newSectionRow(raw.key as SectionKey);
@@ -204,8 +244,8 @@ export function readLayoutFormState(value: Record<string, unknown>): { ok: true;
       }
       rows.push(row);
     } else {
-      return bad(`${at}.kind`, "Each row must be a block or a section.");
+      return bad(`${at}.kind`, "Each row must be a block, a table or a section.");
     }
   }
-  return { ok: true, state: { doc: { title: doc.title, showMeta: doc.showMeta, pageHeader: doc.pageHeader as DocOptions["pageHeader"], pageFooter: doc.pageFooter as DocOptions["pageFooter"], ...(doc.letterhead !== undefined && { letterhead: doc.letterhead as LetterheadOptions }) }, layout: rows } };
+  return { ok: true, state: { doc: { title: doc.title, showMeta: doc.showMeta, pageHeader: doc.pageHeader as DocOptions["pageHeader"], pageFooter: doc.pageFooter as DocOptions["pageFooter"], ...(doc.letterhead !== undefined && { letterhead: doc.letterhead as LetterheadOptions }), ...(doc.theme !== undefined && { theme: doc.theme as DocOptions["theme"] }) }, layout: rows } };
 }

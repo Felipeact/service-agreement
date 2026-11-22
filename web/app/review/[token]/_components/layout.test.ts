@@ -43,7 +43,7 @@ describe("the review page draws the layout of the version's template", () => {
 
     // The PDF's document holds the items the PDF draws, in order; the page draws the same, each under the same title.
     const pdf = portalDocument(view)?.layout ?? [];
-    expect(pdf.map((item) => (item.kind === "section" ? item.key : item.text))).toEqual([
+    expect(pdf.map((item) => (item.kind === "section" ? item.key : item.kind === "block" ? item.text : "table"))).toEqual([
       "About this agreement",
       "included",
       "Welcome Fernwood Dental.",
@@ -73,7 +73,7 @@ describe("the review page draws the layout of the version's template", () => {
     expect(shown).toContain("Call 604-555-0100 to reach us.");
     expect(shown).toContain("Starting November 13, 2026.");
     expect(shown).not.toContain("{{");
-    expect(portalDocument(view)?.layout?.map((item) => (item.kind === "block" ? item.text : item.key))).toContain("Starting November 13, 2026.");
+    expect(portalDocument(view)?.layout?.map((item) => (item.kind === "block" ? item.text : item.kind === "section" ? item.key : "table"))).toContain("Starting November 13, 2026.");
   });
 
   test("C5509: a section absent from the layout is not drawn on the page, as on the PDF", () => {

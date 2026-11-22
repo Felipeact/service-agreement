@@ -8,7 +8,7 @@ import { itemText, type ItemWords } from "@/domain/org-settings";
 import { availableParts, DRAG_TYPE, VARIABLES, VARIABLE_LABELS, type DragPayload, type EditorDocument } from "@/domain/templates/editor-model";
 import type { LayoutRow } from "@/domain/agreement/layout-form";
 
-export type AddChoice = { kind: "block"; type: BlockType } | { kind: "part"; key: SectionKey };
+export type AddChoice = { kind: "block"; type: BlockType } | { kind: "part"; key: SectionKey } | { kind: "table" };
 
 const WRITING: { type: BlockType; label: string; glyph: string }[] = [
   { type: "heading", label: "Heading", glyph: "H" },
@@ -52,7 +52,7 @@ export function partName(key: SectionKey, words: ItemWords): string {
 }
 
 /** One dock control: a glyph over a label, 44px below desktop. */
-const ITEM = "inline-flex min-h-11 min-w-11 shrink-0 cursor-grab flex-col items-center justify-center gap-0.5 rounded-control px-3 text-[11px] font-medium whitespace-nowrap text-night-ink hover:bg-ink-nav hover:text-surface lg:min-h-12";
+const ITEM = "inline-flex min-h-11 min-w-11 shrink-0 cursor-grab flex-col items-center justify-center gap-0.5 rounded-control px-3 text-[11px] font-medium whitespace-nowrap text-ink-nav hover:bg-board hover:text-ink lg:min-h-12";
 
 type Props = {
   document: EditorDocument;
@@ -94,9 +94,9 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
         </div>
       )}
       {fieldsOpen && (
-        <div role="group" aria-label="Fields" className="flex max-h-[45dvh] w-[min(34rem,calc(100vw-1.5rem))] flex-col gap-2 overflow-y-auto rounded-panel bg-night p-3 shadow-card">
-          <p className="text-[11px] font-semibold tracking-wide text-night-ink uppercase">Insert a field</p>
-          {!canInsertVariable && <p className="text-[12px] text-night-ink">Select a text block to insert a field into it.</p>}
+        <div role="group" aria-label="Fields" className="flex max-h-[45dvh] w-[min(34rem,calc(100vw-1.5rem))] flex-col gap-2 overflow-y-auto rounded-panel border border-hairline bg-surface p-3 shadow-float">
+          <p className="text-[11px] font-semibold tracking-wide text-ink-2 uppercase">Insert a field</p>
+          {!canInsertVariable && <p className="text-[12px] text-ink-2">Select a text block to insert a field into it.</p>}
           <div className="flex flex-wrap gap-1.5">
             {VARIABLES.map((name) => (
               <button
@@ -109,7 +109,7 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
                   onVariable(name);
                   setFieldsOpen(false);
                 }}
-                className="inline-flex min-h-11 items-center rounded-full bg-ink-nav px-3 text-[12px] text-surface disabled:opacity-50 lg:min-h-8"
+                className="inline-flex min-h-11 items-center rounded-full bg-board px-3 text-[12px] text-ink hover:bg-action-tint disabled:opacity-50 lg:min-h-8"
               >
                 {VARIABLE_LABELS[name]}
               </button>
@@ -117,16 +117,22 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
           </div>
         </div>
       )}
-      <div role="toolbar" aria-label="Add element" className="relative flex max-w-full items-center gap-1 overflow-x-auto rounded-panel bg-night p-1.5 shadow-card">
+      <div role="toolbar" aria-label="Add element" className="relative flex max-w-full items-center gap-1 overflow-x-auto rounded-panel border border-hairline bg-surface p-1.5 shadow-float">
         {WRITING.map(({ type, label, glyph }) => (
           <button key={type} type="button" onClick={() => onAdd({ kind: "block", type })} {...drag({ kind: "block", type })} className={ITEM}>
-            <span aria-hidden="true" className="text-[15px] font-semibold text-surface">
+            <span aria-hidden="true" className="text-[15px] font-semibold text-ink">
               {glyph}
             </span>
             {label}
           </button>
         ))}
-        <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-ink-nav" />
+        <button type="button" onClick={() => onAdd({ kind: "table" })} {...drag({ kind: "table" })} className={ITEM}>
+          <span aria-hidden="true" className="text-[15px] font-semibold text-ink">
+            ▦
+          </span>
+          Table
+        </button>
+        <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-hairline" />
         {parts.map(({ key, onPage }) => (
           <button
             key={key}
@@ -138,26 +144,26 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
             {...(onPage ? { draggable: false as const } : drag({ kind: "part", key }))}
             className={`${ITEM} ${onPage ? "cursor-default opacity-40" : ""}`}
           >
-            <span aria-hidden="true" className="text-[15px] font-semibold text-surface">
+            <span aria-hidden="true" className="text-[15px] font-semibold text-ink">
               {partGlyph(key)}
             </span>
             {partName(key, words)}
             {onPage && <span className="sr-only">On page</span>}
           </button>
         ))}
-        <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-ink-nav" />
+        <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-hairline" />
         <button type="button" aria-expanded={fieldsOpen} aria-haspopup="true" onClick={() => {
             setFieldsOpen((was) => !was);
             setHeaderOpen(false);
           }} className={`${ITEM} cursor-pointer ${fieldsOpen ? "bg-action text-surface" : ""}`}>
-          <span aria-hidden="true" className="text-[15px] font-semibold text-surface">
+          <span aria-hidden="true" className="text-[15px] font-semibold text-ink">
             {"{ }"}
           </span>
           Field
         </button>
         {header && (
           <>
-            <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-ink-nav" />
+            <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-hairline" />
             <button
               type="button"
               aria-expanded={headerOpen}
@@ -168,7 +174,7 @@ export function AddElementDock({ document, rows, onAdd, onVariable, canInsertVar
               }}
               className={`${ITEM} cursor-pointer ${headerOpen ? "bg-action text-surface" : ""}`}
             >
-              <span aria-hidden="true" className="text-[15px] font-semibold text-surface">
+              <span aria-hidden="true" className="text-[15px] font-semibold text-ink">
                 ▭
               </span>
               Header

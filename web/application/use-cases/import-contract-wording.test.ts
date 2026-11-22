@@ -20,7 +20,7 @@ describe("importContractWording", () => {
     for (const role of ["owner", "admin"] as const) {
       const { run, parse, split } = setup();
       const result = await run(ask({ role }));
-      expect(result.ok && result.form.layout.map((row) => (row.kind === "block" ? row.text : row.key))).toEqual(["price", block.text, "signatures"]);
+      expect(result.ok && result.form.layout.map((row) => (row.kind === "block" ? row.text : row.kind === "section" ? row.key : "table"))).toEqual(["price", block.text, "signatures"]);
       expect(parse).toHaveBeenCalledTimes(1);
       expect(parse.mock.calls[0][0]).toBe(DOCX);
       expect(split).toHaveBeenCalledTimes(1);

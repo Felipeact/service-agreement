@@ -38,11 +38,39 @@ export const LETTERHEAD_FLAGS = ["logo", "name", "address", "phone"] as const sa
 /** The letterhead every document drew before it could be edited: logo (when the company has one), name, address and phone, on the left. */
 export const DEFAULT_LETTERHEAD: LetterheadOptions = { logo: true, logoSize: "medium", align: "left", name: true, address: true, phone: true };
 
+export const TEXT_ALIGNS = ["left", "center", "right"] as const;
+export type TextAlign = (typeof TEXT_ALIGNS)[number];
+
+/** How a text block is set: its alignment and weight. Absent means the plain look every block had before styling. */
+export type BlockStyle = { align?: TextAlign; bold?: boolean; italic?: boolean };
+export const BLOCK_STYLE_KEYS = ["align", "bold", "italic"] as const satisfies readonly (keyof BlockStyle)[];
+
+/** The document's own colour and type, set per template. Absent means the company's accent colour and the sans face. */
+export const THEME_ACCENTS = {
+  blue: "#2563eb",
+  teal: "#0f766e",
+  amber: "#b45309",
+  violet: "#6d28d9",
+  rose: "#be123c",
+  slate: "#334155",
+} as const;
+export type ThemeAccent = keyof typeof THEME_ACCENTS;
+export const THEME_ACCENT_KEYS = Object.keys(THEME_ACCENTS) as ThemeAccent[];
+export const THEME_FONTS = ["sans", "serif"] as const;
+export type ThemeFont = (typeof THEME_FONTS)[number];
+export type Theme = { accent?: ThemeAccent; font?: ThemeFont };
+
+/** A table of free text: its header row (when `header`), then the rest, every row the same width. Cells may hold merge variables. */
+export const TABLE_MAX_ROWS = 12;
+export const TABLE_MAX_COLUMNS = 5;
+export const MAX_CELL = 120;
+export type TableItem = { kind: "table"; header: boolean; rows: string[][] };
+
 /**
  * The title (merge variables allowed), whether the number, customer, site and term lines print, and the repeated letterhead and
  * footer. `letterhead` is how the header looks; a document without it draws `DEFAULT_LETTERHEAD`.
  */
-export type DocOptions = { title: string; showMeta: boolean; pageHeader: PageHeader; pageFooter: PageFooter; letterhead?: LetterheadOptions };
+export type DocOptions = { title: string; showMeta: boolean; pageHeader: PageHeader; pageFooter: PageFooter; letterhead?: LetterheadOptions; theme?: Theme };
 
 /** The letterhead options of a document, the default for the parts it does not say. */
 export const letterheadOf = (doc: Pick<DocOptions, "letterhead">): LetterheadOptions => ({ ...DEFAULT_LETTERHEAD, ...doc.letterhead });
@@ -69,14 +97,14 @@ export type TitleOptions = { title?: string };
 export type SignatureOptions = { customerLabel?: string; contractorLabel?: string; caption?: string; nameField?: boolean; heading?: string };
 export type SectionOptions = PriceOptions | IncludedOptions | TitleOptions | SignatureOptions;
 
-export type BlockItem = { kind: "block"; type: BlockType; text: string; level?: 1 | 2; indent?: 0 | 1 | 2 | 3; pageBreakBefore?: boolean };
+export type BlockItem = { kind: "block"; type: BlockType; text: string; level?: 1 | 2; indent?: 0 | 1 | 2 | 3; pageBreakBefore?: boolean; style?: BlockStyle };
 export type SectionItem =
   | { kind: "section"; key: "price"; options?: PriceOptions }
   | { kind: "section"; key: "included"; options?: IncludedOptions }
   | { kind: "section"; key: "schedule" | "equipment"; options?: TitleOptions }
   | { kind: "section"; key: "terms" }
   | { kind: "section"; key: "signatures"; options?: SignatureOptions };
-export type LayoutItem = BlockItem | SectionItem;
+export type LayoutItem = BlockItem | SectionItem | TableItem;
 export type SectionKey = SectionItem["key"];
 
 /** What a version of a template with schema 2 holds for the part both documents share. */
@@ -114,6 +142,9 @@ export function layoutOf(body: AgreementTemplateBody): LayoutBody {
 
 /** Whether a layout draws the section. */
 export const hasSection = (layout: readonly LayoutItem[], key: SectionKey) => layout.some((item) => item.kind === "section" && item.key === key);
+
+/** The accent colour a document draws in: its template's theme, else the company's own. */
+export const accentOf = (doc: Pick<DocOptions, "theme">, tenantAccent: string): string => (doc.theme?.accent ? THEME_ACCENTS[doc.theme.accent] : tenantAccent);
 
 /** The options of a section in a layout, `undefined` when it has none or is absent. Read as the options type of that key. */
 export function sectionOptions(layout: readonly LayoutItem[], key: SectionKey): SectionOptions | undefined {
@@ -166,6 +197,7 @@ function fillOptions<T extends SectionItem>(item: T, values: TemplateValues): T 
 export function renderLayout(layout: readonly LayoutItem[], values: TemplateValues): LayoutItem[] {
   const filled = layout.map((item): LayoutItem | null => {
     if (item.kind === "section") return fillOptions(item, values);
+    if (item.kind === "table") return { ...item, rows: item.rows.map((row) => row.map((cell) => fillText(cell, values))) };
     const { text, missing } = fillVariables(item.text, values);
     return item.type === "clause" && missing ? null : { ...item, text };
   });
@@ -242,8 +274,64 @@ function checkOptions(key: SectionKey, value: unknown, at: string, n: number, er
   }
 }
 
+/** Why a block's style cannot be stored, as messages; empty when it can. */
+function checkStyle(value: unknown, at: string, n: number, errors: LayoutError[]): void {
+  if (!isRecord(value)) {
+    errors.push({ field: `${at}.style`, message: `Item ${n} has a style that is not an object.` });
+    return;
+  }
+  const extra = unknownKeys(value, BLOCK_STYLE_KEYS);
+  if (extra.length > 0) errors.push({ field: `${at}.style`, message: `Item ${n} has an unknown style option: ${extra[0]}.` });
+  if ("align" in value && !(TEXT_ALIGNS as readonly unknown[]).includes(value.align)) errors.push({ field: `${at}.style.align`, message: `Item ${n} must align left, center or right.` });
+  for (const flag of ["bold", "italic"] as const) {
+    if (flag in value && typeof value[flag] !== "boolean") errors.push({ field: `${at}.style.${flag}`, message: `Item ${n} must say true or false for ${flag}.` });
+  }
+}
+
+function checkTable(item: Record<string, unknown>, at: string, n: number, errors: LayoutError[]): void {
+  const extra = unknownKeys(item, ["kind", "header", "rows"]);
+  if (extra.length > 0) errors.push({ field: at, message: `Item ${n} has an unknown key: ${extra[0]}.` });
+  if (typeof item.header !== "boolean") errors.push({ field: `${at}.header`, message: `Table ${n} must say true or false for its header row.` });
+  const rows = item.rows;
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > TABLE_MAX_ROWS) {
+    errors.push({ field: `${at}.rows`, message: `Table ${n} needs 1 to ${TABLE_MAX_ROWS} rows.` });
+    return;
+  }
+  const width = Array.isArray(rows[0]) ? rows[0].length : 0;
+  if (width < 1 || width > TABLE_MAX_COLUMNS) {
+    errors.push({ field: `${at}.rows`, message: `Table ${n} needs 1 to ${TABLE_MAX_COLUMNS} columns.` });
+    return;
+  }
+  for (const [r, row] of rows.entries()) {
+    if (!Array.isArray(row) || row.length !== width) {
+      errors.push({ field: `${at}.rows.${r}`, message: `Every row of table ${n} must have ${width} cells.` });
+      continue;
+    }
+    for (const [c, cell] of row.entries()) {
+      if (typeof cell !== "string") errors.push({ field: `${at}.rows.${r}.${c}`, message: `A cell of table ${n} must be text.` });
+      else if (cell.length > MAX_CELL) errors.push({ field: `${at}.rows.${r}.${c}`, message: `A cell of table ${n} is too long (${cell.length} characters, at most ${MAX_CELL}).` });
+      else {
+        const unknown = unknownVariable(cell);
+        if (unknown !== null) errors.push({ field: `${at}.rows.${r}.${c}`, message: `A cell of table ${n} uses an unknown variable: ${unknown}.` });
+      }
+    }
+  }
+}
+
+function checkTheme(value: unknown, errors: LayoutError[]): void {
+  if (!isRecord(value)) {
+    errors.push({ field: "doc.theme", message: "The theme must be an object." });
+    return;
+  }
+  const extra = unknownKeys(value, ["accent", "font"]);
+  if (extra.length > 0) errors.push({ field: "doc.theme", message: `The theme has an unknown key: ${extra[0]}.` });
+  if ("accent" in value && !(THEME_ACCENT_KEYS as readonly unknown[]).includes(value.accent)) errors.push({ field: "doc.theme.accent", message: `The accent colour must be one of ${THEME_ACCENT_KEYS.join(", ")}.` });
+  if ("font" in value && !(THEME_FONTS as readonly unknown[]).includes(value.font)) errors.push({ field: "doc.theme.font", message: "The font must be sans or serif." });
+}
+
 function checkBlockItem(item: Record<string, unknown>, at: string, n: number, errors: LayoutError[]): void {
-  const extra = unknownKeys(item, ["kind", "type", "text", "level", "indent", "pageBreakBefore"]);
+  const extra = unknownKeys(item, ["kind", "type", "text", "level", "indent", "pageBreakBefore", "style"]);
+  if ("style" in item && item.style !== undefined) checkStyle(item.style, at, n, errors);
   if (extra.length > 0) errors.push({ field: at, message: `Item ${n} has an unknown key: ${extra[0]}.` });
   if (!(BLOCK_TYPES as readonly unknown[]).includes(item.type)) {
     errors.push({ field: `${at}.type`, message: `Item ${n} has an unknown block type: ${String(item.type)}.` });
@@ -272,7 +360,7 @@ export function validateLayout(input: { doc: unknown; layout: unknown }, spec: L
   if (!isRecord(doc)) {
     errors.push({ field: "doc", message: "The document options are missing." });
   } else {
-    const extra = unknownKeys(doc, ["title", "showMeta", "pageHeader", "pageFooter", "letterhead"]);
+    const extra = unknownKeys(doc, ["title", "showMeta", "pageHeader", "pageFooter", "letterhead", "theme"]);
     if (extra.length > 0) errors.push({ field: "doc", message: `The document options have an unknown key: ${extra[0]}.` });
     if (typeof doc.title === "string" && doc.title.length > MAX_TITLE) {
       errors.push({ field: "doc.title", message: `The title is too long (${doc.title.length} characters, at most ${MAX_TITLE}).` });
@@ -293,6 +381,7 @@ export function validateLayout(input: { doc: unknown; layout: unknown }, spec: L
       const problem = letterheadProblem(doc.letterhead);
       if (problem !== null) errors.push({ field: "doc.letterhead", message: problem });
     }
+    if ("theme" in doc && doc.theme !== undefined) checkTheme(doc.theme, errors);
   }
 
   if (!Array.isArray(layout)) {
@@ -314,6 +403,8 @@ export function validateLayout(input: { doc: unknown; layout: unknown }, spec: L
     } else if (item.kind === "block") {
       blocks += 1;
       checkBlockItem(item, at, n, errors);
+    } else if (item.kind === "table") {
+      checkTable(item, at, n, errors);
     } else if (item.kind === "section") {
       const extra = unknownKeys(item, ["kind", "key", "options"]);
       if (extra.length > 0) errors.push({ field: at, message: `Item ${n} has an unknown key: ${extra[0]}.` });

@@ -110,7 +110,7 @@ export function moveRowTo(rows: LayoutRow[], from: number, at: number): { rows: 
 }
 
 /** What a drag carries: an element chosen in the Add Element panel, or a block of the page being moved. */
-export type DragPayload = { kind: "add"; choice: { kind: "block"; type: BlockType } | { kind: "part"; key: SectionKey } } | { kind: "move"; from: number };
+export type DragPayload = { kind: "add"; choice: { kind: "block"; type: BlockType } | { kind: "part"; key: SectionKey } | { kind: "table" } } | { kind: "move"; from: number };
 
 export const DRAG_TYPE = "application/x-template-editor";
 
@@ -126,6 +126,7 @@ export function readDragPayload(raw: string): DragPayload | null {
   const { kind, choice, from } = value as { kind?: unknown; choice?: { kind?: unknown; type?: unknown; key?: unknown }; from?: unknown };
   if (kind === "move") return typeof from === "number" && Number.isInteger(from) && from >= 0 ? { kind, from } : null;
   if (kind !== "add" || typeof choice !== "object" || choice === null) return null;
+  if (choice.kind === "table") return { kind, choice: { kind: "table" } };
   if (choice.kind === "block" && (BLOCK_TYPES as readonly unknown[]).includes(choice.type)) return { kind, choice: { kind: "block", type: choice.type as BlockType } };
   if (choice.kind === "part" && typeof choice.key === "string" && (AGREEMENT_SECTION_KEYS as readonly string[]).concat(CONTRACT_SECTION_KEYS).includes(choice.key)) return { kind, choice: { kind: "part", key: choice.key as SectionKey } };
   return null;
