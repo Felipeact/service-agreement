@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Service Pacts - Demo</title>
+<!-- Tailwind CSS v3 CDN with forms and container-queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            darkNavy: '#0f172a',
+            sectionDark: '#0b1323',
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="base-styling">
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="bg-[#f8f9fa] text-slate-900 min-h-screen flex flex-col justify-between">
+<!-- BEGIN: SiteHeader -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden z-0"><div class="absolute -top-32 left-1/4 w-[550px] h-[550px] rounded-full bg-blue-400/10 blur-3xl animate-float-slow"></div><div class="absolute top-1/3 -right-24 w-[480px] h-[480px] rounded-full bg-indigo-500/10 blur-3xl animate-float-reverse"></div><div class="absolute top-2/3 left-10 w-[420px] h-[420px] rounded-full bg-cyan-400/10 blur-3xl animate-float-slow"></div><div class="absolute inset-0 bg-grid-pattern opacity-40"></div></div><header class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 border-b border-slate-200/80">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+<a aria-label="Service Pacts Home" class="flex items-center gap-3 group" href="/#">
+<div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:bg-blue-700 transition-colors">
+<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M7 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
+<path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
+<path d="M4 14l4 -4a3.5 3.5 0 0 1 5 0l2 2a3.5 3.5 0 0 0 5 0l2 -2"></path>
+</svg>
+</div>
+<div class="flex items-center gap-2.5">
+<span class="text-xl font-bold tracking-tight text-slate-900">Service Pacts</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80"><span>🍁</span> CAD</span>
+</div>
+</a>
+<nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+<a class="hover:text-slate-900 transition-colors" href="/product">Product</a>
+<a class="text-blue-600 font-semibold text-sm flex items-center gap-1.5" href="/demo">
+<span>Demo</span>
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+</a>
+<a class="hover:text-slate-900 transition-colors" href="/trades">Trades</a>
+<a class="hover:text-slate-900 transition-colors" href="/pricing">Pricing</a>
+</nav>
+<div class="flex items-center gap-3">
+<a class="hidden sm:inline-block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-2 py-1" href="/sign-in">Sign in</a>
+<a class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-all shadow-sm hover:shadow-md hover:shadow-blue-500/20" href="/register">
+<span>Get started</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M5 12h14M12 5l7 7-7 7"></path>
+</svg>
+</a>
+</div>
+</div>
+</header>
+<!-- END: SiteHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-grow pt-16 pb-24"><div class="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+<!-- Hero Header -->
+<div class="text-center max-w-3xl mx-auto pt-4 pb-2">
+<h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1] mb-5">
+      See a deal move from list to <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">signed contract</span>.
+    </h1>
+<p class="text-lg text-slate-600 leading-relaxed font-normal max-w-2xl mx-auto mb-7">
+      Watch how a messy equipment spreadsheet transforms into a legally enforceable, priced commercial service agreement in under 3 minutes.
+    </p>
+<!-- Action Badges -->
+<div class="flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-slate-600">
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-sm">
+<span class="text-amber-500 font-bold">⚡</span> 3-Minute Walkthrough
+      </span>
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-sm">
+<span>🍁</span> Canadian Trade Workflow
+      </span>
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-sm">
+<span class="text-blue-500">✦</span> No sign-up required
+      </span>
+</div>
+</div>
+<!-- Premier Video Walkthrough Container (Ready for Embed) -->
+<div class="mt-12 max-w-5xl mx-auto">
+<div class="glass-player-panel rounded-2xl border border-slate-700/60 shadow-2xl overflow-hidden relative group transition-all duration-300 hover:border-slate-600">
+<!-- Player Top Chrome Bar -->
+<div class="px-5 py-3.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+<div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+<div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+</div>
+<span class="text-slate-600">|</span>
+<div class="flex items-center gap-2 font-medium text-slate-200 truncate">
+<svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewbox="0 0 20 20">
+<path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path>
+</svg>
+<span class="truncate">Service Pacts Platform Walkthrough (HVAC &amp; Mechanical Agreement Workflow)</span>
+</div>
+</div>
+<div class="flex items-center gap-3 flex-shrink-0">
+<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono text-[11px] font-semibold">1080p HD</span>
+<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">02:45</span>
+</div>
+</div>
+<!-- Video Stage / Canvas Area (Interactive Placeholder Ready for Real Embed) -->
+<div class="relative aspect-[16/9] w-full bg-[#0a0f1d] overflow-hidden flex flex-col justify-between p-6 sm:p-10 select-none">
+<!-- Subtle Background Canvas Graphics depicting Workflow Preview -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<div class="absolute inset-0 bg-grid-pattern"></div>
+<div class="absolute top-10 left-10 w-96 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
+<div class="absolute bottom-10 right-10 w-96 h-64 bg-indigo-600/20 rounded-full blur-3xl"></div>
+</div>
+<!-- Top Slot / Watermark Badge -->
+<div class="relative z-10 flex items-center justify-between">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-slate-800/80 border border-slate-700/70 text-slate-300 text-xs backdrop-blur-sm">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+<span>Ready for Video Embed</span>
+</div>
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-slate-900/70 text-slate-400 text-xs font-mono border border-slate-800">
+<span>embed: mp4 / vimeo / loom</span>
+</div>
+</div>
+<!-- Centered Glowing Play Button & Call to Action -->
+<div class="relative z-10 flex flex-col items-center justify-center my-auto cursor-pointer group/btn">
+<div class="relative flex items-center justify-center">
+<div class="absolute -inset-4 rounded-full bg-blue-500/20 blur-xl group-hover/btn:bg-blue-500/40 transition-all duration-300"></div>
+<div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-blue-600 to-blue-500 text-white flex items-center justify-center shadow-2xl border-2 border-white/20 transform group-hover/btn:scale-105 transition-all duration-300">
+<svg class="w-9 h-9 sm:w-10 sm:h-10 ml-1 text-white" fill="currentColor" viewbox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</div>
+</div>
+<div class="mt-4 text-center">
+<p class="text-base sm:text-lg font-bold text-white group-hover/btn:text-blue-300 transition-colors">
+              Watch 3-minute product demo
+            </p>
+<p class="text-xs text-slate-400 mt-0.5">
+              From customer equipment list to signable proposal in real time
+            </p>
+</div>
+</div>
+<!-- Video Bottom Controls Simulator -->
+<div class="relative z-10 w-full pt-4">
+<!-- Progress Bar Scrub Track -->
+<div class="w-full h-1.5 bg-slate-800/90 rounded-full overflow-hidden mb-3 relative cursor-pointer group/scrub">
+<div class="h-full bg-blue-500 rounded-full relative" style="width: 28%;">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover/scrub:opacity-100 transition-opacity"></div>
+</div>
+</div>
+<!-- Bar Controls -->
+<div class="flex items-center justify-between text-slate-400 text-xs">
+<div class="flex items-center gap-4">
+<button aria-label="Play / Pause" class="text-slate-300 hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" fill-rule="evenodd"></path></svg>
+</button>
+<button aria-label="Sound toggle" class="text-slate-400 hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+<span class="font-mono text-[11px] text-slate-400">00:46 / 02:45</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline text-[11px] text-slate-400">Step 1 of 6: Import &amp; Extraction</span>
+<button aria-label="Fullscreen" class="text-slate-400 hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section Divider with Title -->
+<div class="mt-20 text-center max-w-xl mx-auto mb-10" id="simulation-section">
+<span class="text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/50">Hands-On Simulation</span>
+<h3 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-3">
+      Explore the 6-Step Engine Step by Step
+    </h3>
+<p class="text-sm text-slate-500 mt-2">
+      Click through each stage to preview the contractor-first workflow in action.
+    </p>
+</div>
+<!-- Steps Selector Pills (Interactive Tabs) -->
+<div class="flex flex-wrap gap-2.5 items-center justify-center" id="steps-tab-container">
+<!-- Step 1: Active by default -->
+<button class="step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-50/50 text-blue-700 font-semibold text-sm shadow-sm transition-all" id="step-tab-1" onclick="switchStep(1)">
+<span class="step-badge flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-xs">1</span>
+<span>Import</span>
+</button>
+<!-- Step 2 -->
+<button class="step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition-all" id="step-tab-2" onclick="switchStep(2)">
+<span class="step-badge flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 font-bold text-xs text-slate-500">2</span>
+<span>Build</span>
+</button>
+<!-- Step 3 -->
+<button class="step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition-all" id="step-tab-3" onclick="switchStep(3)">
+<span class="step-badge flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 font-bold text-xs text-slate-500">3</span>
+<span>Send</span>
+</button>
+<!-- Step 4 -->
+<button class="step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition-all" id="step-tab-4" onclick="switchStep(4)">
+<span class="step-badge flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 font-bold text-xs text-slate-500">4</span>
+<span>Decide</span>
+</button>
+<!-- Step 5 -->
+<button class="step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition-all" id="step-tab-5" onclick="switchStep(5)">
+<span class="step-badge flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 font-bold text-xs text-slate-500">5</span>
+<span>Sign</span>
+</button>
+<!-- Step 6 -->
+<button class="step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition-all" id="step-tab-6" onclick="switchStep(6)">
+<span class="step-badge flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 font-bold text-xs text-slate-500">6</span>
+<span>Renew</span>
+</button>
+</div>
+<!-- Interactive Demonstration Panels Container -->
+<div class="mt-8">
+<!-- STEP 1 PANEL: Import -->
+<div class="step-content-panel grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200" id="step-panel-1">
+<div class="lg:col-span-5 flex flex-col items-start">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-semibold tracking-wide mb-4">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          Step 1: Estimator View
+        </span>
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-4">
+          Drop in the customer's list.
+        </h2>
+<p class="text-slate-600 text-[15px] leading-relaxed mb-8">
+          Upload the Excel, CSV, Word or PDF the customer sent. AI reads the rows, the app maps them to your own item types, and you fix any ambiguities in an instant review grid.
+        </p>
+<div class="space-y-3 mb-8 w-full">
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Extracts make, model, tonnage, and tag serials automatically.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Custom Canadian trade mappings (HVAC, refrigeration, plumbing, electrical).</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Auto-detects duplicates and suggests correct asset maintenance templates.</span>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<button class="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-400 text-sm font-medium cursor-not-allowed" disabled="">
+            Previous
+          </button>
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors" onclick="switchStep(2)">
+<span>Next: Build agreement</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+<div class="lg:col-span-7">
+<div class="bg-slate-50/70 rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 sm:p-6">
+<div class="flex items-center justify-between pb-4 border-b border-slate-200">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                XLS
+              </div>
+<div>
+<span class="font-bold text-slate-900 text-sm tracking-tight block">harbour-point-units.xlsx</span>
+<span class="text-[11px] text-slate-500">Uploaded just now • 4 total assets detected</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-emerald-100/80 text-emerald-800 text-xs font-semibold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              3 of 4 recognized
+            </span>
+</div>
+<div class="overflow-x-auto mt-2">
+<table class="w-full text-left text-xs border-collapse bg-white rounded-lg border border-slate-200 my-2 overflow-hidden">
+<thead>
+<tr class="text-slate-500 font-semibold bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider">
+<th class="py-3 px-4" scope="col">As written</th>
+<th class="py-3 px-4" scope="col">Unit</th>
+<th class="py-3 px-4" scope="col">Matched to Trade Catalog</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-slate-700 text-xs">
+<tr class="hover:bg-slate-50/60 transition-colors">
+<td class="py-3 px-4 font-medium text-slate-900">RTU</td>
+<td class="py-3 px-4 text-slate-600 font-mono text-[11.5px]">RTU-01</td>
+<td class="py-3 px-4 font-semibold text-slate-900 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Rooftop unit (10 Ton Trane)</span>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/60 transition-colors">
+<td class="py-3 px-4 font-medium text-slate-900">Rooftop unit</td>
+<td class="py-3 px-4 text-slate-600 font-mono text-[11.5px]">RTU-02</td>
+<td class="py-3 px-4 font-semibold text-slate-900 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Rooftop unit (7.5 Ton Carrier)</span>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/60 transition-colors">
+<td class="py-3 px-4 font-medium text-slate-900">MAU</td>
+<td class="py-3 px-4 text-slate-600 font-mono text-[11.5px]">MUA-01</td>
+<td class="py-3 px-4 font-semibold text-slate-900 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Make-up air (Engineered Air)</span>
+</td>
+</tr>
+<tr class="bg-amber-50/40 hover:bg-amber-50/60 transition-colors">
+<td class="py-3 px-4 font-medium text-slate-900">Boiler (condensing)</td>
+<td class="py-3 px-4 text-slate-600 font-mono text-[11.5px]">B-01</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+<svg class="w-3 h-3 text-amber-600" fill="currentColor" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" fill-rule="evenodd"></path></svg>
+                      Needs trade assignment
+                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-3.5 flex items-center gap-2 text-xs text-slate-500">
+<span class="px-2 py-0.5 rounded bg-slate-200/80 font-semibold text-[11px] text-slate-700">Sample data</span>
+<span>Spellings are parsed automatically; low-confidence matches are flagged for quick 1-click confirmation.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- STEP 2 PANEL: Build -->
+<div class="step-content-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200" id="step-panel-2">
+<div class="lg:col-span-5 flex flex-col items-start">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-semibold tracking-wide mb-4">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          Step 2: Agreement Builder
+        </span>
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-4">
+          Generate the 12-month service matrix.
+        </h2>
+<p class="text-slate-600 text-[15px] leading-relaxed mb-8">
+          The engine pairs recognized machinery with your standard preventative maintenance frequencies. Labor rates, filter changes, and seasonal coil inspections are calculated automatically into a clean annual sum.
+        </p>
+<div class="space-y-3 mb-8 w-full">
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Quarterly schedule matrix automatically mapped to Jan, Apr, Jul, and Oct.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Applies your trade markup for parts and pre-calculates emergency dispatch rates.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Custom scope clauses included for Canadian extreme cold weather protocols.</span>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<button class="px-5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors" onclick="switchStep(1)">
+            Previous
+          </button>
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors" onclick="switchStep(3)">
+<span>Next: Send portal link</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+<div class="lg:col-span-7">
+<div class="bg-slate-50/70 rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 sm:p-6">
+<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+<div>
+<span class="font-bold text-slate-900 text-sm tracking-tight block">Commercial Preventative Schedule (2025–2026)</span>
+<span class="text-[11px] text-slate-500">Tier: Comprehensive Mechanical • 4 Scheduled Inspections / Year</span>
+</div>
+<div class="text-right">
+<span class="text-xs text-slate-500 block">Total Contract Value</span>
+<span class="text-base font-extrabold text-blue-600">$14,200 <span class="text-xs font-semibold text-slate-600">CAD/yr</span></span>
+</div>
+</div>
+<!-- 12-Month Service Matrix Preview -->
+<div class="overflow-x-auto mt-3">
+<table class="w-full text-left text-xs bg-white rounded-lg border border-slate-200 overflow-hidden">
+<thead>
+<tr class="bg-slate-100/80 text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
+<th class="py-2.5 px-3">Equipment</th>
+<th class="py-2.5 px-2 text-center">Q1 (Jan)</th>
+<th class="py-2.5 px-2 text-center">Q2 (Apr)</th>
+<th class="py-2.5 px-2 text-center">Q3 (Jul)</th>
+<th class="py-2.5 px-2 text-center">Q4 (Oct)</th>
+<th class="py-2.5 px-3 text-right">Subtotal</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-slate-700">
+<tr>
+<td class="py-2.5 px-3 font-medium text-slate-900">RTU-01 &amp; 02 (Filters &amp; Belts)</td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-semibold">Inspect</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-semibold">Major PM</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-semibold">Inspect</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-semibold">Winterize</span></td>
+<td class="py-2.5 px-3 text-right font-mono font-medium">$5,800</td>
+</tr>
+<tr>
+<td class="py-2.5 px-3 font-medium text-slate-900">MUA-01 (Gas Train &amp; Burner)</td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">Off-cycle</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-semibold">Service</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">Off-cycle</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-semibold">Start-up</span></td>
+<td class="py-2.5 px-3 text-right font-mono font-medium">$3,600</td>
+</tr>
+<tr>
+<td class="py-2.5 px-3 font-medium text-slate-900">B-01 Boiler &amp; Pumps</td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-semibold">Full Check</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-semibold">Shut-down</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">Standby</span></td>
+<td class="py-2.5 px-2 text-center"><span class="inline-block px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-semibold">Ignition Test</span></td>
+<td class="py-2.5 px-3 text-right font-mono font-medium">$4,800</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Billing Schedule Breakdown -->
+<div class="mt-4 p-3 bg-blue-50/60 rounded-lg border border-blue-100 flex items-center justify-between text-xs">
+<span class="text-blue-900 font-medium">Billed quarterly in advance: <strong>$3,550 CAD + GST/HST</strong></span>
+<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+              ✓ Ready for dispatch
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- STEP 3 PANEL: Send -->
+<div class="step-content-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200" id="step-panel-3">
+<div class="lg:col-span-5 flex flex-col items-start">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-semibold tracking-wide mb-4">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          Step 3: Portal Delivery
+        </span>
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-4">
+          Send a dedicated client review link.
+        </h2>
+<p class="text-slate-600 text-[15px] leading-relaxed mb-8">
+          Forget clumsy PDF email attachments that get lost in commercial spam filters. Customers receive an encrypted branded portal link where they can inspect asset details, service tiers, and pricing with complete clarity.
+        </p>
+<div class="space-y-3 mb-8 w-full">
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Real-time email tracking with view alerts and open timestamps.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Custom white-label branding featuring contractor logo and corporate colors.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Secure password-free tokenized URL for frictionless client access.</span>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<button class="px-5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors" onclick="switchStep(2)">
+            Previous
+          </button>
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors" onclick="switchStep(4)">
+<span>Next: Live client decision</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+<div class="lg:col-span-7">
+<div class="bg-slate-50/70 rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 sm:p-6">
+<div class="bg-white rounded-lg border border-slate-200 p-4 shadow-xs">
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Outbound Dispatch Preview</span>
+<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-mono text-[11px] font-semibold">Link Active</span>
+</div>
+<!-- Recipient Metadata -->
+<div class="mt-3 space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-500 font-medium">Recipient:</span>
+<span class="font-semibold text-slate-800">David Armstrong &lt;d.armstrong@harbourpointmarina.ca&gt;</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500 font-medium">Property:</span>
+<span class="text-slate-700">Harbour Point Marina — Building B &amp; Mechanical Room</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500 font-medium">Secure Link:</span>
+<span class="text-blue-600 font-mono text-[11px] underline">pacts.co/review/hp-marina-2025?tok=89f3a</span>
+</div>
+</div>
+<!-- Email Body Mockup -->
+<div class="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-700 space-y-2">
+<p class="font-semibold text-slate-900">Hi David,</p>
+<p>Your tailored 2025–2026 Commercial Mechanical Service Pact is ready for review. We have mapped all 4 units (2 RTUs, Make-Up Air unit, and Condensing Boiler) into the quarterly maintenance schedule.</p>
+<div class="pt-2">
+<a class="inline-block px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 text-center transition-colors" href="javascript:void(0)" onclick="switchStep(4)">
+                  Open Interactive Pact Portal →
+                </a>
+</div>
+</div>
+</div>
+<div class="mt-3.5 flex items-center justify-between text-xs text-slate-500 px-1">
+<span>Dispatched via AWS Canada Central (Montreal Region)</span>
+<span class="text-emerald-600 font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              99.8% inbox delivery
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- STEP 4 PANEL: Decide -->
+<div class="step-content-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200" id="step-panel-4">
+<div class="lg:col-span-5 flex flex-col items-start">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-semibold tracking-wide mb-4">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          Step 4: Customer Experience
+        </span>
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-4">
+          Clients decide in minutes, not weeks.
+        </h2>
+<p class="text-slate-600 text-[15px] leading-relaxed mb-8">
+          The property manager sees their equipment list clearly categorized. They can select optional add-ons (such as 24/7 priority emergency response or coil chemical power washing) with automatic price adjustments before signing.
+        </p>
+<div class="space-y-3 mb-8 w-full">
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Live notification ping sent to your phone the exact second they open it.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Inline change-request notes prevent messy back-and-forth email chains.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Transparency builds trust and closes 3x faster than static PDF quotes.</span>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<button class="px-5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors" onclick="switchStep(3)">
+            Previous
+          </button>
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors" onclick="switchStep(5)">
+<span>Next: Digital signature</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+<div class="lg:col-span-7">
+<div class="bg-slate-50/70 rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 sm:p-6">
+<div class="bg-white rounded-lg border border-slate-200 p-4">
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+<span class="text-xs font-bold text-slate-800">Client is currently reviewing</span>
+</div>
+<span class="text-[11px] font-mono text-slate-400">Session: 3m 42s active</span>
+</div>
+<!-- Add-on Toggles Mockup -->
+<div class="mt-4 space-y-3">
+<div class="p-3 rounded-lg border border-emerald-300 bg-emerald-50/40 flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">✓</span>
+<div>
+<p class="text-xs font-bold text-slate-900">Base Agreement: 4 Quarterly Preventative Visits</p>
+<p class="text-[11px] text-slate-500">Includes belt replacements, coil brushing &amp; filter swaps</p>
+</div>
+</div>
+<span class="font-mono text-xs font-bold text-slate-900">$14,200 CAD</span>
+</div>
+<div class="p-3 rounded-lg border border-blue-300 bg-blue-50/30 flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<input checked="" class="w-4 h-4 text-blue-600 rounded border-slate-300 pointer-events-none" type="checkbox"/>
+<div>
+<p class="text-xs font-bold text-slate-900">Add-on: 24/7 Priority Emergency Guarantee (2-hr response)</p>
+<p class="text-[11px] text-slate-500">Selected by customer during review</p>
+</div>
+</div>
+<span class="font-mono text-xs font-bold text-blue-700">+$1,400 CAD</span>
+</div>
+</div>
+<!-- Decision Bar -->
+<div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-[11px] text-slate-400 block">Accepted Proposal Total:</span>
+<span class="text-base font-extrabold text-slate-900">$15,600 <span class="text-xs font-normal text-slate-500">CAD/yr + HST</span></span>
+</div>
+<button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center gap-1.5" onclick="switchStep(5)">
+<span>Approve &amp; Proceed to Sign</span>
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- STEP 5 PANEL: Sign -->
+<div class="step-content-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200" id="step-panel-5">
+<div class="lg:col-span-5 flex flex-col items-start">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-semibold tracking-wide mb-4">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          Step 5: Enforceable Sign-Off
+        </span>
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-4">
+          Legally binding Canadian digital e-signature.
+        </h2>
+<p class="text-slate-600 text-[15px] leading-relaxed mb-8">
+          Complies with the Uniform Electronic Commerce Act (UECA) and provincial legal standards (Ontario, BC, Alberta, etc.). Automatically appends cryptographic audit certificates and timestamps to protect your business.
+        </p>
+<div class="space-y-3 mb-8 w-full">
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Immutable audit trail recording IP address, device fingerprints, and SHA-256 hash.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Automatic generation of execution certificate PDF emailed to both parties.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Includes standardized Canadian trade terms regarding access, safety, and payment schedule.</span>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<button class="px-5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors" onclick="switchStep(4)">
+            Previous
+          </button>
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors" onclick="switchStep(6)">
+<span>Next: 12-month auto renewal</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+<div class="lg:col-span-7">
+<div class="bg-slate-50/70 rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 sm:p-6">
+<div class="bg-white rounded-lg border border-slate-200 p-5 shadow-xs">
+<div class="flex items-center justify-between pb-3 border-b border-slate-200">
+<span class="font-bold text-slate-900 text-xs uppercase tracking-wider">Executed Agreement Certificate</span>
+<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                ✓ Signed &amp; Enforceable
+              </span>
+</div>
+<!-- Signature Canvas Preview -->
+<div class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col items-center">
+<span class="text-[11px] text-slate-400 uppercase font-mono mb-2">Digital Signature Recorded</span>
+<div class="w-full text-center py-2 font-serif text-3xl text-blue-900 italic select-none">
+                David Armstrong
+              </div>
+<div class="w-48 h-0.5 bg-slate-300 mt-1 mb-2"></div>
+<p class="text-[11px] text-slate-500">Authorized Signatory • Harbour Point Marina Management Inc.</p>
+</div>
+<!-- Audit Metadata Stamp -->
+<div class="mt-4 grid grid-cols-2 gap-3 text-[11px] text-slate-600 bg-slate-100/60 p-3 rounded-lg border border-slate-200/80 font-mono">
+<div>
+<span class="text-slate-400 block text-[10px]">TIME OF SIGNING</span>
+<span>Oct 24, 2025 • 14:22:08 EDT</span>
+</div>
+<div>
+<span class="text-slate-400 block text-[10px]">SIGNER IP RESIDENCY</span>
+<span>174.114.88.21 (Toronto, ON)</span>
+</div>
+<div>
+<span class="text-slate-400 block text-[10px]">GOVERNING LAW</span>
+<span>Province of Ontario, Canada</span>
+</div>
+<div>
+<span class="text-slate-400 block text-[10px]">CERTIFICATE ID</span>
+<span>SP-2025-CA-984420</span>
+</div>
+</div>
+</div>
+<div class="mt-3.5 flex items-center justify-between text-xs text-slate-500 px-1">
+<span>Stored in redundant Canadian cloud vaults</span>
+<a class="text-blue-600 font-semibold hover:underline flex items-center gap-1" href="#">
+<span>Download PDF with audit sheet</span>
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- STEP 6 PANEL: Renew -->
+<div class="step-content-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm transition-all duration-200" id="step-panel-6">
+<div class="lg:col-span-5 flex flex-col items-start">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-semibold tracking-wide mb-4">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          Step 6: Recurring Revenue
+        </span>
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-4">
+          Automated renewal with CPI inflation indexing.
+        </h2>
+<p class="text-slate-600 text-[15px] leading-relaxed mb-8">
+          Stop letting recurring contracts silently lapse. At Day 275 (90 days before expiration), Service Pacts generates the indexed extension, factoring in Canadian CPI adjustments or your preset standard rate increase.
+        </p>
+<div class="space-y-3 mb-8 w-full">
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Automated 90-day &amp; 60-day renewal notifications dispatched to property manager.</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>Bank of Canada CPI integration or customized annual price increase cap (e.g., +3.8%).</span>
+</div>
+<div class="flex items-start gap-2.5 text-xs text-slate-700">
+<svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<span>1-click client renewal keeps your contracted recurring revenue stream compound every year.</span>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<button class="px-5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors" onclick="switchStep(5)">
+            Previous
+          </button>
+<button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors" onclick="switchStep(1)">
+<span>Restart lifecycle (Step 1)</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+<div class="lg:col-span-7">
+<div class="bg-slate-50/70 rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 sm:p-6">
+<div class="bg-white rounded-lg border border-slate-200 p-5">
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<span class="font-bold text-slate-900 text-xs uppercase tracking-wider">Year-2 Auto-Indexing Calculation</span>
+<span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-mono text-[11px] font-semibold">90-Day Notice Trigger</span>
+</div>
+<!-- Renewal Formula Box -->
+<div class="mt-4 p-4 rounded-lg bg-blue-50/50 border border-blue-200 space-y-3 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-600">Current Year Value (2025):</span>
+<span class="font-mono font-semibold text-slate-800">$15,600 CAD</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-600 flex items-center gap-1">
+<span>Annual CPI Adjustment Clause:</span>
+<span class="text-[10px] bg-blue-200/60 px-1.5 py-0.5 rounded font-mono text-blue-800">+3.8%</span>
+</span>
+<span class="font-mono font-semibold text-emerald-700">+$592.80 CAD</span>
+</div>
+<div class="pt-2 border-t border-blue-200/80 flex items-center justify-between font-bold text-sm">
+<span class="text-slate-900">Year 2 Renewal Value (2026):</span>
+<span class="text-blue-700 font-mono">$16,192.80 CAD</span>
+</div>
+</div>
+<!-- Notification Timeline -->
+<div class="mt-4 space-y-2">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Automated Dispatch Sequence</span>
+<div class="flex items-center gap-2 text-xs text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="font-mono text-[11px] text-slate-500">Day 275:</span>
+<span>Send courtesy renewal notice with CPI schedule to client</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-slate-700">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span class="font-mono text-[11px] text-slate-500">Day 335:</span>
+<span>1-click client confirmation &amp; automatic dispatch renewal</span>
+</div>
+</div>
+</div>
+<div class="mt-3.5 flex items-center justify-between text-xs text-slate-500 px-1">
+<span>Average retention rate: 94.2% across Canadian trades</span>
+<span class="text-blue-600 font-semibold cursor-pointer" onclick="switchStep(1)">Back to Start</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main>
+<!-- END: MainContent -->
+<!-- BEGIN: CallToActionAndFooter -->
+<div class="w-full bg-[#0b1323] text-white">
+<!-- CTA Section -->
+<!-- Footer Divider -->
+<div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-20 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left"><div class="max-w-xl"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 mb-4">Ready to accelerate trade sales?</span><h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Turn messy asset lists into recurring contracts today.</h2><p class="text-slate-400 text-sm mt-2">Join Canadian commercial mechanical, HVAC, electrical, and refrigeration leaders.</p></div><div class="flex flex-col sm:flex-row items-center gap-4 flex-shrink-0"><a class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg text-sm transition-all shadow-md hover:shadow-blue-500/20" href="/register"><span>Get started free</span><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></a><a class="inline-flex items-center gap-1.5 px-5 py-3 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-medium transition-colors" href="/pricing">View pricing</a></div></div><div class="border-t border-slate-800"></div>
+<!-- Main Footer Container -->
+<footer class="w-full bg-[#090d18] border-t border-slate-800/80 pt-16 pb-12 text-slate-400 text-xs">
+<div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-14">
+<!-- Left Brand Column -->
+<div class="lg:col-span-5 flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm">
+<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M7 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
+<path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
+<path d="M4 14l4 -4a3.5 3.5 0 0 1 5 0l2 2a3.5 3.5 0 0 0 5 0l2 -2"></path>
+</svg>
+</div>
+<span class="text-base font-bold text-white tracking-tight">Service Pacts</span>
+</div>
+<p class="text-xs text-slate-400 max-w-sm leading-relaxed mt-1">
+Purpose-built recurring service agreements and maintenance software for Canadian trade contractors — from equipment schedules to customer sign-off.
+</p>
+<div class="mt-2 text-[11.5px] text-slate-400 flex items-center gap-1.5">
+<span>🍁 Built for Canada outside Quebec. All billing and pricing in Canadian Dollars (CAD).</span>
+</div>
+<p class="text-[11px] text-slate-500 mt-2">
+© 2025 Service Pacts Technologies Inc. All rights reserved.
+</p>
+</div>
+<!-- 3 Link Columns -->
+<div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-8">
+<!-- Column 1: Product -->
+<div>
+<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Product</h3>
+<ul class="space-y-3">
+<li><a class="hover:text-white transition-colors" href="/trades">Equipment Extraction</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">6-Step Pipeline</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">12-Month Matrix</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Interactive Demo</a></li>
+<li><a class="hover:text-white transition-colors" href="/pricing">Trade Starter Packs</a></li>
+</ul>
+</div>
+<!-- Column 2: Commercial Trades -->
+<div>
+<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Commercial Trades</h3>
+<ul class="space-y-3">
+<li><a class="hover:text-white transition-colors" href="/trades">HVAC &amp; Mechanical</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Plumbing &amp; Hydronics</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Electrical Systems</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Refrigeration</a></li>
+<li><a class="hover:text-white transition-colors" href="/pricing">Pricing &amp; Plans</a></li>
+</ul>
+</div>
+<!-- Column 3: Trust & Security -->
+<div>
+<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Trust &amp; Security</h3>
+<ul class="space-y-3">
+<li><a class="hover:text-white transition-colors" href="/trades">Privacy Policy</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Terms of Service</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Data Security &amp; Backup</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Contractor FAQ</a></li>
+<li><a class="hover:text-white transition-colors" href="/sign-in">Customer Sign In</a></li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Sub-bar at the bottom -->
+<div class="border-t border-slate-800/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
+<div class="flex items-center gap-2">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>SOC2 Type II Compliant</span>
+</div>
+<div>
+<span>Canadian Data Residency</span>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<!-- END: CallToActionAndFooter -->
+<!-- Interactive Step Switcher Logic -->
+<script>
+  function switchStep(stepIndex) {
+    // 1. Hide all panels
+    for (let i = 1; i <= 6; i++) {
+      const panel = document.getElementById(`step-panel-${i}`);
+      const btn = document.getElementById(`step-tab-${i}`);
+      const badge = btn ? btn.querySelector('.step-badge') : null;
+
+      if (panel) {
+        if (i === stepIndex) {
+          panel.classList.remove('hidden');
+        } else {
+          panel.classList.add('hidden');
+        }
+      }
+
+      // 2. Update Tab Styles
+      if (btn && badge) {
+        if (i === stepIndex) {
+          btn.className = "step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-50/50 text-blue-700 font-semibold text-sm shadow-sm transition-all";
+          badge.className = "step-badge flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-xs";
+        } else {
+          btn.className = "step-nav-btn flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition-all";
+          badge.className = "step-badge flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 font-bold text-xs text-slate-500";
+        }
+      }
+    }
+
+    // Scroll smoothly to interactive area if user toggled via sub-controls
+    const activePanel = document.getElementById(`step-panel-${stepIndex}`);
+    if (activePanel) {
+      const rect = activePanel.getBoundingClientRect();
+      if (rect.top < 80 || rect.bottom > window.innerHeight + 200) {
+        document.getElementById('simulation-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }
+</script>
+</body></html>

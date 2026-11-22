@@ -34,7 +34,7 @@ describe("shell search entries", () => {
     const topBar = html.slice(start, html.indexOf("</div>", start));
     expect(tag(topBar, /<div[^>]*>/)).toContain("lg:hidden");
     expect(topBar).toContain(link);
-    expect(tag(html, /<aside[^>]*>/)).toMatch(/class="[^"]*\bhidden\b[^"]*\blg:flex\b/);
+    expect(tag(html, /<aside[^>]*>/)).toMatch(/class="[^"]*\bhidden\b[^"]*\blg:block\b/);
   });
 
   test("C1591: the sidebar field is 44 px tall below 1024 px and 34 px from there up", () => {

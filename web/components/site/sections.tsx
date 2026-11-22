@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { Reveal } from "@/components/motion/reveal";
+import { ShaderCanvas } from "@/components/motion/shader-canvas";
 import { RooftopScene } from "@/components/ui/illustrations";
 import { LinkButton } from "@/components/ui/link-button";
 import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
@@ -14,18 +15,32 @@ export function Wrap({ children, className = "" }: { children: ReactNode; classN
 export function SectionHead({ title, text, onDark = false, className = "" }: { title: string; text?: string; onDark?: boolean; className?: string }) {
   return (
     <Reveal className={`flex max-w-[60ch] flex-col gap-3 ${className}`}>
-      <h2 className="font-display text-[28px] leading-[1.1] font-semibold tracking-tight text-balance lg:text-[38px]">{title}</h2>
+      <h2 className="text-[28px] leading-[1.1] font-semibold tracking-[-0.02em] text-balance lg:text-[36px]">{title}</h2>
       {text && <p className={`text-[16px] leading-relaxed text-pretty lg:text-[17px] ${onDark ? "text-night-ink" : "text-ink-2"}`}>{text}</p>}
     </Reveal>
   );
 }
 
-/** The header of every inner page: a title, one plain line, and an optional action row. */
-export function PageHero({ title, text, children }: { title: string; text: string; children?: ReactNode }) {
+/**
+ * The header of every inner page: a title, one plain line, and an optional action row, over the light shader backdrop.
+ * `accent` is the end of the title (the part that names the promise) set in the action colour; the title's text is unchanged.
+ */
+export function PageHero({ title, text, accent, children }: { title: string; text: string; accent?: string; children?: ReactNode }) {
+  const accented = accent && title.endsWith(accent) ? { head: title.slice(0, title.length - accent.length), accent } : null;
   return (
-    <section className="bg-ground">
-      <Wrap className="flex flex-col gap-5 pt-10 pb-10 lg:pt-16 lg:pb-14">
-        <h1 style={{ "--i": 0 } as CSSProperties} className="hero-in max-w-[20ch] font-display text-[38px] leading-[1.04] font-semibold tracking-tight text-balance lg:text-[56px]">{title}</h1>
+    <section className="relative overflow-hidden border-b border-hairline bg-ground">
+      <ShaderCanvas variant="light" />
+      <Wrap className="relative flex flex-col gap-5 pt-10 pb-10 lg:pt-16 lg:pb-14">
+        <h1 style={{ "--i": 0 } as CSSProperties} className="hero-in max-w-[20ch] text-[36px] leading-[1.08] font-bold tracking-[-0.025em] text-balance lg:text-[56px] lg:leading-[1.05]">
+          {accented ? (
+            <>
+              {accented.head}
+              <span className="text-action">{accented.accent}</span>
+            </>
+          ) : (
+            title
+          )}
+        </h1>
         <p style={{ "--i": 1 } as CSSProperties} className="hero-in max-w-[62ch] text-[16px] leading-relaxed text-pretty text-ink-2 lg:text-[18px]">{text}</p>
         {children && (
           <div style={{ "--i": 2 } as CSSProperties} className="hero-in">
@@ -41,18 +56,23 @@ export function PageHero({ title, text, children }: { title: string; text: strin
 /** Each step wears the tint of the board stage it belongs to, so the path reads like the pipeline it feeds. */
 const STEP_TINT = ["bg-tint-in-progress", "bg-tint-in-progress", "bg-tint-sent", "bg-tint-sent", "bg-tint-accepted", "bg-board"] as const;
 
-export function StepsGrid({ detailed = false }: { detailed?: boolean }) {
+export function StepsGrid({ detailed = false, onDark = false }: { detailed?: boolean; onDark?: boolean }) {
   return (
     <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {STEPS.map((step, i) => (
-        <Reveal as="li" key={step.n} index={i % 3} className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-5 shadow-card">
+        <Reveal
+          as="li"
+          key={step.n}
+          index={i % 3}
+          className={`flex flex-col gap-2 rounded-panel border p-5 shadow-card ${onDark ? "border-night-line bg-night-raised/90 text-surface" : "border-hairline bg-surface"}`}
+        >
           <div className="flex items-center justify-between">
-            <span className={`flex size-8 items-center justify-center rounded-full font-display text-[14px] font-semibold text-ink ${STEP_TINT[step.n - 1] ?? "bg-board"}`}>{step.n}</span>
-            <span className="rounded-full bg-board px-2 py-0.5 text-[11px] font-semibold text-ink-2">{step.who}</span>
+            <span className={`flex size-8 items-center justify-center rounded-full text-[14px] font-semibold ${onDark ? "bg-action text-surface" : `text-ink ${STEP_TINT[step.n - 1] ?? "bg-board"}`}`}>{step.n}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${onDark ? "bg-night-line text-night-ink" : "bg-board text-ink-2"}`}>{step.who}</span>
           </div>
-          <h3 className="font-display text-[18px] font-semibold tracking-tight">{step.title}</h3>
+          <h3 className="text-[18px] font-semibold tracking-tight">{step.title}</h3>
           <p className="text-[15px] font-medium text-pretty">{step.summary}</p>
-          {detailed && <p className="text-[15px] leading-relaxed text-pretty text-ink-2">{step.detail}</p>}
+          {detailed && <p className={`text-[15px] leading-relaxed text-pretty ${onDark ? "text-night-ink" : "text-ink-2"}`}>{step.detail}</p>}
         </Reveal>
       ))}
     </ol>
@@ -132,10 +152,11 @@ export function FaqList({ items = FAQS }: { items?: readonly Faq[] }) {
 }
 
 /** The closing band of a page: one sentence and the two doors, trial and demo. */
-export function CtaBand({ title = "See it with your own list.", text = "Monthly plans from $79, and your workspace is set up for your trade.", demo = true }: { title?: string; text?: string; demo?: boolean }) {
+export function CtaBand({ title = "See it with your own list.", text = `Monthly plans from ${formatPlanPrice(PLANS.reduce((lowest, plan) => (plan.monthlyCents < lowest ? plan.monthlyCents : lowest), PLANS[0].monthlyCents))}, and your workspace is set up for your trade.`, demo = true }: { title?: string; text?: string; demo?: boolean }) {
   return (
-    <section className="bg-night text-surface ring-on-dark">
-      <Wrap className="grid items-center gap-8 py-14 lg:grid-cols-[1fr_340px] lg:gap-14 lg:py-20">
+    <section className="relative overflow-hidden bg-night text-surface ring-on-dark">
+      <ShaderCanvas variant="night" className="opacity-50" />
+      <Wrap className="relative grid items-center gap-8 py-14 lg:grid-cols-[1fr_340px] lg:gap-14 lg:py-20">
         <div className="flex flex-col gap-6">
           <div className="flex max-w-[52ch] flex-col gap-3">
             <h2 className="font-display text-[30px] leading-[1.08] font-semibold tracking-tight text-balance lg:text-[42px]">{title}</h2>

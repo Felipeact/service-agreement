@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ImportHistoryRow, PipelineCard } from "@/application/ports";
+import { FilterIcon, LayoutGridIcon, ListIcon } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { Select } from "@/components/ui/select";
 import { RooftopScene, Spot } from "@/components/ui/illustrations";
-import { FOLLOW_UP_AFTER_DAYS, isClosedStage, needsFollowUp, sortForColumn, type ExpiringAgreement } from "@/domain/pipeline";
+import { FOLLOW_UP_AFTER_DAYS, needsFollowUp, sortForColumn, type ExpiringAgreement } from "@/domain/pipeline";
 import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
 import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
 import { ExpiringColumn } from "./expiring-column";
 import { LiveRefresh } from "./live-refresh";
 import { KanbanColumn } from "./kanban-column";
+import { pipelineStats } from "@/lib/pipeline-stats";
 import { PipelineSummary } from "./pipeline-summary";
 import { RecentImports } from "./recent-imports";
 
@@ -61,24 +63,29 @@ type PipelineViewProps = {
   initialFollowUpOnly?: boolean;
 };
 
+/** "Live" beside the title: the board re-reads the server on its own (see `LiveRefresh`). */
+function LivePill() {
+  return (
+    <span className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-pill-completed-border bg-pill-completed px-2.5 text-[11px] leading-4 font-semibold whitespace-nowrap text-pill-completed-ink">
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-stage-completed" />
+      Live
+    </span>
+  );
+}
+
 /**
  * The Pipeline page body: a greeting, the three cards an estimator opens the app for (money in play, who is waiting on
  * the customer, what needs a nudge), then the board (tabs on mobile, a scrolling row of columns from tablet up). The app's
  * one search is the sidebar's, so the board has none of its own.
  */
-export function PipelineView({ cards, title = "Pipeline", canCreate = false, newAgreement, expiring = [], today = "", imports = [], initialFollowUpOnly = false }: PipelineViewProps) {
+export function PipelineView({ cards, title = "Sales Pipeline", canCreate = false, newAgreement, expiring = [], today = "", imports = [], initialFollowUpOnly = false }: PipelineViewProps) {
   const words = useItemWords();
   const [selected, setSelected] = useState<View>("in_progress");
   const [followUpOnly, setFollowUpOnly] = useState(initialFollowUpOnly);
   const [minAge, setMinAge] = useState(0);
   const tabRefs = useRef<Partial<Record<View, HTMLButtonElement | null>>>({});
 
-  const open = cards.filter((card) => !isClosedStage(card.stage));
-  const openCents = open.reduce((sum, card) => sum + (card.annualCents ?? 0), 0);
-  const waitingCount = cards.filter((card) => card.stage === "sent").length;
-  const followUpCount = cards.filter(needsFollowUp).length;
-  const unpricedCount = open.filter((card) => card.annualCents === undefined).length;
-
+  const stats = pipelineStats(cards, today);
   const shown = cards.filter((card) => (!followUpOnly || needsFollowUp(card)) && card.ageDays >= minAge);
   const filtered = followUpOnly || minAge > 0;
   const byStage = (stage: PipelineStage) => sortForColumn(stage, shown.filter((card) => card.stage === stage));
@@ -117,41 +124,36 @@ export function PipelineView({ cards, title = "Pipeline", canCreate = false, new
       <PageHeader
         large
         title={title}
-        subtitle={itemText("Keep every service agreement moving from equipment list to signature.", words)}
+        badge={<LivePill />}
+        subtitle={itemText("Keep every service agreement moving from equipment intake to signed contract.", words)}
         action={canCreate ? newAgreement : undefined}
       />
 
       {empty ? (
-        <EmptyPanel title="No agreements yet" text="Add the customer and site, import the equipment list, review the rows, then send a priced agreement. It appears here by stage, with its age." art={<RooftopScene className="w-56 text-ink-2" />} />
+        <EmptyPanel title="No agreements yet" text={itemText("Add the customer and site, import the equipment list, review the rows, then send a priced agreement. It appears here by stage, with its age.", words)} art={<RooftopScene className="w-56 text-ink-2" />} />
       ) : (
         <>
-          <PipelineSummary
-            openCents={openCents}
-            openCount={open.length}
-            unpricedCount={unpricedCount}
-            waitingCount={waitingCount}
-            followUpCount={followUpCount}
-            followUpOnly={followUpOnly}
-            onToggleFollowUp={() => setFollowUpOnly((on) => !on)}
-          />
+          <PipelineSummary stats={stats} />
 
           <section aria-labelledby="board-title" className="flex flex-col gap-4">
-            <div className="flex items-end justify-between gap-3">
-              <div className="flex flex-col">
-                <h2 id="board-title" className="font-display text-[19px] font-semibold tracking-tight">
-                  Agreement pipeline
-                </h2>
-                <p className="text-[13px] text-ink-2">Aging starts when an agreement enters a stage. {FOLLOW_UP_RULE}</p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end">
-                <Link href="/agreements" className="inline-flex min-h-11 items-center text-[13px] font-medium whitespace-nowrap text-action lg:min-h-0">
-                  View list
-                </Link>
-                <LiveRefresh />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+            <h2 id="board-title" className="sr-only">
+              Deal pipeline
+            </h2>
+            <div className="flex flex-wrap items-end gap-x-3 gap-y-3 rounded-panel border border-hairline bg-surface p-3 shadow-card">
+              <button
+                type="button"
+                data-summary="follow-ups"
+                aria-pressed={followUpOnly}
+                onClick={() => setFollowUpOnly((on) => !on)}
+                title={FOLLOW_UP_RULE}
+                className="inline-flex h-11 items-center gap-2 rounded-control border border-hairline bg-surface px-3 text-[13px] font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-line-strong hover:bg-ground aria-pressed:border-action aria-pressed:bg-action-tint aria-pressed:text-action lg:h-[38px]"
+              >
+                <FilterIcon className="size-4" aria-hidden="true" />
+                Follow-ups due
+                <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] leading-none font-semibold ${stats.followUpCount > 0 ? "bg-attention-bg text-attention-fg" : "bg-board text-ink-2"}`}>
+                  {stats.followUpCount}
+                </span>
+              </button>
               <Select id="board-age" label="Time in stage" value={minAge} onChange={(event) => setMinAge(Number(event.target.value))} className="w-40">
                 {AGE_CHOICES.map((choice) => (
                   <option key={choice.value} value={choice.value}>
@@ -159,7 +161,20 @@ export function PipelineView({ cards, title = "Pipeline", canCreate = false, new
                   </option>
                 ))}
               </Select>
-              <p className="pb-2 text-[12px] text-ink-2 max-md:hidden">Press j and k to move between cards.</p>
+              <p className="pb-2.5 text-[12px] text-ink-2 max-lg:hidden">Press j and k to move between cards.</p>
+              <div className="ml-auto flex flex-col items-end gap-1">
+                <div className="inline-flex rounded-control bg-board p-0.5 text-[13px] font-semibold">
+                  <span aria-current="true" className="inline-flex h-11 items-center gap-1.5 rounded-control bg-surface px-3 text-action shadow-card lg:h-8">
+                    <LayoutGridIcon className="size-4" aria-hidden="true" />
+                    Kanban View
+                  </span>
+                  <Link href="/agreements" className="inline-flex h-11 items-center gap-1.5 rounded-control px-3 text-ink-2 transition-colors duration-150 hover:text-ink lg:h-8">
+                    <ListIcon className="size-4" aria-hidden="true" />
+                    List View
+                  </Link>
+                </div>
+                <LiveRefresh />
+              </div>
             </div>
 
             {filtered && shown.length === 0 ? (

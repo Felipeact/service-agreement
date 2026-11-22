@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AgreementTemplateSummary } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { LinkButton } from "@/components/ui/link-button";
 import { derivedFrequency } from "@/domain/agreement";
 import { updatedAgo } from "@/lib/relative-time";
 import { ArchiveControl } from "./archive-control";
@@ -76,7 +77,7 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
         {canWrite && <CardMenu template={template} actions={actions} />}
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className="font-display text-[16px] leading-snug font-semibold tracking-tight">{body.name}</h3>
+        <h3 className="text-[16px] leading-snug font-semibold tracking-tight">{body.name}</h3>
         <p className="line-clamp-2 min-h-[2.9em] text-[13px] text-ink-2">{description}</p>
       </div>
       <hr className="border-hairline" />
@@ -84,11 +85,20 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
         <span className="font-semibold text-ink">{frequency ?? "No preset lines"}</span>
         <span className="text-ink-2">{updatedAgo(updatedAt, now)}</span>
       </div>
-      {canUse && (
-        <Button variant="primary" className="mt-auto w-full" onClick={() => onUse?.(versionId)}>
-          <Icon name="document" className="size-4" />
-          Use template
-        </Button>
+      {(canUse || (canWrite && !system)) && (
+        <div className="mt-auto flex gap-2">
+          {canUse && (
+            <Button variant="primary" className="flex-1" onClick={() => onUse?.(versionId)}>
+              <Icon name="document" className="size-4" />
+              Use template
+            </Button>
+          )}
+          {canWrite && !system && (
+            <LinkButton href={`/templates/${id}`} variant="secondary" aria-label={`Edit ${body.name}`} className={canUse ? "" : "w-full"}>
+              Edit
+            </LinkButton>
+          )}
+        </div>
       )}
     </article>
   );

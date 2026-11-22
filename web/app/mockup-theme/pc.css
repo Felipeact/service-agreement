@@ -1,0 +1,113 @@
+/* service_pacts_pricing (mk-pc) */
+@theme {
+  --color-pc-brand-50: #eff6ff;
+  --color-pc-brand-600: #2563eb;
+  --color-pc-brand-700: #1d4ed8;
+  --color-pc-slateBg: #f3f6fa;
+  --color-pc-darkNavy: #0f172a;
+  --color-pc-on-primary-container: #eeefff;
+  --color-pc-on-primary-fixed-variant: #003ea8;
+  --color-pc-secondary-fixed-dim: #bec6e0;
+  --color-pc-primary-container: #2563eb;
+  --color-pc-on-tertiary-fixed: #002113;
+  --color-pc-surface-container-low: #eff4ff;
+  --color-pc-on-surface-variant: #434655;
+  --color-pc-surface-tint: #0053db;
+  --color-pc-surface-bright: #f8f9ff;
+  --color-pc-secondary-container: #dae2fd;
+  --color-pc-inverse-surface: #213145;
+  --color-pc-surface-container-highest: #d3e4fe;
+  --color-pc-surface-container: #e5eeff;
+  --color-pc-surface-dim: #cbdbf5;
+  --color-pc-error: #ba1a1a;
+  --color-pc-on-primary: #ffffff;
+  --color-pc-inverse-primary: #b4c5ff;
+  --color-pc-on-primary-fixed: #00174b;
+  --color-pc-secondary-fixed: #dae2fd;
+  --color-pc-outline: #737686;
+  --color-pc-surface-container-lowest: #ffffff;
+  --color-pc-tertiary: #006242;
+  --color-pc-on-background: #0b1c30;
+  --color-pc-on-tertiary-container: #bdffdb;
+  --color-pc-primary-fixed: #dbe1ff;
+  --color-pc-on-error-container: #93000a;
+  --color-pc-primary-fixed-dim: #b4c5ff;
+  --color-pc-tertiary-fixed-dim: #4edea3;
+  --color-pc-on-secondary-container: #5c647a;
+  --color-pc-inverse-on-surface: #eaf1ff;
+  --color-pc-on-tertiary-fixed-variant: #005236;
+  --color-pc-on-secondary-fixed-variant: #3f465c;
+  --color-pc-on-tertiary: #ffffff;
+  --color-pc-tertiary-fixed: #6ffbbe;
+  --color-pc-on-surface: #0b1c30;
+  --color-pc-tertiary-container: #007d55;
+  --color-pc-on-error: #ffffff;
+  --color-pc-surface: #f8f9ff;
+  --color-pc-primary: #004ac6;
+  --color-pc-on-secondary-fixed: #131b2e;
+  --color-pc-outline-variant: #c3c6d7;
+  --color-pc-secondary: #565e74;
+  --color-pc-background: #f8f9ff;
+  --color-pc-error-container: #ffdad6;
+  --color-pc-on-secondary: #ffffff;
+  --color-pc-surface-variant: #d3e4fe;
+  --color-pc-surface-container-high: #dce9ff;
+  --text-headline-sm: 16px;
+  --text-headline-sm--line-height: 24px;
+  --text-headline-sm--letter-spacing: -0.01em;
+  --text-headline-sm--font-weight: 600;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 16px;
+  --text-body-sm--letter-spacing: 0em;
+  --text-body-sm--font-weight: 400;
+  --text-headline-lg-mobile: 22px;
+  --text-headline-lg-mobile--line-height: 28px;
+  --text-headline-lg-mobile--letter-spacing: -0.015em;
+  --text-headline-lg-mobile--font-weight: 600;
+  --text-headline-xl-mobile: 28px;
+  --text-headline-xl-mobile--line-height: 36px;
+  --text-headline-xl-mobile--letter-spacing: -0.02em;
+  --text-headline-xl-mobile--font-weight: 700;
+  --text-label-md: 14px;
+  --text-label-md--line-height: 20px;
+  --text-label-md--letter-spacing: -0.005em;
+  --text-label-md--font-weight: 500;
+  --text-headline-md: 20px;
+  --text-headline-md--line-height: 28px;
+  --text-headline-md--letter-spacing: -0.015em;
+  --text-headline-md--font-weight: 600;
+  --text-headline-xl: 36px;
+  --text-headline-xl--line-height: 44px;
+  --text-headline-xl--letter-spacing: -0.025em;
+  --text-headline-xl--font-weight: 700;
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0.02em;
+  --text-label-sm--font-weight: 600;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--letter-spacing: 0em;
+  --text-body-md--font-weight: 400;
+  --text-mono-tabular: 13px;
+  --text-mono-tabular--line-height: 18px;
+  --text-mono-tabular--letter-spacing: -0.01em;
+  --text-mono-tabular--font-weight: 500;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--letter-spacing: -0.005em;
+  --text-body-lg--font-weight: 400;
+  --text-headline-lg: 28px;
+  --text-headline-lg--line-height: 36px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
+}
+
+@keyframes floatOrb1 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(50px, 35px) scale(1.15); } }
+@keyframes floatOrb2 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-60px, -45px) scale(1.12); } }
+@keyframes floatOrb3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(70px, -50px) scale(1.1); } }
+.mk-pc {
+    & {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    } & .orb-1 { animation: floatOrb1 14s ease-in-out infinite; will-change: transform; } & .orb-2 { animation: floatOrb2 18s ease-in-out infinite; will-change: transform; } & .orb-3 { animation: floatOrb3 22s ease-in-out infinite; will-change: transform; } @media (prefers-reduced-motion: reduce) { & .orb-1, & .orb-2, & .orb-3 { animation: none !important; } }
+}

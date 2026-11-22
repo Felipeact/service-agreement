@@ -1,10 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { ExpiringAgreement } from "@/domain/pipeline";
 import type { PipelineCard } from "@/application/ports";
 import { ExpiringView } from "./expiring-view";
 import { PipelineView } from "./pipeline-view";
+
+// LiveRefresh asks for the router; a static render has none mounted.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }), usePathname: () => "/pipeline" }));
 
 const row: ExpiringAgreement = {
   id: "a1",

@@ -1,8 +1,10 @@
-import Link from "next/link";
+"use client";
+
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/text-input";
-import { EXTRA_SEAT_CENTS, MAX_SEATS, PLANS, PLAN_KEYS, TRADES, formatPlanPrice, monthlyTotalCents, seatsAfterPlanChange, type PlanKey } from "@/domain/billing";
+import Link from "next/link";
+import * as motion from "motion/react-client";
+import { TAP } from "@/components/motion/variants";
+import { EXTRA_SEAT_CENTS, MAX_SEATS, PLANS, PLAN_KEYS, formatPlanPrice, monthlyTotalCents, seatsAfterPlanChange, type PlanKey } from "@/domain/billing";
 import type { PricingState } from "./state";
 
 /** The refusal texts. The first two belong to the choices; the others are about starting at all. */
@@ -24,27 +26,15 @@ export const FIELD_REFUSALS = {
 /** The refusal for an email that already belongs to an org (checkout-email-in-use). It names no role, org or count. */
 export const EMAIL_IN_USE = "This email already has a workspace.";
 
-const TRADES_ERROR_ID = "register-trades-error";
+const planOf = (key: PlanKey) => PLANS.find((plan) => plan.key === key)!;
 
-const choice =
-  "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-control border border-hairline bg-surface px-3 text-[13px] font-medium text-ink has-[:checked]:border-action has-[:checked]:bg-action-tint lg:min-h-[34px]";
+/** A plan row: ringed in blue while it is the chosen one, as in the mockup. */
+const planLabel = (isChosen: boolean) =>
+  isChosen
+    ? "flex items-center justify-between border-2 border-blue-600 bg-blue-50/30 rounded-xl p-4 cursor-pointer shadow-xs relative"
+    : "flex items-center justify-between border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-slate-50/70 transition";
 
-function Refusal({ id, children }: { id?: string; children: string }) {
-  return (
-    <p id={id} role="alert" className="rounded-control bg-attention-bg px-3 py-2.5 text-[13px] text-attention-fg">
-      {children}
-    </p>
-  );
-}
-
-/** A message under a field, announced with it; the field points at it with `aria-describedby`. */
-function FieldMessage({ id, children }: { id: string; children: string }) {
-  return (
-    <p id={id} role="alert" className="-mt-2 text-[12px] font-medium text-danger">
-      {children}
-    </p>
-  );
-}
+const MESSAGE = "rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700";
 
 type RegisterFieldsProps = {
   state: PricingState;
@@ -54,20 +44,22 @@ type RegisterFieldsProps = {
   action?: (formData: FormData) => void;
 };
 
-const planOf = (key: PlanKey) => PLANS.find((plan) => plan.key === key)!;
-
-/** Step one of sign-up: who is buying, the trades, the plan and its seats, and one button that starts the trial. */
+/**
+ * The register form from the owner's mockup (docs/service_pacts_register): who is signing up, the trades, the plan and its
+ * seats, and the button that starts the trial. The markup and copy are the mockup's; the fields carry the names the
+ * `startTrialAction` reads, and a refusal is shown at the top with the visitor's own values kept.
+ */
 export function RegisterFields({ state, pending, initialPlan = "team", action }: RegisterFieldsProps) {
   const refused = state.status === "idle" ? null : state;
   const values = refused?.values;
   const fields = refused?.fields ?? {};
-  const ticked = refused?.trades ?? [];
+  const ticked: string[] = refused?.trades ?? [];
 
   const [plan, setPlan] = useState<PlanKey>(() => PLAN_KEYS.find((key) => key === values?.plan) ?? initialPlan);
   const [seats, setSeats] = useState<string>(() => values?.seats || String(planOf(PLAN_KEYS.find((key) => key === values?.plan) ?? initialPlan).includedSeats));
-
   const chosen = planOf(plan);
   const seatCount = /^[0-9]{1,3}$/.test(seats.trim()) ? Number(seats.trim()) : NaN;
+
   const extra = Number.isInteger(seatCount) && seatCount > chosen.includedSeats && seatCount <= MAX_SEATS ? seatCount - chosen.includedSeats : 0;
 
   const pickPlan = (next: PlanKey) => {
@@ -75,146 +67,36 @@ export function RegisterFields({ state, pending, initialPlan = "team", action }:
     setPlan(next);
   };
 
-  const tradesRefusal = refused && (refused.status === "no_trade" || refused.status === "invalid_choice") ? REFUSALS[refused.status] : null;
-  const startRefusal = refused && (refused.status === "not_configured" || refused.status === "unavailable") ? REFUSALS[refused.status] : null;
-  const describedBy = (field: keyof typeof fields, id: string) => (fields[field] ? id : undefined);
+  const messages: string[] = [];
+  if (refused && (refused.status === "no_trade" || refused.status === "invalid_choice")) messages.push(REFUSALS[refused.status]);
+  if (refused && (refused.status === "not_configured" || refused.status === "unavailable")) messages.push(REFUSALS[refused.status]);
+  const companyMessage = refused?.status === "company_in_use" ? "A workspace with this company name already exists. Sign in, or ask its owner to invite you." : FIELD_REFUSALS.company;
 
   return (
-    <form action={action} noValidate className="flex flex-col gap-8">
-      <fieldset
-        // A new key remounts the boxes, so a refusal shows the visitor's own values (React resets an uncontrolled form after an action).
-        key={`${state.status}:${JSON.stringify(values ?? {})}`}
-        className="flex flex-col gap-4"
-      >
-        <legend className="mb-3 font-display text-[20px] leading-tight font-semibold tracking-tight">Who is signing up?</legend>
-        <TextInput
-          id="register-email"
-          name="email"
-          type="email"
-          label="Work email"
-          autoComplete="email"
-          defaultValue={values?.email ?? ""}
-          aria-invalid={fields.email ? true : undefined}
-          aria-describedby={describedBy("email", "register-email-message")}
-        />
-        {fields.email &&
-          (refused?.status === "email_in_use" ? (
-            <p id="register-email-message" role="alert" className="-mt-2 text-[12px] font-medium text-danger">
-              {EMAIL_IN_USE}{" "}
-              <Link href="/login" className="underline">
-                Sign in
-              </Link>
+    <form
+      // A new key remounts the form on every result, so a refusal shows the visitor's own values (React resets a form after an action).
+      key={`${state.status}:${JSON.stringify(values ?? {})}`}
+      action={action}
+      noValidate
+      className="space-y-8"
+    >
+      {messages.map((message) => (
+        <p key={message} role="alert" className={MESSAGE}>
+          {message}
+        </p>
+      ))}
+<div className="space-y-4"><div className="flex items-center justify-between border-b border-slate-100 pb-3"><h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><span className="material-symbols-outlined text-blue-600 text-[20px]">person</span><span>Who is signing up?</span></h2><span className="text-xs font-medium text-slate-400">Step 1 of 4</span></div><div className="space-y-3.5"><div><label className="block text-xs font-semibold text-slate-700 mb-1.5" htmlFor="work-email">Work email{" "}<span className="text-rose-500">*</span></label><div className="relative"><span className="material-symbols-outlined absolute left-3.5 top-2.5 text-slate-400 text-[18px]">mail</span><input className="w-full rounded-xl border border-slate-300 pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-2xs max-lg:min-h-11" id="work-email" name="email" aria-describedby={fields.email ? "register-email-message" : undefined} defaultValue={values?.email ?? ""} autoComplete="email" aria-invalid={fields.email ? true : undefined} placeholder="name@company.ca" type="email" /></div>{fields.email && (
+              refused?.status === "email_in_use" ? (
+                <p id="register-email-message" role="alert" className="mt-1.5 text-xs font-medium text-rose-600">
+                  {EMAIL_IN_USE} <Link href="/login" className="underline">Sign in</Link>
+                </p>
+              ) : (
+                <p id="register-email-message" role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{FIELD_REFUSALS.email}</p>
+              )
+            )}</div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5"><div><label className="block text-xs font-semibold text-slate-700 mb-1.5" htmlFor="company-name">Company name{" "}<span className="text-rose-500">*</span></label><div className="relative"><span className="material-symbols-outlined absolute left-3.5 top-2.5 text-slate-400 text-[18px]">business</span><input className="w-full rounded-xl border border-slate-300 pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-2xs max-lg:min-h-11" id="company-name" name="company" aria-describedby={fields.company ? "register-company-message" : undefined} defaultValue={values?.company ?? ""} autoComplete="organization" aria-invalid={fields.company ? true : undefined} placeholder="e.g. Apex Mechanical" type="text" /></div>{fields.company && <p id="register-company-message" role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{companyMessage}</p>}</div><div><label className="block text-xs font-semibold text-slate-700 mb-1.5" htmlFor="phone">Phone{" "}<span className="text-rose-500">*</span></label><div className="relative"><span className="material-symbols-outlined absolute left-3.5 top-2.5 text-slate-400 text-[18px]">phone</span><input className="w-full rounded-xl border border-slate-300 pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-2xs max-lg:min-h-11" id="phone" name="phone" aria-describedby={fields.phone ? "register-phone-message" : undefined} defaultValue={values?.phone ?? ""} autoComplete="tel" aria-invalid={fields.phone ? true : undefined} placeholder="+1 (604) 555-0199" type="tel" /></div>{fields.phone && <p id="register-phone-message" role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{FIELD_REFUSALS.phone}</p>}</div></div></div></div><div className="space-y-3 pt-2"><div className="flex items-center justify-between border-b border-slate-100 pb-3"><div><h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><span className="material-symbols-outlined text-blue-600 text-[20px]">construction</span><span>What does your business do?</span></h2><p className="text-xs text-slate-500 mt-0.5">Tick every trade you work in. We configure pre-built checklists for them.</p></div><span className="text-xs font-medium text-slate-400">Step 2 of 4</span></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1"><label className="group flex items-center justify-between border border-slate-200 rounded-xl p-3.5 cursor-pointer hover:border-blue-500 hover:bg-blue-50/20 transition-all shadow-2xs"><div className="flex items-center gap-3"><input className="w-4 h-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500" type="checkbox" name="trade" value="hvac" defaultChecked={refused ? ticked.includes("hvac") : true} /><div className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-500 group-hover:text-blue-600 text-[18px]">hvac</span><span className="text-xs font-semibold text-slate-800">Heating and cooling</span></div></div><span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">Popular</span></label><label className="group flex items-center justify-between border border-slate-200 rounded-xl p-3.5 cursor-pointer hover:border-blue-500 hover:bg-blue-50/20 transition-all shadow-2xs"><div className="flex items-center gap-3"><input className="w-4 h-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500" type="checkbox" name="trade" value="plumbing" defaultChecked={refused ? ticked.includes("plumbing") : false} /><div className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-500 group-hover:text-blue-600 text-[18px]">plumbing</span><span className="text-xs font-semibold text-slate-800">{"Plumbing & Hydronics"}</span></div></div></label><label className="group flex items-center justify-between border border-slate-200 rounded-xl p-3.5 cursor-pointer hover:border-blue-500 hover:bg-blue-50/20 transition-all shadow-2xs"><div className="flex items-center gap-3"><input className="w-4 h-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500" type="checkbox" name="trade" value="electrical" defaultChecked={refused ? ticked.includes("electrical") : false} /><div className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-500 group-hover:text-blue-600 text-[18px]">bolt</span><span className="text-xs font-semibold text-slate-800">Electrical Systems</span></div></div></label><label className="group flex items-center justify-between border border-slate-200 rounded-xl p-3.5 cursor-pointer hover:border-blue-500 hover:bg-blue-50/20 transition-all shadow-2xs"><div className="flex items-center gap-3"><input className="w-4 h-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500" type="checkbox" name="trade" value="other" defaultChecked={refused ? ticked.includes("other") : false} /><div className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-500 group-hover:text-blue-600 text-[18px]">handyman</span><span className="text-xs font-semibold text-slate-800">Refrigeration / Other</span></div></div></label></div></div><div className="space-y-3 pt-2"><div className="flex items-center justify-between border-b border-slate-100 pb-3"><div><h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><span className="material-symbols-outlined text-blue-600 text-[20px]">verified</span><span>Your plan</span></h2><p className="text-xs text-slate-500 mt-0.5">Team is pre-selected for typical commercial crews. Switch anytime.</p></div><span className="text-xs font-medium text-slate-400">Step 3 of 4</span></div><div className="space-y-2.5 pt-1"><label className={planLabel(plan === "starter")}><div className="flex items-center gap-3.5"><input className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500" name="plan" type="radio" value="starter" checked={plan === "starter"} onChange={() => pickPlan("starter")} /><div><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-900">Starter</span><span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm">Small Contractors</span></div><div className="text-[11px] text-slate-500 mt-0.5">15 live agreements · 10 AI imports a month · 2 seats included</div></div></div><div className="text-right pl-4"><div className="text-sm font-extrabold text-slate-900">$79{" "}<span className="text-xs font-normal text-slate-500">CAD</span></div><div className="text-[10px] text-slate-400">billed monthly</div></div></label><label className={planLabel(plan === "team")}><div className="absolute -top-2.5 right-6 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase">Most Popular</div><div className="flex items-center gap-3.5"><input className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500" name="plan" type="radio" value="team" checked={plan === "team"} onChange={() => pickPlan("team")} /><div><div className="flex items-center gap-2"><span className="text-xs font-bold text-blue-900">Team</span><span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-sm">Best Value</span></div><div className="text-[11px] text-slate-600 mt-0.5">60 live agreements · 40 AI imports a month · 5 seats included</div></div></div><div className="text-right pl-4"><div className="text-sm font-extrabold text-blue-700">$149{" "}<span className="text-xs font-normal text-slate-500">CAD</span></div><div className="text-[10px] text-blue-600/80 font-medium">billed monthly</div></div></label><label className={planLabel(plan === "business")}><div className="flex items-center gap-3.5"><input className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500" name="plan" type="radio" value="business" checked={plan === "business"} onChange={() => pickPlan("business")} /><div><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-900">Business</span><span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm">{"Scale & Multi-trade"}</span></div><div className="text-[11px] text-slate-500 mt-0.5">200 live agreements · 120 AI imports a month · 10 seats included</div></div></div><div className="text-right pl-4"><div className="text-sm font-extrabold text-slate-900">$299{" "}<span className="text-xs font-normal text-slate-500">CAD</span></div><div className="text-[10px] text-slate-400">billed monthly</div></div></label></div></div><div className="space-y-2 pt-2"><div className="flex items-center justify-between border-b border-slate-100 pb-3"><label className="block text-xs font-bold text-slate-900 flex items-center gap-2" htmlFor="team-members"><span className="material-symbols-outlined text-blue-600 text-[18px]">group</span><span>{"Team members & seats"}</span></label><span className="text-xs font-medium text-slate-400">Step 4 of 4</span></div><div className="flex items-center gap-4 pt-1"><div className="relative w-36"><input className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-semibold text-slate-800 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-2xs max-lg:min-h-11" id="team-members" name="seats" aria-invalid={fields.seats ? true : undefined} aria-describedby={fields.seats ? "register-seats-message" : undefined} max={MAX_SEATS} min={chosen.includedSeats} type="number" value={seats} onChange={(event) => setSeats(event.target.value)} /><div className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">seats</div></div><p className="text-xs text-slate-500"><strong>{chosen.includedSeats} seats included</strong> in the {chosen.name} plan. Each extra crew member is {formatPlanPrice(EXTRA_SEAT_CENTS)}/mo CAD.</p></div>{fields.seats && <p id="register-seats-message" role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{FIELD_REFUSALS.seats(chosen.includedSeats)}</p>}{extra > 0 && (
+            <p className="text-xs text-slate-500">
+              {formatPlanPrice(chosen.monthlyCents)} + {extra} extra {extra === 1 ? "seat" : "seats"} x {formatPlanPrice(EXTRA_SEAT_CENTS)} = {formatPlanPrice(monthlyTotalCents(chosen, seatCount))}
             </p>
-          ) : (
-            <FieldMessage id="register-email-message">{FIELD_REFUSALS.email}</FieldMessage>
-          ))}
-        <TextInput
-          id="register-company"
-          name="company"
-          label="Company name"
-          autoComplete="organization"
-          defaultValue={values?.company ?? ""}
-          aria-invalid={fields.company ? true : undefined}
-          aria-describedby={describedBy("company", "register-company-message")}
-        />
-        {fields.company && (
-          <FieldMessage id="register-company-message">{refused?.status === "company_in_use" ? "A workspace with this company name already exists. Sign in, or ask its owner to invite you." : FIELD_REFUSALS.company}</FieldMessage>
-        )}
-        <TextInput
-          id="register-phone"
-          name="phone"
-          type="tel"
-          label="Phone"
-          autoComplete="tel"
-          defaultValue={values?.phone ?? ""}
-          aria-invalid={fields.phone ? true : undefined}
-          aria-describedby={describedBy("phone", "register-phone-message")}
-        />
-        {fields.phone && <FieldMessage id="register-phone-message">{FIELD_REFUSALS.phone}</FieldMessage>}
-      </fieldset>
-
-      <fieldset
-        key={`trades:${refused?.status ?? "idle"}:${ticked.join(",")}`}
-        className="flex flex-col gap-3"
-        aria-describedby={tradesRefusal ? TRADES_ERROR_ID : undefined}
-      >
-        <legend className="mb-3 font-display text-[20px] leading-tight font-semibold tracking-tight">What does your business do?</legend>
-        <p className="text-ink-2">Tick every trade you work in. We set up your workspace for them.</p>
-        <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2">
-          {TRADES.map((trade) => (
-            <label key={trade.code} className={choice}>
-              <input type="checkbox" name="trade" value={trade.code} defaultChecked={ticked.includes(trade.code)} className="size-4 shrink-0 accent-action" />
-              {trade.label}
-            </label>
-          ))}
-        </div>
-        {tradesRefusal && <Refusal id={TRADES_ERROR_ID}>{tradesRefusal}</Refusal>}
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-3">
-        <legend className="mb-3 font-display text-[20px] leading-tight font-semibold tracking-tight">Your plan</legend>
-        <p className="text-ink-2">Team is pre-selected for a small crew. Choose another plan if it fits better.</p>
-        <div className="flex flex-col gap-2">
-          {PLANS.map((option) => (
-            <label key={option.key} className={`${choice} min-h-16 justify-between py-2.5 lg:min-h-16`}>
-              <span className="flex items-center gap-2.5">
-                <input type="radio" name="plan" value={option.key} checked={plan === option.key} onChange={() => pickPlan(option.key)} className="size-4 shrink-0 accent-action" />
-                <span className="flex flex-col gap-0.5">
-                  <span className="font-semibold">{option.name}</span>
-                  <span className="text-[13px] font-normal text-ink-2">
-                    {option.liveAgreements} live agreements · {option.aiImports} AI imports a month · {option.includedSeats} seats included
-                  </span>
-                </span>
-              </span>
-              <span className="shrink-0 font-semibold">{formatPlanPrice(option.monthlyCents)} a month</span>
-            </label>
-          ))}
-        </div>
-        <TextInput
-          id="register-seats"
-          name="seats"
-          type="number"
-          inputMode="numeric"
-          label="Team members"
-          min={chosen.includedSeats}
-          max={MAX_SEATS}
-          value={seats}
-          onChange={(event) => setSeats(event.target.value)}
-          aria-invalid={fields.seats ? true : undefined}
-          aria-describedby={describedBy("seats", "register-seats-message")}
-        />
-        {fields.seats && <FieldMessage id="register-seats-message">{FIELD_REFUSALS.seats(chosen.includedSeats)}</FieldMessage>}
-        {extra > 0 && (
-          <p className="text-[13px] text-ink-2">
-            {formatPlanPrice(chosen.monthlyCents)} + {extra} extra {extra === 1 ? "seat" : "seats"} x {formatPlanPrice(EXTRA_SEAT_CENTS)} ={" "}
-            {formatPlanPrice(monthlyTotalCents(chosen, seatCount))}
-          </p>
-        )}
-        <p className="text-[12px] text-ink-2">
-          {chosen.includedSeats} seats are included. Each extra seat is {formatPlanPrice(EXTRA_SEAT_CENTS)} a month.
-        </p>
-      </fieldset>
-
-      {startRefusal && <Refusal>{startRefusal}</Refusal>}
-      <div className="flex flex-col gap-2">
-        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-fit">
-          {pending ? "Starting…" : "Continue to secure checkout"}
-        </Button>
-        <p className="max-w-[60ch] text-[12px] text-ink-2">
-          Next you enter your card with our payment provider. You are charged the plan price today, then monthly. Prices are in Canadian dollars.
-        </p>
-        <p className="max-w-[60ch] text-[12px] text-ink-2">
-          By continuing you accept our{" "}
-          <Link href="/terms" className="underline underline-offset-2">
-            terms
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline underline-offset-2">
-            privacy policy
-          </Link>
-          .
-        </p>
-      </div>
-    </form>
+          )}</div><div className="space-y-4 pt-4 border-t border-slate-100"><motion.button disabled={pending} className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-xl text-sm transition-all shadow-lg shadow-blue-600/25 active:scale-[0.99] cursor-pointer" type="submit" whileTap={TAP}><span>{pending ? "Starting…" : "Continue to secure checkout"}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></motion.button><div className="flex items-center justify-center gap-6 text-xs text-slate-500 pt-1"><div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-emerald-600 text-[16px]">lock</span><span>256-bit SSL encrypted</span></div><div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-blue-600 text-[16px]">credit_card</span><span>Card charged monthly</span></div><div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-slate-400 text-[16px]">cancel</span><span>Cancel anytime</span></div></div><div className="text-[11px] text-center text-slate-500 leading-relaxed pt-1"><p>You will enter your payment method with Stripe Canada. Canadian provincial taxes applied where applicable.</p><p className="mt-1">By continuing you accept our{" "}<Link className="underline text-slate-700 hover:text-blue-600 font-medium" href="/terms">Terms of Service</Link>{" "}and{" "}<Link className="underline text-slate-700 hover:text-blue-600 font-medium" href="/privacy">Privacy Policy</Link>.</p></div></div></form>
   );
 }

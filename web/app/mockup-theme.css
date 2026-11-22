@@ -1,0 +1,28 @@
+/* One file per mockup page, generated from the owner mockups in docs: its palette, keyframes and scoped CSS. */
+@import "./mockup-theme/nf.css";
+@import "./mockup-theme/hm.css";
+@import "./mockup-theme/pr.css";
+@import "./mockup-theme/pc.css";
+@import "./mockup-theme/dm.css";
+@import "./mockup-theme/tr.css";
+@import "./mockup-theme/rg.css";
+@import "./mockup-theme/s1.css";
+
+/* The mockups draw small links and buttons. Below 1024px each gets an invisible tap area of at least 44x44px (the project's
+   touch rule) without moving anything: the pseudo-element is centred on the control and only ever grows past its edges. */
+@layer base {
+  @media (max-width: 1023px) {
+    :where([class*="mk-"] a, [class*="mk-"] button, [class*="mk-"] summary) {
+      position: relative;
+    }
+    :where([class*="mk-"] a, [class*="mk-"] button, [class*="mk-"] summary)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}

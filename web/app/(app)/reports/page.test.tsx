@@ -179,7 +179,7 @@ describe("the reports page (reporting S1 to S4)", () => {
     expect(html).toMatch(/name="from"[^>]*value="2026-06-16"/);
     expect(html).toMatch(/name="to"[^>]*value="2027-06-15"/);
     expect(html).toContain("50% dropped off");
-    expect(html).toContain('<h1 class="font-display leading-tight font-semibold tracking-tight text-[26px]">Reports</h1>');
+    expect(html).toContain('<h1 class="tracking-[-0.02em] text-[22px] leading-7 font-semibold md:text-[28px] md:leading-9">Reports</h1>');
   });
 
   test("C5765: the type revenue rows, the range controls, the pipeline stat and an expired group render", async () => {

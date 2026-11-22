@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Service Pacts - From service list to signed agreement</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f6fe',
+              100: '#ddeafd',
+              500: '#2563eb',
+              600: '#1a62eb',
+              700: '#1d4ed8',
+            },
+            navy: {
+              900: '#0b1320',
+              950: '#080d17',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="base-styling">
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+<meta content="web_standard" name="shell-type"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head>
+<body class="bg-white text-gray-900 font-sans antialiased selection:bg-brand-500 selection:text-white">
+<!-- BEGIN: MainHeader -->
+<header class="w-full bg-white border-b border-gray-100 sticky top-0 z-50"><div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+<!-- Logo Container & Badge -->
+<div class="flex items-center gap-3">
+<a class="flex items-center gap-2 group" href="/">
+<svg class="w-7 h-7 text-brand-600 transition-transform group-hover:scale-105" fill="currentColor" viewbox="0 0 32 32">
+<path d="M6 10C6 7.79086 7.79086 6 10 6H20C21.1046 6 22 6.89543 22 8C22 9.10457 21.1046 10 20 10H10C8.89543 10 8 10.8954 8 12C8 13.1046 8.89543 14 10 14H22C24.2091 14 26 15.7909 26 18C26 20.2091 24.2091 22 22 22H12C10.8954 22 10 21.1046 10 20C10 18.8954 10.8954 18 12 18H22C23.1046 18 24 17.1046 24 16C24 14.8954 23.1046 14 22 14H10C7.79086 14 6 12.2091 6 10Z" fill="currentColor"></path>
+</svg>
+<span class="font-bold text-gray-950 text-base tracking-tight">Service Pacts</span>
+</a>
+<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+<span>🍁</span>
+<span>CAD</span>
+</span>
+</div>
+<!-- Center Navigation Links -->
+<nav class="hidden md:flex items-center gap-7 text-xs font-medium text-gray-600">
+<a class="hover:text-gray-900 transition-colors" href="/product">Product</a>
+<a class="hover:text-gray-900 transition-colors" href="/demo">Demo</a>
+<a class="hover:text-gray-900 transition-colors" href="/trades">Trades</a>
+<a class="hover:text-gray-900 transition-colors" href="/pricing">Pricing</a>
+</nav>
+<!-- Right Actions -->
+<div class="flex items-center gap-4">
+<a class="text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors" href="/sign-in">Sign in</a>
+<a class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow" href="/register">
+<span>Get started</span>
+<span class="material-symbols-outlined text-sm leading-none">arrow_forward</span>
+</a>
+</div>
+</div></header>
+<!-- END: MainHeader -->
+<main><div class="relative min-h-[calc(100vh-4rem)] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-brand-50/60 via-white to-slate-50/40 py-16">
+<!-- Ambient soft radial glowing mesh -->
+<div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[720px] h-[360px] bg-gradient-to-br from-blue-300/25 via-sky-200/20 to-transparent blur-3xl rounded-full"></div>
+<div class="pointer-events-none absolute top-1/3 -right-24 w-96 h-96 bg-blue-100/40 rounded-full blur-3xl"></div>
+<div class="pointer-events-none absolute bottom-12 -left-20 w-80 h-80 bg-sky-100/40 rounded-full blur-3xl"></div>
+<div class="relative mx-auto max-w-5xl px-4 sm:px-6 w-full my-auto">
+<!-- Centerpiece Hero -->
+<div class="flex flex-col items-center text-center max-w-2xl mx-auto">
+<!-- Creative Status Pill -->
+<div class="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-white/80 px-3.5 py-1 shadow-xs backdrop-blur-sm mb-6">
+<span class="relative flex h-2 w-2">
+<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-75"></span>
+<span class="relative inline-flex h-2 w-2 rounded-full bg-brand-600"></span>
+</span>
+<span class="text-xs font-semibold text-brand-700 tracking-wide uppercase">Error 404</span>
+<span class="h-3 w-px bg-slate-200"></span>
+<span class="text-xs text-slate-600 font-medium">Lost in the field • Route disconnected</span>
+</div>
+<!-- Stylized Modern Display 404 Graphic -->
+<div class="relative mb-3 flex items-center justify-center select-none">
+<h1 class="text-[110px] sm:text-[132px] font-black tracking-tight text-slate-900 leading-none bg-gradient-to-b from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+          4<span class="text-brand-600 bg-none">0</span>4
+        </h1>
+</div>
+<!-- Headline & Subtitle -->
+<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+        This agreement or route doesn't exist.
+      </h2>
+<p class="mt-3 text-base text-slate-600 leading-relaxed max-w-lg">
+        The commercial agreement, equipment schedule, or page you're looking for might have been moved, renamed, or is currently off-schedule.
+      </p>
+<!-- Primary Action Buttons -->
+<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+<a class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold shadow-sm hover:shadow transition-all group" href="/">
+<span class="material-symbols-outlined text-lg transition-transform group-hover:-translate-x-0.5">arrow_back</span>
+<span>Back to Home</span>
+</a>
+<a class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 px-4 py-2.5 text-sm font-semibold shadow-2xs hover:shadow-xs transition-all" href="/demo">
+<span class="material-symbols-outlined text-lg text-brand-600">play_circle</span>
+<span>View Live Demo</span>
+</a>
+</div>
+<a class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-brand-600 transition-colors" href="/sign-in">
+<span>Already have an account? Sign in to your workspace</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+<!-- Quick Navigation Hubs (Minimalist Glass Bento Cards) -->
+<div class="mt-14 pt-8 border-t border-slate-200/70">
+<div class="text-center mb-6">
+<p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Looking for one of these standard modules?</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Card 1 -->
+<a class="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white/70 p-4 backdrop-blur-sm shadow-xs hover:border-brand-500 hover:bg-white hover:shadow-md transition-all" href="/product">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">layers</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all text-base">arrow_outward</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600 transition-colors">Product Architecture</h3>
+<p class="mt-1 text-xs text-slate-500 leading-snug">
+              Inspect our 6-step commercial agreement pipeline and tag scanner.
+            </p>
+</div>
+</a>
+<!-- Card 2 -->
+<a class="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white/70 p-4 backdrop-blur-sm shadow-xs hover:border-brand-500 hover:bg-white hover:shadow-md transition-all" href="/demo">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">terminal</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all text-base">arrow_outward</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600 transition-colors">Interactive Demo</h3>
+<p class="mt-1 text-xs text-slate-500 leading-snug">
+              Test building an annual multi-tenant maintenance schedule.
+            </p>
+</div>
+</a>
+<!-- Card 3 -->
+<a class="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white/70 p-4 backdrop-blur-sm shadow-xs hover:border-brand-500 hover:bg-white hover:shadow-md transition-all" href="/pricing">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">payments</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all text-base">arrow_outward</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600 transition-colors">Plans &amp; Pricing</h3>
+<p class="mt-1 text-xs text-slate-500 leading-snug">
+              Review transparent contractor tiers &amp; dedicated Canadian rates.
+            </p>
+</div>
+</a>
+<!-- Card 4 -->
+<a class="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white/70 p-4 backdrop-blur-sm shadow-xs hover:border-brand-500 hover:bg-white hover:shadow-md transition-all" href="/trades">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">grid_view</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all text-base">arrow_outward</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600 transition-colors">Contractor Trades</h3>
+<p class="mt-1 text-xs text-slate-500 leading-snug">
+              Pre-built modules for HVAC, plumbing, hydronics &amp; electrical.
+            </p>
+</div>
+</a>
+</div>
+</div>
+</div>
+</div></main>
+<!-- BEGIN: MainFooter -->
+<footer class="bg-navy-950 text-gray-400 text-xs py-14 border-t border-gray-800"><div class="max-w-6xl mx-auto px-4 sm:px-6">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start pb-10">
+<!-- Brand and mission -->
+<div class="md:col-span-5">
+<a class="flex items-center gap-2 text-white" href="/">
+<svg class="w-5 h-5 text-brand-600" fill="currentColor" viewbox="0 0 32 32">
+<path d="M6 10C6 7.79086 7.79086 6 10 6H20C21.1046 6 22 6.89543 22 8C22 9.10457 21.1046 10 20 10H10C8.89543 10 8 10.8954 8 12C8 13.1046 8.89543 14 10 14H22C24.2091 14 26 15.7909 26 18C26 20.2091 24.2091 22 22 22H12C10.8954 22 10 21.1046 10 20C10 18.8954 10.8954 18 12 18H22C23.1046 18 24 17.1046 24 16C24 14.8954 23.1046 14 22 14H10C7.79086 14 6 12.2091 6 10Z" fill="currentColor"></path>
+</svg>
+<span class="font-bold text-white text-sm">Service Pacts</span>
+</a>
+<p class="mt-3 text-[11px] text-gray-400 max-w-sm leading-relaxed">
+        Purpose-built recurring service agreements and maintenance software for Canadian trade contractors — from equipment schedules to customer sign-off.
+      </p>
+<p class="mt-3 text-[10px] text-gray-400 flex items-center gap-1.5">
+<span>🍁</span>
+<span>Built for Canada outside Quebec. All billing and pricing in Canadian Dollars (CAD).</span>
+</p>
+</div>
+<!-- Links Navigation Columns -->
+<div class="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8 md:pl-12">
+<div>
+<h4 class="text-[11px] font-semibold uppercase tracking-wider text-gray-300 mb-3">Product</h4>
+<ul class="space-y-2 text-[11px]">
+<li><a class="hover:text-white transition-colors" href="/product">Product Overview</a></li>
+<li><a class="hover:text-white transition-colors" href="/demo">Interactive Demo</a></li>
+<li><a class="hover:text-white transition-colors" href="/pricing">Pricing &amp; Plans</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades">Trade Coverage</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-[11px] font-semibold uppercase tracking-wider text-gray-300 mb-3">Commercial Trades</h4>
+<ul class="space-y-2 text-[11px]">
+<li><a class="hover:text-white transition-colors" href="/trades#hvac">Commercial HVAC</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades#plumbing">Plumbing &amp; Hydronics</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades#electrical">Electrical &amp; Controls</a></li>
+<li><a class="hover:text-white transition-colors" href="/trades#refrigeration">Refrigeration</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-[11px] font-semibold uppercase tracking-wider text-gray-300 mb-3">Trust &amp; Security</h4>
+<ul class="space-y-2 text-[11px]">
+<li><a class="hover:text-white transition-colors" href="/security">Security Overview</a></li>
+<li><a class="hover:text-white transition-colors" href="/privacy">Privacy Policy</a></li>
+<li><a class="hover:text-white transition-colors" href="/terms">Terms of Service</a></li>
+<li><a class="hover:text-white transition-colors" href="/contact">Contact Support</a></li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Bottom sub-bar -->
+<div class="pt-8 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] text-gray-500">
+<div>© 2025 Service Pacts Technologies Inc. All rights reserved.</div>
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+<span>SOC2 Type II Compliant</span>
+</span>
+<span>•</span>
+<span>Canadian Data Residency (Montreal &amp; Toronto)</span>
+</div>
+</div>
+</div></footer>
+<!-- END: MainFooter -->
+</body></html>

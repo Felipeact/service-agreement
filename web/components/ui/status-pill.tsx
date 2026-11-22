@@ -21,7 +21,7 @@ export function StatusPill({ label, stage, tone, filled }: StatusPillProps) {
       <span
         data-stage-pill={stage}
         title={STAGE_META[stage].label}
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] leading-4 font-semibold ${STAGE_META[stage].pillClass}`}
+        className={`inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] leading-4 font-semibold whitespace-nowrap ${STAGE_META[stage].pillClass}`}
       >
         {label}
       </span>

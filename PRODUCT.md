@@ -44,13 +44,13 @@ The user confirmed three reasons, all of equal weight:
 - **Tenant branding is data, not code.** Legal name, address, phone, logo, accent colour and terms come from each tenant's settings. No company name is hard-coded. Customer-facing surfaces (the portal, PDFs, emails) must take on the tenant's identity, including an arbitrary accent colour.
 - **Seed and demo data** use a fictitious company.
 - **Customers never see or build workflows.** The app owns all status; n8n only automates.
-- **Engineering:** SOLID, ports and adapters, money in integer cents. Every change to the web app must pass Playwright validation at 375, 768 and 1440 px wide, with touch targets of at least 44 px (see `AGENTS..md`).
+- **Engineering:** SOLID, ports and adapters, money in integer cents. Every change to the web app must pass Playwright validation at 375, 768 and 1440 px wide, with touch targets of at least 44 px (see `AGENTS.md`). Pages follow the `page.tsx` / `_components` / `_actions` / `_data-access` structure, forms use shadcn inputs with React Hook Form and Zod, and every server action validates its input with Zod.
 - **Undecided:** the product name and brand (the working name is "Service Pacts"), plans and pricing (Phase 5), and, for the multi-trade scope, the things only the user can supply: a pilot contractor, a practitioner to review packs, a lawyer for the starter contract wording, and plan price points (see `ROADMAP.md` Decisions). Transactional email runs on Resend (outbox-dispatch, 2026-10-29).
 
 ## Brand Commitments
 
 - Customer-facing output carries the tenant's brand, never a hard-coded one.
-- **Visual stance (chosen 2026-10-16, warmed 2026-11-06):** the user deliberately chose the familiar category standard over distinctive directions. The quality bar is Linear, Stripe Dashboard, Attio/HubSpot CRM and Jobber/Housecall Pro. On 2026-11-06 the user said it felt "too dry" and chose to warm it up on a pilot (shell, Pipeline, sign-in) rather than replace it: same structure and density, with a navy shell, a display face, stage-tinted wells, layered depth and authored drawings in quiet moments. The rollout to the other staff screens and to the customer-facing surfaces (portal, signing page, PDFs, emails, where the tenant's brand leads) is agreed but not yet done. See `DESIGN.md`.
+- **Visual stance (Field Protocol, set 2026-11-21):** `docs/DESIGN.md` is the design source of truth. It keeps the familiar category standard (quality bar: Linear, Stripe Dashboard, Attio/HubSpot CRM and Jobber/Housecall Pro): a light canvas (`#F8FAFC` page, white cards with 1px `#E2E8F0` borders), Inter throughout with tabular numerals for money and dates, Royal Blue `#2563EB` for primary actions, 4px controls and 8px cards, pill status badges in fixed stage colours, and dense 14px tables. It replaces the earlier warmed stance (navy shell, display face, stage-tinted wells, authored drawings) that was piloted on 2026-11-06. The rollout to all staff screens and then to the customer-facing surfaces (portal, signing page, PDFs, emails) is planned in `ROADMAP.md` Phase 0.6. On customer-facing surfaces the tenant's brand and accent colour lead over the product's blue.
 
 ## Evidence on Hand
 
@@ -60,7 +60,7 @@ The user confirmed three reasons, all of equal weight:
 
 ## Public Site
 
-The marketing front door is `/` (Persuade mode): home, product, demo, trades, pricing, about, FAQ, contact and register, in the product's own design system (the navy shell, Action Blue and tokens in DESIGN.md). It shows the product with clearly labelled sample data and claims no customers, testimonials or results until they exist. The visitor picks their trade at `/register`, not on the price page.
+The marketing front door is `/` (Persuade mode): home, product, demo, trades, pricing, about, FAQ, contact and register, in the product's own design system (Field Protocol: the light canvas, Royal Blue and tokens in `docs/DESIGN.md`). It shows the product with clearly labelled sample data and claims no customers, testimonials or results until they exist. The visitor picks their trade at `/register`, not on the price page.
 
 ## Product Principles
 
@@ -72,4 +72,4 @@ The marketing front door is `/` (Persuade mode): home, product, demo, trades, pr
 
 ## Accessibility & Inclusion
 
-No product-specific standard has been confirmed yet. The working baseline from `AGENTS..md` is readable text, no horizontal scroll, touch targets of at least 44×44 px on mobile and tablet, and nothing that works on hover only. Customer-portal users are non-technical and use it rarely, so the portal needs plain language and obvious actions.
+No product-specific standard has been confirmed yet. The working baseline from `AGENTS.md` is readable text, no horizontal scroll, touch targets of at least 44×44 px on mobile and tablet, and nothing that works on hover only. Customer-portal users are non-technical and use it rarely, so the portal needs plain language and obvious actions.

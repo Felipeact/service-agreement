@@ -82,7 +82,10 @@ Dispatch and GPS, visit scheduling (who performs which visit, and when), payroll
 | PDF generation | `@react-pdf/renderer`, behind `DocumentRenderer` | Serverless-friendly, no headless Chrome |
 | Email | Resend, domain `felipeviana.com` | Transactional email |
 | SaaS billing | Stripe (subscriptions, Checkout, Customer Portal) | Idempotent webhook handling |
-| Design workflow | Impeccable skill (`/impeccable init`, `shape`, `document`) | Product context, variant directions, and a DESIGN.md generated from the chosen direction |
+| Design workflow | `/frontend-design` and `/shadcn` skills, with `docs/DESIGN.md` (Field Protocol) as the source of truth | Replaced Impeccable on 2026-11-21; the root DESIGN.md and `.impeccable/` are retired |
+| UI kit and forms | shadcn/ui on Radix, React Hook Form, Zod | The standard in `cursor/rules/rules.mdc`; every form and server action input is validated with a Zod schema (Phase 0.6) |
+| Page structure | `page.tsx` (server) with `_components`, `_actions`, `_data-access` per route | `cursor/rules/page-rules.mdc`; thin adapters over `web/application` use cases (Phase 0.6) |
+| Tests | Vitest for unit and integration, `npm run test:db` for SQL, Playwright MCP live (nothing committed) | See `AGENTS.md` |
 
 ## Modules
 
@@ -104,7 +107,8 @@ Dispatch and GPS, visit scheduling (who performs which visit, and when), payroll
 | M14 | SaaS billing & onboarding | Public pricing page, Stripe plans per tenant, plan limits, workspace provisioning from the Stripe webhook, setup screen on first login | 5 |
 | M15 | Audit, files, security | Org-scoped storage, event log, portal rate limits, Supabase advisors clean | 1+ |
 | M16 | Post-contract operations | Annual CPI adjustment, renewals and cancellations, mid-term amendments. No deficiency reports, visit scheduling or per-visit invoicing (decision 23) | 6 |
-| M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in DESIGN.md and `.impeccable/design.json`, tokens and components | 0.5 |
+| M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in `docs/DESIGN.md` (Field Protocol, since 2026-11-21; the root DESIGN.md and `.impeccable/` are retired), tokens and components | 0.5 |
+| M22 | Standards migration | Move every existing page to the page structure, shadcn, React Hook Form and Zod, and roll the Field Protocol look out to every screen and customer-facing surface | 0.6 |
 | M18 | Trades, packs & vocabulary | Starter packs per trade (types, checklists, default months, synonyms, extraction context), a per-org label for the serviced item ("Equipment", "Areas", "Stations"), per-org synonyms, catalog drafted by Claude for other trades | 4.5, 5 |
 | M19 | Document templates | Tenant-owned agreement and contract templates built from text blocks with merge variables and fixed system blocks, versioned and frozen into each agreement and contract | 5.5 |
 | M21 | Public site | Marketing front door at `/`: home, product, demo, trades, pricing, about, FAQ, contact and register. Sample-data visuals, no invented proof. Sign-in is a link | 5 |
@@ -235,7 +239,7 @@ Tenant reports for the contractor's owner and office, read from data that alread
 
 ## Phases
 
-When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` with what was built (see `AGENTS..md`).
+When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` with what was built (see `AGENTS.md`).
 
 ### Phase 0.5: Design system & UX (M17)
 - [x] PRODUCT.md: users, positioning, constraints and principles (`/impeccable init`)
@@ -243,6 +247,18 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Chosen direction (category standard, benchmarked against Linear, Stripe Dashboard, Attio/HubSpot and Jobber/Housecall Pro) recorded as a seed DESIGN.md, plus the Pipeline surface brief
 - [x] Tokens and base components (sidebar, page header, buttons, search input, status pill, kanban column and card) implemented in `web/`. Text input, select and the field error state moved to Phase 1
 - [x] DESIGN.md regenerated from code with real tokens, and `.impeccable/design.json` written (`/impeccable document`)
+
+### Phase 0.6: Standards migration (M22)
+Decision 24. The Cursor rules (`cursor/rules/page-rules.mdc`, `rules.mdc`) and `docs/DESIGN.md` apply to every page, new and existing. Migrate one route group at a time; each one ships on its own.
+- [x] Install shadcn (`components.json`, Tailwind 4), add Zod and React Hook Form (2026-11-22; components added by hand from `shadcn view` because the CLI tried to install an npm package named `cn`; `web/.npmrc` sets `allow-remote=all` so npm 12 can fetch the pinned `xlsx` tarball)
+- [x] Map the `docs/DESIGN.md` tokens (colours, Inter, radii, shadows, tabular numerals) into `web/app/globals.css`; the navy shell is kept (2026-11-22)
+- [ ] Replace hand-built primitives in `web/components` (button, inputs, select, dialog and so on) with shadcn equivalents where one exists
+- [ ] Staff pages in `web/app/(app)` to the page structure: agreements, billing, contracts, customers, imports, kanban, members, motion, records, reports
+- [ ] Customer-facing and account pages to the page structure: login, setup, register, review (portal), sign, auth
+- [ ] Public site to the page structure: home, product, demo, trades, pricing, about, FAQ, contact, privacy, terms, security. The Field Protocol look is done for the public site, sign-in and register (2026-11-22, shaders included); the `_components/_actions/_data-access` split for these routes is still to do
+- [ ] Every form on shadcn inputs with React Hook Form and a Zod schema; every server action validates its input with Zod, checks auth and returns a typed result
+- [ ] Field Protocol look on the staff screens, then on the portal, signing page, PDFs and emails (the tenant accent leads there). Done so far: tokens, `Button`, stage pills, `StatCard`, the app shell, the Pipeline, Agreements, Customers, Templates and the New agreement dialog (2026-11-22; the last four still need live validation). Next: live validation of those four, then the remaining staff pages (sites, imports, reports, settings, members)
+- [ ] Per route group: Playwright validation at 375, 768 and 1440 px, a CONTEXT.md entry, and `web/boundaries.test.ts` still passing
 
 ### Phase 1: Foundation
 - [x] Supabase project and `0001_init` migration (orgs, memberships, settings, customers, contacts, sites, asset types/tasks, assets, agreements, service lines, contracts, events, outbox) with RLS on every table
@@ -417,6 +433,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 21 | Build order | Finish Phase 4, then 4.5, 5, 5.5, then reporting (5.6) | Nobody can be sold a contract that cannot complete (the DocuSeal webhook, signed PDF and audit log are still open). Templates decide whether a contractor adopts the product; reports need real tenant data to say anything |
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
 | 23 | Scheduling | The product does not schedule visits or track who performs them, so Phase 6 has no visit schedule or per-visit invoicing. Visit months on the agreement grid stay: they are cadence, not scheduling (added 2026-11-15 by the owner) | Same line as the dispatch and GPS non-goal; the product feeds a field-service suite rather than replacing one |
+| 24 | Standards and design source (2026-11-21, owner) | The Cursor rules apply to all existing and new pages (migration is Phase 0.6). `docs/DESIGN.md` (Field Protocol) is the design source of truth. The owner's mockups in `docs/service_pacts_*/` keep a dark navy sidebar with a light canvas, so the navy shell stays (amended 2026-11-22). UI work uses `/frontend-design` and `/shadcn` instead of `/impeccable` | One page structure, one UI kit and one visual system are cheaper to maintain than two. Unit tests stay on Vitest and the ports-and-adapters layers stay (AGENTS.md) |
 
 **Needs you:** see Phase 5.9. Plan prices were set on 2026-11-13.
 

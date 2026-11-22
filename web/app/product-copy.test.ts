@@ -12,13 +12,15 @@ const document = (file: string) => read(path.join(ROOT, file));
 /** JSX text spells an apostrophe as an entity; the page shows it as one character. */
 const shown = (text: string) => text.replace(/&apos;|&#39;|&#x27;/g, "'").trim();
 
-/** The text of the one `<p>` whose class list matches, as the page shows it. */
+/** The text of the one `<p>` whose class list matches, as the page shows it (inline markup such as an accent `<span>` is dropped). */
 function paragraph(file: string, classPattern: string) {
-  const match = source(file).match(new RegExp(`<p className="[^"]*${classPattern}[^"]*">\\s*([^<]+?)\\s*</p>`));
+  const match = source(file).match(new RegExp(`<p className="[^"]*${classPattern}[^"]*">([\\s\\S]*?)</p>`));
   expect(match, `a <p> matching ${classPattern} in ${file}`).not.toBeNull();
-  return shown(match![1]);
+  return shown(match![1].replace(/<[^>]+>/g, "").replace(/\s+/g, " "));
 }
 
+/** Files generated from, or written to, the owner's mockups say so in their doc comment. */
+const MOCKUP_MARKER = "docs/service_pacts_";
 const ONE_LINER = "Recurring service agreements for trade contractors, from the customer's list to signature.";
 const FORBIDDEN = ["HVAC", "mechanical contractors", "PM agreement", "Preventive-maintenance"] as const;
 const SCANNED = ["app", "components", "application", "domain", "infrastructure", "lib"] as const;
@@ -45,27 +47,25 @@ function section(text: string, startLine: string, endLine: string) {
 
 describe("the product's own copy, outside the org's item words", () => {
   test("C2301: the root layout's description names the product by what it does, for any trade", () => {
-    expect(source("layout.tsx")).toContain(`description: "${ONE_LINER}"`);
+    const layout = source("layout.tsx");
+    expect(layout).toContain(`const description = "${ONE_LINER}"`);
+    // The one constant feeds the page, Open Graph and Twitter metadata.
+    expect(layout.match(/\bdescription\b(?=[,\s}])/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
   });
 
-  test("C2302: the sign-in page's mobile line is the same sentence", () => {
-    expect(paragraph("login/page.tsx", "lg:hidden")).toBe(ONE_LINER);
-  });
-
-  test("C2303: the sign-in headline is 'From service list to signed agreement.' and no longer than 40 characters", () => {
-    const headline = paragraph("login/page.tsx", "max-w-\\[13ch\\]");
+  test("C2302: the sign-in headline (from the owner's mockup) is 'From service list to signed agreement.' and no longer than 40 characters", () => {
+    const content = source("login/_components/content.tsx");
+    const heading = content.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
+    const headline = shown(heading.replace(/\{" "\}/g, " ").replace(/<br \/>/g, " ").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
     expect(headline).toBe("From service list to signed agreement.");
     expect(headline.length).toBeLessThanOrEqual(40);
-  });
-
-  test("C2304: the sign-in page's desktop footer line names trade contractors, not one trade", () => {
-    expect(paragraph("login/page.tsx", "lg:block")).toBe("Recurring service agreements for trade contractors.");
   });
 
   test.each(SCANNED)("C2305: no forbidden word in the non-test source under web/%s", (dir) => {
     const files = sourceFiles(path.join(WEB, dir));
     expect(files.length, `files scanned under ${dir}`).toBeGreaterThan(0);
-    const hits = files.flatMap((file) => forbiddenIn(read(file)).map((word) => `${path.relative(WEB, file)}: ${word}`));
+    // The owner's mockup pages carry their own marketing copy verbatim (decided 2026-11-22), HVAC and all; they are marked by their source comment.
+    const hits = files.flatMap((file) => (read(file).includes(MOCKUP_MARKER) ? [] : forbiddenIn(read(file)).map((word) => `${path.relative(WEB, file)}: ${word}`)));
     expect(hits).toEqual([]);
   });
 
@@ -95,17 +95,17 @@ describe("the product's own copy, outside the org's item words", () => {
     expect(section(product, "## Product Purpose", "## Operating Context")).not.toContain("HVAC");
   });
 
-  test("C2312: the DESIGN.md description names no trade", () => {
-    const description = document("DESIGN.md").split("\n").find((line) => line.startsWith("description:"));
-    expect(description).toBeDefined();
-    expect(description).not.toContain("HVAC");
+  test("C2312: docs/DESIGN.md (Field Protocol) never presents one trade alone: HVAC appears only beside the other trades", () => {
+    const design = document("docs/DESIGN.md");
+    const hvacLines = design.split("\n").filter((line) => line.includes("HVAC"));
+    expect(hvacLines.length).toBeGreaterThan(0);
+    for (const line of hvacLines) expect(line, line.slice(0, 80)).toMatch(/plumb/i);
+    expect(design.match(/^name: .+$/m), "the frontmatter names the system").not.toBeNull();
   });
 
-  test("C2313: the DESIGN.md Page header paragraph quotes the new Pipeline subtitle", () => {
-    const header = document("DESIGN.md").split("\n").find((line) => line.startsWith("**Page header.**"));
-    expect(header).toBeDefined();
-    expect(header).toContain("Keep every service agreement moving from equipment list to signature.");
-    expect(header).not.toContain("PM agreement");
+  test("C2313: docs/DESIGN.md carries none of the retired wording ('PM agreement', 'Preventive-maintenance', 'mechanical contractors')", () => {
+    const design = document("docs/DESIGN.md");
+    expect(FORBIDDEN.filter((word) => word !== "HVAC" && design.includes(word))).toEqual([]);
   });
 
   test("C2314: CONTEXT.md's Tenant entry and Service agreement heading carry no HVAC or PM wording", () => {

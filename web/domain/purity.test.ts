@@ -103,6 +103,8 @@ describe("item copy goes through the org's words", () => {
       for (const file of appSources(root)) {
         const relative = path.relative(webRoot, file).split(path.sep).join("/");
         if (ITEM_COPY_ALLOWED.includes(relative)) continue;
+        // Public marketing pages generated from the owner's mockups (decided 2026-11-22) speak for the product, not for an org, so no org words apply.
+        if (readFileSync(file, "utf8").includes("docs/service_pacts_")) continue;
         for (const copy of unlocalisedItemCopy(readFileSync(file, "utf8"), relative)) offenders.push(`${relative}: ${copy}`);
       }
     }

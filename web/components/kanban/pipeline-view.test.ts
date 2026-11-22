@@ -2,12 +2,15 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createElement, type FunctionComponent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { PipelineCard } from "@/application/ports";
 import { PipelineView } from "./pipeline-view";
 import { KanbanCard } from "./kanban-card";
 import { ItemWordsProvider } from "@/components/shell/item-words";
 import { DEFAULT_ITEM_WORDS, itemWords, type ItemWords } from "@/domain/org-settings";
+
+// LiveRefresh asks for the router; a static render has none mounted.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }), usePathname: () => "/pipeline" }));
 
 const card = (patch: Partial<PipelineCard> = {}): PipelineCard => ({
   id: "a1",
@@ -179,14 +182,28 @@ describe("PipelineView: follow-up", () => {
   test("the Follow-ups due card counts the cards that qualify, starts off, and is the board's filter", () => {
     const html = render(stuck());
     expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*data-summary="follow-ups"|<button[^>]*data-summary="follow-ups"[^>]*aria-pressed="false"/);
-    expect(html).toMatch(/Follow-ups due[\s\S]*?<span[^>]*text-\[32px\][^>]*>2</);
+    expect(html).toMatch(/Follow-ups due[\s\S]*?<span[^>]*>2</);
   });
 
-  test("the first card is the open money, the second the cards waiting on the customer", () => {
+  test("the first card is the open money with the deals in motion, the second the open deals and how many need follow-up", () => {
     const html = render([...stuck(), card({ id: "draft", annualCents: 500000, visitsPerYear: 4 })]);
-    expect(html).toMatch(/Open pipeline[\s\S]*?\$5,000/);
-    expect(html).toMatch(/Waiting on customer[\s\S]*?text-\[32px\][^>]*>3</);
+    expect(html).toMatch(/Pipeline Value[\s\S]*?\$5,000/);
     expect(html).toContain("4 agreements in motion");
+    expect(html).toMatch(/Total Deals Active[\s\S]*?4[\s\S]*?total/);
+    expect(html).toMatch(/2 need follow-up/);
+  });
+
+  test("the four cards read Pipeline Value, Total Deals Active, Deals Won (This Month) and Deals in Progress", () => {
+    const html = render([card()]);
+    for (const label of ["Pipeline Value", "Total Deals Active", "Deals Won (This Month)", "Deals in Progress"]) expect(html).toContain(label);
+  });
+
+  test("the page is titled Sales Pipeline with a Live pill, and the board has a Kanban View and a List View that opens the agreements list", () => {
+    const html = render([card()]);
+    expect(html).toMatch(/<h1[^>]*>Sales Pipeline</);
+    expect(html).toMatch(/Live<\/span>/);
+    expect(html).toContain("Kanban View");
+    expect(html).toMatch(/<a[^>]*href="\/agreements"[^>]*>[\s\S]*?List View/);
   });
 
   test("the page title is the greeting it is given", () => {
@@ -226,14 +243,14 @@ describe("PipelineView: follow-up", () => {
       ...patch,
     }) as never;
 
-  test("Recent equipment imports names the newest lists with how much was recognized, and links to all of them", () => {
+  test("Recent Equipment Imports names the newest lists with how much was recognized, and links to all of them", () => {
     const html = renderToStaticMarkup(createElement(PipelineView, { cards: [card()], imports: [importJob(), importJob({ id: "j2", originalName: "Riverside.xlsx", status: "uploaded", extraction: undefined })] }));
-    expect(html).toContain("Recent equipment imports");
-    expect(html).toContain("Messy files, structured into priceable assets.");
+    expect(html).toContain("Recent Equipment Imports");
+    expect(html).toContain("Messy contractor CSVs structured into automated priceable asset inventories.");
     expect(html).toContain("Juniper HVAC list.csv");
     expect(html).toContain("Juniper Medical Pavilion · Juniper Health");
     expect(html).toContain("27 of 31 rows recognized");
-    expect(html).toMatch(/<a[^>]*href="\/imports"[^>]*>View all<\/a>/);
+    expect(html).toMatch(/<a[^>]*href="\/imports"[^>]*>View all imports →<\/a>/);
     // a reviewable list links to its rows, any other to the site's import page
     expect(html).toMatch(/<a[^>]*href="\/imports\/j1"/);
     expect(html).toMatch(/<a[^>]*href="\/sites\/s1\/import"/);
@@ -242,7 +259,7 @@ describe("PipelineView: follow-up", () => {
   test("only the three newest imports are named, and with none the panel is left out", () => {
     const many = ["a", "b", "c", "d", "e"].map((id) => importJob({ id }));
     expect((renderToStaticMarkup(createElement(PipelineView, { cards: [card()], imports: many })).match(/data-import=/g) ?? []).length).toBe(3);
-    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()] }))).not.toContain("Recent equipment imports");
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()] }))).not.toContain("Recent Equipment Imports");
   });
 
   test("opened from the bell the board starts on the agreements that need follow-up", () => {
@@ -320,10 +337,10 @@ describe("PipelineView subtitle", () => {
     renderToStaticMarkup(createElement(ItemWordsProvider as FunctionComponent<{ words: ItemWords }>, { words }, createElement(PipelineView, { cards: [] })));
 
   test("C2308: with the default item words the subtitle says service agreement and equipment list", () => {
-    expect(renderWith(DEFAULT_ITEM_WORDS)).toContain("Keep every service agreement moving from equipment list to signature.");
+    expect(renderWith(DEFAULT_ITEM_WORDS)).toContain("Keep every service agreement moving from equipment intake to signed contract.");
   });
 
   test("C2309: with the item words station and stations the subtitle says station list", () => {
-    expect(renderWith(itemWords("station", "stations"))).toContain("Keep every service agreement moving from station list to signature.");
+    expect(renderWith(itemWords("station", "stations"))).toContain("Keep every service agreement moving from stations intake to signed contract.");
   });
 });

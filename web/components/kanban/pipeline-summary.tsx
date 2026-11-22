@@ -1,87 +1,77 @@
-import { Icon } from "@/components/ui/icons";
+import { InfoIcon, StarIcon, UserIcon } from "lucide-react";
 import { CountUp } from "@/components/motion/count-up";
+import { StatCard } from "@/components/ui/stat-card";
+import { StatusPill } from "@/components/ui/status-pill";
 import { formatCad } from "@/lib/money";
+import { FRESH_UNDER_DAYS, type PipelineStats } from "@/lib/pipeline-stats";
 
 const formatCount = (value: number) => String(value);
-
-type SummaryProps = {
-  /** Annual CAD cents still in play: In progress, Sent and Accepted. */
-  openCents: number;
-  /** Agreements in those stages. */
-  openCount: number;
-  /** Of those, how many have no service lines and so add nothing to the total. */
-  unpricedCount?: number;
-  /** Agreements waiting on the customer: stage Sent. */
-  waitingCount: number;
-  /** Agreements that need the estimator: an attention label, or sat past their stage's limit. */
-  followUpCount: number;
-  /** The board shows only the cards that need follow-up. */
-  followUpOnly: boolean;
-  onToggleFollowUp: () => void;
-};
+const dealsIn = (count: number) => `${count} ${count === 1 ? "agreement" : "agreements"}`;
 
 /**
- * The three questions an estimator opens the app with: how much is in play, who has not answered, and what needs a
- * nudge today. The last card is also the board's follow-up filter, so the number and what it counts are one tap apart.
+ * The four figures an estimator opens the Pipeline for (docs/DESIGN.md "Service Pact Summary Cards"): money in play, how
+ * many deals are open and how fresh, what was signed this month, and what is being drafted. The figures come from
+ * `pipelineStats`; nothing here computes.
  */
-export function PipelineSummary({ openCents, openCount, unpricedCount = 0, waitingCount, followUpCount, followUpOnly, onToggleFollowUp }: SummaryProps) {
+export function PipelineSummary({ stats }: { stats: PipelineStats }) {
+  const unpriced = stats.openCents === 0 && stats.openCount > 0;
   return (
-    <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
-      <div data-summary="open" className="col-span-2 flex flex-col gap-2 rounded-panel bg-night p-5 text-surface shadow-card sm:col-span-1">
-        <span className="flex items-center justify-between text-[13px] font-medium text-night-ink">
-          Open pipeline
-          <Icon name="trend" className="size-[18px]" />
-        </span>
-        {openCents === 0 && openCount > 0 ? (
-          <>
-            <span className="font-display text-[32px] leading-none font-medium tracking-tight">
-              Unpriced
-            </span>
-            <span className="text-[12px] text-night-ink">
-              {openCount} {openCount === 1 ? "agreement" : "agreements"} in motion, priced once service lines are added
-            </span>
-          </>
-        ) : (
-          <>
-            <CountUp className="font-display text-[32px] leading-none font-medium tracking-tight" value={openCents} format={formatCad} snap={100} />
-            <span className="text-[12px] text-night-ink">
-              {openCount} {openCount === 1 ? "agreement" : "agreements"} in motion · annual value{unpricedCount > 0 ? `, ${unpricedCount} unpriced` : ""}
-            </span>
-          </>
-        )}
+    <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4">
+      <div data-summary="open">
+        <StatCard
+          label="Pipeline Value"
+          icon={<InfoIcon />}
+          value={unpriced ? "Unpriced" : <CountUp value={stats.openCents} format={formatCad} snap={100} />}
+          unit={unpriced ? undefined : "CAD"}
+          note={
+            <>
+              <span>{dealsIn(stats.openCount)} in motion</span>
+              <span>{unpriced ? "priced once lines are added" : stats.unpricedCount > 0 ? `${stats.unpricedCount} unpriced` : "annualized"}</span>
+            </>
+          }
+        />
       </div>
-
-      <div data-summary="waiting" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4 shadow-card sm:p-5">
-        <span className="flex items-center justify-between text-[13px] font-medium text-ink-2">
-          Waiting on customer
-          <Icon name="clock" className="size-[18px]" />
-        </span>
-        <CountUp className="font-display text-[32px] leading-none font-medium tracking-tight text-ink" value={waitingCount} format={formatCount} />
-        <span className="text-[12px] text-ink-2">Sent, no decision yet</span>
+      <div data-summary="active">
+        <StatCard
+          label="Total Deals Active"
+          icon={<InfoIcon />}
+          value={<CountUp value={stats.openCount} format={formatCount} />}
+          unit="total"
+          note={
+            <>
+              <span>{stats.freshCount} aging under {FRESH_UNDER_DAYS} days</span>
+              <span>{stats.followUpCount} need follow-up</span>
+            </>
+          }
+        />
       </div>
-
-      <button
-        type="button"
-        data-summary="follow-ups"
-        aria-pressed={followUpOnly}
-        onClick={onToggleFollowUp}
-        className={`flex flex-col gap-2 rounded-panel border p-4 text-left shadow-card transition-colors duration-150 sm:p-5 ${
-          followUpOnly
-            ? "border-action bg-action-tint"
-            : followUpCount > 0
-              ? "border-attention-fg/30 bg-attention-bg/50 hover:bg-attention-bg"
-              : "border-hairline bg-surface hover:bg-ground"
-        }`}
-      >
-        <span className={`flex items-center justify-between text-[13px] font-medium ${followUpCount > 0 && !followUpOnly ? "text-attention-fg" : "text-ink-2"}`}>
-          Follow-ups due
-          <Icon name="bell" className="size-[18px]" />
-        </span>
-        <CountUp className={`font-display text-[32px] leading-none font-medium tracking-tight ${followUpCount > 0 && !followUpOnly ? "text-attention-fg" : "text-ink"}`} value={followUpCount} format={formatCount} />
-        <span className={`text-[12px] ${followUpCount > 0 && !followUpOnly ? "text-attention-fg" : "text-ink-2"}`}>
-          {followUpOnly ? "Showing only these. Select to show all." : followUpCount > 0 ? "Needs attention. Select to filter the board." : "Nothing is overdue"}
-        </span>
-      </button>
+      <div data-summary="won">
+        <StatCard
+          label="Deals Won (This Month)"
+          icon={<StarIcon />}
+          value={<CountUp value={stats.signedCents} format={formatCad} snap={100} />}
+          note={
+            <>
+              <span>{dealsIn(stats.signedCount)} signed</span>
+              <span>{stats.winRate === null ? "nothing closed yet" : `${stats.winRate}% win rate`}</span>
+            </>
+          }
+        />
+      </div>
+      <div data-summary="progress">
+        <StatCard
+          label="Deals in Progress"
+          icon={<UserIcon />}
+          value={<CountUp value={stats.inProgress.count} format={formatCount} />}
+          indicator={<StatusPill stage="in_progress" filled label="Active" />}
+          note={
+            <>
+              <span>{stats.inProgress.averageVisits === null ? "No priced deals" : `${stats.inProgress.averageVisits} visits/yr average`}</span>
+              <span>{stats.inProgress.siteCount} {stats.inProgress.siteCount === 1 ? "site" : "sites"}</span>
+            </>
+          }
+        />
+      </div>
     </div>
   );
 }

@@ -242,7 +242,7 @@ export const itemWas = (words: ItemWords) => itemVerb(words, "was", "were");
  * modifier, any other "equipment" the plural, a capital stays a capital, and "an" before it follows the new word. With the default words nothing changes.
  */
 export function itemText(text: string, words: ItemWords): string {
-  return text.replace(/\b(?:([Aa])n )?([Ee])quipment( (?:list|type|import|catalog)s?)?\b/g, (_match, a: string | undefined, first: string, tail: string | undefined) => {
+  return text.replace(/\b(?:([Aa])n )?([Ee])quipment( (?:[Ll]ist|[Tt]ype|[Ii]mport|[Cc]atalog)s?)?\b/g, (_match, a: string | undefined, first: string, tail: string | undefined) => {
     const word = tail ? words.singular : words.plural;
     const article = a ? a + (startsWithVowelSound(word) ? "n " : " ") : "";
     return article + (first === "E" ? capitalise(word) : word) + (tail ?? "");

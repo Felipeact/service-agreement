@@ -162,7 +162,7 @@ describe("the import control in the contract wording editor", () => {
   test("C5826: the control's button and file input use the 44 px touch classes and no fixed width past w-44", async () => {
     await mount(async () => ({ status: "failed", code: "invalid" }));
     expect(readButton().className).toContain("h-11");
-    expect(readButton().className).toContain("lg:h-[34px]");
+    expect(readButton().className).toContain("lg:h-[38px]");
     expect(fileInput().className).toContain("min-h-11");
     const source = readFileSync(path.resolve(__dirname, "contract-import-control.tsx"), "utf8");
     expect(source).not.toMatch(/\bw-(5\d|[6-9]\d|\d{3})\b|w-\[\d+px\]/);

@@ -23,7 +23,28 @@ export const NAV: readonly NavLink[] = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-export const FOOTER_LINKS: readonly NavLink[] = [...NAV, { href: "/about", label: "About" }, { href: "/faq", label: "FAQ" }, { href: "/contact", label: "Contact" }, { href: "/terms", label: "Terms" }, { href: "/privacy", label: "Privacy" }, { href: "/security", label: "Security" }];
+/** The footer's three columns. Every link points at a page that exists (site-pages.test.ts). */
+export const FOOTER_GROUPS: readonly { title: string; links: readonly NavLink[] }[] = [
+  { title: "Product", links: NAV },
+  {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/terms", label: "Terms" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/security", label: "Security" },
+    ],
+  },
+];
+
+export const FOOTER_LINKS: readonly NavLink[] = FOOTER_GROUPS.flatMap((group) => group.links);
 
 /** The public pages a search engine may list, in sitemap order (qa-p1-p2 C7009). */
 export const SITEMAP_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/contact", "/register", "/terms", "/privacy", "/security"];

@@ -31,7 +31,7 @@ function ExpiringCard({ row, today, index }: { row: ExpiringAgreement; today: st
           {left}d
         </span>
       </div>
-      <h3 className="mt-3 font-display text-[15px] leading-snug font-semibold tracking-tight">{row.site}</h3>
+      <h3 className="mt-3 text-[15px] leading-snug font-semibold tracking-tight">{row.site}</h3>
       <p className="text-[12px] text-ink-2">{row.customer}</p>
       <p className="text-[12px] text-ink-2">{row.number}</p>
       <p className="mt-2 text-[12px] break-words text-ink-2">{expiringLabel(row, today)}</p>
@@ -50,7 +50,7 @@ function ExpiringCard({ row, today, index }: { row: ExpiringAgreement; today: st
 export function ExpiringColumn({ rows, today, className = "" }: { rows: ExpiringAgreement[]; today: string; className?: string }) {
   const total = rows.reduce((sum, row) => sum + row.annualCents, 0);
   return (
-    <section data-column="expiring" id="panel-expiring" aria-labelledby="column-expiring" className={`flex-col gap-2.5 rounded-panel bg-board/60 p-3 xl:p-2.5 ${className}`}>
+    <section data-column="expiring" id="panel-expiring" aria-labelledby="column-expiring" className={`flex-col gap-2.5 rounded-panel border border-hairline bg-board p-3 xl:p-2.5 ${className}`}>
       <ColumnHeader
         id="column-expiring"
         title={

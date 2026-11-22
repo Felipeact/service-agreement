@@ -7,7 +7,10 @@ import { Icon } from "@/components/ui/icons";
 import { ProductMark } from "@/components/ui/product-mark";
 import { SearchInput } from "@/components/ui/search-input";
 import { SEARCH_MAX } from "@/domain/records";
-import { SidebarAccount } from "./sidebar-account";
+import { initialsOf } from "@/lib/initials";
+import { PlanQuota, type PlanQuotaFigure } from "./plan-quota";
+import { SidebarAccount, roleLabel } from "./sidebar-account";
+import { WorkspaceCard } from "./workspace-card";
 import type { ItemWords } from "@/domain/org-settings";
 import { ItemWordsProvider } from "./item-words";
 import { SidebarNav } from "./sidebar-nav";
@@ -32,6 +35,12 @@ type AppShellProps = {
   frozen?: { canRenew: boolean };
   /** The member may read Reports (owner, admin or estimator): the sidebar shows the link. */
   reports?: boolean;
+  /** The member's role, shown under their email and in the top bar. */
+  role?: string;
+  /** The plan and how much of its live-agreement limit is used; absent when the org has no plan or the figure could not be read. */
+  plan?: PlanQuotaFigure | null;
+  /** A count per nav item `href`, shown as a small badge (open agreements beside Pipeline). */
+  counts?: Record<string, number>;
 };
 
 /** The bell: a link to the Pipeline filtered to the agreements that need follow-up, with their count when there are any. */
@@ -55,21 +64,18 @@ function FollowUpBell({ count }: { count: number }) {
   );
 }
 
-/** The product name over the tenant's company name, beside the mark. Both sit on the Night shell. */
-function Brand({ orgName, markClass }: { orgName: string; markClass: string }) {
+/** The plan's quota card (when there is a plan to show) above the signed-in member's account row. */
+function SidebarFooter({ plan, email, role, signOut }: { plan?: PlanQuotaFigure | null; email: string; role?: string; signOut: () => Promise<void> }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <ProductMark className={markClass} />
-      <div className="min-w-0">
-        <div className="font-display text-[16px] leading-tight font-semibold tracking-tight text-surface">{PRODUCT_NAME}</div>
-        <div className="pt-0.5 text-[12px] leading-snug font-medium break-words text-night-ink">{orgName}</div>
-      </div>
+    <div className="flex flex-col gap-2 pt-2">
+      {plan && <PlanQuota {...plan} />}
+      <SidebarAccount email={email} role={role} signOut={signOut} />
     </div>
   );
 }
 
 /** Fixed Night sidebar on desktop (the app's one search lives in it); a Night top bar with a navigation drawer below 1024px. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen, reports }: AppShellProps) {
+export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen, reports, role, plan, counts }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -133,12 +139,25 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
       <aside id="app-sidebar" inert={collapsed} className="sticky top-0 hidden h-dvh min-w-0 overflow-hidden bg-night lg:block">
         {/* Fixed width inside the shrinking column, so the content slides and fades rather than reflowing. */}
         <div
-          className={`flex h-full w-[240px] flex-col px-3 pt-5 pb-4 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
+          className={`flex h-full w-[240px] flex-col overflow-y-auto px-3 pt-5 pb-4 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
             collapsed ? "-translate-x-6 opacity-0 duration-150" : "translate-x-0 opacity-100 duration-300"
           }`}
         >
-          <div className="px-2.5 pb-6">
-            <Brand orgName={orgName} markClass="size-8" />
+          <div className="flex items-center justify-between px-2.5 pb-2.5">
+            <span className="text-[11px] font-semibold tracking-[0.05em] text-night-ink uppercase">Navigation</span>
+            <button
+              type="button"
+              aria-label="Hide sidebar"
+              aria-expanded={!collapsed}
+              aria-controls="app-sidebar"
+              onClick={toggleSidebar}
+              className="inline-flex size-7 items-center justify-center rounded-control text-night-ink transition-colors duration-150 hover:bg-surface/10 hover:text-surface"
+            >
+              <Icon name="sidebar" className="size-4" />
+            </button>
+          </div>
+          <div className="pb-3">
+            <WorkspaceCard orgName={orgName} planName={plan?.planName} />
           </div>
           <form method="get" action="/search" role="search" className="px-0.5 pb-3">
             <SearchInput
@@ -151,7 +170,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               shortcut={SEARCH_SHORTCUT}
             />
           </form>
-          <SidebarNav words={words} reports={reports} footer={<SidebarAccount email={email} signOut={signOut} />} />
+          <SidebarNav words={words} reports={reports} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} />} />
         </div>
       </aside>
 
@@ -199,13 +218,15 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
               role="dialog"
               aria-modal="true"
               aria-label="Navigation"
-              className="absolute inset-y-0 left-0 flex w-[272px] flex-col bg-night px-3 pt-2 pb-4 shadow-panel"
+              className="absolute inset-y-0 left-0 flex w-[272px] flex-col overflow-y-auto bg-night px-3 pt-2 pb-4 shadow-panel"
               initial={{ x: -272 }}
               animate={{ x: 0, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } }}
               exit={{ x: -272, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
             >
-              <div className="flex items-center justify-between pb-3 pl-2.5">
-                <Brand orgName={orgName} markClass="size-8" />
+              <div className="flex items-center justify-between gap-2 pb-3">
+                <div className="min-w-0 flex-1">
+                  <WorkspaceCard orgName={orgName} planName={plan?.planName} />
+                </div>
                 <button
                   ref={closeButtonRef}
                   type="button"
@@ -216,7 +237,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
                   <Icon name="close" />
                 </button>
               </div>
-              <SidebarNav words={words} reports={reports} onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
+              <SidebarNav words={words} reports={reports} counts={counts} onNavigate={closeDrawer} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} />} />
             </motion.div>
           </motion.div>
         )}
@@ -237,9 +258,14 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
           {todayLabel && <span className="text-[13px] text-ink-2">{todayLabel}</span>}
           <div className="ml-auto flex items-center gap-4">
             <FollowUpBell count={followUps} />
-            <div className="flex flex-col items-end leading-tight">
-              <span className="text-[13px] font-semibold text-ink">{orgName}</span>
-              <span className="text-[12px] text-ink-2">Workspace</span>
+            <div className="flex items-center gap-2.5">
+              <div className="flex flex-col items-end leading-tight">
+                <span className="text-[13px] font-semibold text-ink">{orgName}</span>
+                <span className="text-[12px] text-ink-2">{roleLabel(role) ?? "Workspace"}</span>
+              </div>
+              <span aria-hidden="true" className="inline-flex size-8 items-center justify-center rounded-full bg-action text-[12px] font-semibold text-surface">
+                {initialsOf(email)}
+              </span>
             </div>
           </div>
         </header>

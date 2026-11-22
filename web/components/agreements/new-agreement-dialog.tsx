@@ -250,12 +250,12 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
         onClose={reset}
         onCancel={(event) => busy && event.preventDefault()}
         onClick={(event) => event.target === dialogRef.current && !busy && close()}
-        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[min(34rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[16px] bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
+        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[min(34rem,calc(100vw-1.5rem))] overflow-y-auto rounded-panel border border-hairline bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
       >
         <form onSubmit={submit} noValidate className="flex flex-col gap-5 p-5 sm:p-7">
           <header className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <h2 id="new-agreement-title" className="font-display text-[22px] leading-tight font-semibold tracking-tight">
+              <h2 id="new-agreement-title" className="text-[22px] leading-tight font-semibold tracking-[-0.015em]">
                 New agreement
               </h2>
               <p className="text-[13px] text-ink-2">{itemText("Start with the customer's equipment list and the service scope is built from what is on site.", words)}</p>
@@ -273,7 +273,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
 
           <FileDropzone
             id="newAgreementFile"
-            label={itemText("Equipment list (optional)", words)}
+            label={itemText("Customer's equipment list (optional)", words)}
             accept={IMPORT_ACCEPT}
             hint={FILE_HINT}
             file={file}

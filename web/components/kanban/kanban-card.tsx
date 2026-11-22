@@ -33,7 +33,7 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
           <span className="sr-only">{ageLabel(card.ageDays)}</span>
         </span>
       </div>
-      <h3 className={`mt-2.5 font-display text-[15px] leading-snug tracking-tight ${closed ? "font-medium" : "font-semibold"}`}>{card.site}</h3>
+      <h3 className={`mt-2.5 text-[15px] leading-snug tracking-tight ${closed ? "font-medium" : "font-semibold"}`}>{card.site}</h3>
       {showCustomer && <p className="text-[12px] text-ink-2">{card.customer}</p>}
       {(card.attention || followUp || card.isRenewal || card.status === "expired") && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -43,12 +43,12 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
           {followUp && <StatusPill tone="attention" label={followUp} />}
         </div>
       )}
-      <div className="mt-3 flex items-end justify-between gap-2 border-t border-hairline pt-3">
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-hairline pt-3">
         {card.annualCents !== undefined ? (
-          <div className="flex flex-col">
-            <span className={`text-[15px] font-semibold ${closed ? "text-ink-2" : "text-ink"}`}>{formatCad(card.annualCents)}/yr</span>
-            <span className="text-[12px] text-ink-2">{card.visitsPerYear} visits/yr</span>
-          </div>
+          <span className={`inline-flex flex-col rounded-control px-2 py-1 leading-snug ${closed ? "bg-board text-ink-2" : "bg-pill-completed text-pill-completed-ink"}`}>
+            <span className="text-[13px] font-semibold">{formatCad(card.annualCents)}/yr</span>
+            <span className="text-[12px] font-medium">{card.visitsPerYear} visits/yr</span>
+          </span>
         ) : (
           <span className="text-[12px] text-ink-2">No service lines yet</span>
         )}

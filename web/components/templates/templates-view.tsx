@@ -1,4 +1,5 @@
 import type { AgreementTemplateSummary, MemberRole } from "@/application/ports";
+import { ItemText } from "@/components/shell/item-words";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { Icon } from "@/components/ui/icons";
@@ -26,8 +27,8 @@ export function TemplatesView({ templates, role, now, actions, dialog, contractW
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Agreement templates"
-        subtitle="Standardize scope and pricing without making every customer agreement feel generic."
+        title="Agreement Templates"
+        subtitle={<ItemText>Standardize scope, equipment schedules, and pricing without making every customer agreement feel generic.</ItemText>}
         action={
           canWrite && (
             <LinkButton href="/templates/new" variant="primary">

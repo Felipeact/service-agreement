@@ -1,6 +1,6 @@
-import { HomeA } from "@/components/site/home-concepts";
+import { Content } from "./_components/home-content";
 
-/** The public front door (`/`). The concept pages under /concepts show the two alternatives until the owner picks one. */
+/** The public front door (`/`), from the owner's mockup (docs/service_pacts_home_light_redesign). */
 export default function HomePage() {
-  return <HomeA />;
+  return <Content />;
 }

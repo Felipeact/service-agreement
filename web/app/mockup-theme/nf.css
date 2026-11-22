@@ -1,0 +1,18 @@
+/* service_pacts_404_not_found (mk-nf) */
+@theme {
+  --color-nf-brand-50: #f0f6fe;
+  --color-nf-brand-100: #ddeafd;
+  --color-nf-brand-500: #2563eb;
+  --color-nf-brand-600: #1a62eb;
+  --color-nf-brand-700: #1d4ed8;
+  --color-nf-navy-900: #0b1320;
+  --color-nf-navy-950: #080d17;
+}
+
+
+.mk-nf {
+    & {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+}

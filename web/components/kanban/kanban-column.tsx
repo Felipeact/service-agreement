@@ -34,14 +34,15 @@ export function ColumnHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-0.5 pb-2">
-      <h2 id={id} {...{ [attr]: "" }} className="flex items-center gap-2 font-display text-[14px] font-semibold tracking-tight whitespace-nowrap text-ink max-md:sr-only">
+      <h2 id={id} {...{ [attr]: "" }} className="flex items-center gap-2 text-[14px] font-semibold tracking-tight whitespace-nowrap text-ink max-md:sr-only">
         <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${dotClass}`} />
         {title}
       </h2>
-      <span data-column-count className="font-medium text-ink-2 max-md:sr-only">
-        {count}
-      </span>
-      <span className="flex basis-full flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-ink-2 max-md:order-first">
+      <span className="flex basis-full flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] font-medium text-ink-2 max-md:order-first">
+        <span>
+          <span data-column-count>{count}</span> {count === 1 ? "Deal" : "Deals"}
+        </span>
+        <span aria-hidden="true">·</span>
         <span data-column-total>{total}</span>
         {note && <span className="font-normal">{note}</span>}
         {pill}
@@ -86,7 +87,7 @@ export function KanbanColumn({ stage, cards, className = "" }: KanbanColumnProps
         }
       />
       {cards.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 px-1 py-5 text-center text-ink-2">
+        <div className="flex flex-col items-center gap-2 rounded-control border border-dashed border-line-strong px-3 py-8 text-center text-ink-2">
           {meta.emptySpot && <Spot kind={meta.emptySpot} className="size-14 opacity-80" />}
           <p className="text-[12px]">{meta.emptyText}</p>
         </div>

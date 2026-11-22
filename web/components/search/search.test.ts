@@ -98,9 +98,10 @@ describe("search results", () => {
     const html = render("", null);
     const input = html.match(/<input[^>]*>/)?.[0] ?? "";
     const button = html.match(/<button[^>]*>/)?.[0] ?? "";
-    for (const element of [input, button]) {
+    // The field is still the legacy 34px control until the inputs move to shadcn; the button is Field Protocol's 38px standard.
+    for (const [element, desktopHeight] of [[input, "34px"], [button, "38px"]] as const) {
       expect(element, element).toMatch(/class="(?:[^"]*\s)?h-11(?:\s[^"]*)?"/);
-      expect(element, element).toMatch(/class="(?:[^"]*\s)?lg:h-\[34px\](?:\s[^"]*)?"/);
+      expect(element, element).toContain(`lg:h-[${desktopHeight}]`);
     }
   });
 });

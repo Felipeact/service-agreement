@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PortalMock } from "@/components/site/mock-ui";
-import { Wrap } from "@/components/site/sections";
-import { SiteShell } from "@/components/site/site-shell";
 import { PLAN_KEYS, type PlanKey } from "@/domain/billing";
+import { Content } from "./_components/content";
 import { RegisterForm } from "./register-form";
 
 export const metadata: Metadata = { title: "Register" };
@@ -17,34 +15,16 @@ export async function RegisterFormForRequest({ searchParams }: Pick<PageProps<"/
 
 /**
  * Where a new business says what it does, before it pays (decision 6, onboarding step 1): its trades and a plan,
- * then Checkout. The trades live here, not on the pricing page, so the price page stays about prices.
+ * then Checkout. The page is the owner's mockup (docs/service_pacts_register); the form is the live one.
  */
 export default function RegisterPage({ searchParams }: PageProps<"/register">) {
   return (
-    <SiteShell>
-      <section className="bg-ground">
-        <Wrap className="grid gap-8 py-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14 lg:py-16">
-          <div className="flex flex-col gap-4">
-            <h1 className="max-w-[14ch] font-display text-[36px] leading-[1.05] font-semibold tracking-tight text-balance lg:text-[52px]">Create your workspace.</h1>
-            <p className="max-w-[44ch] text-[15px] leading-relaxed text-ink-2">
-              Tell us your trade and we set up your workspace to match: service types, checklists and visit months, all editable.
-            </p>
-            <ol className="flex flex-col gap-2 text-ink-2">
-              <li>1. Your details, trades, plan and team size, here.</li>
-              <li>2. Your card, with our payment provider.</li>
-              <li>3. A sign-in link, then a short setup for your company.</li>
-            </ol>
-            <div className="mt-4 hidden max-w-[480px] lg:block">
-              <PortalMock />
-            </div>
-          </div>
-          <div className="rounded-panel border border-hairline bg-surface p-5 shadow-panel sm:p-7">
-            <Suspense fallback={<RegisterForm />}>
-              <RegisterFormForRequest searchParams={searchParams} />
-            </Suspense>
-          </div>
-        </Wrap>
-      </section>
-    </SiteShell>
+    <Content
+      form={
+        <Suspense fallback={<RegisterForm />}>
+          <RegisterFormForRequest searchParams={searchParams} />
+        </Suspense>
+      }
+    />
   );
 }

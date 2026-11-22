@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileTextIcon } from "lucide-react";
 import type { ImportHistoryRow } from "@/application/ports";
 import { Icon } from "@/components/ui/icons";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -22,13 +23,13 @@ export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
     <section aria-labelledby="recent-imports-title" className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col">
-          <h2 id="recent-imports-title" className="font-display text-[19px] font-semibold tracking-tight">
-            {itemText("Recent equipment imports", words)}
+          <h2 id="recent-imports-title" className="text-[18px] leading-7 font-semibold tracking-tight">
+            {itemText("Recent Equipment Imports", words)}
           </h2>
-          <p className="text-[13px] text-ink-2">Messy files, structured into priceable assets.</p>
+          <p className="text-[13px] text-ink-2">Messy contractor CSVs structured into automated priceable asset inventories.</p>
         </div>
         <Link href="/imports" className="inline-flex min-h-11 shrink-0 items-center text-[13px] font-medium whitespace-nowrap text-action lg:min-h-0">
-          View all
+          View all imports →
         </Link>
       </div>
       <ul className="flex flex-col divide-y divide-hairline">
@@ -40,6 +41,9 @@ export function RecentImports({ jobs }: { jobs: ImportHistoryRow[] }) {
           return (
             <li key={job.id} data-import={job.id}>
               <Link href={href} className="group flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5 transition-colors duration-150 hover:bg-action-tint/40">
+                <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-control bg-action-tint text-action">
+                  <FileTextIcon className="size-5" />
+                </span>
                 <span className="flex min-w-[12rem] flex-1 flex-col">
                   <span className="text-[13.5px] font-semibold break-all text-ink">{job.originalName}</span>
                   <span className="text-[12px] text-ink-2">{`${job.site.name} · ${job.customer.name}`}</span>

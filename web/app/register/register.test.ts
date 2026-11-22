@@ -39,15 +39,13 @@ describe("the register page", () => {
 });
 
 describe("the form", () => {
-  test("four trade checkboxes named trade, in order, none checked at first", () => {
+  test("four trade checkboxes named trade, in order, with the mockup's Heating and cooling ticked at first", () => {
     const boxes = inputs(renderFields(IDLE), "checkbox");
     expect(boxes.map(value)).toEqual(["hvac", "plumbing", "electrical", "other"]);
-    for (const attrs of boxes) {
-      expect(attrs).toContain('name="trade"');
-      expect(attrs).not.toContain("checked");
-    }
-    const labels = [...renderFields(IDLE).matchAll(/<label[^>]*>\s*<input[^>]*type="checkbox"[^>]*\/?>([^<]*)<\/label>/g)].map((m) => m[1].trim());
-    expect(labels).toEqual(["Heating and cooling", "Plumbing", "Electrical", "Other"]);
+    for (const attrs of boxes) expect(attrs).toContain('name="trade"');
+    expect(boxes.filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["hvac"]);
+    const labels = [...renderFields(IDLE).matchAll(/<label[^>]*>(?:(?!<\/label>)[\s\S])*?type="checkbox"[\s\S]*?<\/label>/g)].map((m) => textOf(m[0]));
+    expect(labels).toEqual(["hvac Heating and cooling Popular", "plumbing Plumbing & Hydronics", "bolt Electrical Systems", "handyman Refrigeration / Other"]);
   });
 
   test("three plan radios named plan, in order, with Team chosen by default", () => {
@@ -63,22 +61,22 @@ describe("the form", () => {
   });
 
   test("one submit button reads 'Continue to secure checkout'", () => {
-    const buttons = [...renderFields(IDLE).matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)];
+    const buttons = [...renderFields(IDLE).matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
     expect(buttons).toHaveLength(1);
     expect(buttons[0][1]).toContain('type="submit"');
-    expect(buttons[0][2]).toBe("Continue to secure checkout");
+    expect(textOf(buttons[0][2])).toBe("Continue to secure checkout arrow_forward");
   });
 
   test("while pending the button is disabled and reads Starting…", () => {
-    const [button] = [...renderFields(IDLE, true).matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)];
+    const [button] = [...renderFields(IDLE, true).matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
     expect(button[1]).toMatch(/\sdisabled=""/);
-    expect(decode(button[2])).toBe("Starting…");
+    expect(textOf(button[2])).toContain("Starting…");
   });
 
-  test("no trade shows its text inside the trades fieldset", () => {
+  test("no trade shows its text in a role=alert element", () => {
     const html = renderFields({ status: "no_trade", trades: [], values: BLANK, fields: {} });
-    const fieldset = [...html.matchAll(/<fieldset[\s\S]*?<\/fieldset>/g)].map((m) => m[0]).find((block) => block.includes("What does your business do?"))!;
-    expect(textOf(fieldset)).toContain("Choose at least one trade.");
+    expect(textOf(html)).toContain("Choose at least one trade.");
+    expect(html).toContain('role="alert"');
   });
 
   test.each(REFUSALS)("$status shows exactly its own text, in one role=alert element", ({ status, message }) => {
@@ -181,18 +179,16 @@ describe("the contact fields (register-seats)", () => {
   });
 
   test("C2618: while a submit is pending the button is disabled and reads Starting…", () => {
-    const [button] = [...renderFields(IDLE, true).matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)];
+    const [button] = [...renderFields(IDLE, true).matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
     expect(button[1]).toMatch(/\sdisabled=""/);
-    expect(decode(button[2])).toBe("Starting…");
+    expect(textOf(button[2])).toContain("Starting…");
   });
 
-  test("C2620: the text fields are TextInput components (44 px below lg), the choices keep min-h-11, and no fixed pixel width is set", () => {
+  test("C2620: the text fields are 44 px tall below lg, and no fixed pixel width is set", () => {
+    const html = renderFields(IDLE);
+    for (const name of ["email", "company", "phone", "seats"]) expect(attrsOf(html, name), name).toContain("max-lg:min-h-11");
     const code = readFileSync(path.join(__dirname, "register-fields.tsx"), "utf8");
-    expect((code.match(/<TextInput\b/g) ?? []).length).toBe(4);
-    expect(code).toContain("min-h-11");
     expect(code).not.toMatch(/\bw-\[\d+px\]|\bwidth:\s*\d+px/);
-    const input = readFileSync(path.join(__dirname, "..", "..", "components", "ui", "text-input.tsx"), "utf8");
-    expect(input).toMatch(/\bh-11\b/);
   });
 
   test("C4308: email_in_use says the email has a workspace, links Sign in, marks the email field and keeps every value", () => {

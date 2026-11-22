@@ -1,0 +1,151 @@
+/* service_pacts_sign_in_animated_split_1 (mk-s1) */
+@theme {
+  --color-s1-brand-dark: #070b14;
+  --color-s1-brand-surface: #0d1527;
+  --color-s1-brand-navy: #0b1626;
+  --color-s1-brand-primary: #2563eb;
+  --color-s1-brand-cyan: #00d9f2;
+  --color-s1-brand-violet: #7c3aed;
+  --color-s1-brand-amberBg: #fffbeb;
+  --color-s1-brand-amberBorder: #fde68a;
+  --color-s1-brand-amberText: #b45309;
+  --animate-float: floatSlow 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  --animate-float-delay: floatReverse 7s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite 1.5s;
+  --animate-pulse-glow: pulseGlow 5s ease-in-out infinite alternate;
+}
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(8px); }
+}
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.08); }
+}
+@keyframes flowCyan {
+  0% { stroke-dashoffset: 60; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes flowAmber {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -60; }
+}
+@keyframes cardEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(22px) scale(0.99);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+@keyframes dashCycle {
+      to { stroke-dashoffset: -28; }
+    }
+@keyframes dashCycleRev {
+      to { stroke-dashoffset: 28; }
+    }
+@keyframes cardEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(22px) scale(0.99);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+@keyframes dashCycle {
+      to { stroke-dashoffset: -28; }
+    }
+@keyframes dashCycleRev {
+      to { stroke-dashoffset: 28; }
+    }
+.mk-s1 {
+    & {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Subtle dot grid pattern on right side */
+    & .bg-dot-pattern {
+      background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1.2px, transparent 1.2px);
+      background-size: 24px 24px;
+    }
+
+    /* Glass card backdrop shadow */
+    & .glass-auth-card {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px -15px rgba(11, 28, 48, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.85);
+    }
+
+    /* Form card slide up entrance */
+    & .card-enter {
+      animation: cardEnter 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Custom animated SVG stroke styles */
+    & .flow-wave-cyan {
+      stroke-dasharray: 8 6;
+      animation: dashCycle 3s linear infinite;
+    }
+    & .flow-wave-amber {
+      stroke-dasharray: 8 6;
+      animation: dashCycleRev 3.5s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      & .animate-float, & .animate-float-delay, & .card-enter, & .flow-wave-cyan, & .flow-wave-amber {
+        animation: none !important;
+        transform: none !important;
+      }
+    }
+  
+
+    & {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Subtle dot grid pattern on right side */
+    & .bg-dot-pattern {
+      background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1.2px, transparent 1.2px);
+      background-size: 24px 24px;
+    }
+
+    /* Glass card backdrop shadow */
+    & .glass-auth-card {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px -15px rgba(11, 28, 48, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.85);
+    }
+
+    /* Form card slide up entrance */
+    & .card-enter {
+      animation: cardEnter 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Custom animated SVG stroke styles */
+    & .flow-wave-cyan {
+      stroke-dasharray: 8 6;
+      animation: dashCycle 3s linear infinite;
+    }
+    & .flow-wave-amber {
+      stroke-dasharray: 8 6;
+      animation: dashCycleRev 3.5s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      & .animate-float, & .animate-float-delay, & .card-enter, & .flow-wave-cyan, & .flow-wave-amber {
+        animation: none !important;
+        transform: none !important;
+      }
+    }
+}

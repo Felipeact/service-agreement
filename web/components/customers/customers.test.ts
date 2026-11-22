@@ -37,8 +37,8 @@ describe("CustomersView", () => {
   });
 
   test.each([
-    [12, "12 customers"],
-    [1, "1 customer"],
+    [12, "12 active customers"],
+    [1, "1 active customer"],
   ])("C125: %s customers: the header standing line starts %s", (count, label) => {
     const customers = Array.from({ length: count }, (_, index) => summary(String(index), `Customer ${index}`));
     expect(list(customers)).toContain(`>${label} · `);

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-slate-100" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pipeline - New Agreement Modal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {theme: {extend: {colors: {brand: {"50": "#eff6ff", "100": "#dbeafe", "500": "#3b82f6", "600": "#2563eb", "700": "#1d4ed8", "800": "#1e40af", "900": "#0f172a"}, sidebar: "#0c192c", sidebarHover: "#162844", sidebarActive: "#1d4ed8", "on-primary-container": "#eeefff", "on-primary-fixed-variant": "#003ea8", "secondary-fixed-dim": "#bec6e0", "primary-container": "#2563eb", "on-tertiary-fixed": "#002113", "surface-container-low": "#eff4ff", "on-surface-variant": "#434655", "surface-tint": "#0053db", "surface-bright": "#f8f9ff", "secondary-container": "#dae2fd", "inverse-surface": "#213145", "surface-container-highest": "#d3e4fe", "surface-container": "#e5eeff", "surface-dim": "#cbdbf5", error: "#ba1a1a", "on-primary": "#ffffff", "inverse-primary": "#b4c5ff", "on-primary-fixed": "#00174b", "secondary-fixed": "#dae2fd", outline: "#737686", "surface-container-lowest": "#ffffff", tertiary: "#006242", "on-background": "#0b1c30", "on-tertiary-container": "#bdffdb", "primary-fixed": "#dbe1ff", "on-error-container": "#93000a", "primary-fixed-dim": "#b4c5ff", "tertiary-fixed-dim": "#4edea3", "on-secondary-container": "#5c647a", "inverse-on-surface": "#eaf1ff", "on-tertiary-fixed-variant": "#005236", "on-secondary-fixed-variant": "#3f465c", "on-tertiary": "#ffffff", "tertiary-fixed": "#6ffbbe", "on-surface": "#0b1c30", "tertiary-container": "#007d55", "on-error": "#ffffff", surface: "#f8f9ff", primary: "#004ac6", "on-secondary-fixed": "#131b2e", "outline-variant": "#c3c6d7", secondary: "#565e74", background: "#f8f9ff", "error-container": "#ffdad6", "on-secondary": "#ffffff", "surface-variant": "#d3e4fe", "surface-container-high": "#dce9ff"}, fontFamily: {"headline-sm": ["Inter"], "body-sm": ["Inter"], "headline-lg-mobile": ["Inter"], "headline-xl-mobile": ["Inter"], "label-md": ["Inter"], "headline-md": ["Inter"], "headline-xl": ["Inter"], "label-sm": ["Inter"], "body-md": ["Inter"], "mono-tabular": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Inter"]}, fontSize: {"headline-sm": ["16px", {lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600"}], "body-sm": ["12px", {lineHeight: "16px", letterSpacing: "0em", fontWeight: "400"}], "headline-lg-mobile": ["22px", {lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600"}], "headline-xl-mobile": ["28px", {lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "700"}], "label-md": ["14px", {lineHeight: "20px", letterSpacing: "-0.005em", fontWeight: "500"}], "headline-md": ["20px", {lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600"}], "headline-xl": ["36px", {lineHeight: "44px", letterSpacing: "-0.025em", fontWeight: "700"}], "label-sm": ["12px", {lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "600"}], "body-md": ["14px", {lineHeight: "20px", letterSpacing: "0em", fontWeight: "400"}], "mono-tabular": ["13px", {lineHeight: "18px", letterSpacing: "-0.01em", fontWeight: "500"}], "body-lg": ["16px", {lineHeight: "24px", letterSpacing: "-0.005em", fontWeight: "400"}], "headline-lg": ["28px", {lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600"}]}, spacing: {"space-sm": "0.5rem", gutter: "1rem", "space-xs": "0.25rem", "space-md": "1rem", "margin-md": "1.5rem", margin: "1rem", "gutter-md": "1.5rem", "space-lg": "1.5rem", "margin-lg": "2.5rem", "space-2xl": "3rem", "gutter-lg": "2rem", "space-xl": "2rem"}, borderRadius: {DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem"}}}}
+  </script>
+</head>
+<body class="h-full text-slate-800 antialiased overflow-hidden select-none font-sans">
+<!-- BEGIN: ApplicationLayoutContainer -->
+<div class="flex h-screen w-screen overflow-hidden">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-64 flex-shrink-0 bg-[#0b1320] flex flex-col justify-between text-slate-300 text-[13px] select-none border-r border-slate-900 z-20 transition-all duration-300 ease-in-out relative h-screen" data-purpose="main-navigation-sidebar" id="app-sidebar">
+<!-- Top sidebar area: Brand Switcher, Search & Nav Links -->
+<div class="flex flex-col pt-3.5 px-3">
+<div class="flex items-center justify-between pb-2 mb-1 px-1 border-b border-slate-800/80 sidebar-header-row">
+<span class="text-[11px] font-semibold text-slate-400 tracking-wider uppercase sidebar-title-text">Navigation</span>
+<button aria-label="Collapse sidebar" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all flex items-center justify-center" id="collapse-sidebar-btn" title="Collapse sidebar (⌘B)">
+<svg class="w-4 h-4 sidebar-collapse-icon transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect>
+<line x1="9" x2="9" y1="3" y2="21"></line>
+<path d="m14 9-3 3 3 3"></path>
+</svg>
+</button>
+</div>
+<!-- Workspace Switcher Card -->
+<div class="flex items-center justify-between p-2 mb-3.5 rounded-xl bg-[#162032]/80 hover:bg-[#162032] border border-slate-700/60 transition-all cursor-pointer group shadow-xs">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0 tracking-tight">
+          SP
+        </div>
+<div class="leading-tight min-w-0 text-left">
+<div class="flex items-center gap-1.5">
+<span class="text-white text-xs font-semibold tracking-tight truncate">Service Pacts</span>
+<span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30">Pro</span>
+</div>
+<div class="text-[11px] text-slate-400 truncate mt-0.5">HVAC &amp; Facility Maint.</div>
+</div>
+</div>
+<div class="text-slate-400 group-hover:text-slate-200 transition-colors ml-1 flex-shrink-0">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+</svg>
+</div>
+</div>
+<!-- Quick Search Input with ⌘K -->
+<div class="relative mb-3.5 px-0.5">
+<div class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<circle cx="11" cy="11" r="8"></circle>
+<line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+</svg>
+</div>
+<input class="w-full bg-[#162032]/70 border border-slate-700/60 rounded-lg py-1.5 pl-8 pr-9 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="Search app..." type="text"/>
+<div class="absolute inset-y-0 right-2.5 flex items-center pointer-events-none">
+<span class="text-[10px] font-mono text-slate-400 border border-slate-700/80 rounded px-1.5 py-0.5 bg-[#0e1626] leading-none shadow-xs">⌘K</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="space-y-1 font-medium" data-purpose="main-navigation">
+<!-- Pipeline (Active State) -->
+<a aria-current="page" class="flex items-center justify-between px-3 py-2 rounded-xl bg-blue-600 text-white font-medium shadow-sm transition-all group" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-white" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="7" width="7" x="3" y="3"></rect>
+<rect height="7" width="7" x="14" y="3"></rect>
+<rect height="7" width="7" x="14" y="14"></rect>
+<rect height="7" width="7" x="3" y="14"></rect>
+</svg>
+<span>Pipeline</span>
+</div>
+<span class="text-[10px] font-semibold bg-white/20 px-1.5 py-0.2 rounded-full">2</span>
+</a>
+<!-- Agreements -->
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+<polyline points="14 2 14 8 20 8"></polyline>
+<line x1="16" x2="8" y1="13" y2="13"></line>
+<line x1="16" x2="8" y1="17" y2="17"></line>
+<polyline points="10 9 9 9 8 9"></polyline>
+</svg>
+<span>Agreements</span>
+</div>
+<span class="text-[10px] font-medium bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded">28</span>
+</a>
+<!-- Templates -->
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect>
+<line x1="3" x2="21" y1="9" y2="9"></line>
+<line x1="9" x2="9" y1="21" y2="21"></line>
+</svg>
+<span>Templates</span>
+</div>
+<span class="text-[10px] font-medium bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded">2</span>
+</a>
+<!-- Customers -->
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+<circle cx="9" cy="7" r="4"></circle>
+<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+</svg>
+<span>Customers</span>
+</div>
+</a>
+<!-- Sites & equipment -->
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+<circle cx="12" cy="10" r="3"></circle>
+</svg>
+<span>Sites &amp; equipment</span>
+</div>
+</a>
+<!-- Imports -->
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+<polyline points="17 8 12 3 7 8"></polyline>
+<line x1="12" x2="12" y1="3" y2="15"></line>
+</svg>
+<span>Imports</span>
+</div>
+</a>
+<!-- Reports -->
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all" href="#">
+<div class="flex items-center gap-3">
+<svg class="w-4 h-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+<polyline points="17 6 23 6 23 12"></polyline>
+</svg>
+<span>Reports</span>
+</div>
+</a>
+</nav>
+</div>
+<!-- Bottom sidebar area: Usage Status Card & User Profile Dropdown -->
+<div class="px-3 pb-4 pt-2 space-y-3">
+<!-- Usage / Plan Status Card -->
+<div class="p-3 rounded-xl bg-[#162032]/60 border border-slate-800/80">
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-medium text-slate-200">Active Agreements</span>
+<span class="text-slate-400 text-[11px]">4 / 50</span>
+</div>
+<div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-blue-600 h-full rounded-full" style="width: 8%"></div>
+</div>
+<div class="mt-2 flex items-center justify-between">
+<span class="text-[10px] text-slate-400">Pro Plan Quota</span>
+<a class="text-[10px] text-blue-400 hover:text-blue-300 font-medium transition-colors" href="#">Manage</a>
+</div>
+</div>
+<!-- User Profile Section -->
+<div class="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 shadow-xs">
+          FV
+        </div>
+<div class="min-w-0 text-left">
+<div class="text-xs font-semibold text-slate-200 truncate leading-tight">Felipe Viana</div>
+<div class="text-[10px] text-slate-400 truncate">Admin / Owner</div>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Settings" class="text-slate-400 hover:text-slate-200 p-1 rounded-md hover:bg-slate-800/60 transition-colors" title="Settings">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="3"></circle>
+<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+</svg>
+</button>
+<button aria-label="Sign out" class="text-slate-400 hover:text-slate-200 p-1 rounded-md hover:bg-slate-800/60 transition-colors" title="Sign out">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+<polyline points="16 17 21 12 16 7"></polyline>
+<line x1="21" x2="9" y1="12" y2="12"></line>
+</svg>
+</button>
+</div>
+</div>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainPipelineBackground -->
+<!-- The actual background page, visually blurred/dimmed to match screenshot context -->
+<main class="flex-1 flex flex-col bg-slate-50 overflow-y-auto">
+<!-- Top Header -->
+<header class="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0"><!-- Left Group: Sidebar Toggle & Global Search -->
+<div class="flex items-center gap-3.5 flex-1 max-w-xl">
+<button class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 6h16M4 12h16M4 18h7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<div class="relative w-80">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<input class="w-full pl-8 pr-12 py-1.5 text-xs rounded-md border border-slate-200 bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" disabled="" placeholder="Search templates, contracts, customers..." type="text"/>
+<span class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+<kbd class="text-[10px] bg-slate-200/70 text-slate-500 px-1 py-0.5 rounded font-mono">⌘S</kbd>
+</span>
+</div>
+</div>
+<!-- Right Action Controls -->
+<div class="flex items-center gap-3">
+<!-- Ask AI Pill Button -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-md shadow-2xs transition-colors" type="button">
+<span class="text-blue-600">✨</span>
+<span>+ Ask AI</span>
+</button>
+<!-- Notification Bell with Unread Indicator -->
+<button class="relative p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white"></span>
+</button>
+<!-- New Agreement Action Button -->
+<button class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-3.5 py-1.5 rounded-md shadow-sm transition-colors">
+      + New Agreement
+    </button>
+<!-- User Avatar Profile Pill with Dropdown Chevron -->
+<div class="flex items-center gap-2 pl-2 border-l border-slate-200 cursor-pointer">
+<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-semibold text-xs shadow-2xs">
+        FV
+      </div>
+<div class="leading-tight hidden sm:block">
+<div class="text-xs font-semibold text-slate-800">Felipe Viana</div>
+<div class="text-[10px] text-slate-400">Admin &amp; Owner</div>
+</div>
+<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div></header>
+<!-- Dashboard Body Content (Faded Behind Modal) -->
+<div class="p-8 space-y-6">
+<div>
+<h2 class="text-xl font-bold text-slate-900 tracking-tight">Good afternoon</h2>
+<p class="text-xs text-slate-500 mt-0.5">Here is your pipeline snapshot and equipment overview for today.</p>
+</div>
+<!-- Metric Stat Cards -->
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm">
+<div class="text-xs text-slate-400 font-medium">In Pipeline</div>
+<div class="text-2xl font-bold mt-1">$44,560</div>
+<div class="text-[11px] text-emerald-400 mt-2 font-medium">↑ 12% from last month</div>
+</div>
+<div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+<div class="text-xs text-slate-500 font-medium">Under Review</div>
+<div class="text-2xl font-bold text-slate-800 mt-1">8</div>
+<div class="text-[11px] text-slate-400 mt-2">3 require action today</div>
+</div>
+<div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+<div class="text-xs text-slate-500 font-medium">Active Services</div>
+<div class="text-2xl font-bold text-slate-800 mt-1">24</div>
+<div class="text-[11px] text-slate-400 mt-2">All visits scheduled</div>
+</div>
+<div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+<div class="text-xs text-slate-500 font-medium">Expiring Soon</div>
+<div class="text-2xl font-bold text-amber-600 mt-1">3</div>
+<div class="text-[11px] text-slate-400 mt-2">Next 30 days</div>
+</div>
+</div>
+<!-- Kanban Columns Placeholder -->
+<div class="grid grid-cols-4 gap-4 min-h-[400px]">
+<div class="bg-slate-100 border border-slate-200 rounded-lg p-3">
+<div class="font-medium text-xs text-slate-700 mb-3">Discovery (3)</div>
+<div class="space-y-3">
+<div class="bg-white p-3 rounded border border-slate-200 shadow-xs">
+<div class="font-semibold text-xs">Acme Corporation</div>
+<div class="text-[11px] text-slate-400 mt-1">HVAC Service Annual</div>
+</div>
+</div>
+</div>
+<div class="bg-amber-50/50 border border-amber-200/60 rounded-lg p-3">
+<div class="font-medium text-xs text-amber-900 mb-3">Site Survey (1)</div>
+<div class="bg-white p-3 rounded border border-slate-200 shadow-xs">
+<div class="font-semibold text-xs">TechCorp Lab</div>
+<div class="text-[11px] text-slate-400 mt-1">Cooling Systems</div>
+</div>
+</div>
+<div class="bg-slate-100 border border-slate-200 rounded-lg p-3">
+<div class="font-medium text-xs text-slate-700 mb-3">Proposal Sent (2)</div>
+</div>
+<div class="bg-slate-100 border border-slate-200 rounded-lg p-3">
+<div class="font-medium text-xs text-slate-700 mb-3">Approved (4)</div>
+</div>
+</div>
+</div>
+</main>
+<!-- END: MainPipelineBackground -->
+</div>
+<!-- END: ApplicationLayoutContainer -->
+<!-- BEGIN: ModalOverlay -->
+<!-- Dimmed & blurred backdrop overlay exactly covering the page -->
+<div class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4" data-purpose="modal-overlay">
+<!-- BEGIN: NewAgreementModalCard -->
+<div class="bg-white w-full max-w-[570px] rounded-xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" data-purpose="new-agreement-modal"><!-- Modal Header -->
+<div class="pt-6 px-7 pb-2 relative flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-[19px] font-semibold text-slate-900 leading-tight">New agreement</h2>
+<span class="px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-full">Step 1 of 3</span>
+</div>
+<p class="text-xs text-slate-500 mt-1 leading-relaxed max-w-[440px]">
+      Upload the customer's equipment list or pick what is on site, and we recommend the service lines, visit schedule and scope.
+    </p>
+</div>
+<!-- Close Button 'X' -->
+<button aria-label="Close" class="text-slate-400 hover:text-slate-600 transition-colors p-1 -mr-1 -mt-1 rounded" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Modal Body Content -->
+<div class="px-7 py-4 space-y-4 max-h-[716px] overflow-y-auto">
+<!-- Equipment On Site Segmented Selector Section -->
+<div>
+<label class="block text-xs font-semibold text-slate-800 mb-1.5">Equipment on site</label>
+<!-- Segmented Navigation Pill Tabs -->
+<div class="grid grid-cols-3 bg-slate-100 p-0.5 rounded-lg text-xs font-medium text-slate-600 text-center">
+<button class="py-1.5 rounded-md hover:text-slate-900 transition-all" type="button">
+        Upload a list
+      </button>
+<button class="py-1.5 bg-white text-blue-600 font-semibold rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.06)] border border-slate-200/50" type="button">
+        Pick by hand
+      </button>
+<button class="py-1.5 rounded-md hover:text-slate-900 transition-all" type="button">
+        Add later
+      </button>
+</div>
+</div>
+<!-- Search Input with Search Glass Icon -->
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<input class="w-full pl-8 pr-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="Search types by name or code..." type="text"/>
+</div>
+<!-- Filter Category Badges/Pills -->
+<div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+<button class="px-2.5 py-1 text-[11px] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors shrink-0" type="button">
+      All trades
+    </button>
+<button class="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors shrink-0" type="button">
+      Heating and cooling
+    </button>
+<button class="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors shrink-0" type="button">
+      Refrigeration
+    </button>
+<button class="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors shrink-0" type="button">
+      Electrical &amp; Controls
+    </button>
+</div>
+<!-- Equipment Selection List Box -->
+<div class="border border-slate-200/80 rounded-lg overflow-hidden bg-white shadow-xs">
+<!-- List Group Header with Selected Count Pill -->
+<div class="bg-slate-50/80 px-3.5 py-1.5 border-b border-slate-200/80 text-[11px] font-medium text-slate-500 flex items-center justify-between">
+<span>Heating and cooling</span>
+<span class="text-[10px] text-blue-600 font-semibold bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded-full">3 units selected</span>
+</div>
+<!-- Expandable Rows with '+' Button and checked state -->
+<div class="divide-y divide-slate-100 text-xs text-slate-700 max-h-52 overflow-y-auto">
+<!-- Row: Acid neutralizer -->
+<div class="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-normal text-slate-700">Acid neutralizer</span>
+</div>
+<button class="text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors p-1" title="Add unit" type="button">
+<svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Row: AHU (Selected) -->
+<div class="px-3.5 py-2 flex items-center justify-between bg-blue-50/50 hover:bg-blue-50 transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-medium text-blue-900">AHU (Air Handling Unit)</span>
+<span class="text-[10px] bg-blue-100 text-blue-700 font-semibold px-1 rounded">Qty: 2</span>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="text-slate-500 hover:text-blue-600 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-medium" type="button">-</button>
+<span class="text-xs font-semibold text-slate-800 px-1">2</span>
+<button class="text-slate-500 hover:text-blue-600 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-medium" type="button">+</button>
+</div>
+</div>
+<!-- Row: Air separator -->
+<div class="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
+<span class="font-normal text-slate-700">Air separator</span>
+<button class="text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors p-1" title="Add unit" type="button">
+<svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Row: Backflow preventer -->
+<div class="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
+<span class="font-normal text-slate-700">Backflow preventer</span>
+<button class="text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors p-1" title="Add unit" type="button">
+<svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Row: Boiler (Selected) -->
+<div class="px-3.5 py-2 flex items-center justify-between bg-blue-50/50 hover:bg-blue-50 transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-medium text-blue-900">Boiler (Hydronic / Steam)</span>
+<span class="text-[10px] bg-blue-100 text-blue-700 font-semibold px-1 rounded">Qty: 1</span>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="text-slate-500 hover:text-blue-600 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-medium" type="button">-</button>
+<span class="text-xs font-semibold text-slate-800 px-1">1</span>
+<button class="text-slate-500 hover:text-blue-600 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-medium" type="button">+</button>
+</div>
+</div>
+<!-- Row: Chiller -->
+<div class="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
+<span class="font-normal text-slate-700">Chiller (Water/Air Cooled)</span>
+<button class="text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors p-1" title="Add unit" type="button">
+<svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Row: Rooftop Unit -->
+<div class="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
+<span class="font-normal text-slate-700">Rooftop Unit (RTU)</span>
+<button class="text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors p-1" title="Add unit" type="button">
+<svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Instructional Subtext -->
+<p class="text-[11px] text-slate-500 pt-0.5 flex items-center justify-between">
+<span>Tap + beside each equipment type on site or adjust quantities.</span>
+<span class="text-blue-600 font-medium hover:underline cursor-pointer">Reset list</span>
+</p>
+<!-- Template Selection Dropdown -->
+<div class="pt-1">
+<div class="flex items-center justify-between mb-1">
+<label class="block text-xs font-semibold text-slate-800">Template</label>
+<span class="text-[10px] text-emerald-700 font-medium bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">Recommended</span>
+</div>
+<div class="relative">
+<select class="w-full text-xs text-slate-700 border border-slate-200 rounded-md py-2 px-3 appearance-none bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 pr-8">
+<option selected="">Standard agreement - Comprehensive scope</option>
+<option>Full coverage commercial (Quarterly Visits)</option>
+<option>Preventive maintenance basic (Bi-Annual)</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<span class="block text-[11px] text-slate-400 mt-1">No preset lines • 12 month recurring term</span>
+</div>
+<!-- Customer Assignment Dropdown -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<label class="block text-xs font-semibold text-slate-800">Who is it for?</label>
+<button class="text-[11px] text-blue-600 font-medium hover:underline flex items-center gap-0.5" type="button">
+<span>+ Add new customer</span>
+</button>
+</div>
+<div class="relative">
+<select class="w-full text-xs text-slate-700 border border-slate-200 rounded-md py-2 px-3 appearance-none bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 pr-8">
+<option selected="">Apex Facility Management</option>
+<option>BlueSky Data Center</option>
+<option>Central Metro Hospital</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer Action Buttons -->
+<div class="px-7 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-[11px] text-slate-500">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Draft auto-saved</span>
+</div>
+<div class="flex items-center gap-2.5">
+<button class="px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors shadow-2xs" type="button">
+      Cancel
+    </button>
+<button class="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-xs transition-colors flex items-center gap-1" type="button">
+<span>+ Create agreement</span>
+</button>
+</div>
+</div></div>
+<!-- END: NewAgreementModalCard -->
+</div>
+<!-- END: ModalOverlay -->
+</body></html>

@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth antialiased" lang="en"><head></head><body class="bg-white text-slate-900 selection:bg-brand-600 selection:text-white"><svg aria-hidden="true" class="inline-defs-container" style="position:absolute;width:0;height:0;overflow:hidden"></svg>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Service Pacts - From service list to signed agreement</title>
+<!-- Inter & JetBrains Mono Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04)',
+            'card-hover': '0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+            'float': '0 20px 40px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05)',
+            'neon-blue': '0 0 25px -3px rgba(37, 99, 235, 0.5), 0 0 10px -2px rgba(6, 182, 212, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #ffffff;
+      color: #0f172a;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      overflow-x: hidden;
+    }
+    .subtle-grid {
+      background-size: 32px 32px;
+      background-image:
+        linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+    }
+    .radial-fade {
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 50%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 50%, transparent 100%);
+    }
+  </style>
+<style id="motion-choreography-styles">
+  /* --- Visibility Guarantee: All components visible by default --- */
+  .scroll-zoom-section,
+  .scroll-card-item {
+    opacity: 1;
+    transform: none;
+    transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    will-change: transform, opacity;
+  }
+
+  /* Scroll entrance and exit classes applied progressively */
+  .scroll-zoom-section.before-view {
+    opacity: 0.92;
+    transform: scale(0.96) translateY(20px);
+  }
+  .scroll-zoom-section.in-view {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  .scroll-zoom-section.scrolled-past {
+    opacity: 0.94;
+    transform: scale(0.985) translateY(-10px);
+  }
+
+  .scroll-card-item.before-view {
+    opacity: 0.88;
+    transform: scale(0.94) translateY(18px);
+  }
+  .scroll-card-item.in-view {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  .scroll-card-item.scrolled-past {
+    opacity: 0.92;
+    transform: scale(0.97) translateY(-8px);
+  }
+
+  /* --- Dynamic Continuous Ambient Motion & Orbs --- */
+  @keyframes aurora-drift-1 {
+    0% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.6; }
+    33% { transform: translate(70px, -45px) scale(1.15) rotate(25deg); opacity: 0.85; }
+    66% { transform: translate(-50px, 50px) scale(0.9) rotate(-20deg); opacity: 0.55; }
+    100% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.6; }
+  }
+  @keyframes aurora-drift-2 {
+    0% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.55; }
+    33% { transform: translate(-65px, 60px) scale(1.18) rotate(-30deg); opacity: 0.8; }
+    66% { transform: translate(60px, -40px) scale(0.92) rotate(25deg); opacity: 0.5; }
+    100% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.55; }
+  }
+  @keyframes aurora-drift-3 {
+    0% { transform: translate(0px, 0px) scale(1); opacity: 0.45; }
+    50% { transform: translate(45px, 55px) scale(1.12); opacity: 0.75; }
+    100% { transform: translate(0px, 0px) scale(1); opacity: 0.45; }
+  }
+  @keyframes grid-scan {
+    0% { background-position: 0px 0px; }
+    100% { background-position: 40px 40px; }
+  }
+  @keyframes float-mote {
+    0% { transform: translateY(100vh) translateX(0) scale(0.6); opacity: 0; }
+    15% { opacity: 0.85; }
+    85% { opacity: 0.85; }
+    100% { transform: translateY(-10vh) translateX(35px) scale(1.2); opacity: 0; }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+    100% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  }
+  @keyframes float-mockup {
+    0% { transform: translateY(0px) rotate3d(1, 1, 0, 1.2deg); }
+    50% { transform: translateY(-10px) rotate3d(1, 1, 0, -0.6deg); }
+    100% { transform: translateY(0px) rotate3d(1, 1, 0, 1.2deg); }
+  }
+  @keyframes float-card-subtle {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-7px); }
+    100% { transform: translateY(0px); }
+  }
+  @keyframes beam-flow {
+    0% { transform: translateX(-100%); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
+  }
+  @keyframes border-gleam {
+    0% { border-color: rgba(59, 130, 246, 0.3); }
+    50% { border-color: rgba(6, 182, 212, 0.8); }
+    100% { border-color: rgba(59, 130, 246, 0.3); }
+  }
+  @keyframes team-tier-glow {
+    0%, 100% { box-shadow: 0 0 25px -4px rgba(37, 99, 235, 0.35), 0 20px 40px -12px rgba(37, 99, 235, 0.2); transform: scale(1.015); }
+    50% { box-shadow: 0 0 35px 2px rgba(37, 99, 235, 0.55), 0 25px 45px -10px rgba(37, 99, 235, 0.3); transform: scale(1.025); }
+  }
+  @keyframes shimmer-gradient {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  @keyframes dark-glow-pulse {
+    0%, 100% { background-position: 0% 50%; opacity: 0.6; }
+    50% { background-position: 100% 50%; opacity: 0.9; }
+  }
+  @keyframes dash-drift {
+    to { stroke-dashoffset: -40; }
+  }
+
+  /* Motion & Element Classes */
+  .aurora-bg-mesh {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .aurora-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  .aurora-orb-1 {
+    top: -10%;
+    left: 15%;
+    width: 580px;
+    height: 580px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, rgba(37, 99, 235, 0.22) 60%, transparent 80%);
+    animation: aurora-drift-1 14s ease-in-out infinite;
+  }
+  .aurora-orb-2 {
+    top: 15%;
+    right: 5%;
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(circle, rgba(147, 51, 234, 0.35) 0%, rgba(99, 102, 241, 0.2) 60%, transparent 80%);
+    animation: aurora-drift-2 16s ease-in-out infinite;
+  }
+  .aurora-orb-3 {
+    bottom: -10%;
+    left: 30%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(16, 185, 129, 0.18) 70%, transparent 80%);
+    animation: aurora-drift-3 18s ease-in-out infinite;
+  }
+  .animated-matrix-grid {
+    background-size: 36px 36px;
+    background-image:
+      linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+    animation: grid-scan 28s linear infinite;
+  }
+  .mote-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.9);
+    pointer-events: none;
+  }
+  .hero-mockup-perspective {
+    perspective: 1200px;
+  }
+  .hero-mockup-inner {
+    transform-style: preserve-3d;
+    animation: float-mockup 6.5s ease-in-out infinite;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hero-mockup-inner:hover {
+    transform: translateY(-4px) scale(1.015);
+  }
+  .floating-portal-card {
+    animation: float-card-subtle 5s ease-in-out infinite 0.7s;
+  }
+  .spring-pill-badge {
+    animation: pulse-ring 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .gradient-shimmer-text {
+    background: linear-gradient(110deg, #1d4ed8 0%, #3b82f6 30%, #8b5cf6 55%, #1d4ed8 90%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-gradient 7s ease-in-out infinite alternate;
+  }
+  .team-card-active {
+    animation: team-tier-glow 4s ease-in-out infinite;
+  }
+  .glow-hover-card {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glow-hover-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 30px -10px rgba(37, 99, 235, 0.16), 0 0 0 1px rgba(37, 99, 235, 0.25);
+  }
+  .dark-pipeline-card {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark-pipeline-card:hover {
+    transform: translateY(-6px) scale(1.025);
+    border-color: rgba(6, 182, 212, 0.7);
+    box-shadow: 0 16px 36px -6px rgba(37, 99, 235, 0.45), 0 0 20px -2px rgba(6, 182, 212, 0.35);
+  }
+  .circuit-beam-line {
+    position: absolute;
+    height: 3px;
+    top: 50%;
+    left: 0;
+    right: 0;
+    background: linear-gradient(90deg, transparent, #3b82f6, #06b6d4, #a855f7, transparent);
+    animation: beam-flow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .dash-stream-left {
+    stroke-dasharray: 8 6;
+    animation: dash-drift 2s linear infinite;
+  }
+  .dash-stream-right {
+    stroke-dasharray: 8 6;
+    animation: dash-drift 2s linear infinite reverse;
+  }
+  .interactive-tab-btn {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .interactive-tab-btn:hover {
+    transform: translateX(4px);
+  }
+  .cta-pulse-button {
+    transition: all 0.25s ease;
+  }
+  .cta-pulse-button:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.5);
+  }
+  .dark-energy-gradient {
+    background: radial-gradient(ellipse at 50% 30%, rgba(37,99,235,0.22) 0%, rgba(6,182,212,0.12) 45%, transparent 75%),
+                radial-gradient(ellipse at 80% 80%, rgba(147,51,234,0.18) 0%, transparent 60%);
+    background-size: 200% 200%;
+    animation: dark-glow-pulse 8s ease-in-out infinite;
+  }
+</style>
+<!-- BEGIN: MainHeader -->
+<header class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 border-b border-slate-200/80">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+<!-- Brand Logo -->
+<a class="flex items-center gap-3 group" href="index.html">
+<div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:bg-blue-700 transition-colors">
+<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewbox="0 0 24 24">
+<path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="flex items-center gap-2.5">
+<span class="text-xl font-bold tracking-tight text-slate-900">Service Pacts</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80"><span class="text-xs">🍁</span> CAD</span>
+</div>
+</a>
+<!-- Center Navigation Links -->
+<nav class="hidden md:flex items-center gap-8 text-sm font-medium">
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors flex items-center gap-1.5" href="/product">Product</a>
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors flex items-center gap-1.5" href="demo.html">Demo</a>
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors flex items-center gap-1.5" href="trades.html">Trades</a>
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors flex items-center gap-1.5" href="pricing.html">Pricing</a>
+</nav>
+<!-- Right Action Area -->
+<div class="flex items-center gap-4">
+<a class="text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors" href="sign-in.html">Sign in</a>
+<a class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm hover:shadow transition-all group" href="register.html">
+<span>Get started</span>
+<span class="material-symbols-outlined text-base group-hover:translate-x-0.5 transition-transform">east</span>
+</a>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<main>
+<!-- BEGIN: HeroSection -->
+<section class="relative pt-14 pb-20 lg:pt-20 lg:pb-24 overflow-hidden bg-gradient-to-b from-[#f8f9ff] to-white border-b border-slate-200/80 scroll-zoom-section before-view in-view">
+<div class="aurora-bg-mesh">
+<div class="aurora-orb aurora-orb-1"></div>
+<div class="aurora-orb aurora-orb-2"></div>
+<div class="aurora-orb aurora-orb-3"></div>
+<div class="mote-particle" style="top: 20%; left: 10%; animation: float-mote 12s linear infinite;"></div>
+<div class="mote-particle" style="top: 45%; left: 80%; animation: float-mote 15s linear infinite 2s;"></div>
+<div class="mote-particle" style="top: 70%; left: 25%; animation: float-mote 10s linear infinite 4s;"></div>
+<div class="mote-particle" style="top: 15%; left: 65%; animation: float-mote 14s linear infinite 1s;"></div>
+<div class="mote-particle" style="top: 85%; left: 90%; animation: float-mote 16s linear infinite 3s;"></div>
+<div class="aurora-orb" style="top: 40%; right: 20%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(6,182,212,0.22) 0%, rgba(37,99,235,0.12) 60%, transparent 80%); animation: aurora-drift-2 18s ease-in-out infinite alternate; filter: blur(100px);"></div>
+</div>
+<div class="absolute inset-0 subtle-grid radial-fade pointer-events-none animated-matrix-grid"></div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+<!-- Left Column: Copy & CTAs -->
+<div class="lg:col-span-5">
+<h1 class="text-4xl sm:text-5xl lg:text-[52px] font-extrabold tracking-tight text-slate-900 leading-[1.08]">
+              From service list to <span class="text-brand-600 gradient-shimmer-text">signed agreement.</span>
+</h1>
+<p class="mt-5 text-base text-slate-600 leading-relaxed">
+              Import your customer's equipment list, send an itemized priced agreement under your own brand, and follow it straight to signature. Every deal sits in one stage with its age, so nothing goes quiet.
+            </p>
+<!-- CTAs -->
+<div class="mt-7 flex flex-wrap items-center gap-3">
+<a class="px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition-all flex items-center gap-2 cta-pulse-button" href="register.html">
+<span>Get started free</span>
+<span class="material-symbols-outlined text-base">east</span>
+</a>
+<a class="px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-all shadow-card flex items-center gap-2 cta-pulse-button" href="demo.html">
+<span class="material-symbols-outlined text-base text-brand-600">play_circle</span>
+<span>Step through the interactive demo</span>
+</a>
+</div>
+<p class="mt-5 text-xs text-slate-500 font-medium flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1.5 text-slate-600">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Monthly plans from $79
+              </span>
+<span class="text-slate-300">•</span>
+<span>Built exclusively for Canadian commercial trade contractors</span>
+</p>
+</div>
+<!-- Right Column: Crisp Light-Mode Product UI Preview Card -->
+<div class="lg:col-span-7 relative hero-mockup-perspective">
+<div class="rounded-2xl bg-white border border-slate-200 shadow-float overflow-hidden hero-mockup-inner">
+<!-- Window Title Bar -->
+<div class="h-10 bg-slate-50 border-b border-slate-200 px-4 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+<span class="ml-2 text-[11px] font-mono text-slate-500">app.servicepacts.com/pipeline/live-deals</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live Sync
+                  </span>
+</div>
+</div>
+<!-- Pipeline Header -->
+<div class="px-5 py-4 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+<div>
+<h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    Service Agreements Pipeline
+                    <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">FY 2025</span>
+</h3>
+<p class="text-xs text-slate-500 mt-0.5">5 agreements in motion • Active pipeline: <span class="text-emerald-600 font-mono font-semibold">$59,920/yr</span></p>
+</div>
+<button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-sm flex items-center gap-1 cta-pulse-button">
+<span class="material-symbols-outlined text-[14px]">add</span>
+<span>New Agreement</span>
+</button>
+</div>
+<!-- Pipeline Kanban Columns (Light Mode) -->
+<div class="p-4 bg-slate-50/70 overflow-x-auto">
+<div class="grid grid-cols-3 gap-3 min-w-[540px]">
+<!-- Column 1: In Progress -->
+<div class="bg-slate-100/70 rounded-xl p-2.5 border border-slate-200/80">
+<div class="flex items-center justify-between text-[11px] font-semibold pb-2 border-b border-slate-200 text-slate-700">
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-brand-600"></span> In progress
+                      </span>
+<span class="font-mono text-slate-500">$10,500</span>
+</div>
+<div class="space-y-2 mt-2.5">
+<div class="bg-white border border-slate-200 rounded-lg p-2.5 shadow-card glow-hover-card">
+<div class="flex justify-between items-start">
+<span class="text-[9px] font-mono text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200">HVAC + Controls</span>
+<span class="text-[9px] text-slate-400 font-mono">1d ago</span>
+</div>
+<h4 class="text-xs font-semibold text-slate-900 mt-1.5">439 Railway Street</h4>
+<p class="text-[10px] text-slate-500">Strata Plan EPS 4920</p>
+<div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+<span class="text-[10px] text-slate-500">12 RTUs</span>
+<span class="text-xs font-bold font-mono text-slate-900">$450/mo</span>
+</div>
+</div>
+<div class="bg-white border border-slate-200 rounded-lg p-2.5 shadow-card glow-hover-card">
+<div class="flex justify-between items-start">
+<span class="text-[9px] font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">Boiler &amp; Hydronic</span>
+<span class="text-[9px] text-slate-400 font-mono">3d ago</span>
+</div>
+<h4 class="text-xs font-semibold text-slate-900 mt-1.5">Pacific Rim Logistics</h4>
+<p class="text-[10px] text-slate-500">4 Viessmann Boilers</p>
+<div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+<span class="text-[10px] text-slate-500">Annual</span>
+<span class="text-xs font-bold font-mono text-slate-900">$10,050/yr</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 2: Sent to Customer -->
+<div class="bg-amber-50/50 rounded-xl p-2.5 border border-amber-200/80">
+<div class="flex items-center justify-between text-[11px] font-semibold pb-2 border-b border-amber-200/80 text-slate-700">
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span> Sent
+                      </span>
+<span class="font-mono text-amber-700">$18,900</span>
+</div>
+<div class="mt-2.5">
+<div class="bg-white border border-amber-200 rounded-lg p-2.5 shadow-card glow-hover-card">
+<div class="flex justify-between items-start">
+<span class="text-[9px] font-mono text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">Plumbing</span>
+<span class="text-[9px] text-amber-600 font-mono">9d ago</span>
+</div>
+<h4 class="text-xs font-semibold text-slate-900 mt-1.5">Maple Court Plaza</h4>
+<p class="text-[10px] text-slate-500">Ridgeline Realty Mgmt</p>
+<div class="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+<span class="material-symbols-outlined text-[10px]">schedule</span> No reply in 9 days
+                        </div>
+<div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+<span class="text-[10px] text-slate-500">8 Pumps</span>
+<span class="text-xs font-bold font-mono text-slate-900">$18,900/yr</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Completed & Signed -->
+<div class="bg-emerald-50/50 rounded-xl p-2.5 border border-emerald-200/80">
+<div class="flex items-center justify-between text-[11px] font-semibold pb-2 border-b border-emerald-200/80 text-slate-700">
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Signed
+                      </span>
+<span class="font-mono text-emerald-700">$18,800</span>
+</div>
+<div class="mt-2.5">
+<div class="bg-white border border-emerald-200 rounded-lg p-2.5 shadow-card glow-hover-card">
+<div class="flex justify-between items-start">
+<span class="text-[9px] font-mono text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Signed</span>
+<span class="text-[9px] text-emerald-600 font-mono">Active</span>
+</div>
+<h4 class="text-xs font-semibold text-slate-900 mt-1.5">Fraser Industrial Park</h4>
+<p class="text-[10px] text-slate-500">West Fraser Real Estate</p>
+<div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+<span class="text-[10px] text-emerald-700 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">verified</span> Auto-renews
+                          </span>
+<span class="text-xs font-bold font-mono text-emerald-700">$18,800/yr</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating White-Label Customer Approval Portal Card -->
+<div class="sm:absolute sm:-bottom-5 sm:-right-4 sm:w-72 w-full mt-4 sm:mt-0 p-4 rounded-xl bg-white border border-slate-200 shadow-float floating-portal-card">
+<div class="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100">
+<span class="text-[10px] uppercase font-bold tracking-wider text-slate-500 flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Customer Portal
+                </span>
+<span class="text-[9px] font-mono bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded border border-brand-200 font-semibold">White Label</span>
+</div>
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-xs">
+                  BH
+                </div>
+<div>
+<h5 class="text-xs font-semibold text-slate-900">Blue Heron Mechanical</h5>
+<p class="text-[10px] text-slate-500">Harbour Point Tower Agreement</p>
+</div>
+</div>
+<div class="my-2.5 flex items-baseline justify-between bg-slate-50 p-2 rounded-lg border border-slate-200/80">
+<span class="text-[11px] text-slate-600 font-medium">Contract Total:</span>
+<span class="text-sm font-bold text-slate-900 font-mono">$14,280<span class="text-[10px] text-slate-500 font-normal">/yr CAD</span></span>
+</div>
+<div class="grid grid-cols-3 gap-1.5">
+<button class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold py-1.5 px-2 rounded transition-colors shadow-sm">Accept</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-medium py-1.5 px-1.5 rounded transition-colors">Changes</button>
+<button class="bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 text-[11px] font-medium py-1.5 px-1.5 rounded transition-colors">Refuse</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: HeroSection -->
+<!-- BEGIN: Logo Strip & Impact Metrics -->
+<section class="py-16 bg-white border-b border-slate-200/80 scroll-zoom-section before-view in-view">
+<div class="max-w-7xl mx-auto px-4 sm:px-6">
+<p class="text-center text-xs font-semibold uppercase tracking-wider text-slate-500 mb-8">
+          Trusted by leading Canadian commercial HVAC, mechanical, plumbing &amp; electrical contractors
+        </p>
+<!-- Monochrome Contractor Badges -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 items-center justify-items-center">
+<div class="flex items-center gap-2 text-slate-700 font-bold tracking-tight text-sm px-4 py-3 rounded-lg bg-slate-50 border border-slate-200/80 w-full justify-center glow-hover-card">
+<span class="material-symbols-outlined text-slate-500 text-lg">precision_manufacturing</span>
+<span>Apex Mechanical</span>
+</div>
+<div class="flex items-center gap-2 text-slate-700 font-bold tracking-tight text-sm px-4 py-3 rounded-lg bg-slate-50 border border-slate-200/80 w-full justify-center glow-hover-card">
+<span class="material-symbols-outlined text-slate-500 text-lg">ac_unit</span>
+<span>Summit HVAC</span>
+</div>
+<div class="flex items-center gap-2 text-slate-700 font-bold tracking-tight text-sm px-4 py-3 rounded-lg bg-slate-50 border border-slate-200/80 w-full justify-center glow-hover-card">
+<span class="material-symbols-outlined text-slate-500 text-lg">domain</span>
+<span>TrueNorth Building</span>
+</div>
+<div class="flex items-center gap-2 text-slate-700 font-bold tracking-tight text-sm px-4 py-3 rounded-lg bg-slate-50 border border-slate-200/80 w-full justify-center glow-hover-card">
+<span class="material-symbols-outlined text-slate-500 text-lg">bolt</span>
+<span>Prairie Power &amp; Elec</span>
+</div>
+<div class="flex items-center gap-2 text-slate-700 font-bold tracking-tight text-sm px-4 py-3 rounded-lg bg-slate-50 border border-slate-200/80 w-full justify-center col-span-2 sm:col-span-1 glow-hover-card">
+<span class="material-symbols-outlined text-slate-500 text-lg">mode_fan</span>
+<span>Maple Leaf Climate</span>
+</div>
+</div>
+<!-- Bold Blue-Highlighted Statement (AccessGrid style) -->
+<div class="mt-20 max-w-3xl mx-auto text-center">
+<h2 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
+<span class="text-brand-600">We've done the hard work</span> of turning messy equipment lists into signed commercial agreements, <span class="text-brand-600">so you don't have to.</span>
+</h2>
+</div>
+<!-- 3-Column Impact Metrics -->
+<div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/90 text-center glow-hover-card scroll-card-item before-view in-view">
+<div class="text-3xl sm:text-4xl font-extrabold text-brand-600 font-mono">$42M+</div>
+<div class="text-xs sm:text-sm text-slate-600 mt-1.5 font-medium">Commercial trade agreements quoted</div>
+</div>
+<div class="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/90 text-center glow-hover-card scroll-card-item before-view in-view">
+<div class="text-3xl sm:text-4xl font-extrabold text-brand-600 font-mono">98.4%</div>
+<div class="text-xs sm:text-sm text-slate-600 mt-1.5 font-medium">Faster proposal turnaround to customer</div>
+</div>
+<div class="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/90 text-center glow-hover-card scroll-card-item before-view in-view">
+<div class="text-3xl sm:text-4xl font-extrabold text-brand-600 font-mono">12,000+</div>
+<div class="text-xs sm:text-sm text-slate-600 mt-1.5 font-medium">Commercial rooftop &amp; mechanical assets priced</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Logo Strip & Impact Metrics -->
+<!-- BEGIN: Dark Contrast Showcase Band ("Six steps, one job.") -->
+<section class="py-24 bg-[#0b0e17] text-white relative overflow-hidden scroll-zoom-section before-view in-view" id="workflow">
+<!-- WebGL Background Canvas with CSS Glowing Fallback -->
+<div class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden dark-energy-gradient">
+<canvas class="absolute inset-0 w-full h-full pointer-events-none opacity-90" height="1308" id="workflow-webgl-canvas" width="1920"></canvas>
+<div class="aurora-bg-mesh opacity-50">
+<div class="aurora-orb aurora-orb-1" style="background: radial-gradient(circle, rgba(37,99,235,0.4) 0%, transparent 70%);"></div>
+<div class="aurora-orb aurora-orb-2" style="background: radial-gradient(circle, rgba(6,182,212,0.35) 0%, transparent 70%);"></div>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+<div>
+<span class="text-xs uppercase font-bold tracking-wider text-brand-400 font-mono">Complete Lifecycle Pipeline</span>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mt-1">
+              Six steps, one job.
+            </h2>
+<p class="mt-3 text-sm text-slate-300 max-w-xl">
+              From the raw list the customer sent to a recurring commercial contract that renews itself. Nothing slips between a spreadsheet and an inbox.
+            </p>
+</div>
+<div class="mt-4 md:mt-0">
+<span class="text-xs font-mono text-slate-200 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-lg inline-flex items-center gap-2 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Zero duplicate data entry
+            </span>
+</div>
+</div>
+<!-- 6 Connected Step Cards Grid -->
+<div class="relative w-full h-1 overflow-hidden my-4 rounded-full bg-slate-900/80 border border-slate-800 hidden md:block">
+<div class="circuit-beam-line"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+<div class="rounded-xl p-6 backdrop-blur-md bg-slate-900/75 border border-slate-700/80 hover:border-cyan-400 shadow-xl transition-all duration-300 dark-pipeline-card scroll-card-item before-view in-view">
+<div class="flex items-center justify-between mb-4">
+<div class="w-8 h-8 rounded-lg bg-brand-500/20 border border-brand-500/40 text-brand-300 flex items-center justify-center font-mono font-bold text-sm">01</div>
+<span class="text-[11px] font-mono text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-700/60">Estimator</span>
+</div>
+<h3 class="text-base font-bold text-white mb-1.5">Import</h3>
+<p class="text-xs text-slate-300 leading-relaxed mb-4">Drop in the customer's raw equipment list in CSV, scanned PDF, or Excel without manual retyping.</p>
+<div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-slate-300"><span class="material-symbols-outlined text-[14px] text-brand-400">upload_file</span> equipment_list.xlsx</span>
+<span class="text-emerald-400 font-semibold">Parsed 24 items</span>
+</div>
+</div>
+<div class="rounded-xl p-6 backdrop-blur-md bg-slate-900/75 border border-slate-700/80 hover:border-cyan-400 shadow-xl transition-all duration-300 dark-pipeline-card scroll-card-item before-view in-view">
+<div class="flex items-center justify-between mb-4">
+<div class="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center font-mono font-bold text-sm">02</div>
+<span class="text-[11px] font-mono text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-700/60">Estimator + AI</span>
+</div>
+<h3 class="text-base font-bold text-white mb-1.5">Build</h3>
+<p class="text-xs text-slate-300 leading-relaxed mb-4">A priced agreement, not a blank page. AI structures assets into priced service lines with visit schedules.</p>
+<div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-slate-300"><span class="material-symbols-outlined text-[14px] text-indigo-400">calculate</span> Auto-rates applied</span>
+<span class="text-indigo-300 font-bold">$14,280/yr</span>
+</div>
+</div>
+<div class="rounded-xl p-6 backdrop-blur-md bg-slate-900/75 border border-slate-700/80 hover:border-cyan-400 shadow-xl transition-all duration-300 dark-pipeline-card scroll-card-item before-view in-view">
+<div class="flex items-center justify-between mb-4">
+<div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex items-center justify-center font-mono font-bold text-sm">03</div>
+<span class="text-[11px] font-mono text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-700/50">Automatic</span>
+</div>
+<h3 class="text-base font-bold text-white mb-1.5">Send</h3>
+<p class="text-xs text-slate-300 leading-relaxed mb-4">An email with a review link and live preview. The branded PDF agreement is dynamically packaged on that page.</p>
+<div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-slate-300"><span class="material-symbols-outlined text-[14px] text-cyan-400">mark_email_read</span> Customer notified</span>
+<span class="text-cyan-400 font-semibold">Opened in 4m</span>
+</div>
+</div>
+<div class="rounded-xl p-6 backdrop-blur-md bg-slate-900/75 border border-slate-700/80 hover:border-cyan-400 shadow-xl transition-all duration-300 dark-pipeline-card scroll-card-item before-view in-view">
+<div class="flex items-center justify-between mb-4">
+<div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center font-mono font-bold text-sm">04</div>
+<span class="text-[11px] font-mono text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-700/60">Customer</span>
+</div>
+<h3 class="text-base font-bold text-white mb-1.5">Decide</h3>
+<p class="text-xs text-slate-300 leading-relaxed mb-4">One-tap response. The customer can instantly accept, refuse, or request specific line item modifications.</p>
+<div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-slate-300"><span class="material-symbols-outlined text-[14px] text-amber-400">touch_app</span> Single tap</span>
+<span class="text-emerald-400 font-bold">Approved ✓</span>
+</div>
+</div>
+<div class="rounded-xl p-6 backdrop-blur-md bg-slate-900/75 border border-slate-700/80 hover:border-cyan-400 shadow-xl transition-all duration-300 dark-pipeline-card scroll-card-item before-view in-view">
+<div class="flex items-center justify-between mb-4">
+<div class="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center font-mono font-bold text-sm">05</div>
+<span class="text-[11px] font-mono text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-700/60">Customer, Owner</span>
+</div>
+<h3 class="text-base font-bold text-white mb-1.5">Sign</h3>
+<p class="text-xs text-slate-300 leading-relaxed mb-4">The accepted version becomes an enforceable contract, counter-signed with audit trail on phone or desktop.</p>
+<div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-slate-300"><span class="material-symbols-outlined text-[14px] text-purple-400">draw</span> E-signature</span>
+<span class="text-purple-300 font-semibold">Signed &amp; Sealed</span>
+</div>
+</div>
+<div class="rounded-xl p-6 backdrop-blur-md bg-slate-900/75 border border-slate-700/80 hover:border-cyan-400 shadow-xl transition-all duration-300 dark-pipeline-card scroll-card-item before-view in-view">
+<div class="flex items-center justify-between mb-4">
+<div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center font-mono font-bold text-sm">06</div>
+<span class="text-[11px] font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700/50">Automatic, Staff</span>
+</div>
+<h3 class="text-base font-bold text-white mb-1.5">Renew</h3>
+<p class="text-xs text-slate-300 leading-relaxed mb-4">Nothing quietly lapses. Configurable CPI escalator caps and 60-day notice automation ensure continuous MRR.</p>
+<div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-slate-300"><span class="material-symbols-outlined text-[14px] text-emerald-400">autorenew</span> +3.5% CPI adjusted</span>
+<span class="text-emerald-400 font-bold">Renewed 2026</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Dark Contrast Showcase Band -->
+<!-- BEGIN: Bento / Interactive Step-by-Step Section (Light Mode) -->
+<section class="py-24 bg-[#f8f9ff] border-b border-slate-200/80 scroll-zoom-section relative before-view in-view" id="product">
+<div class="aurora-bg-mesh absolute inset-0 overflow-hidden pointer-events-none">
+<div class="aurora-orb" style="top: 5%; left: 5%; width: 650px; height: 650px; background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, rgba(147,51,234,0.12) 60%, transparent 80%); animation: aurora-drift-1 18s ease-in-out infinite alternate; filter: blur(120px);"></div>
+<div class="aurora-orb" style="bottom: 10%; right: 5%; width: 550px; height: 550px; background: radial-gradient(circle, rgba(6,182,212,0.18) 0%, rgba(16,185,129,0.1) 60%, transparent 80%); animation: aurora-drift-2 22s ease-in-out infinite alternate; filter: blur(110px);"></div>
+</div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+<div class="max-w-2xl mb-14">
+<span class="text-xs uppercase font-bold tracking-wider text-brand-600 font-mono">Engineered for Canadian Subcontractors</span>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-1">
+            Built for service agreements, <span class="text-brand-600">not generic sales.</span>
+</h2>
+<p class="mt-3 text-sm text-slate-600">
+            Every feature is purpose-tailored to multi-unit mechanical equipment, seasonal maintenance calendars, and white-label trust.
+          </p>
+</div>
+<!-- 2-Column Interactive Breakdown -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left: Numbered Interactive Steps -->
+<div class="lg:col-span-5 space-y-3" id="feature-tabs">
+<button class="w-full text-left p-5 rounded-xl bg-white border-2 border-brand-600 shadow-card transition-all interactive-tab-btn" id="tab-btn-0" onclick="selectFeature(0)">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-md bg-brand-600 text-white font-mono text-xs font-bold flex items-center justify-center">1</span>
+<h3 class="text-sm font-bold text-slate-900">White-Label Customer Portal</h3>
+</div>
+<p class="mt-2 text-xs text-slate-600 leading-relaxed pl-9">
+                Your customer sees your name, emblem, brand hex color, and GST/HST registration—with zero account creation or app download.
+              </p>
+</button>
+<button class="w-full text-left p-5 rounded-xl bg-white/70 hover:bg-white border border-slate-200 transition-all interactive-tab-btn" id="tab-btn-1" onclick="selectFeature(1)">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-bold flex items-center justify-center">2</span>
+<h3 class="text-sm font-bold text-slate-900">AI Equipment List Parsing</h3>
+</div>
+<p class="mt-2 text-xs text-slate-600 leading-relaxed pl-9">
+                Drop in raw building equipment schedules. Our Canadian trade parser normalizes tonnage, serials, filter sizes, and belt specs in seconds.
+              </p>
+</button>
+<button class="w-full text-left p-5 rounded-xl bg-white/70 hover:bg-white border border-slate-200 transition-all interactive-tab-btn" id="tab-btn-2" onclick="selectFeature(2)">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-bold flex items-center justify-center">3</span>
+<h3 class="text-sm font-bold text-slate-900">12-Month Annual Service Matrix</h3>
+</div>
+<p class="mt-2 text-xs text-slate-600 leading-relaxed pl-9">
+                Each service line holds its own visit months. The customer signs once, and the complete scope is written from the equipment list on site.
+              </p>
+</button>
+<button class="w-full text-left p-5 rounded-xl bg-white/70 hover:bg-white border border-slate-200 transition-all interactive-tab-btn" id="tab-btn-3" onclick="selectFeature(3)">
+<div class="flex items-center gap-3">
+<span class="w-6 h-6 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-bold flex items-center justify-center">4</span>
+<h3 class="text-sm font-bold text-slate-900">Day-One Trade Starter Packs</h3>
+</div>
+<p class="mt-2 text-xs text-slate-600 leading-relaxed pl-9">
+                Select your trade specialty at registration. Boot instantly with CSA/ASHRAE service tasks, checklists, and visit intervals.
+              </p>
+</button>
+</div>
+<!-- Right: Live Card Preview Area -->
+<div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-float p-6 sm:p-8 min-h-[380px] flex flex-col justify-between glow-hover-card">
+<!-- Panel 0: White-Label Portal -->
+<div class="feature-panel" id="panel-0">
+<div class="flex items-center justify-between border-b border-slate-100 pb-4">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-brand-600 text-white font-extrabold flex items-center justify-center text-xs">BH</div>
+<div>
+<span class="text-sm font-bold text-slate-900 block">Blue Heron Mechanical Ltd.</span>
+<span class="text-[11px] text-slate-500 font-mono">Vancouver, BC • GST #829391024RT0001</span>
+</div>
+</div>
+<span class="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-semibold">Verified Contractor</span>
+</div>
+<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold block">Agreement Target</span>
+<span class="font-bold text-slate-900 mt-1 block text-sm">Harbour Point Tower (32 Floors)</span>
+<span class="text-xs text-slate-600 mt-1 block">18 RTUs • 2 Chillers • 4 Boilers</span>
+</div>
+<div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 flex items-center justify-between">
+<div>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold block">Annual Contract</span>
+<span class="text-xl font-extrabold text-slate-900 font-mono mt-1 block">$14,280 CAD</span>
+</div>
+<span class="text-[10px] text-brand-700 bg-brand-50 px-2.5 py-1 rounded font-semibold border border-brand-200">Billed Quarterly</span>
+</div>
+</div>
+<div class="mt-6 p-4 rounded-xl bg-brand-50/50 border border-brand-100 flex items-center justify-between">
+<span class="text-xs text-slate-700 font-medium">Private review link • Zero login required</span>
+<span class="text-xs font-semibold text-brand-600">Ready for signature →</span>
+</div>
+</div>
+<!-- Panel 1: AI Parsing Engine -->
+<div class="feature-panel hidden" id="panel-1">
+<div class="flex items-center justify-between border-b border-slate-100 pb-4">
+<span class="text-sm font-bold text-slate-900">AI Equipment List Extraction</span>
+<span class="text-[10px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">99.2% Accuracy</span>
+</div>
+<div class="mt-5 space-y-3 font-mono text-xs">
+<div class="bg-slate-50 border border-slate-200 p-3 rounded-lg text-slate-600 flex items-center justify-between">
+<span class="truncate">RTU-1_Carrier_48TCED08_SN9420.pdf</span>
+<span class="text-brand-700 font-sans text-[10px] font-semibold bg-brand-50 px-2 py-0.5 rounded border border-brand-200">Scanned File</span>
+</div>
+<div class="flex justify-center text-brand-600 py-1">
+<span class="material-symbols-outlined text-lg animate-bounce">arrow_downward</span>
+</div>
+<div class="bg-white border-2 border-brand-200 p-4 rounded-xl shadow-card">
+<div class="flex justify-between font-bold text-slate-900 mb-2">
+<span>Carrier 7.5 Ton RTU</span>
+<span class="text-emerald-600">$1,450/yr</span>
+</div>
+<div class="text-[11px] text-slate-600 grid grid-cols-2 gap-2">
+<span>Filters: 20x20x2 (Qty 4)</span>
+<span>Belts: AX-48 (Qty 2)</span>
+<span>Visits: Mar, Jun, Sep, Dec</span>
+<span>Scope: Full Preventive</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Panel 2: 12-Month Matrix -->
+<div class="feature-panel hidden" id="panel-2">
+<div class="flex items-center justify-between border-b border-slate-100 pb-4">
+<span class="text-sm font-bold text-slate-900">Annual Service Matrix</span>
+<span class="text-[10px] font-mono text-slate-500">12-Month Calendar</span>
+</div>
+<div class="mt-4 overflow-x-auto">
+<div class="min-w-[480px]">
+<div class="grid grid-cols-12 text-center text-[10px] font-bold text-slate-500 mb-2 font-mono">
+<div>J</div><div>F</div><div class="text-brand-600">M</div><div>A</div><div>M</div><div class="text-brand-600">J</div><div>J</div><div>A</div><div class="text-brand-600">S</div><div class="text-brand-600">O</div><div>N</div><div class="text-brand-600">D</div>
+</div>
+<div class="space-y-2.5 text-xs">
+<div class="flex items-center gap-2">
+<span class="w-32 shrink-0 text-[11px] font-medium text-slate-700">Heating &amp; cooling</span>
+<div class="grid grid-cols-12 gap-1 flex-1">
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-brand-600 rounded text-[9px] font-bold text-white flex items-center justify-center">Q1</div>
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-brand-600 rounded text-[9px] font-bold text-white flex items-center justify-center">Q2</div>
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-brand-600 rounded text-[9px] font-bold text-white flex items-center justify-center">Q3</div>
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-brand-600 rounded text-[9px] font-bold text-white flex items-center justify-center">Q4</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-32 shrink-0 text-[11px] font-medium text-slate-700">Commercial boilers</span>
+<div class="grid grid-cols-12 gap-1 flex-1">
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-indigo-600 rounded text-[9px] font-bold text-white flex items-center justify-center">Oct</div>
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-32 shrink-0 text-[11px] font-medium text-slate-700">Exhaust &amp; MUA</span>
+<div class="grid grid-cols-12 gap-1 flex-1">
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-cyan-600 rounded text-[9px] font-bold text-white flex items-center justify-center">May</div>
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+<div class="h-6 bg-cyan-600 rounded text-[9px] font-bold text-white flex items-center justify-center">Oct</div>
+<div class="h-6 bg-slate-100 rounded"></div><div class="h-6 bg-slate-100 rounded"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Panel 3: Trade Starter Packs -->
+<div class="feature-panel hidden" id="panel-3">
+<div class="flex items-center justify-between border-b border-slate-100 pb-4">
+<span class="text-sm font-bold text-slate-900">Trade Starter Packs</span>
+<span class="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Day-One Ready</span>
+</div>
+<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+<span class="text-[10px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">Ready</span>
+<h4 class="text-xs font-bold text-slate-900 mt-2">Heating &amp; Cooling</h4>
+<p class="text-[11px] text-slate-600 mt-1">RTUs, air handlers, chillers, hydronic boilers, fan coils.</p>
+</div>
+<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+<span class="text-[10px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">Ready</span>
+<h4 class="text-xs font-bold text-slate-900 mt-2">Plumbing &amp; Hydronics</h4>
+<p class="text-[11px] text-slate-600 mt-1">Backflow certifications, sump pumps, domestic water heaters.</p>
+</div>
+<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+<span class="text-[10px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">Ready</span>
+<h4 class="text-xs font-bold text-slate-900 mt-2">Electrical &amp; Controls</h4>
+<p class="text-[11px] text-slate-600 mt-1">Distribution panels, thermal imaging, standby generators.</p>
+</div>
+<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+<span class="text-[10px] font-mono text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded">Custom</span>
+<h4 class="text-xs font-bold text-slate-900 mt-2">Refrigeration &amp; Fire</h4>
+<p class="text-[11px] text-slate-600 mt-1">Walk-in evaporators, rack controls, fire dampers, hoods.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Bento / Interactive Step-by-Step Section -->
+<!-- BEGIN: Integrations / Ecosystem Diagram (AccessGrid Node Style) -->
+<section class="py-24 bg-white border-b border-slate-200/80 scroll-zoom-section before-view in-view">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+<span class="text-xs uppercase font-bold tracking-wider text-brand-600 font-mono">Seamless Workflow</span>
+<h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+          Connect your existing lists. <span class="text-brand-600">Everything you use.</span>
+</h2>
+<p class="mt-3 text-sm text-slate-600 max-w-xl mx-auto">
+          From raw customer spreadsheets to signed, recurring agreements—Service Pacts bridges every step automatically.
+        </p>
+<!-- Node Diagram -->
+<div class="mt-12 p-8 lg:p-12 rounded-2xl bg-[#f8f9ff] border border-slate-200/90 relative overflow-hidden shadow-float group">
+<!-- Ambient radial aura backdrop -->
+<div class="aurora-bg-mesh pointer-events-none absolute inset-0 overflow-hidden">
+<div class="aurora-orb aurora-orb-1" style="width: 480px; height: 480px; top: -10%; left: 25%; opacity: 0.28; filter: blur(90px);"></div>
+<div class="aurora-orb aurora-orb-2" style="width: 420px; height: 420px; bottom: -15%; right: 20%; opacity: 0.24; filter: blur(95px);"></div>
+<div class="aurora-orb" style="top: 25%; left: 40%; width: 320px; height: 320px; background: radial-gradient(circle, rgba(37,99,235,0.3) 0%, rgba(6,182,212,0.15) 60%, transparent 80%); animation: aurora-drift-3 16s ease-in-out infinite alternate; filter: blur(80px);"></div>
+</div>
+<div class="absolute inset-0 subtle-grid radial-fade pointer-events-none animated-matrix-grid opacity-60"></div>
+<!-- SVG Connection Beams (Desktop view) -->
+<svg class="hidden md:block absolute inset-0 w-full h-full pointer-events-none z-0" fill="none" preserveaspectratio="none" viewbox="0 0 900 320">
+<defs>
+<lineargradient id="beamGradLeft1" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#10b981" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#2563eb" stop-opacity="0.9"></stop>
+</lineargradient>
+<lineargradient id="beamGradLeft2" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#e11d48" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#2563eb" stop-opacity="0.9"></stop>
+</lineargradient>
+<lineargradient id="beamGradRight1" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#2563eb" stop-opacity="0.9"></stop>
+<stop offset="100%" stop-color="#3b82f6" stop-opacity="0.3"></stop>
+</lineargradient>
+<lineargradient id="beamGradRight2" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#2563eb" stop-opacity="0.9"></stop>
+<stop offset="100%" stop-color="#6366f1" stop-opacity="0.3"></stop>
+</lineargradient>
+<filter height="140%" id="glowBeam" width="140%" x="-20%" y="-20%">
+<fegaussianblur result="blur" stddeviation="3"></fegaussianblur>
+<fecomposite in="SourceGraphic" in2="blur" operator="over"></fecomposite>
+</filter>
+</defs>
+<!-- Top-left to Center -->
+<path d="M 260 100 C 350 100, 370 160, 450 160" opacity="0.4" stroke="#bfdbfe" stroke-width="2"></path>
+<path class="dash-stream-left" d="M 260 100 C 350 100, 370 160, 450 160" filter="url(#glowBeam)" stroke="url(#beamGradLeft1)" stroke-width="2.5"></path>
+<!-- Bottom-left to Center -->
+<path d="M 260 220 C 350 220, 370 160, 450 160" opacity="0.4" stroke="#bfdbfe" stroke-width="2"></path>
+<path class="dash-stream-left" d="M 260 220 C 350 220, 370 160, 450 160" filter="url(#glowBeam)" stroke="url(#beamGradLeft2)" stroke-width="2.5"></path>
+<!-- Center to Top-right -->
+<path d="M 450 160 C 530 160, 550 100, 640 100" opacity="0.4" stroke="#bfdbfe" stroke-width="2"></path>
+<path class="dash-stream-right" d="M 450 160 C 530 160, 550 100, 640 100" filter="url(#glowBeam)" stroke="url(#beamGradRight1)" stroke-width="2.5"></path>
+<!-- Center to Bottom-right -->
+<path d="M 450 160 C 530 160, 550 220, 640 220" opacity="0.4" stroke="#bfdbfe" stroke-width="2"></path>
+<path class="dash-stream-right" d="M 450 160 C 530 160, 550 220, 640 220" filter="url(#glowBeam)" stroke="url(#beamGradRight2)" stroke-width="2.5"></path>
+</svg>
+<!-- 3-Column Node Arrangement -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center relative z-10">
+<!-- Left Nodes: Inputs -->
+<div class="space-y-4">
+<!-- Top Left Card -->
+<div class="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-card hover:shadow-float hover:border-brand-300 transition-all duration-300 flex items-center justify-between glow-hover-card">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-xl">table_view</span>
+</div>
+<div class="text-left">
+<div class="text-xs font-bold text-slate-900">Excel &amp; CSV Lists</div>
+<div class="text-[10px] text-slate-500">Raw equipment schedules</div>
+</div>
+</div>
+<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-medium text-emerald-700 bg-emerald-50 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+          Live
+        </span>
+</div>
+<!-- Bottom Left Card -->
+<div class="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-card hover:shadow-float hover:border-brand-300 transition-all duration-300 flex items-center justify-between glow-hover-card">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200/80 flex items-center justify-center text-rose-600 shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+</div>
+<div class="text-left">
+<div class="text-xs font-bold text-slate-900">Scanned PDFs</div>
+<div class="text-[10px] text-slate-500">Building asset sheets</div>
+</div>
+</div>
+<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-medium text-brand-700 bg-brand-50 border border-brand-200">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-600 animate-pulse"></span>
+          OCR
+        </span>
+</div>
+</div>
+<!-- Center Node: Service Pacts Engine -->
+<div class="flex flex-col items-center justify-center py-4 relative group/core">
+<div class="relative flex items-center justify-center">
+<!-- Pulsing concentric waves -->
+<div class="absolute -inset-4 rounded-3xl bg-brand-500/20 pulse-node-ring pointer-events-none animate-ping opacity-30"></div>
+<div class="absolute -inset-8 rounded-full bg-cyan-500/10 blur-xl pointer-events-none"></div>
+<!-- Central Core Icon Box -->
+<div class="w-20 h-20 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white flex flex-col items-center justify-center shadow-float border-2 border-white/60 transition-transform duration-300 transform group-hover/core:scale-105">
+<span class="material-symbols-outlined text-3xl animate-pulse">auto_awesome</span>
+<span class="text-[9px] font-mono uppercase tracking-wider mt-1 font-semibold text-white/90">AI Engine</span>
+</div>
+</div>
+<div class="mt-3 text-xs font-bold text-slate-900 flex items-center gap-1.5">
+<span>Service Pacts Core</span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+</div>
+<div class="text-[11px] text-slate-500 font-medium">Parsing, Pricing &amp; Scheduling</div>
+</div>
+<!-- Right Nodes: Outputs -->
+<div class="space-y-4">
+<!-- Top Right Card -->
+<div class="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-card hover:shadow-float hover:border-brand-300 transition-all duration-300 flex items-center justify-between glow-hover-card">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-brand-50 border border-brand-200/80 flex items-center justify-center text-brand-600 shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-xl">web</span>
+</div>
+<div class="text-left">
+<div class="text-xs font-bold text-slate-900">Customer Review Portal</div>
+<div class="text-[10px] text-slate-500">White-label one-tap approval</div>
+</div>
+</div>
+<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-medium text-emerald-700 bg-emerald-50 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+          Ready
+        </span>
+</div>
+<!-- Bottom Right Card -->
+<div class="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-card hover:shadow-float hover:border-brand-300 transition-all duration-300 flex items-center justify-between glow-hover-card">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-xl">draw</span>
+</div>
+<div class="text-left">
+<div class="text-xs font-bold text-slate-900">E-Signature &amp; Renewal</div>
+<div class="text-[10px] text-slate-500">Enforceable PDF + CPI tracking</div>
+</div>
+</div>
+<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-medium text-indigo-700 bg-indigo-50 border border-indigo-200">
+<span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+          Auto
+        </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Integrations / Ecosystem Diagram -->
+<!-- BEGIN: TestimonialsSection -->
+<section class="py-24 bg-[#f8f9ff] border-b border-slate-200/80 scroll-zoom-section relative before-view in-view" id="testimonials">
+<div class="aurora-bg-mesh absolute inset-0 overflow-hidden pointer-events-none">
+<div class="aurora-orb" style="top: 15%; right: 15%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(147,51,234,0.16) 0%, rgba(37,99,235,0.12) 60%, transparent 80%); animation: aurora-drift-3 18s ease-in-out infinite alternate; filter: blur(130px);"></div>
+<div class="aurora-orb" style="bottom: 5%; left: 10%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, rgba(6,182,212,0.12) 60%, transparent 80%); animation: aurora-drift-1 22s ease-in-out infinite alternate; filter: blur(120px);"></div>
+</div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+<div class="text-center max-w-2xl mx-auto mb-14">
+<span class="text-xs uppercase font-bold tracking-wider text-brand-600 font-mono">Contractor Success Stories</span>
+<h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+            How Canadian trade leaders close recurring revenue
+          </h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Quote 1 -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card flex flex-col justify-between glow-hover-card scroll-card-item before-view in-view">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-4">
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+</div>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                "We quoted a 40-rooftop-unit commercial shopping center in Calgary in under 20 minutes. The customer signed on their smartphone before our competitors even returned the phone call. Closed $68,000 in recurring maintenance."
+              </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-slate-700">ML</div>
+<div>
+<h5 class="text-xs font-bold text-slate-900">Markus Lindholm</h5>
+<p class="text-[10px] text-slate-500">VP Operations, Prairie Peak Mechanical</p>
+</div>
+</div>
+</div>
+<!-- Quote 2 -->
+<div class="bg-white rounded-2xl p-6 border border-brand-200 shadow-card flex flex-col justify-between glow-hover-card scroll-card-item before-view in-view">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-4">
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+</div>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                "The proposal aging visibility completely changed our pipeline. Before Service Pacts, we had $150k in open agreements that went dead silently. Now the moment a deal hits 7 days without customer review, we trigger a follow-up."
+              </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center font-bold text-xs text-brand-700">DS</div>
+<div>
+<h5 class="text-xs font-bold text-slate-900">Darren Stewart</h5>
+<p class="text-[10px] text-slate-500">Managing Director, Stewart Commercial HVAC</p>
+</div>
+</div>
+</div>
+<!-- Quote 3 -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card flex flex-col justify-between glow-hover-card scroll-card-item before-view in-view">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-4">
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+</div>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                "Our property manager clients love the white-label review link. No login friction, crystal clear equipment scope with visit months, and a legally compliant signature in one click. We’ve increased contract renewal rate to 96%."
+              </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center font-bold text-xs text-emerald-700">ER</div>
+<div>
+<h5 class="text-xs font-bold text-slate-900">Elena Roy</h5>
+<p class="text-[10px] text-slate-500">Head of Service, Apex Climate Solutions</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: TestimonialsSection -->
+<!-- BEGIN: PricingSection -->
+<section class="py-24 bg-white border-b border-slate-200/80 relative scroll-zoom-section before-view in-view" id="pricing"><div class="aurora-bg-mesh absolute inset-0 overflow-hidden pointer-events-none"><div class="aurora-orb" style="top: -10%; left: 25%; width: 700px; height: 700px; background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, rgba(6,182,212,0.08) 60%, transparent 80%); animation: aurora-drift-2 26s ease-in-out infinite alternate; filter: blur(140px);"></div><div class="aurora-orb" style="bottom: -5%; right: 20%; width: 550px; height: 550px; background: radial-gradient(circle, rgba(147,51,234,0.1) 0%, rgba(37,99,235,0.08) 60%, transparent 80%); animation: aurora-drift-1 20s ease-in-out infinite alternate; filter: blur(120px);"></div></div><div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10"><div class="text-center max-w-3xl mx-auto mb-12"><span class="text-[11px] uppercase font-bold tracking-wider text-brand-600 font-mono">PLANS &amp; PRICING</span>
+<h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight mt-2 leading-[1.12]">So much value at a fraction of the cost</h2>
+<p class="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl mx-auto">Size your team and tell us what you need. We'll recommend the plan that fits.</p>
+<div class="flex items-center justify-center gap-3 mt-8 mb-2">
+<div class="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 shadow-inner">
+<button class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-sm transition-all" type="button">Monthly</button>
+<button class="px-4 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all" type="button">
+<span>Annual</span>
+<span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">-15%</span>
+</button>
+</div>
+</div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch"><!-- Tier 1: Starter -->
+<div class="bg-white rounded-2xl p-7 flex flex-col justify-between border border-slate-200 shadow-card hover:shadow-float transition-all duration-300 glow-hover-card">
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-xl bg-brand-50 border border-brand-200 text-brand-600 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-lg">bolt</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 font-sans">Starter</h3>
+</div>
+<span class="text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-semibold">Solo / Small</span>
+</div>
+<p class="text-xs text-slate-500 mt-3 leading-relaxed">Perfect for sole operators and small mechanical teams getting started.</p>
+<div class="mt-5 pb-5 border-b border-slate-100">
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-extrabold text-slate-900 font-mono">$79</span>
+<span class="text-xs text-slate-500 font-mono uppercase tracking-wider font-semibold ml-1">CAD / mo</span>
+</div>
+<p class="text-[11px] text-slate-400 mt-1 font-mono">Billed monthly or $63 CAD billed annually</p>
+</div>
+<div class="mt-5">
+<div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono mb-3">WHAT'S INCLUDED</div>
+<ul class="space-y-3 text-xs text-slate-700">
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span><strong>15</strong> active agreements managed simultaneously</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span><strong>10</strong> AI schedule lookups per month</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>Unlimited equipment tag registers</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>Client video portal with instant approval link</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>CSA / ASHRAE 180 maintenance templates</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>Export to PDF &amp; ServiceTitan format</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="mt-8 pt-4 border-t border-slate-100">
+<a class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all cta-pulse-button" href="register.html">
+<span>Start 30-day free trial</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Tier 2: Pro / Team (Signature Elevated Dark Card) -->
+<div class="bg-slate-900 text-white rounded-2xl p-7 flex flex-col justify-between border-2 border-brand-500 shadow-float relative glow-hover-card">
+<div class="absolute -top-3.5 right-6 bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+<span>MOST POPULAR</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-300 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-lg text-cyan-300">offline_bolt</span>
+</div>
+<h3 class="text-lg font-bold text-white font-sans">Pro</h3>
+</div>
+<span class="text-[10px] font-mono text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-700/50 font-semibold">Scale</span>
+</div>
+<p class="text-xs text-slate-300 mt-3 leading-relaxed">For high-velocity HVAC, refrigeration, and commercial trade contractors.</p>
+<div class="mt-5 pb-5 border-b border-slate-700/80">
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-extrabold text-white font-mono">$149</span>
+<span class="text-xs text-slate-400 font-mono uppercase tracking-wider font-semibold ml-1">CAD / mo</span>
+</div>
+<p class="text-[11px] text-slate-400 mt-1 font-mono">+ $19 CAD/mo per additional seat · Billed monthly</p>
+</div>
+<div class="mt-5">
+<div class="text-[10px] uppercase font-bold tracking-wider text-brand-300 font-mono mb-3">EVERYTHING IN STARTER, PLUS</div>
+<ul class="space-y-3 text-xs text-slate-200">
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+<span><strong>60</strong> active agreements with telemetry tracking</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+<span><strong>40</strong> AI schedule imports and PDF batch extractions</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+<span>Automated 60-day proactive renewal dispatch</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+<span>Real-time client telemetry &amp; video quote analytics</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+<span>Multi-branch management with <strong>5</strong> team seats</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+<span>Dedicated live 1-on-1 contractor onboarding session</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="mt-8 pt-4 border-t border-slate-700/80">
+<a class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-md transition-all cta-pulse-button" href="register.html">
+<span>Sign up now</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+<div class="text-center mt-2.5">
+<span class="text-[10px] text-slate-400 font-mono">Add-ons available</span>
+</div>
+</div>
+</div>
+<!-- Tier 3: Max / Business -->
+<div class="bg-white rounded-2xl p-7 flex flex-col justify-between border border-slate-200 shadow-card hover:shadow-float transition-all duration-300 glow-hover-card">
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-lg">electric_bolt</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 font-sans">Max</h3>
+</div>
+<span class="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">Enterprise</span>
+</div>
+<p class="text-xs text-slate-500 mt-3 leading-relaxed">For multi-branch enterprise contractors and commercial facilities groups.</p>
+<div class="mt-5 pb-5 border-b border-slate-100">
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-extrabold text-slate-900 font-mono">$299</span>
+<span class="text-xs text-slate-500 font-mono uppercase tracking-wider font-semibold ml-1">CAD / mo</span>
+</div>
+<p class="text-[11px] text-slate-400 mt-1 font-mono">Unlimited users per organization or custom SLA</p>
+</div>
+<div class="mt-5">
+<div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono mb-3">EVERYTHING IN PRO, PLUS</div>
+<ul class="space-y-3 text-xs text-slate-700">
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span><strong>200+</strong> live agreements across all territories</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span><strong>120</strong> AI list imports with custom regex parsers</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>Custom legal master pacts &amp; province-specific terms</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>Multi-site batch pricing &amp; corporate portfolio sync</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>ERP &amp; ServiceTitan automated bidirectional sync</span>
+</li>
+<li class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-brand-600 shrink-0 mt-0.5">check_circle</span>
+<span>Priority Canadian phone support with 1-hr SLA</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="mt-8 pt-4 border-t border-slate-100">
+<a class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all cta-pulse-button" href="#start">
+<span>Schedule call</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div></div><div class="mt-12 text-center text-xs text-slate-500 flex flex-wrap items-center justify-center gap-3 pt-6 border-t border-slate-100"><span>Extra seats $19 CAD a month.</span><span class="text-slate-300">•</span><span>Need Enterprise? 200+ agreements available on Business plan.</span><span class="text-slate-300">•</span><a class="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center gap-1" href="#pricing">Compare all features &amp; capabilities in our full tier matrix <span class="material-symbols-outlined text-xs">arrow_forward</span></a></div></div></section>
+<!-- END: PricingSection -->
+<!-- BEGIN: Bottom CTA Section -->
+<section class="py-20 bg-[#f8f9ff] border-b border-slate-200/80 scroll-zoom-section relative before-view in-view" id="start">
+<div class="aurora-bg-mesh opacity-70">
+<div class="aurora-orb aurora-orb-1" style="width: 450px; height: 450px; top: -20%; left: 35%;"></div>
+<div class="aurora-orb" style="width: 500px; height: 500px; bottom: -15%; right: 20%; background: radial-gradient(circle, rgba(6,182,212,0.18) 0%, rgba(37,99,235,0.12) 60%, transparent 80%); animation: aurora-drift-3 19s ease-in-out infinite alternate; filter: blur(110px);"></div>
+<div class="aurora-orb" style="width: 400px; height: 400px; top: 10%; left: 15%; background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, rgba(147, 51, 234, 0.1) 60%, transparent 80%); animation: 24s ease-in-out 0s infinite alternate none running aurora-drift-2; filter: blur(100px);"></div>
+</div>
+<div class="max-w-3xl mx-auto px-4 sm:px-6 text-center relative z-10">
+<span class="text-xs uppercase font-mono font-bold tracking-wider text-brand-600">Ready in 60 seconds</span>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-2">
+          Mobile-ready approvals. Zero complexity.
+        </h2>
+<p class="mt-3 text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+          See it with your own list. Monthly plans from $79 CAD. No setup fee, cancel anytime. Your trade starter pack is ready right now.
+        </p>
+<div class="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 max-w-md mx-auto">
+<input class="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 shadow-sm" placeholder="Enter your work email..." type="email"/>
+<a class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg shadow-sm transition-colors whitespace-nowrap cta-pulse-button inline-flex items-center justify-center" href="register.html">Start free trial</a>
+</div>
+<div class="mt-4 flex items-center justify-center gap-5 text-[11px] text-slate-500">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-emerald-600">check</span> No credit card required</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-emerald-600">check</span> 14-day full access</span>
+</div>
+</div>
+</section>
+<!-- END: Bottom CTA Section -->
+</main><footer class="w-full bg-[#090d18] text-slate-400 py-16 px-6 lg:px-12 border-t border-slate-800">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+<div class="lg:col-span-2 space-y-4">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<span class="text-xl font-bold tracking-tight text-white">Service Pacts</span>
+</div>
+<p class="text-sm text-slate-400 max-w-sm leading-relaxed">Purpose-built recurring service agreements and maintenance software for Canadian trade contractors — from equipment schedules to customer sign-off.</p>
+<div class="flex items-center space-x-2 text-xs text-slate-400 pt-2">
+<span class="text-red-400">🍁</span>
+<span>Built for Canada outside Quebec</span>
+</div>
+<p class="text-xs text-slate-500">All billing and pricing in Canadian Dollars (CAD)</p>
+</div>
+<div>
+<h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Product</h4>
+<ul class="space-y-2.5 text-sm">
+<li><a class="hover:text-white transition" href="#product">Equipment Extraction</a></li>
+<li><a class="hover:text-white transition" href="#workflow">6-Step Pipeline</a></li>
+<li><a class="hover:text-white transition" href="#product">12-Month Matrix</a></li>
+<li><a class="hover:text-white transition" href="demo.html">Interactive Demo</a></li>
+<li><a class="hover:text-white transition" href="trades.html">Trade Starter Packs</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Commercial Trades</h4>
+<ul class="space-y-2.5 text-sm"><li><a class="hover:text-white transition" href="trades.html">HVAC &amp; Mechanical</a></li><li><a class="hover:text-white transition" href="trades.html">Plumbing &amp; Hydronics</a></li><li><a class="hover:text-white transition" href="trades.html">Electrical Systems</a></li><li><a class="hover:text-white transition" href="trades.html">Refrigeration</a></li><li><a class="hover:text-white transition" href="pricing.html">Pricing &amp; Plans</a></li></ul>
+</div>
+<div>
+<h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Trust &amp; Security</h4>
+<ul class="space-y-2.5 text-sm"><li><a class="hover:text-white transition" href="#privacy">Privacy Policy</a></li><li><a class="hover:text-white transition" href="#terms">Terms of Service</a></li><li><a class="hover:text-white transition" href="#security">Data Security &amp; Backup</a></li><li><a class="hover:text-white transition" href="#faq">Contractor FAQ</a></li><li><a class="hover:text-white transition" href="sign-in.html">Customer Sign In</a></li></ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+<p>© 2025 Service Pacts Technologies Inc. All rights reserved.</p>
+<div class="flex items-center space-x-6">
+<span class="inline-flex items-center space-x-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>SOC2 Type II Compliant</span></span>
+<span>Canadian Data Residency</span>
+</div>
+</div>
+</footer>
+<!-- BEGIN: MainFooter (Clean Light Footer) -->
+<!-- END: MainFooter -->
+<!-- Interactive Tabs Logic -->
+<script>
+  function selectFeature(index) {
+    document.querySelectorAll('.feature-panel').forEach(function(panel, i) {
+      if (i === index) {
+        panel.classList.remove('hidden');
+      } else {
+        panel.classList.add('hidden');
+      }
+    });
+
+    for (var i = 0; i < 4; i++) {
+      var btn = document.getElementById('tab-btn-' + i);
+      if (!btn) continue;
+      var badge = btn.querySelector('span');
+      if (i === index) {
+        btn.className = 'w-full text-left p-5 rounded-xl bg-white border-2 border-brand-600 shadow-card transition-all interactive-tab-btn';
+        if (badge) badge.className = 'w-6 h-6 rounded-md bg-brand-600 text-white font-mono text-xs font-bold flex items-center justify-center';
+      } else {
+        btn.className = 'w-full text-left p-5 rounded-xl bg-white/70 hover:bg-white border border-slate-200 transition-all interactive-tab-btn';
+        if (badge) badge.className = 'w-6 h-6 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-bold flex items-center justify-center';
+      }
+    }
+  }
+</script>
+<!-- WebGL Background Controller with Safe Init and Error Handling -->
+<script>
+(function() {
+  function initWorkflowCanvas() {
+    var canvas = document.getElementById('workflow-webgl-canvas');
+    if (!canvas) return;
+
+    var gl = null;
+    try {
+      gl = canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: 'low-power' });
+    } catch (e) {
+      gl = null;
+    }
+
+    if (!gl) {
+      // Fallback gradient already set via parent element .dark-energy-gradient
+      return;
+    }
+
+    var vsSource = 'attribute vec2 position; void main() { gl_Position = vec4(position, 0.0, 1.0); }';
+    var fsSource = [
+      'precision mediump float;',
+      'uniform vec2 u_resolution;',
+      'uniform float u_time;',
+      'void main() {',
+      '  vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);',
+      '  float t = u_time * 0.7;',
+      '  vec3 col = vec3(0.0);',
+      '  for(int i = 0; i < 6; i++) {',
+      '    float fi = float(i);',
+      '    float nx = -1.35 + fi * 0.54;',
+      '    float ny = sin(t * 0.9 + fi * 1.0) * 0.22;',
+      '    float dist = length(p - vec2(nx, ny));',
+      '    float glow = 0.04 / (dist + 0.045);',
+      '    vec3 nodeColor = (i == 0 || i == 1) ? vec3(0.15, 0.45, 1.0) : (i == 2 ? vec3(0.0, 0.75, 0.95) : (i == 3 ? vec3(0.95, 0.6, 0.1) : (i == 4 ? vec3(0.65, 0.25, 0.95) : vec3(0.05, 0.85, 0.5))));',
+      '    col += nodeColor * glow * 0.75;',
+      '  }',
+      '  float wave = sin(p.x * 2.4 + t * 1.6) * 0.22;',
+      '  float beam = 0.02 / (abs(p.y - wave) + 0.035);',
+      '  col += vec3(0.1, 0.45, 1.0) * beam * 0.6;',
+      '  float alpha = clamp(dot(col, vec3(0.333)) * 1.5, 0.0, 0.85);',
+      '  gl_FragColor = vec4(col, alpha);',
+      '}'
+    ].join('\n');
+
+    function createShader(glCtx, type, source) {
+      var shader = glCtx.createShader(type);
+      glCtx.shaderSource(shader, source);
+      glCtx.compileShader(shader);
+      if (!glCtx.getShaderParameter(shader, glCtx.COMPILE_STATUS)) {
+        glCtx.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    var vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+    var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    if (!vertexShader || !fragmentShader) return;
+
+    var program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
+    gl.useProgram(program);
+
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+
+    var posAttr = gl.getAttribLocation(program, 'position');
+    gl.enableVertexAttribArray(posAttr);
+    gl.vertexAttribPointer(posAttr, 2, gl.FLOAT, false, 0, 0);
+
+    var resLoc = gl.getUniformLocation(program, 'u_resolution');
+    var timeLoc = gl.getUniformLocation(program, 'u_time');
+
+    function resize() {
+      if (!canvas || !canvas.parentElement) return;
+      var w = canvas.parentElement.clientWidth || 800;
+      var h = canvas.parentElement.clientHeight || 500;
+      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    var startTime = performance.now();
+    function render(now) {
+      var elapsed = (now - startTime) * 0.001;
+      gl.uniform2f(resLoc, canvas.width, canvas.height);
+      gl.uniform1f(timeLoc, elapsed);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWorkflowCanvas);
+  } else {
+    initWorkflowCanvas();
+  }
+})();
+</script>
+<!-- Intersection Observer & Scroll Zoom Orchestrator (Safe in iframes) -->
+<script id="scroll-zoom-orchestrator">
+(function() {
+  function setupTransitions() {
+    var sections = document.querySelectorAll('.scroll-zoom-section');
+    var cards = document.querySelectorAll('.scroll-card-item');
+
+    // Default ensure all visible
+    sections.forEach(function(s) { s.classList.add('in-view'); });
+    cards.forEach(function(c) { c.classList.add('in-view'); });
+
+    if (!('IntersectionObserver' in window)) {
+      return;
+    }
+
+    var observerOptions = {
+      root: null,
+      rootMargin: '0px 0px -40px 0px',
+      threshold: [0, 0.15, 0.6]
+    };
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        var el = entry.target;
+        if (entry.isIntersecting) {
+          el.classList.remove('before-view', 'scrolled-past');
+          el.classList.add('in-view');
+        } else {
+          var bounding = entry.boundingClientRect;
+          if (bounding.top > 0) {
+            el.classList.remove('in-view', 'scrolled-past');
+            el.classList.add('before-view');
+          } else {
+            el.classList.remove('in-view', 'before-view');
+            el.classList.add('scrolled-past');
+          }
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach(function(s) { observer.observe(s); });
+    cards.forEach(function(c) { observer.observe(c); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTransitions);
+  } else {
+    setupTransitions();
+  }
+})();
+</script>
+</body></html>

@@ -1,0 +1,278 @@
+/* service_pacts_home_light_redesign (mk-hm) */
+@theme {
+  --color-hm-brand-50: #eff6ff;
+  --color-hm-brand-100: #dbeafe;
+  --color-hm-brand-200: #bfdbfe;
+  --color-hm-brand-500: #3b82f6;
+  --color-hm-brand-600: #2563eb;
+  --color-hm-brand-700: #1d4ed8;
+  --color-hm-brand-800: #1e40af;
+  --color-hm-brand-900: #1e3a8a;
+  --shadow-hm-card: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-hm-card-hover: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  --shadow-hm-float: 0 20px 40px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  --shadow-hm-neon-blue: 0 0 25px -3px rgba(37, 99, 235, 0.5), 0 0 10px -2px rgba(6, 182, 212, 0.4);
+}
+
+@keyframes aurora-drift-1 {
+    0% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.6; }
+    33% { transform: translate(70px, -45px) scale(1.15) rotate(25deg); opacity: 0.85; }
+    66% { transform: translate(-50px, 50px) scale(0.9) rotate(-20deg); opacity: 0.55; }
+    100% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.6; }
+  }
+@keyframes aurora-drift-2 {
+    0% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.55; }
+    33% { transform: translate(-65px, 60px) scale(1.18) rotate(-30deg); opacity: 0.8; }
+    66% { transform: translate(60px, -40px) scale(0.92) rotate(25deg); opacity: 0.5; }
+    100% { transform: translate(0px, 0px) scale(1) rotate(0deg); opacity: 0.55; }
+  }
+@keyframes aurora-drift-3 {
+    0% { transform: translate(0px, 0px) scale(1); opacity: 0.45; }
+    50% { transform: translate(45px, 55px) scale(1.12); opacity: 0.75; }
+    100% { transform: translate(0px, 0px) scale(1); opacity: 0.45; }
+  }
+@keyframes grid-scan {
+    0% { background-position: 0px 0px; }
+    100% { background-position: 40px 40px; }
+  }
+@keyframes float-mote {
+    0% { transform: translateY(100vh) translateX(0) scale(0.6); opacity: 0; }
+    15% { opacity: 0.85; }
+    85% { opacity: 0.85; }
+    100% { transform: translateY(-10vh) translateX(35px) scale(1.2); opacity: 0; }
+  }
+@keyframes pulse-ring {
+    0% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+    100% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  }
+@keyframes float-mockup {
+    0% { transform: translateY(0px) rotate3d(1, 1, 0, 1.2deg); }
+    50% { transform: translateY(-10px) rotate3d(1, 1, 0, -0.6deg); }
+    100% { transform: translateY(0px) rotate3d(1, 1, 0, 1.2deg); }
+  }
+@keyframes float-card-subtle {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-7px); }
+    100% { transform: translateY(0px); }
+  }
+@keyframes beam-flow {
+    0% { transform: translateX(-100%); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
+  }
+@keyframes border-gleam {
+    0% { border-color: rgba(59, 130, 246, 0.3); }
+    50% { border-color: rgba(6, 182, 212, 0.8); }
+    100% { border-color: rgba(59, 130, 246, 0.3); }
+  }
+@keyframes team-tier-glow {
+    0%, 100% { box-shadow: 0 0 25px -4px rgba(37, 99, 235, 0.35), 0 20px 40px -12px rgba(37, 99, 235, 0.2); transform: scale(1.015); }
+    50% { box-shadow: 0 0 35px 2px rgba(37, 99, 235, 0.55), 0 25px 45px -10px rgba(37, 99, 235, 0.3); transform: scale(1.025); }
+  }
+@keyframes shimmer-gradient {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+@keyframes dark-glow-pulse {
+    0%, 100% { background-position: 0% 50%; opacity: 0.6; }
+    50% { background-position: 100% 50%; opacity: 0.9; }
+  }
+@keyframes dash-drift {
+    to { stroke-dashoffset: -40; }
+  }
+.mk-hm {
+    & {
+      background-color: #ffffff;
+      color: #0f172a;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      overflow-x: hidden;
+    }
+    & .subtle-grid {
+      background-size: 32px 32px;
+      background-image:
+        linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+    }
+    & .radial-fade {
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 50%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 50%, transparent 100%);
+    }
+  
+
+  /* --- Visibility Guarantee: All components visible by default --- */
+  & .scroll-zoom-section,
+  & .scroll-card-item {
+    opacity: 1;
+    transform: none;
+    transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    will-change: transform, opacity;
+  }
+
+  /* Scroll entrance and exit classes applied progressively */
+  & .scroll-zoom-section.before-view {
+    opacity: 0.92;
+    transform: scale(0.96) translateY(20px);
+  }
+  & .scroll-zoom-section.in-view {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  & .scroll-zoom-section.scrolled-past {
+    opacity: 0.94;
+    transform: scale(0.985) translateY(-10px);
+  }
+
+  & .scroll-card-item.before-view {
+    opacity: 0.88;
+    transform: scale(0.94) translateY(18px);
+  }
+  & .scroll-card-item.in-view {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  & .scroll-card-item.scrolled-past {
+    opacity: 0.92;
+    transform: scale(0.97) translateY(-8px);
+  }
+
+  /* --- Dynamic Continuous Ambient Motion & Orbs --- */
+
+  /* Motion & Element Classes */
+  & .aurora-bg-mesh {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  & .aurora-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  & .aurora-orb-1 {
+    top: -10%;
+    left: 15%;
+    width: 580px;
+    height: 580px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, rgba(37, 99, 235, 0.22) 60%, transparent 80%);
+    animation: aurora-drift-1 14s ease-in-out infinite;
+  }
+  & .aurora-orb-2 {
+    top: 15%;
+    right: 5%;
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(circle, rgba(147, 51, 234, 0.35) 0%, rgba(99, 102, 241, 0.2) 60%, transparent 80%);
+    animation: aurora-drift-2 16s ease-in-out infinite;
+  }
+  & .aurora-orb-3 {
+    bottom: -10%;
+    left: 30%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(16, 185, 129, 0.18) 70%, transparent 80%);
+    animation: aurora-drift-3 18s ease-in-out infinite;
+  }
+  & .animated-matrix-grid {
+    background-size: 36px 36px;
+    background-image:
+      linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+    animation: grid-scan 28s linear infinite;
+  }
+  & .mote-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.9);
+    pointer-events: none;
+  }
+  & .hero-mockup-perspective {
+    perspective: 1200px;
+  }
+  & .hero-mockup-inner {
+    transform-style: preserve-3d;
+    animation: float-mockup 6.5s ease-in-out infinite;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  & .hero-mockup-inner:hover {
+    transform: translateY(-4px) scale(1.015);
+  }
+  & .floating-portal-card {
+    animation: float-card-subtle 5s ease-in-out infinite 0.7s;
+  }
+  & .spring-pill-badge {
+    animation: pulse-ring 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  & .gradient-shimmer-text {
+    background: linear-gradient(110deg, #1d4ed8 0%, #3b82f6 30%, #8b5cf6 55%, #1d4ed8 90%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-gradient 7s ease-in-out infinite alternate;
+  }
+  & .team-card-active {
+    animation: team-tier-glow 4s ease-in-out infinite;
+  }
+  & .glow-hover-card {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  & .glow-hover-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 30px -10px rgba(37, 99, 235, 0.16), 0 0 0 1px rgba(37, 99, 235, 0.25);
+  }
+  & .dark-pipeline-card {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  & .dark-pipeline-card:hover {
+    transform: translateY(-6px) scale(1.025);
+    border-color: rgba(6, 182, 212, 0.7);
+    box-shadow: 0 16px 36px -6px rgba(37, 99, 235, 0.45), 0 0 20px -2px rgba(6, 182, 212, 0.35);
+  }
+  & .circuit-beam-line {
+    position: absolute;
+    height: 3px;
+    top: 50%;
+    left: 0;
+    right: 0;
+    background: linear-gradient(90deg, transparent, #3b82f6, #06b6d4, #a855f7, transparent);
+    animation: beam-flow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  & .dash-stream-left {
+    stroke-dasharray: 8 6;
+    animation: dash-drift 2s linear infinite;
+  }
+  & .dash-stream-right {
+    stroke-dasharray: 8 6;
+    animation: dash-drift 2s linear infinite reverse;
+  }
+  & .interactive-tab-btn {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  & .interactive-tab-btn:hover {
+    transform: translateX(4px);
+  }
+  & .cta-pulse-button {
+    transition: all 0.25s ease;
+  }
+  & .cta-pulse-button:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.5);
+  }
+  & .dark-energy-gradient {
+    background: radial-gradient(ellipse at 50% 30%, rgba(37,99,235,0.22) 0%, rgba(6,182,212,0.12) 45%, transparent 75%),
+                radial-gradient(ellipse at 80% 80%, rgba(147,51,234,0.18) 0%, transparent 60%);
+    background-size: 200% 200%;
+    animation: dark-glow-pulse 8s ease-in-out infinite;
+  }
+}

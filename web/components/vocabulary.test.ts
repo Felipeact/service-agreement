@@ -102,7 +102,7 @@ describe("staff screens, item words", () => {
   test("C2015: the New agreement dialog names the item in its intro and its file field", () => {
     const dialog = asStations(createElement(NewAgreementDialog, { customers: [], sites: [], templates: [], actions: { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() } } as unknown as Parameters<typeof NewAgreementDialog>[0]));
     expect(dialog).toContain("Start with the customer's station list");
-    expect(dialog).toContain("Station list (optional)");
+    expect(dialog).toContain("Customer's station list (optional)");
     noEquipment(dialog);
   });
 
@@ -126,8 +126,8 @@ describe("staff screens, item words", () => {
   test("C2019: the Pipeline subtitle and its recent imports block name the item", () => {
     const imports: ImportHistoryRow[] = [{ ...job(), site: { id: "s1", name: "Harbourview Towers" }, customer: { id: "c1", name: "Harbourview Strata" } }];
     const out = asStations(createElement(PipelineView, { cards: [], imports }));
-    expect(out).toContain("from station list to signature");
-    expect(out).toContain("Recent station imports");
+    expect(out).toContain("from stations intake to signed contract");
+    expect(out).toContain("Recent Station Imports");
     noEquipment(out);
   });
 

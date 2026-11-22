@@ -7,7 +7,6 @@ import { getContainer } from "@/composition";
 import { setupGate } from "@/domain/org-settings/setup";
 import type { MemberRole } from "@/application/ports";
 import { today as businessDay } from "@/lib/business-day";
-import { greetingLine } from "@/lib/greeting";
 import { NewAgreementLauncher } from "../new-agreement-launcher";
 
 export const metadata: Metadata = {
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 /** `?view=expiring` shows Expiring soon in full; any other value, or none, shows the board, whose sixth column is Expiring soon (renewal Surface). */
-export async function PipelineForRequest({ view, role, email = "", followUps = false }: { view: string | string[] | undefined; role?: MemberRole; email?: string; followUps?: boolean }) {
+export async function PipelineForRequest({ view, role, followUps = false }: { view: string | string[] | undefined; role?: MemberRole; followUps?: boolean }) {
   const { pipelineBoard, pipelineExpiring, listImportHistory, clock } = await getContainer();
   const today = businessDay(clock.now());
   if (view === "expiring") {
@@ -26,7 +25,6 @@ export async function PipelineForRequest({ view, role, email = "", followUps = f
   return (
     <PipelineView
       cards={cards}
-      title={greetingLine(clock.now(), email)}
       canCreate={canCreate}
       newAgreement={canCreate ? <NewAgreementLauncher /> : undefined}
       expiring={expiring}
@@ -47,5 +45,5 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
     const pending = await container.setupPending(member.orgId).catch(() => false);
     if (setupGate(member.role, pending) === "setup") redirect("/setup");
   }
-  return <PipelineForRequest view={view} role={member.status === "member" ? member.role : undefined} email={member.status === "member" ? member.email : ""} followUps={followups === "1"} />;
+  return <PipelineForRequest view={view} role={member.status === "member" ? member.role : undefined} followUps={followups === "1"} />;
 }

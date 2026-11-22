@@ -6,18 +6,19 @@ import type { ReactNode } from "react";
  * from 768px up (decoration for sighted scanning, hidden from assistive tech because every row names its own cells),
  * and hairline-divided rows.
  */
-export function ListPanel({ columns, headings, children }: { columns: string; headings: ReactNode[]; children: ReactNode }) {
+export function ListPanel({ columns, headings, children, footer }: { columns: string; headings: ReactNode[]; children: ReactNode; /** A line under the rows, e.g. "Showing 6 of 6 agreements". */ footer?: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-panel border border-hairline bg-surface shadow-card">
       <div
         aria-hidden="true"
-        className={`hidden border-b border-hairline bg-ground px-4 py-2.5 text-[11px] font-semibold text-ink-2 md:grid md:gap-x-4 ${columns}`}
+        className={`hidden h-10 items-center border-b border-hairline bg-ground px-5 text-[12px] font-semibold tracking-[0.05em] text-ink-2 uppercase md:grid md:gap-x-4 ${columns}`}
       >
         {headings.map((heading, index) => (
           <span key={index}>{heading}</span>
         ))}
       </div>
       <ul className="stagger divide-y divide-hairline">{children}</ul>
+      {footer && <div className="border-t border-hairline bg-ground px-5 py-3 text-[13px] text-ink-2">{footer}</div>}
     </div>
   );
 }
