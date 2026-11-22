@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   currentMember.mockResolvedValue(member);
   listSites.mockResolvedValue([]);
-  listCustomers.mockResolvedValue([{ id: CUSTOMER, name: "Harbourview Strata", primaryContact: null, active: true, siteCount: 1, assetCount: 0 }]);
+  listCustomers.mockResolvedValue([{ id: CUSTOMER, name: "Harbourview Strata", primaryContact: null, primaryEmail: null, primaryContactId: null, primaryPhone: null, agreementNumbers: [], agreementCount: 0, active: true, siteCount: 1, assetCount: 0 }]);
 });
 
 describe("/sites", () => {

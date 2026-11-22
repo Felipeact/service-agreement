@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
-import { validateNewAgreement, type NewAgreementInput } from "@/domain/agreement/new-agreement";
+import { validateNewAgreement, validatePickedEquipment, type NewAgreementInput, type PickedEquipment } from "@/domain/agreement/new-agreement";
 import type { StartAgreementState } from "@/components/agreements/new-agreement-state";
 import { canWriteRecords } from "@/components/records/state";
 
@@ -54,4 +54,31 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
     return { status: "invalid_template", ...(customer.kind === "new" && { customerId }), ...(site.kind === "new" && { siteId }) };
   }
   return { status: agreement.code, customerId, siteId };
+}
+
+/** What adding picked equipment to the site answered. */
+export type AddEquipmentState = { status: "added"; count: number } | { status: "invalid"; message: string } | { status: "forbidden" } | { status: "unavailable"; added: number };
+
+/**
+ * Adds the equipment picked by hand in the New agreement dialog to the agreement's site: one asset per unit, of the chosen
+ * type, with no unit number yet. The org comes from the member; the types are checked against the org's own catalog.
+ */
+export async function addEquipmentAction(siteId: string, items: PickedEquipment[]): Promise<AddEquipmentState> {
+  const container = await getContainer();
+  const member = await container.currentMember();
+  if (member.status !== "member") redirect("/login");
+  if (!canWriteRecords(member.role)) return { status: "forbidden" };
+
+  const checked = validatePickedEquipment(items, (await container.listAssetTypes()).map((type) => type.id));
+  if (!checked.ok) return { status: "invalid", message: checked.message };
+
+  let added = 0;
+  for (const { assetTypeId, quantity } of checked.items) {
+    for (let unit = 0; unit < quantity; unit++) {
+      const saved = await container.createAsset(member.orgId, siteId, { assetTypeId, unitNo: null, typeModel: null, location: null });
+      if (!saved.ok) return { status: "unavailable", added };
+      added++;
+    }
+  }
+  return { status: "added", count: added };
 }

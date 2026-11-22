@@ -198,6 +198,16 @@ export type CustomerSummary = {
   name: string;
   /** The contact created first; null when the customer has none. */
   primaryContact: string | null;
+  /** The primary contact id, for the Edit link; null when there is no contact. */
+  primaryContactId: string | null;
+  /** The primary contact phone; null when none. */
+  primaryPhone: string | null;
+  /** The primary contact's email; null when there is no contact or it has none. */
+  primaryEmail: string | null;
+  /** The numbers of the customer's agreements, newest first ("AG-1005"); agreements not yet numbered are left out. */
+  agreementNumbers: string[];
+  /** How many agreements the customer's sites hold, numbered or not. */
+  agreementCount: number;
   /** False once deactivated (deactivation door 1). */
   active: boolean;
   /** Active sites only. */

@@ -38,6 +38,17 @@ describe("a template card", () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
+  test("the card chips name the service lines and the term, and the yearly price once every line is priced", () => {
+    const unpriced = card();
+    expect(unpriced).toContain("1 service line");
+    expect(unpriced).toContain("12 month term");
+    expect(unpriced).not.toContain("/ yr");
+    const priced = card({
+      template: { ...TEMPLATE, body: { ...TEMPLATE.body, preset: { termMonths: 12, lines: [{ description: "Visit", visitMonths: [3, 6, 9, 12], assetTypeCodes: ["RTU"], costPerVisitCents: 45000 }] } } },
+    });
+    expect(priced).toContain("$1,800 / yr");
+  });
+
   test("[C35] Use template shows for a member who can use templates and not for one who cannot", () => {
     expect(card({ canUse: true })).toContain("Use template");
     expect(card({ canUse: false })).not.toContain("Use template");

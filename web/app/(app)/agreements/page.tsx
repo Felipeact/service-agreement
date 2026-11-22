@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AgreementsListView } from "@/components/agreements/agreements-list";
 import { getContainer } from "@/composition";
-import { parseAgreementFilter } from "@/domain/agreement";
+import { parseAgreementFilter, STATUS_FILTER_VALUES } from "@/domain/agreement";
 import { canWriteRecords } from "@/components/records/state";
 import { today } from "@/lib/business-day";
 import { NewAgreementLauncher } from "../new-agreement-launcher";
@@ -18,8 +18,14 @@ export async function AgreementsForRequest({ params }: { params: Params }) {
   if (member.status !== "member") redirect("/login");
   const filter = parseAgreementFilter(params);
   const rows = await listAgreements(filter, today(clock.now()));
+  // The tabs' numbers: what each status holds under the same site and expiring filters, whichever tab is open.
+  const day = today(clock.now());
+  const scope = { ...(filter.siteId && { siteId: filter.siteId }), ...(filter.expiring && { expiring: true }) };
+  const counted = await Promise.all(STATUS_FILTER_VALUES.map(async (status) => [status, (await listAgreements({ ...scope, status }, day)).length] as const));
+  const all = filter.status ? (await listAgreements(scope, day)).length : rows.length;
+  const counts = { all, ...Object.fromEntries(counted) };
   const newAgreement = canWriteRecords(member.role) ? <NewAgreementLauncher /> : undefined;
-  return <AgreementsListView rows={rows} filter={filter} role={member.role} newAgreement={newAgreement} now={clock.now()} />;
+  return <AgreementsListView rows={rows} filter={filter} role={member.role} newAgreement={newAgreement} now={clock.now()} counts={counts} />;
 }
 
 export default async function AgreementsPage({ searchParams }: PageProps<"/agreements">) {

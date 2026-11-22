@@ -60,3 +60,31 @@ export function validateNewAgreement(input: NewAgreementInput): NewAgreementVali
   if (!customer || !site || Object.keys(errors).length > 0) return { ok: false, errors };
   return { ok: true, value: version === "" ? { customer, site } : { customer, site, templateVersionId: version } };
 }
+
+/** Equipment picked by hand in the New agreement dialog: a type and how many of it are on site. */
+export type PickedEquipment = { assetTypeId: string; quantity: number };
+
+/** The most units one pick can add in one go, so a slip of the keyboard does not fill a site's register. */
+export const MAX_PICKED_UNITS = 200;
+
+export type PickedEquipmentCheck = { ok: true; items: PickedEquipment[] } | { ok: false; message: string };
+
+/**
+ * Checks what was picked against the org's equipment types: at least one unit, every type known, each quantity a whole
+ * number from 1 to 99, no more than `MAX_PICKED_UNITS` units in all. A type picked twice is added up.
+ */
+export function validatePickedEquipment(items: unknown, allowedTypeIds: readonly string[]): PickedEquipmentCheck {
+  if (!Array.isArray(items) || items.length === 0) return { ok: false, message: "Pick at least one piece of equipment." };
+  const totals = new Map<string, number>();
+  for (const item of items) {
+    const { assetTypeId, quantity } = (item ?? {}) as Partial<PickedEquipment>;
+    if (typeof assetTypeId !== "string" || !allowedTypeIds.includes(assetTypeId)) return { ok: false, message: "Choose equipment from the list." };
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) return { ok: false, message: "Each quantity must be a whole number from 1 to 99." };
+    totals.set(assetTypeId, (totals.get(assetTypeId) ?? 0) + quantity);
+  }
+  const merged = [...totals].map(([assetTypeId, quantity]) => ({ assetTypeId, quantity }));
+  if (merged.some((item) => item.quantity > 99) || merged.reduce((sum, item) => sum + item.quantity, 0) > MAX_PICKED_UNITS) {
+    return { ok: false, message: `Add at most ${MAX_PICKED_UNITS} units at a time.` };
+  }
+  return { ok: true, items: merged };
+}

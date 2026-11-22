@@ -30,7 +30,7 @@ const stations = itemWords("station", "stations");
 const asStations = (node: ReactElement) => renderToStaticMarkup(createElement(ItemWordsProvider as FunctionComponent<{ words: typeof stations }>, { words: stations }, node)).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 const noEquipment = (html: string) => expect(html).not.toMatch(/equipment/i);
 
-const customers: CustomerSummary[] = [{ id: "c1", name: "Harbourview Strata", primaryContact: null, active: true, siteCount: 1, assetCount: 0 }];
+const customers: CustomerSummary[] = [{ id: "c1", name: "Harbourview Strata", primaryContact: null, primaryEmail: null, primaryContactId: null, primaryPhone: null, agreementNumbers: [], agreementCount: 0, active: true, siteCount: 1, assetCount: 0 }];
 const siteRow = (patch: Partial<SiteListRow> = {}): SiteListRow => ({
   id: "s1", name: "Harbourview Towers", address: "2150 Harbour Lane", customerId: "c1", customer: "Harbourview Strata", active: true,
   assetCount: 3, equipment: [{ code: "RTU", count: 3 }], liveAgreement: null, ...patch,

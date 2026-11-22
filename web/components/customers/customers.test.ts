@@ -10,6 +10,11 @@ const summary = (id: string, name: string, patch: Partial<CustomerSummary> = {})
   id,
   name,
   primaryContact: "Dana Whitfield",
+  primaryEmail: "dana@example.com",
+  primaryContactId: "ct-1",
+  primaryPhone: "604-555-0100",
+  agreementNumbers: ["AG-1002", "AG-1001"],
+  agreementCount: 2,
   active: true,
   siteCount: 1,
   assetCount: 5,
@@ -24,6 +29,22 @@ describe("CustomersView", () => {
     const out = list([summary("11111111-1111-4111-8111-111111111111", "Alpha"), summary("22222222-2222-4222-8222-222222222222", "bravo")]);
     expect(out).toContain('href="/customers/11111111-1111-4111-8111-111111111111"');
     expect(out.indexOf("Alpha")).toBeLessThan(out.indexOf("bravo"));
+  });
+
+  test("a card shows the agreement count and numbers, and the primary contact with their email, as in the mockup", () => {
+    const out = list([summary("1", "Alpha", { agreementCount: 3, agreementNumbers: ["AG-1005", "AG-1003", "AG-1001"], primaryContact: "Dana", primaryEmail: "dana@x.test" })]);
+    expect(out).toMatch(/Agreements<\/span><span[^>]*>3</);
+    expect(out).toContain("AG-1005 · AG-1003");
+    expect(out).not.toContain("AG-1001");
+    expect(out).toContain("(Primary)");
+    expect(out).toContain("dana@x.test");
+  });
+
+  test("the primary contact opens a Contact Details panel; the card's link to the customer page stays", () => {
+    const out = list([summary("1", "Alpha", { primaryContact: "Dana" })]);
+    expect(out).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*>[\s\S]*?Dana/);
+    expect(out).toContain('href="/customers/1"');
+    expect(out).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*>\s*View customer details/);
   });
 
   test("C122: a row shows the site and asset counts", () => {

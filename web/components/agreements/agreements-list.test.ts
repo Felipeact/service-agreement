@@ -98,9 +98,9 @@ describe("agreements list", () => {
     const now = new Date("2026-10-31T00:00:00Z");
     const stale = renderToStaticMarkup(createElement(AgreementsListView, { rows: [row({ status: "sent", updatedAt: "2026-10-01T00:00:00Z" })], filter: {}, role: "estimator", now }));
     const fresh = renderToStaticMarkup(createElement(AgreementsListView, { rows: [row({ status: "sent", updatedAt: "2026-10-30T00:00:00Z" })], filter: {}, role: "estimator", now }));
-    expect(stale).toMatch(/font-semibold text-danger[^>]*>(?:<svg[\s\S]*?<\/svg>)30 days</);
+    expect(stale).toMatch(/font-semibold text-danger[^>]*>(?:<svg[\s\S]*?<\/svg>)30 days ago</);
     expect(fresh).not.toMatch(/text-danger/);
-    expect(fresh).toContain("1 day<");
+    expect(fresh).toContain("1 day ago<");
   });
 
   test("C5415: a writer sees the dialog launcher the page supplies, never a link, and a viewer sees none", () => {

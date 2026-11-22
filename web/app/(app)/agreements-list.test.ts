@@ -43,9 +43,11 @@ describe("/agreements", () => {
 
   test("C1356: an invalid status reads the same rows as no status", async () => {
     await render({ status: "bogus", site: "nope", expiring: "yes" });
+    const first = listAgreements.mock.calls[0];
+    listAgreements.mockClear();
     await render({});
-    expect(listAgreements).toHaveBeenNthCalledWith(1, {}, "2027-12-01");
-    expect(listAgreements).toHaveBeenNthCalledWith(2, {}, "2027-12-01");
+    expect(first).toEqual([{}, "2027-12-01"]);
+    expect(listAgreements.mock.calls[0]).toEqual([{}, "2027-12-01"]);
   });
 
   test("C1357: signed out goes to /login and nothing is read", async () => {

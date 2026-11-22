@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { derivedFrequency } from "@/domain/agreement";
+import { formatCad } from "@/lib/money";
 import { updatedAgo } from "@/lib/relative-time";
 import { ArchiveControl } from "./archive-control";
 import { CustomizeControl } from "./customize-control";
@@ -68,6 +69,10 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
   const { id, body, system, updatedAt, versionId } = template;
   const frequency = derivedFrequency(body.preset);
   const description = body.description || (system ? SYSTEM_DESCRIPTION : "");
+  const lines = body.preset.lines;
+  // The preset's yearly price, when every line has a price: each line's visit price times its visits in the year.
+  const priced = lines.length > 0 && lines.every((line) => line.costPerVisitCents !== null);
+  const yearlyCents = priced ? lines.reduce((sum, line) => sum + (line.costPerVisitCents ?? 0) * line.visitMonths.length, 0) : null;
   return (
     <article data-template={id} className="flex h-full flex-col gap-3 rounded-panel border border-hairline bg-surface p-5 shadow-card">
       <div className="flex items-start justify-between gap-2">
@@ -80,6 +85,15 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
         <h3 className="text-[16px] leading-snug font-semibold tracking-tight">{body.name}</h3>
         <p className="line-clamp-2 min-h-[2.9em] text-[13px] text-ink-2">{description}</p>
       </div>
+      {lines.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+          <span className="inline-flex items-center gap-1 rounded-md bg-board px-2 py-0.5 text-ink">
+            {lines.length} {lines.length === 1 ? "service line" : "service lines"}
+          </span>
+          {yearlyCents !== null && <span className="inline-flex items-center rounded-md border border-pill-completed-border bg-pill-completed px-2 py-0.5 text-pill-completed-ink">{formatCad(yearlyCents)} / yr</span>}
+          {body.preset.termMonths !== null && <span className="inline-flex items-center rounded-md bg-action-tint px-2 py-0.5 text-action">{body.preset.termMonths} month term</span>}
+        </div>
+      )}
       <hr className="border-hairline" />
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px]">
         <span className="font-semibold text-ink">{frequency ?? "No preset lines"}</span>

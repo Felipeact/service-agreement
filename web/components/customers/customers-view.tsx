@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { CustomerSummary, MemberRole } from "@/application/ports";
-import { ChevronRightIcon, PlusIcon, UserIcon } from "lucide-react";
+import { MailIcon, PlusIcon } from "lucide-react";
 import { ShowInactiveToggle } from "@/components/records/show-inactive";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
@@ -18,6 +18,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
+import { ContactTrigger, CustomerSheet, DetailsTrigger } from "./customer-sheet";
 import { filterCustomers } from "./filter";
 
 type CustomersViewProps = {
@@ -100,39 +101,48 @@ export function CustomersView({ customers, initialQuery = "", role, showInactive
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 lg:gap-4">
           {shown.map((customer) => (
             <li key={customer.id}>
-              <Link
-                href={`/customers/${customer.id}`}
-                className="group flex h-full flex-col rounded-panel border border-hairline bg-surface shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
+              <CustomerSheet customer={customer} canEdit={Boolean(role && canWriteRecords(role))}>
+              <div
+                className="group relative flex h-full flex-col rounded-panel border border-hairline bg-surface shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
               >
                 <span className="flex items-start gap-3 p-5 pb-4">
                   <Initials name={customer.name} large />
-                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span className="text-[16px] leading-snug font-semibold tracking-tight break-words text-ink">{customer.name}</span>
-                    <span className="flex">{customer.active ? <StatusPill stage="completed" filled label="Active" /> : <StatusPill tone="neutral" label="Inactive" />}</span>
+                  <span className="min-w-0 flex-1 text-[16px] leading-snug font-semibold tracking-tight break-words text-ink">
+                    <Link href={`/customers/${customer.id}`} className="relative z-10 hover:text-action">
+                      {customer.name}
+                    </Link>
                   </span>
+                  <span className="flex shrink-0">{customer.active ? <StatusPill stage="completed" filled label="Active" /> : <StatusPill tone="neutral" label="Inactive" />}</span>
                 </span>
-                <span className="mx-5 grid grid-cols-2 gap-4 rounded-control bg-ground px-4 py-3">
+                <span className="mx-5 grid grid-cols-3 gap-3 rounded-control border border-hairline bg-ground px-4 py-3">
                   <span className="flex flex-col">
                     <span className="text-[12px] text-ink-2">Sites</span>
-                    <span className="text-[22px] leading-tight font-semibold tracking-tight">{customer.siteCount}</span>
+                    <span className="text-[22px] leading-tight font-semibold tracking-tight tabular-nums">{customer.siteCount}</span>
                   </span>
                   <span className="flex flex-col">
                     <span className="text-[12px] text-ink-2">Assets</span>
-                    <span className="text-[22px] leading-tight font-semibold tracking-tight">{customer.assetCount}</span>
+                    <span className="text-[22px] leading-tight font-semibold tracking-tight tabular-nums">{customer.assetCount}</span>
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="text-[12px] text-ink-2">Agreements</span>
+                    <span className="text-[22px] leading-tight font-semibold tracking-tight text-action tabular-nums">{customer.agreementCount}</span>
                   </span>
                 </span>
-                <span className="flex items-center gap-2 px-5 pt-4 pb-4 text-[13px]">
-                  <UserIcon aria-hidden="true" className="size-4 shrink-0 text-ink-2" />
-                  <span className="min-w-0">
-                    <span className="text-ink-2">Primary contact </span>
-                    <span className="truncate font-semibold text-ink">{customer.primaryContact ?? "No contact yet"}</span>
-                  </span>
+                <span className="flex flex-col gap-1.5 px-5 pt-4 pb-4 text-[13px]">
+                  <ContactTrigger customer={customer} />
+                  {customer.primaryEmail && (
+                    <span className="flex items-center gap-2 text-ink-2">
+                      <MailIcon aria-hidden="true" className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{customer.primaryEmail}</span>
+                    </span>
+                  )}
                 </span>
-                <span className="mt-auto flex min-h-11 items-center justify-between gap-2 border-t border-hairline px-5 text-[13px] font-semibold text-action">
-                  View customer details
-                  <ChevronRightIcon aria-hidden="true" className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                <span className="mt-auto flex min-h-11 items-center justify-between gap-2 border-t border-hairline px-5 text-[13px]">
+                  <DetailsTrigger />
+                  {customer.agreementNumbers.length > 0 && <span className="truncate font-mono text-[11px] text-ink-2">{customer.agreementNumbers.slice(0, 2).join(" · ")}</span>}
                 </span>
-              </Link>
+              </div>
+              </CustomerSheet>
             </li>
           ))}
           {newCustomer && !query.trim() && (

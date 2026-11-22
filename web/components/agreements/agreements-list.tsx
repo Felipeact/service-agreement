@@ -21,7 +21,7 @@ import { useItemWords } from "@/components/shell/item-words";
 import { itemText } from "@/domain/org-settings";
 import { formatCad } from "@/lib/money";
 
-const COLUMNS = "md:grid-cols-[minmax(0,2.6fr)_minmax(0,1.5fr)_8rem_6rem_1.5rem]";
+const COLUMNS = "md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_7.5rem_6.5rem_7.5rem_1.25rem]";
 
 const FILTER_LABELS: Record<StatusFilterValue, string> = {
   in_progress: "In progress",
@@ -43,6 +43,8 @@ type Props = {
   newAgreement?: ReactNode;
   /** The moment the ages are counted from. */
   now?: Date;
+  /** How many agreements sit under each status tab ("All (6)"); the tabs show no number without it. */
+  counts?: Partial<Record<"all" | StatusFilterValue, number>>;
 };
 
 /** `/agreements` with the filter's site kept; `status` and `expiring` are replaced by the arguments. */
@@ -67,7 +69,7 @@ function ageDays(row: AgreementListRow, now: Date): number {
  * agreement (agreements-page S1). The status and expiring filters are links, so the filter lives in the URL; the search
  * narrows the rows on the page.
  */
-export function AgreementsListView({ rows, filter, role, newAgreement: newAgreementSlot, now = new Date() }: Props) {
+export function AgreementsListView({ rows, filter, role, newAgreement: newAgreementSlot, now = new Date(), counts }: Props) {
   const words = useItemWords();
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
@@ -87,41 +89,43 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
     const stage = stageOf(row);
     return sum + (stage && !isClosedStage(stage) ? (row.annualCents ?? 0) : 0);
   }, 0);
+  const activeCount = rows.filter((row) => row.status !== "withdrawn" && row.status !== "expired" && row.status !== "refused").length;
   const wonCents = rows.reduce((sum, row) => sum + (row.status === "accepted" && row.annualCents ? row.annualCents : 0), 0);
 
   // The New agreement control is the dialog launcher the page supplies for writers; there is no page to link to.
   const canCreate = Boolean(role && canWriteRecords(role));
   const newAgreement = canCreate && newAgreementSlot;
 
-  const segments: { label: string; href: string; active: boolean }[] = [
-    { label: "All", href: agreementsHref({ ...filter, status: undefined }, undefined, filter.expiring), active: !filter.status },
-    ...STATUS_FILTER_VALUES.map((value) => ({ label: FILTER_LABELS[value], href: agreementsHref(filter, value, filter.expiring), active: filter.status === value })),
+  const segments: { key: "all" | StatusFilterValue; label: string; href: string; active: boolean }[] = [
+    { key: "all" as const, label: "All", href: agreementsHref({ ...filter, status: undefined }, undefined, filter.expiring), active: !filter.status },
+    ...STATUS_FILTER_VALUES.map((value) => ({ key: value, label: FILTER_LABELS[value], href: agreementsHref(filter, value, filter.expiring), active: filter.status === value })),
   ];
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Agreements" subtitle="Lifecycle oversight, commercial milestones, and countersignature statuses." action={newAgreement || undefined} />
+      <PageHeader title="Agreements" badge={<span className="inline-flex h-6 items-center rounded-md border border-hairline bg-board px-2 text-[12px] font-medium text-ink-2">{activeCount} active</span>} subtitle="Lifecycle oversight, commercial milestones, and countersignature statuses." action={newAgreement || undefined} />
 
       <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4">
         <StatCard label="Total Agreements" icon={<FileTextIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : "Across all active accounts"} />
-        <StatCard label="With Customer" icon={<MailIcon />} value={String(withCustomer)} note="No pending customer action" />
-        <StatCard label="Action Required" icon={<BellIcon />} value={String(needFollowUp)} note="Changes asked or past SLA" />
-        <StatCard label="Contract Pipeline" icon={<TrendingUpIcon />} value={formatCad(openCents)} note={`${formatCad(wonCents)}/yr accepted`} />
+        <StatCard label="With Customer" icon={<MailIcon />} value={String(withCustomer)} indicator={<span className="inline-flex items-center rounded-md bg-board px-2 py-0.5 text-[11px] font-medium text-ink-2">{withCustomer} pending</span>} note="No pending customer action" />
+        <StatCard label="Action Required" icon={<BellIcon />} value={String(needFollowUp)} indicator={<span className="inline-flex items-center rounded-md bg-board px-2 py-0.5 text-[11px] font-medium text-ink-2">{needFollowUp === 0 ? "All on schedule" : `${needFollowUp} overdue`}</span>} note="Changes asked or past SLA" />
+        <StatCard label="Contract Pipeline" icon={<TrendingUpIcon />} value={formatCad(openCents)} unit="ARR" note={`${formatCad(wonCents)}/yr accepted`} />
       </div>
 
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3 shadow-card xl:flex-row xl:items-center xl:justify-between">
         <nav aria-label="Filter by status" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0">
-          <div className="inline-flex gap-1 rounded-control bg-board p-1">
+          <div className="inline-flex gap-1">
             {segments.map((segment) => (
               <Link
                 key={segment.label}
                 href={segment.href}
                 aria-current={segment.active ? "true" : undefined}
                 className={`inline-flex h-11 shrink-0 items-center rounded-[6px] px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
-                  segment.active ? "bg-surface font-semibold text-ink shadow-card" : "text-ink-2 hover:text-ink"
+                  segment.active ? "bg-ink font-semibold text-surface" : "text-ink-2 hover:bg-board hover:text-ink"
                 }`}
               >
                 {segment.label}
+                {counts?.[segment.key] !== undefined && <span className="ml-1">({counts[segment.key]})</span>}
               </Link>
             ))}
           </div>
@@ -137,7 +141,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
             <Icon name="calendar" className="size-4" />
             Expiring soon
           </Link>
-          <SearchInput label="Search agreements" placeholder="Search this list…" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 md:w-60 md:flex-none" />
+          <SearchInput label="Search agreements" placeholder="Search agreements, sites, or customers…" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 md:w-60 md:flex-none" />
         </div>
       </div>
 
@@ -167,7 +171,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
       ) : (
         <ListPanel
           columns={COLUMNS}
-          headings={["Agreement and site", "Stage", <span key="value" className="block text-right">Annual value</span>, "Age", ""]}
+          headings={["Agreement & Site", "Customer", "Stage / Status", <span key="value" className="block text-right">Annual Value</span>, "Term End / Age", ""]}
           footer={
             <>
               Showing <span className="font-semibold text-ink">{shown.length}</span> of <span className="font-semibold text-ink">{rows.length}</span> {rows.length === 1 ? "agreement" : "agreements"}
@@ -181,18 +185,26 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
             return (
               <li key={row.id}>
                 <Link href={`/agreements/${row.id}`} className={`grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-5 py-4 ${ROW_CLASSES} ${COLUMNS}`}>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-[14px] font-semibold tracking-tight text-ink">{row.site}</span>
-                    <span className="text-[12px] text-ink-2">{`${row.customer} · ${row.number ?? "Draft"} · v${row.versionNo}`}</span>
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span aria-hidden="true" className="hidden size-9 shrink-0 items-center justify-center rounded-control bg-board text-ink-2 md:inline-flex">
+                      <FileTextIcon className="size-4" />
+                    </span>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-[14px] font-semibold tracking-tight text-ink">{row.site}</span>
+                      <span className="text-[12px] text-ink-2">{`${row.number ?? "Draft"} · v${row.versionNo}`}</span>
+                    </span>
                   </span>
+                  <span className="col-span-2 min-w-0 text-[13px] text-ink-2 md:col-span-1">{row.customer}</span>
                   <span className="col-span-2 flex flex-wrap items-center gap-x-2 gap-y-1 md:col-span-1">
                     {stage ? <StatusPill stage={stage} label={statusLabel(row.status)} filled /> : <StatusPill tone="neutral" label={statusLabel(row.status)} />}
-                    {row.termEnd && <span className="text-[12px] text-ink-2">{`Ends ${row.termEnd}`}</span>}
                   </span>
-                  <span className="font-semibold text-ink md:text-right">{row.annualCents === null ? <span className="font-normal text-ink-2">Unpriced</span> : `${formatCad(row.annualCents)}/yr`}</span>
-                  <span title={`Updated ${days} ${days === 1 ? "day" : "days"} ago`} className={`inline-flex items-center gap-1 text-[12px] ${stale ? "font-semibold text-danger" : "text-ink-2"}`}>
-                    <Icon name="clock" className="size-3.5" />
-                    {days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"}`}
+                  <span className="font-semibold tabular-nums text-ink md:text-right">{row.annualCents === null ? <span className="font-normal text-ink-2">Unpriced</span> : `${formatCad(row.annualCents)}/yr`}</span>
+                  <span title={`Updated ${days} ${days === 1 ? "day" : "days"} ago`} className="flex flex-col text-[12px]">
+                    <span className="text-ink">{row.termEnd ? `Ends ${row.termEnd}` : <span className="italic text-ink-2">Unspecified</span>}</span>
+                    <span className={`inline-flex items-center gap-1 ${stale ? "font-semibold text-danger" : "text-ink-2"}`}>
+                      <Icon name="clock" className="size-3.5" />
+                      {days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"} ago`}
+                    </span>
                   </span>
                   <Icon name="chevron" className="hidden size-4 text-ink-2 md:block" />
                 </Link>

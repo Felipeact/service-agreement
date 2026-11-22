@@ -200,9 +200,12 @@ const isActive = (row: Inactive) => !row.deactivated_at;
 
 type ContactRow = { id: string; name: string; email: string | null; phone: string | null; created_at: string };
 
+function firstContact(contacts: ContactRow[]): ContactRow | undefined {
+  return [...contacts].sort((a, b) => a.created_at.localeCompare(b.created_at) || byName(a.name, b.name))[0];
+}
+
 function primaryContact(contacts: ContactRow[]): string | null {
-  const [first] = [...contacts].sort((a, b) => a.created_at.localeCompare(b.created_at) || byName(a.name, b.name));
-  return first?.name ?? null;
+  return firstContact(contacts)?.name ?? null;
 }
 
 export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
@@ -210,7 +213,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
     async list() {
       const { data, error } = await client
         .from("customers")
-        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at))")
+        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at), agreements(number, created_at))")
         .order("name")
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
@@ -220,15 +223,21 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
         name: string;
         deactivated_at: string | null;
         contacts: ContactRow[];
-        sites: { deactivated_at: string | null; assets: Inactive[] }[];
+        sites: { deactivated_at: string | null; assets: Inactive[]; agreements: { number: string | null; created_at: string }[] }[];
       }[];
       return rows
         .map<CustomerSummary>((row) => {
           const sites = row.sites.filter(isActive);
+          const agreements = row.sites.flatMap((site) => site.agreements ?? []).sort((a, b) => b.created_at.localeCompare(a.created_at));
           return {
             id: row.id,
             name: row.name,
             primaryContact: primaryContact(row.contacts),
+            primaryEmail: firstContact(row.contacts)?.email ?? null,
+            primaryContactId: firstContact(row.contacts)?.id ?? null,
+            primaryPhone: firstContact(row.contacts)?.phone ?? null,
+            agreementNumbers: agreements.flatMap((agreement) => (agreement.number ? [agreement.number] : [])),
+            agreementCount: agreements.length,
             active: isActive(row),
             siteCount: sites.length,
             assetCount: sites.reduce((total, site) => total + site.assets.filter(isActive).length, 0),

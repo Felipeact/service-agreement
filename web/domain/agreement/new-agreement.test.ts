@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { NEW_CHOICE, validateNewAgreement, type NewAgreementInput } from "./new-agreement";
+import { NEW_CHOICE, validateNewAgreement, validatePickedEquipment, type NewAgreementInput } from "./new-agreement";
 
 const CUSTOMER = "11111111-1111-4111-8111-111111111111";
 const SITE = "22222222-2222-4222-8222-222222222222";
@@ -67,5 +67,28 @@ describe("validateNewAgreement, the template version", () => {
   test("C5407: a bad version is reported with the other field errors", () => {
     const checked = validateNewAgreement(input({ customer: "", templateVersionId: "nope" }));
     expect(!checked.ok && Object.keys(checked.errors).sort()).toEqual(["customer", "templateVersionId"]);
+  });
+});
+
+describe("validatePickedEquipment", () => {
+  const TYPES = ["rtu", "boiler"];
+  test("adds up a type picked twice and keeps the order", () => {
+    expect(validatePickedEquipment([{ assetTypeId: "rtu", quantity: 2 }, { assetTypeId: "boiler", quantity: 1 }, { assetTypeId: "rtu", quantity: 3 }], TYPES)).toEqual({
+      ok: true,
+      items: [{ assetTypeId: "rtu", quantity: 5 }, { assetTypeId: "boiler", quantity: 1 }],
+    });
+  });
+  test.each([
+    [[], "Pick at least one"],
+    [null, "Pick at least one"],
+    [[{ assetTypeId: "nope", quantity: 1 }], "Choose equipment"],
+    [[{ assetTypeId: "rtu", quantity: 0 }], "whole number"],
+    [[{ assetTypeId: "rtu", quantity: 1.5 }], "whole number"],
+    [[{ assetTypeId: "rtu", quantity: 100 }], "whole number"],
+    [[{ assetTypeId: "rtu", quantity: 99 }, { assetTypeId: "boiler", quantity: 99 }, { assetTypeId: "rtu", quantity: 5 }], "at most"],
+  ])("refuses %j", (items, message) => {
+    const result = validatePickedEquipment(items, TYPES);
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.message).toContain(message);
   });
 });
