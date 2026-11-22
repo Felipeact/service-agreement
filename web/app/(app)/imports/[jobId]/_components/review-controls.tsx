@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useActionState, useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
+import { useForm, type Resolver, type UseFormRegister } from "react-hook-form";
 import type { AssetTypeOption } from "@/application/ports";
 import { useItemWords } from "@/components/shell/item-words";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { fixLine } from "@/domain/imports";
+import { validateAsset, type AssetInput } from "@/domain/records";
+import { domainSchema, text } from "@/lib/forms/domain-schema";
 import { itemText } from "@/domain/org-settings";
 import { REVIEW_MESSAGES, type CommitState, type MapState, type RowState, type SuggestState } from "@/components/imports/state";
 
@@ -47,17 +51,23 @@ type RowEditorProps = {
   pending: boolean;
   onCancel?: () => void;
   action?: (formData: FormData) => void;
+  /** The browser-side form (React Hook Form); without it the fields are plain and post through `action`. */
+  onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+  register?: UseFormRegister<AssetInput>;
+  /** Messages from the browser's check; they win over the server's. */
+  liveErrors?: Partial<Record<string, string>>;
 };
 
 /** One row's fields as the asset form has them, with Save and Cancel. */
-export function RowEditor({ row, types, state, pending, onCancel, action }: RowEditorProps) {
+export function RowEditor({ row, types, state, pending, onCancel, action, onSubmit, register, liveErrors }: RowEditorProps) {
   const words = useItemWords();
-  const errors = state.status === "invalid" && "errors" in state ? state.errors : {};
+  const errors: Partial<Record<string, string>> = { ...(state.status === "invalid" && "errors" in state ? state.errors : {}), ...liveErrors };
+  const field = (name: keyof AssetInput) => (register ? register(name) : { name });
   const id = (field: string) => `${row.id}-${field}`;
   return (
-    <form action={action} className="flex flex-col gap-3 rounded-control border border-hairline bg-ground p-3">
+    <form action={action} onSubmit={onSubmit} noValidate className="flex flex-col gap-3 rounded-control border border-hairline bg-ground p-3">
       <div className="grid gap-3 md:grid-cols-2">
-        <Select id={id("assetTypeId")} name="assetTypeId" label={itemText("Equipment type", words)} defaultValue={row.assetTypeId ?? ""} error={errors.assetTypeId && itemText(errors.assetTypeId, words)}>
+        <Select id={id("assetTypeId")} label={itemText("Equipment type", words)} defaultValue={row.assetTypeId ?? ""} error={errors.assetTypeId && itemText(errors.assetTypeId, words)} {...field("assetTypeId")}>
           <option value="">Choose a type</option>
           {types.map((type) => (
             <option key={type.id} value={type.id}>
@@ -65,9 +75,9 @@ export function RowEditor({ row, types, state, pending, onCancel, action }: RowE
             </option>
           ))}
         </Select>
-        <TextInput id={id("unitNo")} name="unitNo" label="Unit #" defaultValue={row.unitNo ?? ""} error={errors.unitNo} />
-        <TextInput id={id("typeModel")} name="typeModel" label="Type/model" defaultValue={row.typeModel ?? ""} error={errors.typeModel} />
-        <TextInput id={id("location")} name="location" label="Location/access" defaultValue={row.location ?? ""} error={errors.location} />
+        <TextInput id={id("unitNo")} label="Unit #" defaultValue={row.unitNo ?? ""} error={errors.unitNo} {...field("unitNo")} />
+        <TextInput id={id("typeModel")} label="Type/model" defaultValue={row.typeModel ?? ""} error={errors.typeModel} {...field("typeModel")} />
+        <TextInput id={id("location")} label="Location/access" defaultValue={row.location ?? ""} error={errors.location} {...field("location")} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" variant="primary" disabled={pending}>
@@ -88,17 +98,48 @@ type RowControlsProps = {
   toggleSkip: () => Promise<RowState>;
 };
 
+/**
+ * One row's edit form on React Hook Form and Zod: checked in the browser first (`validateAsset`, the rule the server applies
+ * again), then sent. It is its own component so a long list builds a form only for the row being edited.
+ */
+function RowEditForm({ row, types, update, onDone, onCancel, onAnswer }: { row: EditableRow; types: AssetTypeOption[]; update: (formData: FormData) => Promise<RowState>; onDone: () => void; onCancel: () => void; onAnswer: (state: RowState) => void }) {
+  const [state, setState] = useState<RowState>({ status: "idle" });
+  const [pending, startTransition] = useTransition();
+  const schema = useMemo(() => domainSchema({ assetTypeId: text(), unitNo: text(), typeModel: text(), location: text() }, (input) => validateAsset(input, types.map((type) => type.id))), [types]);
+  const form = useForm<AssetInput>({
+    resolver: zodResolver(schema) as unknown as Resolver<AssetInput>,
+    defaultValues: { assetTypeId: row.assetTypeId ?? "", unitNo: row.unitNo ?? "", typeModel: row.typeModel ?? "", location: row.location ?? "" },
+    mode: "onTouched",
+  });
+  const { setError } = form;
+  // The server's own messages land on the same fields.
+  useEffect(() => {
+    if (state.status !== "invalid" || !("errors" in state)) return;
+    for (const [field, message] of Object.entries(state.errors)) if (message) setError(field as keyof AssetInput, { type: "server", message: String(message) });
+  }, [state, setError]);
+  const onSubmit = form.handleSubmit((_values, event) => {
+    const element = event?.target as HTMLFormElement | undefined;
+    if (!element) return;
+    const data = new FormData(element);
+    startTransition(async () => {
+      const answer = await update(data);
+      setState(answer);
+      onAnswer(answer);
+      if (answer.status === "saved") onDone();
+    });
+  });
+  const live: Partial<Record<string, string>> = {};
+  for (const [field, error] of Object.entries(form.formState.errors)) if (error && typeof error.message === "string") live[field] = error.message;
+  return <RowEditor row={row} types={types} state={state} pending={pending} onCancel={onCancel} onSubmit={onSubmit} register={form.register} liveErrors={live} />;
+}
+
 /** "Edit" opens the row's form; "Skip" / "Include" flips whether it is added. */
 export function RowControls({ row, types, update, toggleSkip }: RowControlsProps) {
   const [editing, setEditing] = useState(false);
-  const [state, formAction, pending] = useActionState<RowState, FormData>(async (_, formData) => {
-    const answer = await update(formData);
-    if (answer.status === "saved") setEditing(false);
-    return answer;
-  }, { status: "idle" });
+  const [state, setState] = useState<RowState>({ status: "idle" });
   const [skipState, skipAction, skipping] = useActionState<RowState>(() => toggleSkip(), { status: "idle" });
 
-  if (editing) return <RowEditor row={row} types={types} state={state} pending={pending} onCancel={() => setEditing(false)} action={formAction} />;
+  if (editing) return <RowEditForm row={row} types={types} update={update} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} onAnswer={setState} />;
   return (
     <div className="flex flex-col gap-2">
       <form action={skipAction} className="flex flex-wrap items-center gap-2">
