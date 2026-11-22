@@ -9,6 +9,7 @@ import { linkBase } from "./link-base";
 import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { flagRows, isBlocking, isUuid, normalized, unmatchedSpellings, validateImportFile } from "@/domain/imports";
 import { validateAsset } from "@/domain/records";
+import { readFields } from "@/lib/forms/server-input";
 import { canWriteRecords } from "@/components/records/state";
 import type { CommitState, ConfirmState, DiscardState, ExtractState, MapState, SuggestState, ReadState, RowState, StartState } from "@/components/imports/state";
 
@@ -148,7 +149,7 @@ export async function updateImportRowAction(rowId: string, formData: FormData): 
   if (!isUuid(rowId)) return { status: "not_found" };
   const types = await ctx.container.listAssetTypes();
   const checked = validateAsset(
-    { assetTypeId: text(formData, "assetTypeId"), unitNo: text(formData, "unitNo"), typeModel: text(formData, "typeModel"), location: text(formData, "location") },
+    readFields(formData, ["assetTypeId", "unitNo", "typeModel", "location"]),
     types.map((type) => type.id),
   );
   if (!checked.ok) return { status: "invalid", errors: checked.errors };

@@ -14,6 +14,7 @@ import {
   type SiteInput,
 } from "@/domain/records";
 import { canWriteRecords, type ActiveState, type DeleteState, type RecordFormState } from "@/components/records/state";
+import { isId, readFields, readPostedFields } from "@/lib/forms/server-input";
 
 const FORBIDDEN = { status: "forbidden" } as const;
 
@@ -25,30 +26,12 @@ async function writer() {
   return canWriteRecords(member.role) ? { container, orgId: member.orgId } : null;
 }
 
-// Only these fields are read: ids and org come from the route and the member, never from the form (AC 35).
-const text = (formData: FormData, name: string) => String(formData.get(name) ?? "");
+// Only these fields are read (Zod, `readFields`): ids and org come from the route and the member, never from the form (AC 35).
 // A role is read only when the form offered it, so a form without the select leaves the stored role alone.
-const readCustomer = (formData: FormData): CustomerInput => ({
-  name: text(formData, "name"),
-  ...(formData.has("billingContactId") && { billingContactId: text(formData, "billingContactId") }),
-});
-const readContact = (formData: FormData): ContactInput => ({
-  name: text(formData, "name"),
-  email: text(formData, "email"),
-  phone: text(formData, "phone"),
-});
-const readSite = (formData: FormData): SiteInput => ({
-  name: text(formData, "name"),
-  address: text(formData, "address"),
-  siteContactId: text(formData, "siteContactId"),
-  ...(formData.has("approverContactId") && { approverContactId: text(formData, "approverContactId") }),
-});
-const readAsset = (formData: FormData): AssetInput => ({
-  assetTypeId: text(formData, "assetTypeId"),
-  unitNo: text(formData, "unitNo"),
-  typeModel: text(formData, "typeModel"),
-  location: text(formData, "location"),
-});
+const readCustomer = (formData: FormData): CustomerInput => ({ ...readFields(formData, ["name"]), ...readPostedFields(formData, ["billingContactId"]) });
+const readContact = (formData: FormData): ContactInput => readFields(formData, ["name", "email", "phone"]);
+const readSite = (formData: FormData): SiteInput => ({ ...readFields(formData, ["name", "address", "siteContactId"]), ...readPostedFields(formData, ["approverContactId"]) });
+const readAsset = (formData: FormData): AssetInput => readFields(formData, ["assetTypeId", "unitNo", "typeModel", "location"]);
 
 function refused<Input>(code: WriteFailure, values: Input): RecordFormState<Input> {
   return code === "forbidden" ? FORBIDDEN : { status: code, values };
@@ -73,6 +56,7 @@ export async function updateCustomerAction(
   const values = readCustomer(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(customerId)) return { status: "not_found", values };
   const customer = values.billingContactId === undefined ? null : await ctx.container.customerDetail(customerId);
   if (values.billingContactId !== undefined && !customer) return { status: "not_found", values };
   const checked = validateCustomer(values, customer?.contacts.map((contact) => contact.id));
@@ -90,6 +74,7 @@ export async function createContactAction(
   const values = readContact(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(customerId)) return { status: "not_found", values };
   const checked = validateContact(values);
   if (!checked.ok) return { status: "invalid", errors: checked.errors, values };
   const saved = await ctx.container.createContact(ctx.orgId, customerId, checked.value);
@@ -105,6 +90,7 @@ export async function updateContactAction(
   const values = readContact(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(contactId)) return { status: "not_found", values };
   const checked = validateContact(values);
   if (!checked.ok) return { status: "invalid", errors: checked.errors, values };
   const contact = await ctx.container.contactForEdit(contactId);
@@ -117,6 +103,7 @@ export async function updateContactAction(
 export async function deleteContactAction(contactId: string): Promise<DeleteState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(contactId)) return { status: "not_found" };
   const contact = await ctx.container.contactForEdit(contactId);
   if (!contact) return { status: "not_found" };
   const deleted = await ctx.container.deleteContact(contactId);
@@ -128,6 +115,7 @@ export async function createSiteAction(customerId: string, _state: RecordFormSta
   const values = readSite(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(customerId)) return { status: "not_found", values };
   const customer = await ctx.container.customerDetail(customerId);
   if (!customer) return { status: "not_found", values };
   const checked = validateSite(values, customer.contacts.map((contact) => contact.id));
@@ -141,6 +129,7 @@ export async function updateSiteAction(siteId: string, _state: RecordFormState<S
   const values = readSite(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(siteId)) return { status: "not_found", values };
   const site = await ctx.container.siteRegister(siteId);
   const customer = site && (await ctx.container.customerDetail(site.customerId));
   if (!customer) return { status: "not_found", values };
@@ -155,6 +144,7 @@ export async function createAssetAction(siteId: string, _state: RecordFormState<
   const values = readAsset(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(siteId)) return { status: "not_found", values };
   const checked = validateAsset(values, (await ctx.container.listAssetTypes()).map((type) => type.id));
   if (!checked.ok) return { status: "invalid", errors: checked.errors, values };
   const saved = await ctx.container.createAsset(ctx.orgId, siteId, checked.value);
@@ -166,6 +156,7 @@ export async function updateAssetAction(assetId: string, _state: RecordFormState
   const values = readAsset(formData);
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(assetId)) return { status: "not_found", values };
   const asset = await ctx.container.assetForEdit(assetId);
   if (!asset) return { status: "not_found", values };
   const checked = validateAsset(values, (await ctx.container.listAssetTypes()).map((type) => type.id));
@@ -193,6 +184,7 @@ function activeRefusal(result: SetActiveResult): ActiveState | null {
 export async function deactivateCustomerAction(customerId: string): Promise<ActiveState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(customerId)) return { status: "not_found" };
   const refused = activeRefusal(await ctx.container.setCustomerActive(customerId, false));
   if (refused) return refused;
   redirect(`/customers/${customerId}`);
@@ -201,6 +193,7 @@ export async function deactivateCustomerAction(customerId: string): Promise<Acti
 export async function reactivateCustomerAction(customerId: string): Promise<ActiveState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(customerId)) return { status: "not_found" };
   const refused = activeRefusal(await ctx.container.setCustomerActive(customerId, true));
   if (refused) return refused;
   redirect(`/customers/${customerId}`);
@@ -209,6 +202,7 @@ export async function reactivateCustomerAction(customerId: string): Promise<Acti
 export async function deactivateSiteAction(siteId: string): Promise<ActiveState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(siteId)) return { status: "not_found" };
   const refused = activeRefusal(await ctx.container.setSiteActive(siteId, false));
   if (refused) return refused;
   redirect(`/sites/${siteId}`);
@@ -217,6 +211,7 @@ export async function deactivateSiteAction(siteId: string): Promise<ActiveState>
 export async function reactivateSiteAction(siteId: string): Promise<ActiveState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(siteId)) return { status: "not_found" };
   const refused = activeRefusal(await ctx.container.setSiteActive(siteId, true));
   if (refused) return refused;
   redirect(`/sites/${siteId}`);
@@ -225,9 +220,10 @@ export async function reactivateSiteAction(siteId: string): Promise<ActiveState>
 export async function removeAssetAction(assetId: string, _state: ActiveState, formData: FormData): Promise<ActiveState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(assetId)) return { status: "not_found" };
   const asset = await ctx.container.assetForEdit(assetId);
   if (!asset) return { status: "not_found" };
-  const replacedBy = text(formData, "replacedBy") || null;
+  const replacedBy = readFields(formData, ["replacedBy"]).replacedBy || null;
   const refused = activeRefusal(await ctx.container.setAssetActive(assetId, false, replacedBy));
   if (refused) return refused;
   redirect(`/sites/${asset.siteId}`);
@@ -236,6 +232,7 @@ export async function removeAssetAction(assetId: string, _state: ActiveState, fo
 export async function reactivateAssetAction(assetId: string): Promise<ActiveState> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
+  if (!isId(assetId)) return { status: "not_found" };
   const asset = await ctx.container.assetForEdit(assetId);
   if (!asset) return { status: "not_found" };
   const refused = activeRefusal(await ctx.container.setAssetActive(assetId, true));
