@@ -6,7 +6,7 @@ import { canSignContracts, isLiveRequest, SIGNER_NAME_MAX } from "@/domain/contr
 import { Button } from "@/components/ui/button";
 import { SigningForm } from "@/components/signing/signing-form";
 import type { SignedCopyView } from "@/application/ports";
-import { signerLine, signingMessageFor, type SendSignatureState } from "./signing-state";
+import { signerLine, signingMessageFor, type SendSignatureState } from "@/components/contracts/signing-state";
 
 export const WAITING_FOR_CUSTOMER = "Waiting for the customer to sign.";
 export const NO_REQUEST_RECORDED = "No signature request was recorded for this contract.";

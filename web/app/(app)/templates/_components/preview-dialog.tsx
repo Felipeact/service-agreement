@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { TemplatePreviewFrame } from "./template-preview-frame";
+import { TemplatePreviewFrame } from "@/components/templates/template-preview-frame";
 
 export const PREVIEW_DIALOG_MESSAGES = { invalid: "Fix the highlighted blocks to preview." } as const;
 

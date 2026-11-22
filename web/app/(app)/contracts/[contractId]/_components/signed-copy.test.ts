@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { SignedCopyView } from "@/application/ports";
 import type { ContractStatus, SignatureRequestStatus } from "@/domain/contract";
 import { SigningArea, signingAreaKind, type SigningAreaProps } from "./signing-area";
-import { formatSignedAt } from "./signing-state";
+import { formatSignedAt } from "@/components/contracts/signing-state";
 
 vi.mock("@/components/signing/signing-form", () => ({
   SigningForm: (props: { src: string }) => createElement("div", { "data-docuseal-form": props.src }),

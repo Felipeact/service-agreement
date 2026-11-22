@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { ContractStatus, SignatureRequestStatus } from "@/domain/contract";
 import { SendForSignaturePrompt, SigningArea, signingAreaKind, type SigningAreaProps } from "./signing-area";
-import { SIGNING_MESSAGES, signingMessageFor, type SendSignatureState } from "./signing-state";
+import { SIGNING_MESSAGES, signingMessageFor, type SendSignatureState } from "@/components/contracts/signing-state";
 
 // The embedded form is the signing form component, which only mounts in the browser; here it is a marker that carries its props.
 vi.mock("@/components/signing/signing-form", () => ({

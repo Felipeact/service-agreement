@@ -32,9 +32,9 @@ const { TemplatesForRequest } = await import("./page");
 const { default: NewTemplatePage } = await import("./new/page");
 const { default: ContractWordingPage } = await import("./contract/page");
 const { EditTemplateForRequest } = await import("./[templateId]/page");
-const { TemplatesView } = await import("@/components/templates/templates-view");
-const { TemplateEditor } = await import("@/components/templates/template-editor");
-const { ContractWordingEditor } = await import("@/components/templates/contract-wording-editor");
+const { TemplatesView } = await import("@/app/(app)/templates/_components/content");
+const { TemplateEditor } = await import("@/app/(app)/templates/_components/template-editor");
+const { ContractWordingEditor } = await import("@/app/(app)/templates/_components/contract-wording-editor");
 
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role });
 const ID = "7f9c2d3e-1a2b-4c5d-8e9f-0a1b2c3d4e5f";

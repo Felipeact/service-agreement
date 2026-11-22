@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgreementTemplateSummary, MemberRole } from "@/application/ports";
 import { SYSTEM_AGREEMENT_BODY } from "@/domain/agreement";
-import { TemplatesView } from "./templates-view";
+import { TemplatesView } from "./content";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/templates" }));
