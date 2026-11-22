@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/icons";
 import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
-import { FOOTER_NAV, mainNav, type NavItem } from "./nav-items";
+import { mainNav, type NavItem } from "./nav-items";
 
 export const ITEM_CLASSES = "flex h-11 items-center gap-3 rounded-control px-2.5 font-medium transition-colors duration-150 lg:h-9";
 
@@ -68,14 +68,13 @@ export function SidebarNav({
   const pathname = usePathname();
   const pillId = `nav-pill-${useId()}`;
   return (
-    <nav aria-label="Main" className="flex h-full flex-col gap-0.5">
+    <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
       {mainNav(words, reports).map((item) => (
         <NavEntry key={item.label} item={item} pathname={pathname} onNavigate={onNavigate} pillId={pillId} count={item.href ? counts[item.href] : undefined} />
       ))}
-      <div className="mt-auto flex flex-col gap-0.5 border-t border-surface/10 pt-3">
-        {FOOTER_NAV.map((item) => (
-          <NavEntry key={item.label} item={item} pathname={pathname} onNavigate={onNavigate} pillId={pillId} />
-        ))}
+      </div>
+      <div className="flex shrink-0 flex-col">
         {footer}
       </div>
     </nav>

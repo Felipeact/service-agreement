@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ImportHistoryRow, PipelineCard } from "@/application/ports";
-import { FilterIcon, LayoutGridIcon, ListIcon } from "lucide-react";
+import { FilterIcon, LayoutGridIcon, ListIcon, SearchIcon, SparklesIcon } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
@@ -68,7 +68,7 @@ function LivePill() {
   return (
     <span className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-pill-completed-border bg-pill-completed px-2.5 text-[11px] leading-4 font-semibold whitespace-nowrap text-pill-completed-ink">
       <span aria-hidden="true" className="size-1.5 rounded-full bg-stage-completed" />
-      Live
+      Live CAD
     </span>
   );
 }
@@ -83,11 +83,13 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
   const [selected, setSelected] = useState<View>("in_progress");
   const [followUpOnly, setFollowUpOnly] = useState(initialFollowUpOnly);
   const [minAge, setMinAge] = useState(0);
+  const [query, setQuery] = useState("");
   const tabRefs = useRef<Partial<Record<View, HTMLButtonElement | null>>>({});
 
   const stats = pipelineStats(cards, today);
-  const shown = cards.filter((card) => (!followUpOnly || needsFollowUp(card)) && card.ageDays >= minAge);
-  const filtered = followUpOnly || minAge > 0;
+  const needle = query.trim().toLowerCase();
+  const shown = cards.filter((card) => (!followUpOnly || needsFollowUp(card)) && card.ageDays >= minAge && (!needle || `${card.site} ${card.customer}`.toLowerCase().includes(needle)));
+  const filtered = followUpOnly || minAge > 0 || needle !== "";
   const byStage = (stage: PipelineStage) => sortForColumn(stage, shown.filter((card) => card.stage === stage));
   const countOf = (view: View) => (view === "expiring" ? expiring.length : byStage(view).length);
   const empty = cards.length === 0 && expiring.length === 0;
@@ -126,7 +128,21 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
         title={title}
         badge={<LivePill />}
         subtitle={itemText("Keep every service agreement moving from equipment intake to signed contract.", words)}
-        action={canCreate ? newAgreement : undefined}
+        action={
+          <>
+            {!empty && (
+              <button
+                type="button"
+                onClick={() => setFollowUpOnly(true)}
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-purple-600 px-3.5 text-[13px] font-medium whitespace-nowrap text-white shadow-card transition-colors duration-150 hover:bg-purple-700 lg:h-[38px]"
+              >
+                <SparklesIcon className="size-3.5" aria-hidden="true" />
+                Insights ({stats.followUpCount})
+              </button>
+            )}
+            {canCreate ? newAgreement : undefined}
+          </>
+        }
       />
 
       {empty ? (
@@ -139,7 +155,18 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
             <h2 id="board-title" className="sr-only">
               Deal pipeline
             </h2>
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-3 rounded-panel border border-hairline bg-surface p-3 shadow-card">
+            <div className="flex flex-wrap items-end gap-x-2.5 gap-y-3 rounded-xl border border-hairline bg-surface p-3 shadow-card">
+              <div className="relative w-full sm:w-[240px]">
+                <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-ink-2" />
+                <input
+                  type="search"
+                  aria-label="Search deal name or company"
+                  placeholder="Search deal name or company..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="h-11 w-full rounded-lg border border-hairline bg-ground pr-3 pl-8 text-[12px] text-ink placeholder:text-ink-2 focus:border-action focus:ring-1 focus:ring-action focus:outline-none lg:h-[34px]"
+                />
+              </div>
               <button
                 type="button"
                 data-summary="follow-ups"

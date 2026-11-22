@@ -6,6 +6,7 @@ import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkButton } from "@/components/ui/link-button";
 import { StatusPill } from "@/components/ui/status-pill";
+import { initialsOf } from "@/lib/initials";
 import { formatCad } from "@/lib/money";
 import { STAGE_META } from "@/lib/pipeline-stage";
 
@@ -39,6 +40,17 @@ function ContactLink({ href, text }: { href: string; text: string | null }) {
   );
 }
 
+/** One cell of the title block: a small label over a figure, in the way a drawing sheet's title block files its facts. */
+function Fact({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="flex flex-col gap-0.5 px-4 py-3 sm:px-5">
+      <dt className="text-[12px] font-medium text-ink-2">{label}</dt>
+      <dd className="text-[22px] leading-7 font-semibold tracking-tight tabular-nums">{value}</dd>
+      {note && <dd className="text-[12px] text-ink-2">{note}</dd>}
+    </div>
+  );
+}
+
 const EDIT_LINK = "inline-flex min-h-11 min-w-11 items-center font-medium text-action lg:min-h-0 lg:min-w-0 md:ml-auto";
 
 /** The customer record: contacts, sites and the agreements on those sites. Without a role it is read-only. */
@@ -54,6 +66,10 @@ export function CustomerDetailView({
 }) {
   const canWrite = role !== undefined && canWriteRecords(role);
   const sites = showInactive ? customer.sites : customer.sites.filter((site) => site.active);
+  const activeSites = customer.sites.filter((site) => site.active);
+  const assets = activeSites.reduce((sum, site) => sum + site.assetCount, 0);
+  const priced = customer.agreements.filter((agreement) => agreement.annualCents !== undefined && (agreement.stage === "accepted" || agreement.stage === "completed"));
+  const signedCents = priced.reduce((sum, agreement) => sum + (agreement.annualCents ?? 0), 0);
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
@@ -66,6 +82,24 @@ export function CustomerDetailView({
           action={canWrite ? <LinkButton href={`/customers/${customer.id}/edit`}>Edit</LinkButton> : undefined} />
       </div>
 
+      <div className="flex flex-col overflow-hidden rounded-panel border border-hairline bg-surface shadow-card md:flex-row">
+        <div className="flex items-center gap-3 border-b border-hairline bg-night px-4 py-3 text-surface sm:px-5 md:w-56 md:shrink-0 md:border-r md:border-b-0 md:py-4">
+          <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-action text-[15px] font-semibold shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
+            {initialsOf(customer.name)}
+          </span>
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="text-[12px] text-night-ink">{customer.active ? "Active customer" : "Inactive customer"}</span>
+            <span className="truncate text-[14px] font-semibold">{customer.name}</span>
+          </span>
+        </div>
+        <dl className="grid flex-1 grid-cols-2 divide-x divide-hairline md:grid-cols-4 max-md:[&>div:nth-child(n+3)]:border-t max-md:[&>div:nth-child(n+3)]:border-hairline">
+          <Fact label="Sites" value={String(activeSites.length)} />
+          <Fact label="Assets" value={String(assets)} note="on those sites" />
+          <Fact label="Agreements" value={String(customer.agreements.length)} />
+          <Fact label="Signed value" value={formatCad(signedCents)} note="per year" />
+        </dl>
+      </div>
+
       <Section
         title="Contacts"
         empty="No contacts yet"
@@ -74,7 +108,11 @@ export function CustomerDetailView({
       >
         {customer.contacts.map((contact) => (
           <li key={contact.id} className={ROW}>
-            <span className="font-semibold md:w-56">
+            <span className="flex items-center gap-3 font-semibold md:w-56">
+              <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-board text-[12px] font-semibold text-ink-2">
+                {initialsOf(contact.name)}
+              </span>
+              <span>
               {contact.name}
               {(contact.roles ?? []).length > 0 && (
                 <span className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] font-medium text-ink-2">
@@ -85,6 +123,7 @@ export function CustomerDetailView({
                   ))}
                 </span>
               )}
+              </span>
             </span>
             <span className="text-ink-2 md:w-72">
               <ContactLink href={`mailto:${contact.email}`} text={contact.email} />

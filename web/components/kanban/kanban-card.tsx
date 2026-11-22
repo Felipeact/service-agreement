@@ -23,8 +23,9 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
       data-card
       data-amount-cents={card.annualCents ?? 0}
       style={{ "--i": index } as CSSProperties}
-      className="settle block rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card xl:max-[1600px]:p-3.5 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
+      className="settle group relative block overflow-hidden rounded-panel border border-hairline bg-surface p-4 text-ink shadow-card xl:max-[1600px]:p-3.5 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:shadow-lift"
     >
+      {followUp && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-attention-fg" />}
       <div className="flex items-center justify-between gap-2">
         <span className="text-[12px] font-medium whitespace-nowrap text-ink-2">{card.number ?? "Unnumbered"} · v{card.versionNo}</span>
         <span title={ageLabel(card.ageDays)} className="inline-flex items-center gap-1 text-[12px] text-ink-2">
@@ -46,13 +47,21 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-hairline pt-3">
         {card.annualCents !== undefined ? (
           <span className={`inline-flex flex-col rounded-control px-2 py-1 leading-snug ${closed ? "bg-board text-ink-2" : "bg-pill-completed text-pill-completed-ink"}`}>
-            <span className="text-[13px] font-semibold">{formatCad(card.annualCents)}/yr</span>
+            <span className="text-[14px] font-semibold tabular-nums">{formatCad(card.annualCents)}/yr</span>
             <span className="text-[12px] font-medium">{card.visitsPerYear} visits/yr</span>
           </span>
         ) : (
           <span className="text-[12px] text-ink-2">No service lines yet</span>
         )}
-        <Icon name="chevron" className="size-4 text-ink-2" />
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+            closed ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700" : card.attention || followUp ? "border-amber-500/20 bg-amber-500/10 text-amber-700" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+          }`}
+        >
+          <span aria-hidden="true" className={`size-1.5 rounded-full ${closed ? "bg-emerald-600" : card.attention || followUp ? "bg-amber-500" : "bg-emerald-500"}`} />
+          {closed ? "Active Contract" : card.attention || followUp ? "Needs Review" : "On Track"}
+        </span>
+        <Icon name="chevron" className="size-4 text-ink-2 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-action" />
       </div>
     </Link>
   );

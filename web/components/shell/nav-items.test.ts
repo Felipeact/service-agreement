@@ -91,16 +91,11 @@ describe("navigation", () => {
     expect(FOOTER_NAV.map((item) => item.label)).toEqual(["Settings", "Members"]);
   });
 
-  test.each([
-    ["/members", true],
-    ["/settings", false],
-    ["/pipeline", false],
-  ])("C1504: on %s the Members item is current: %s", (path, current) => {
-    pathname = path;
+  test("C1504: Settings and Members are not nav items: the mockup shows them as icons in the account row", () => {
+    pathname = "/pipeline";
     const html = renderToStaticMarkup(createElement(SidebarNav, {}));
-    const link = /<a\b[^>]*href="\/members"[^>]*>(?:<span[^>]*><\/span>)?(?:<svg[\s\S]*?<\/svg>)?Members<\/a>/.exec(html)?.[0] ?? "";
-    expect(link).not.toBe("");
-    expect(link.includes('aria-current="page"')).toBe(current);
+    expect(html).not.toContain('href="/members"');
+    expect(html).not.toContain('href="/settings"');
   });
 });
 

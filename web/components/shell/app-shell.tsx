@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDownIcon, SparklesIcon } from "lucide-react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -139,7 +140,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
       <aside id="app-sidebar" inert={collapsed} className="sticky top-0 hidden h-dvh min-w-0 overflow-hidden bg-night lg:block">
         {/* Fixed width inside the shrinking column, so the content slides and fades rather than reflowing. */}
         <div
-          className={`flex h-full w-[240px] flex-col overflow-y-auto px-3 pt-5 pb-4 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
+          className={`relative flex h-full w-[240px] flex-col overflow-hidden px-3 pt-5 pb-4 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
             collapsed ? "-translate-x-6 opacity-0 duration-150" : "translate-x-0 opacity-100 duration-300"
           }`}
         >
@@ -244,28 +245,41 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
       </AnimatePresence>
 
       <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-        <header className="sticky top-0 z-10 hidden h-14 items-center gap-3 border-b border-hairline bg-ground/90 px-8 backdrop-blur lg:flex">
+        <header className="sticky top-0 z-10 hidden h-12 items-center gap-3 border-b border-hairline bg-surface px-8 lg:flex">
           <button
             type="button"
             aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
             aria-expanded={!collapsed}
             aria-controls="app-sidebar"
             onClick={toggleSidebar}
-            className="-ml-2 inline-flex size-9 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink"
+            className="-ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink"
           >
             <Icon name="sidebar" />
           </button>
-          {todayLabel && <span className="text-[13px] text-ink-2">{todayLabel}</span>}
-          <div className="ml-auto flex items-center gap-4">
+          <form method="get" action="/search" role="search" className="w-full max-w-xl flex-1">
+            <SearchInput label="Search" name="q" placeholder="Search contacts, deals, or tasks..." maxLength={SEARCH_MAX} shortcut="⌘S" />
+          </form>
+          <div className="ml-auto flex items-center gap-3">
+            {todayLabel && <span className="hidden text-[12px] text-ink-2 2xl:inline">{todayLabel}</span>}
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              className="inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-purple-600/20 bg-purple-600/10 px-3 text-[12px] font-medium text-purple-600 shadow-card disabled:cursor-not-allowed"
+            >
+              <SparklesIcon aria-hidden="true" className="size-3.5" />
+              Ask AI
+            </button>
             <FollowUpBell count={followUps} />
-            <div className="flex items-center gap-2.5">
-              <div className="flex flex-col items-end leading-tight">
-                <span className="text-[13px] font-semibold text-ink">{orgName}</span>
-                <span className="text-[12px] text-ink-2">{roleLabel(role) ?? "Workspace"}</span>
-              </div>
-              <span aria-hidden="true" className="inline-flex size-8 items-center justify-center rounded-full bg-action text-[12px] font-semibold text-surface">
+            <div className="flex items-center gap-2.5 border-l border-hairline pl-3">
+              <span aria-hidden="true" className="inline-flex size-8 items-center justify-center rounded-full bg-action text-[12px] font-semibold text-surface shadow-card">
                 {initialsOf(email)}
               </span>
+              <div className="flex flex-col leading-tight">
+                <span className="max-w-[180px] truncate text-[12px] font-semibold text-ink" title={email}>{email.split("@")[0]}</span>
+                <span className="text-[11px] text-ink-2">{roleLabel(role) ?? "Workspace"}</span>
+              </div>
+              <ChevronDownIcon aria-hidden="true" className="size-4 text-ink-2" />
             </div>
           </div>
         </header>

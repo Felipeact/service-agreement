@@ -201,7 +201,7 @@ describe("PipelineView: follow-up", () => {
   test("the page is titled Sales Pipeline with a Live pill, and the board has a Kanban View and a List View that opens the agreements list", () => {
     const html = render([card()]);
     expect(html).toMatch(/<h1[^>]*>Sales Pipeline</);
-    expect(html).toMatch(/Live<\/span>/);
+    expect(html).toMatch(/Live CAD<\/span>/);
     expect(html).toContain("Kanban View");
     expect(html).toMatch(/<a[^>]*href="\/agreements"[^>]*>[\s\S]*?List View/);
   });
@@ -269,8 +269,8 @@ describe("PipelineView: follow-up", () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*data-summary="follow-ups"|data-summary="follow-ups"[^>]*aria-pressed="true"/);
   });
 
-  test("there is no search on the board: the sidebar's is the app's one", () => {
-    expect(render([card()])).not.toContain("type=\"search\"");
+  test("the board's toolbar searches deals by site or company, as in the mockup", () => {
+    expect(render([card()])).toContain('placeholder="Search deal name or company..."');
   });
 
   test("with no agreements there are no summary cards", () => {
