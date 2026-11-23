@@ -503,6 +503,27 @@ export interface TypeSuggester {
   suggest(spellings: string[], types: { code: string; name: string }[], tradeContext: string | null): Promise<TypeSuggestResult>;
 }
 
+/** What the model is told about an agreement: figures and equipment, never a customer, site, contact or address. */
+export type AgreementFacts = {
+  status: string;
+  versionNo: number;
+  term: { months: number; start: string | null };
+  totalPerYearCents: number;
+  lines: { description: string; visitMonths: number[]; costPerVisitCents: number; annualCents: number; equipment: string[] }[];
+  /** Equipment on the site by type, with how many units, and whether a line covers the type. */
+  equipment: { type: string; units: number; covered: boolean }[];
+  tradeContext: string | null;
+};
+
+export type AgreementInsightNote = { kind: "risk" | "opportunity" | "next_step"; text: string };
+export type AgreementInsight = { summary: string; notes: AgreementInsightNote[] };
+export type AgreementInsightResult = { ok: true; insight: AgreementInsight } | { ok: false; code: "unavailable" };
+
+/** Reads an agreement's facts and says what a person should look at before sending it. */
+export interface AgreementInsighter {
+  insight(facts: AgreementFacts): Promise<AgreementInsightResult>;
+}
+
 export interface ImportAllowance {
   /** Whether the org of this job may start another AI import this month. An org with no plan is always allowed. */
   check(jobId: string): Promise<ImportAllowanceResult>;

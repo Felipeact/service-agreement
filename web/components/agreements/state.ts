@@ -92,3 +92,11 @@ export function messageFor(status: string): string | null {
 export function linkMessageFor(status: string): string | null {
   return status in LINK_MESSAGES ? LINK_MESSAGES[status as keyof typeof LINK_MESSAGES] : null;
 }
+
+/** What `generateServiceLinesAction` answers: how many lines it added from the site's equipment (0 when every type was covered). */
+export type GenerateLinesState = { status: "idle" | "forbidden" | "not_found" | "locked" | "unavailable" } | { status: "generated"; added: number };
+
+/** What `agreementInsightAction` answers: the model's read of the agreement, or why there is none. */
+export type InsightState =
+  | { status: "idle" | "forbidden" | "not_found" | "unavailable" }
+  | { status: "ready"; summary: string; notes: { kind: "risk" | "opportunity" | "next_step"; text: string }[] };

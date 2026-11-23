@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import type { AssetTypeOption, SiteOption } from "@/application/ports";
 import type { AddEquipmentState } from "@/app/(app)/new-agreement-actions";
@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { EquipmentPicker, pickedItems, pickedTotal, type PickedCounts } from "./pick-list";
 import { NoticeText, ProgressLine } from "./new-agreement-text";
+import { AgreementThinking } from "./agreement-thinking";
 import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
@@ -45,6 +46,8 @@ export type NewAgreementActions = {
   commitCleanImport?: (jobId: string) => Promise<{ status: string }>;
   /** Adds equipment picked by hand to the site; with `assetTypes`, it turns on the Pick by hand tab. */
   addEquipment?: (siteId: string, items: { assetTypeId: string; quantity: number }[]) => Promise<AddEquipmentState>;
+  /** Builds the new agreement's service lines from the equipment now on its site. A failure is not fatal: the agreement page offers the same button. */
+  generateLines?: (agreementId: string) => Promise<{ status: string }>;
 };
 
 /** How the equipment gets onto the site: a list uploaded now, units picked by hand, or nothing yet. */
@@ -78,6 +81,7 @@ type Props = {
 export function NewAgreementDialog({ customers, sites, actions, templates, initialTemplateVersionId, open: controlledOpen, onClose, initialFile, assetTypes }: Props) {
   const words = useItemWords();
   const router = useRouter();
+  const pathname = usePathname();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const offered = [...(templates ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   const startingTemplate = offered.some((template) => template.versionId === initialTemplateVersionId) ? (initialTemplateVersionId as string) : STANDARD_CHOICE;
@@ -96,6 +100,22 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [created, setCreated] = useState<{ customerId?: string; siteId?: string }>({});
+  // Set when the work is done and the browser is on its way to the agreement; the thinking screen stays until the page changes.
+  const [leavingTo, setLeavingTo] = useState<string | null>(null);
+  const leaving = leavingTo !== null && pathname !== leavingTo;
+  const thinking = phase !== "idle" || leaving;
+  // The dialog stays open, under the thinking screen, until the browser reaches the agreement; then it closes.
+  useEffect(() => {
+    if (leavingTo !== null && pathname === leavingTo && dialogRef.current?.open) dialogRef.current.close();
+  }, [pathname, leavingTo]);
+  // A page kept hidden after the browser leaves it must not bring the dialog back when it is shown again.
+  useEffect(() => {
+    if (leavingTo === null) return;
+    const dialog = dialogRef.current;
+    return () => {
+      if (dialog?.open) dialog.close();
+    };
+  }, [leavingTo]);
   const [pending, startTransition] = useTransition();
 
   const newCustomer = customer === NEW_CHOICE;
@@ -129,14 +149,16 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     dialogRef.current?.close();
   }
 
-  /** Leaves for another page with the dialog shut: a modal left open would stay on top of the page it navigates to. */
+  /** Leaves for another page. The dialog stays open under the thinking screen and closes itself once the page has changed. */
   function go(href: string) {
-    const dialog = dialogRef.current;
-    if (dialog?.open) dialog.close();
+    setLeavingTo(href.split("?")[0] ?? href);
+    // Should the page never change, the thinking screen does not stay forever.
+    setTimeout(() => setLeavingTo(null), 15000);
     router.push(href);
   }
 
   function reset() {
+    setLeavingTo(null);
     setTemplate(startingTemplate);
     setCustomer(firstCustomerChoice(customers));
     setCustomerName("");
@@ -178,8 +200,9 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     setNotice(null);
     if (mode === "pick" && pickedTotal(picked) === 0) return setNotice({ text: itemText("Pick at least one piece of equipment, or choose Add later.", words) });
 
+    // Set before the transition, so the first step shows at once: an update made inside an async transition waits for it to end.
+    setPhase("creating");
     startTransition(async () => {
-      setPhase("creating");
       const input = {
         // A customer or site made on an earlier try is used as it is, never created twice.
         customer: created.customerId ?? customer,
@@ -219,6 +242,8 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
           setPhase("idle");
           return setCreated({ customerId: started.customerId, siteId: started.siteId });
         }
+        setPhase("building");
+        await actions.generateLines?.(started.agreementId).catch(() => null);
         return go(agreementHref);
       }
       if (!file || mode !== "upload") return go(agreementHref);
@@ -249,7 +274,11 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       // A list with nothing wrong goes straight to the agreement; the review opens only when something needs a person.
       if (extracted.status === "extracted" && actions.commitCleanImport) {
         const committed = await actions.commitCleanImport(jobId).catch(() => ({ status: "needs_review" }));
-        if (committed.status === "committed") return go(agreementHref);
+        if (committed.status === "committed") {
+          setPhase("building");
+          await actions.generateLines?.(started.agreementId).catch(() => null);
+          return go(agreementHref);
+        }
       }
       // Rows found go to the review grid; a list that could not be read through is finished from the site's import page.
       go(
@@ -279,11 +308,11 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
         ref={dialogRef}
         aria-labelledby="new-agreement-title"
         onClose={reset}
-        onCancel={(event) => busy && event.preventDefault()}
-        onClick={(event) => event.target === dialogRef.current && !busy && close()}
+        onCancel={(event) => (busy || thinking) && event.preventDefault()}
+        onClick={(event) => event.target === dialogRef.current && !busy && !thinking && close()}
         className="m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-panel border border-hairline bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
       >
-        <form onSubmit={submit} noValidate className="flex max-h-[calc(100dvh-1.5rem)] flex-col">
+        <form onSubmit={submit} noValidate inert={thinking} className="flex max-h-[calc(100dvh-1.5rem)] flex-col">
           <header className="flex items-start gap-3 border-b border-hairline px-5 py-4">
             <div className="mr-auto">
               <h2 id="new-agreement-title" className="text-[17px] font-bold tracking-tight">
@@ -469,6 +498,8 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
           </footer>
           </div>
         </form>
+        {/* Over the form, inside this same dialog: a second modal would stack one on another. */}
+        <AgreementThinking phase={phase} progress={progress} leaving={leaving} />
       </dialog>
     </>
   );

@@ -56,6 +56,8 @@ export function makeTransitionContract(contracts: ContractRepository) {
 
 export { makeRequestSignInLink, type SignInLinkResult } from "./sign-in";
 export { makeReadImport, outcomeOf, type ReadImportResult } from "./read-import";
+export { makeGenerateServiceLines, type GenerateServiceLinesResult } from "./generate-service-lines";
+export { makeAgreementInsight, type AgreementInsightOutcome } from "./agreement-insight";
 export { makeSuggestImportTypes, type SuggestImportTypesResult, type TypeSuggestionForReview } from "./suggest-import-types";
 export { makeExtractImport, makeImportProgress, type ExtractImportResult } from "./extract-import";
 export { makeReissueLink, makeSendAgreement, type LinkIssueResult } from "./portal-links";

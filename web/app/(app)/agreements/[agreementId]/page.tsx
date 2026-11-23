@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { PageLoading } from "@/components/shell/page-loading";
 import {
   addServiceLineAction,
+  agreementInsightAction,
+  generateServiceLinesAction,
   removeServiceLineAction,
   reviseAgreementAction,
   saveTermAction,
@@ -38,10 +40,11 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         saveTerm: saveTermAction.bind(null, agreementId),
         saveNote: saveVersionNoteAction.bind(null, agreementId),
         generate: generateContractAction.bind(null, agreementId),
+        generateLines: generateServiceLinesAction.bind(null, agreementId),
       }
     : undefined;
 
-  return <AgreementView agreement={agreement} role={role} actions={actions} words={words} skippedCodes={skippedCodes} recipient={recipient} templateChoices={templateChoices} />;
+  return <AgreementView agreement={agreement} role={role} actions={actions} words={words} skippedCodes={skippedCodes} recipient={recipient} templateChoices={templateChoices} insight={agreementInsightAction.bind(null, agreementId)} />;
 }
 
 export default async function AgreementPage({ params, searchParams }: PageProps<"/agreements/[agreementId]">) {

@@ -11,6 +11,8 @@ import { notEmailedWords } from "@/domain/notifications";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { formatCadExact } from "@/lib/money";
 import { GenerateContractControl } from "./contract-controls";
+import { GenerateLinesControl } from "./generate-lines-control";
+import { InsightControl } from "./insight-control";
 import { LineFormControl } from "@/components/agreements/line-form";
 import { LineRow } from "@/components/agreements/line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
@@ -27,7 +29,7 @@ import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { ProgressSteps } from "./progress-steps";
 import type { GenerateContractState } from "@/components/agreements/contract-state";
-import type { LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
+import type { GenerateLinesState, InsightState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -47,6 +49,8 @@ export type AgreementActions = {
   saveNote: (formData: FormData) => Promise<NoteState>;
   /** Optional so a page without contracts (and older fixtures) still compiles; the agreement page always binds it. */
   generate?: () => Promise<GenerateContractState>;
+  /** Builds a service line for each equipment type no line covers yet. Optional so older fixtures compile. */
+  generateLines?: () => Promise<GenerateLinesState>;
 };
 
 type AgreementViewProps = {
@@ -62,6 +66,8 @@ type AgreementViewProps = {
   recipient?: string | null;
   /** The templates a writer can switch a draft to, the pinned one included; absent for a version that cannot change its template. */
   templateChoices?: { choices: TemplateChoice[]; selected: string };
+  /** The AI Insight, bound to this agreement. Read-only, so it is offered to every role; absent in a fixture that has none. */
+  insight?: () => Promise<InsightState>;
 };
 
 /** A short fingerprint of what the PDF would say, so an open preview knows when to redraw. */
@@ -87,7 +93,7 @@ function deliveryLine(email: LinkEmailView | null): string {
 }
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
-export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient, templateChoices }: AgreementViewProps) {
+export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient, templateChoices, insight }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
   const latest = agreement.versions[0]?.versionNo ?? shown.versionNo;
@@ -135,6 +141,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
               <a href={`/agreements/${agreement.id}/pdf?version=${shown.versionNo}`} className={buttonClass("secondary", "")}>
                 Download PDF
               </a>
+              {insight && <InsightControl action={insight} />}
               {canRevise && <ReviseControl nextVersion={latest + 1} action={writer.revise} />}
               {canWithdraw && <WithdrawControl number={agreement.number} action={writer.withdraw} />}
             </div>
@@ -211,6 +218,9 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
               ))}
             </ul>
           </>
+        )}
+        {lineActions?.generateLines && agreement.equipmentChoices.length > 0 && (agreement.scopeDraft?.uncovered.length ?? 0) > 0 && (
+          <GenerateLinesControl action={lineActions.generateLines} uncoveredCount={agreement.scopeDraft?.uncovered.length ?? 0} />
         )}
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
           <p className="text-[14px] font-semibold">

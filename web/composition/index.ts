@@ -17,6 +17,8 @@ import {
   makeContractDocuments,
   makeExtractImport,
   makeSuggestImportTypes,
+  makeGenerateServiceLines,
+  makeAgreementInsight,
   makeImportProgress,
   makeNotify,
   makeReadImport,
@@ -48,6 +50,7 @@ import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
+import { claudeAgreementInsighter } from "@/infrastructure/claude/agreement-insighter";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
@@ -315,6 +318,8 @@ export async function getContainer() {
     getContractWording: makeGetContractWording(supabaseContractWordingReader(supabase)),
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
+    generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
+    agreementInsight: makeAgreementInsight(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementInsighter({ apiKey: process.env.ANTHROPIC_API_KEY })),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.

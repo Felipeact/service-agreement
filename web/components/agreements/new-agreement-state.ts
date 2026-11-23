@@ -53,13 +53,23 @@ export function firstCustomerChoice(customers: readonly { id: string }[]): strin
   return customers.length === 0 ? NEW_CHOICE : "";
 }
 
-export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting";
+export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting" | "building";
 
 const PHASE_TEXT: Record<Exclude<Phase, "idle">, string> = {
   creating: "Creating the agreement…",
   uploading: "Sending the equipment list…",
   reading: "Reading the file…",
   extracting: "Finding the equipment…",
+  building: "Building the service lines…",
+};
+
+/** The same steps once done, for the thinking screen's fading history. */
+export const PHASE_DONE_TEXT: Record<Exclude<Phase, "idle">, string> = {
+  creating: "Created the agreement",
+  uploading: "Sent the equipment list",
+  reading: "Read the file",
+  extracting: "Found the equipment",
+  building: "Built the service lines",
 };
 
 /** The progress line under the form, in the org's words ("Finding the stations… 2 of 5"). */
