@@ -210,12 +210,20 @@ function primaryContact(contacts: ContactRow[]): string | null {
   return firstContact(contacts)?.name ?? null;
 }
 
+/** What the accepted and completed agreements are worth a year, in cents. */
+function signedCents(agreements: AgreementRow[]): number {
+  return agreements.reduce((total, agreement) => {
+    const stage = stageOf(agreement).stage;
+    return total + (stage === "accepted" || stage === "completed" ? (amounts(latestVersion(agreement)).annualCents ?? 0) : 0);
+  }, 0);
+}
+
 export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
   return {
     async list() {
       const { data, error } = await client
         .from("customers")
-        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at), agreements(number, created_at))")
+        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at), agreements(id, number, created_at, status, updated_at, agreement_versions(version_no, contracts(status), service_lines(visits_per_year, cost_per_visit_cents))))")
         .order("name")
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
@@ -225,7 +233,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
         name: string;
         deactivated_at: string | null;
         contacts: ContactRow[];
-        sites: { deactivated_at: string | null; assets: Inactive[]; agreements: { number: string | null; created_at: string }[] }[];
+        sites: { deactivated_at: string | null; assets: Inactive[]; agreements: (AgreementRow & { created_at: string })[] }[];
       }[];
       return rows
         .map<CustomerSummary>((row) => {
@@ -243,6 +251,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
             active: isActive(row),
             siteCount: sites.length,
             assetCount: sites.reduce((total, site) => total + site.assets.filter(isActive).length, 0),
+            annualCents: signedCents(agreements),
           };
         })
         .sort((a, b) => byName(a.name, b.name));

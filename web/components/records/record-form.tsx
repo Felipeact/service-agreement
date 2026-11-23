@@ -7,9 +7,14 @@ import { LinkButton } from "@/components/ui/link-button";
 import { RECORD_MESSAGES } from "./state";
 
 /** The page around a record form; a member who may not write gets the reason instead of the form. */
-export function RecordPage({ title, canWrite, children }: { title: string; canWrite: boolean; children: ReactNode }) {
+export function RecordPage({ title, canWrite, children, back }: { title: string; canWrite: boolean; children: ReactNode; back?: { href: string; label: string } }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-3xl flex-col gap-6">
+      {back && (
+        <Link href={back.href} className="inline-flex min-h-11 w-fit items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
+          <span aria-hidden="true">←</span> {back.label}
+        </Link>
+      )}
       <PageHeader title={title} />
       {canWrite ? children : <EmptyPanel title={RECORD_MESSAGES.noAccess} />}
     </div>
@@ -53,7 +58,7 @@ type RecordFormProps = {
 /** The fields in a framed card, the failure alert under them, then a footer bar with Cancel and Save. Presentational: the caller owns the state. */
 export function RecordForm({ action, onSubmit, status, pending, submitLabel, cancelHref, children }: RecordFormProps) {
   return (
-    <form action={action} onSubmit={onSubmit} noValidate className="flex max-w-2xl flex-col rounded-panel border border-hairline bg-surface shadow-card">
+    <form action={action} onSubmit={onSubmit} noValidate className="flex flex-col rounded-panel border border-hairline bg-surface shadow-card">
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         {children}
         <FormAlert status={status} />

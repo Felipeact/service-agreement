@@ -9,7 +9,7 @@ type DuplicateAction = (templateId: string) => Promise<DuplicateTemplateState>;
 const ITEM = "flex min-h-11 w-full items-center px-3 text-left text-[13px] font-medium text-ink hover:bg-ground disabled:opacity-50 lg:min-h-9";
 
 /** Saves a copy and opens its editor; a form, so it works by touch (agreement-templates AC 19). `item` is a row of the card menu. */
-export function DuplicateControl({ templateId, action, look = "button" }: { templateId: string; action: DuplicateAction; look?: "item" | "button" }) {
+export function DuplicateControl({ templateId, action, look = "button", className = "w-full" }: { templateId: string; action: DuplicateAction; look?: "item" | "button"; className?: string }) {
   const [state, formAction, pending] = useActionState<DuplicateTemplateState, FormData>(() => action(templateId), { status: "idle" });
   const failed = state.status !== "idle";
   return (
@@ -19,7 +19,7 @@ export function DuplicateControl({ templateId, action, look = "button" }: { temp
           {pending ? "Duplicating…" : "Duplicate"}
         </button>
       ) : (
-        <Button type="submit" disabled={pending} className="w-full">
+        <Button type="submit" disabled={pending} className={className}>
           {pending ? "Duplicating…" : "Duplicate"}
         </Button>
       )}

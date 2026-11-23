@@ -37,21 +37,21 @@ describe("the Templates page", () => {
     expect(html).toContain("Quarterly HVAC");
   });
 
-  test.each(["owner", "admin"] as const)("[C35] a %s sees New template, a menu on each card and Use template", (role) => {
+  test.each(["owner", "admin"] as const)("[C35] a %s sees New template, Edit on each card and Use template", (role) => {
     const html = render(role);
     expect(html).toContain('href="/templates/new"');
-    expect(html.match(/aria-label="Actions for /g)).toHaveLength(2);
+    expect(html.match(/>Duplicate</g)).toHaveLength(2);
     expect(html.match(/Use template/g)).toHaveLength(2);
   });
 
   test("[C35] an estimator has Use template and none of the writer controls; a viewer has neither", () => {
     const estimator = render("estimator");
     expect(estimator.match(/Use template/g)).toHaveLength(2);
-    expect(estimator).not.toContain("Actions for ");
+    expect(estimator).not.toContain(">Duplicate<");
     expect(estimator).not.toContain("New template");
     const viewer = render("viewer");
     expect(viewer).not.toContain("Use template");
-    expect(viewer).not.toContain("Actions for ");
+    expect(viewer).not.toContain(">Duplicate<");
     expect(viewer).toContain("Annual boiler");
   });
 

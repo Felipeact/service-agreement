@@ -14,7 +14,7 @@ type ScopeControlsProps = {
   words?: ItemWords;
 };
 
-const panel = "overflow-hidden rounded-panel border border-hairline bg-surface";
+const panel = "overflow-hidden rounded-panel border border-hairline bg-surface shadow-card";
 const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 
 const unitLabel = (control: ScopeControl) => [control.unitNo ?? "No unit #", control.typeModel, control.location].filter(Boolean).join(" · ");

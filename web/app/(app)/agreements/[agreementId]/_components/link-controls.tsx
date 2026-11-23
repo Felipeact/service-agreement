@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { formatTermDate } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type CompanyProblem, type ItemWords } from "@/domain/org-settings";
 import { linkMessageFor, type LinkState } from "@/components/agreements/state";
@@ -49,11 +50,18 @@ type SendPromptProps = PromptProps & { number: string; recipient?: string | null
 export function SendPrompt({ number, recipient = null, confirming, pending, state, onStart, onCancel, action, words = DEFAULT_ITEM_WORDS }: SendPromptProps) {
   return (
     <div className="flex flex-col gap-2">
-      {confirming ? (
-        <form action={action} className="flex flex-col gap-2">
-          <p className="text-[13px] font-medium text-ink">
-            {recipient ? `Email ${number} to ${recipient}? Its lines, scope and terms are locked.` : `Email ${number} to the customer? Its lines, scope and terms are locked.`}
-          </p>
+      <div>
+        <Button variant="primary" onClick={onStart}>
+          Send to customer
+        </Button>
+      </div>
+      <Modal
+        open={confirming}
+        onClose={() => onCancel?.()}
+        title={recipient ? `Send ${number} to ${recipient}?` : `Send ${number} to the customer?`}
+        sub="It is emailed with your link. Its lines, scope and terms are locked."
+      >
+        <form action={action} className="flex flex-col gap-4">
           {state.status === "needs_confirmation" && (
             <div role="alert" className="flex flex-col gap-1 rounded-control border border-hairline bg-ground px-3 py-2 text-[13px]">
               <p className="font-medium">{itemText(`Not in this agreement: ${state.uncovered.length} equipment ${state.uncovered.length === 1 ? "type has" : "types have"} no service line.`, words)}</p>
@@ -83,20 +91,14 @@ export function SendPrompt({ number, recipient = null, confirming, pending, stat
               />
             </label>
           )}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="submit" variant="primary" disabled={pending}>
               {state.status === "needs_confirmation" || state.status === "needs_start_confirmation" ? "Send anyway" : "Send"}
             </Button>
-            <Button onClick={onCancel}>Cancel</Button>
           </div>
         </form>
-      ) : (
-        <div>
-          <Button variant="primary" onClick={onStart}>
-            Send to customer
-          </Button>
-        </div>
-      )}
+      </Modal>
       <Alert state={state} />
     </div>
   );

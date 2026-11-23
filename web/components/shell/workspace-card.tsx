@@ -1,3 +1,4 @@
+import { ChevronsUpDownIcon } from "lucide-react";
 import { ProductMark } from "@/components/ui/product-mark";
 
 const PRODUCT_NAME = "Service Pacts";
@@ -21,7 +22,7 @@ export function WorkspaceCard({ orgName, planName, markClass = "size-9" }: Works
       <ProductMark className={`${markClass} rounded-xl shadow-md shadow-action/20`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="truncate text-[14px] leading-tight font-bold text-ink">{PRODUCT_NAME}</span>
+          <span className="truncate text-[13px] leading-tight font-bold text-ink">{PRODUCT_NAME}</span>
           {planName && (
             <span className="shrink-0 rounded-full border border-blue-100 bg-action-tint px-2 text-[10px] leading-4 font-semibold text-action-press">
               {planName}
@@ -32,6 +33,7 @@ export function WorkspaceCard({ orgName, planName, markClass = "size-9" }: Works
           {orgName}
         </div>
       </div>
+      <ChevronsUpDownIcon aria-hidden="true" className="size-4 text-ink-2" />
     </div>
   );
 }

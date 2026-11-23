@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AgreementDetail, LinkEmailView, MemberRole } from "@/application/ports";
 import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
+import { buttonClass } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { labelFor, visitSchedule } from "@/domain/agreement";
 import { CONTRACT_STATUS_META } from "@/domain/contract";
@@ -99,40 +100,44 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
   const canGenerate = writer?.generate !== undefined && agreement.status === "accepted" && !agreement.contract;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap gap-x-3 text-[13px]">
-          <Link href={`/customers/${agreement.customer.id}`} className={link}>
-            {agreement.customer.name}
-          </Link>
-          <Link href={`/sites/${agreement.site.id}`} className={link}>
-            {agreement.site.name}
-          </Link>
-          {agreement.renews && (
-            <Link href={`/agreements/${agreement.renews.id}`} className={link}>
-              Renewal of {agreement.renews.number}
-            </Link>
-          )}
-          {agreement.renewedBy && (
-            <Link href={`/agreements/${agreement.renewedBy.id}`} className={link}>
-              Renewed by {agreement.renewedBy.number}
-            </Link>
-          )}
-          {/* A file download, not a page: a plain anchor so the browser saves it. */}
-          <a href={`/agreements/${agreement.id}/pdf?version=${shown.versionNo}`} className={link}>
-            Download PDF
-          </a>
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
+        <Link href="/agreements" className="inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
+          <span aria-hidden="true">←</span> Agreements
+        </Link>
         <PageHeader
           title={agreement.number}
           badge={agreement.stage ? <StatusPill stage={agreement.stage} label={label} /> : <StatusPill tone="neutral" label={label} />}
+          subtitle={
+            <span className="flex flex-wrap gap-x-3">
+              <Link href={`/customers/${agreement.customer.id}`} className={link}>
+                {agreement.customer.name}
+              </Link>
+              <Link href={`/sites/${agreement.site.id}`} className={link}>
+                {agreement.site.name}
+              </Link>
+              {agreement.renews && (
+                <Link href={`/agreements/${agreement.renews.id}`} className={link}>
+                  Renewal of {agreement.renews.number}
+                </Link>
+              )}
+              {agreement.renewedBy && (
+                <Link href={`/agreements/${agreement.renewedBy.id}`} className={link}>
+                  Renewed by {agreement.renewedBy.number}
+                </Link>
+              )}
+            </span>
+          }
           action={
-            canRevise || canWithdraw ? (
-              <div className="flex flex-wrap items-start gap-2.5">
-                {canRevise && <ReviseControl nextVersion={latest + 1} action={writer.revise} />}
-                {canWithdraw && <WithdrawControl number={agreement.number} action={writer.withdraw} />}
-              </div>
-            ) : undefined
+            <div className="flex flex-wrap items-start gap-2.5">
+              <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status, agreement.templateVersionId ?? null])} />
+              {/* A file download, not a page: a plain anchor so the browser saves it. */}
+              <a href={`/agreements/${agreement.id}/pdf?version=${shown.versionNo}`} className={buttonClass("secondary", "")}>
+                Download PDF
+              </a>
+              {canRevise && <ReviseControl nextVersion={latest + 1} action={writer.revise} />}
+              {canWithdraw && <WithdrawControl number={agreement.number} action={writer.withdraw} />}
+            </div>
           }
         />
         <p className="text-[13px] text-ink-2">
@@ -167,13 +172,11 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-4">
-      <AgreementPdfPreview agreementId={agreement.id} versionNo={shown.versionNo} revision={revisionOf([shown.lines, shown.annualCents, agreement.term, agreement.status, agreement.templateVersionId ?? null])} />
 
       {agreement.compare && <VersionCompare fromNo={agreement.compare.versionNo} toNo={shown.versionNo} from={agreement.compare.lines} to={shown.lines} words={words} />}
 
       <TermSection term={agreement.term} action={lineActions?.saveTerm} />
 
-      {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
 
       {skippedCodes.length > 0 && (
         <p role="status" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
@@ -181,7 +184,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         </p>
       )}
 
-      <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface">
+      <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface shadow-card">
         <h2 className="border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">Service lines</h2>
         {shown.lines.length === 0 ? (
           <p className="px-4 py-6 text-center text-[13px] text-ink-2">No service lines yet.</p>
@@ -218,7 +221,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
       </section>
 
       {lineActions && (
-        <section aria-label="Add a line" className="rounded-panel border border-hairline bg-surface px-4 py-3">
+        <section aria-label="Add a line" className="rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
           {agreement.equipmentChoices.length === 0 ? (
             // A line covers at least one equipment type (cadence AC 13), so the site needs some first.
             <p className="text-[13px] text-ink-2">
@@ -278,6 +281,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         />
       )}
 
+      {lineActions && <NoteSection note={agreement.versions.find((version) => version.versionNo === shown.versionNo)?.reason ?? null} action={lineActions.saveNote} />}
       {agreement.timeline && agreement.timeline.length > 0 && <ActivitySection timeline={agreement.timeline} />}
         </aside>
       </div>

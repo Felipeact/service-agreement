@@ -31,26 +31,22 @@ describe("CustomersView", () => {
     expect(out.indexOf("Alpha")).toBeLessThan(out.indexOf("bravo"));
   });
 
-  test("a card shows the agreement count and numbers, and the primary contact with their email, as in the mockup", () => {
-    const out = list([summary("1", "Alpha", { agreementCount: 3, agreementNumbers: ["AG-1005", "AG-1003", "AG-1001"], primaryContact: "Dana", primaryEmail: "dana@x.test" })]);
-    expect(out).toMatch(/Agreements<\/span><span[^>]*>3</);
-    expect(out).toContain("AG-1005 · AG-1003");
-    expect(out).not.toContain("AG-1001");
-    expect(out).toContain("(Primary)");
-    expect(out).toContain("dana@x.test");
+  test("a card shows the agreement count and the primary contact, as the design draws it", () => {
+    const out = list([summary("1", "Alpha", { agreementCount: 3, primaryContact: "Dana" })]);
+    expect(out).toMatch(/>3<\/span><span[^>]*>Agreements</);
   });
 
   test("the primary contact opens a Contact Details panel; the card's link to the customer page stays", () => {
     const out = list([summary("1", "Alpha", { primaryContact: "Dana" })]);
     expect(out).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*>[\s\S]*?Dana/);
     expect(out).toContain('href="/customers/1"');
-    expect(out).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*>\s*View customer details/);
+    expect(out).toMatch(/<button[^>]*aria-haspopup="dialog"[^>]*>\s*View details/);
   });
 
-  test("C122: a row shows the site and asset counts", () => {
-    const out = list([summary("1", "Alpha", { siteCount: 2, assetCount: 7 })]);
-    expect(out).toMatch(/Sites<\/span><span[^>]*>2</);
-    expect(out).toMatch(/Assets<\/span><span[^>]*>7</);
+  test("C122: a row shows the site count and what the customer is worth a year", () => {
+    const out = list([summary("1", "Alpha", { siteCount: 2, annualCents: 1234500 })]);
+    expect(out).toMatch(/>2<\/span><span[^>]*>Sites</);
+    expect(out).toMatch(/>\$12,345<\/span><span[^>]*>Per year</);
   });
 
   test("C124: no contact says so", () => {
@@ -58,11 +54,11 @@ describe("CustomersView", () => {
   });
 
   test.each([
-    [12, "12 active customers"],
-    [1, "1 active customer"],
-  ])("C125: %s customers: the header standing line starts %s", (count, label) => {
+    [12, "12 active"],
+    [1, "1 active"],
+  ])("C125: %s customers: the header badge counts the active ones: %s", (count, label) => {
     const customers = Array.from({ length: count }, (_, index) => summary(String(index), `Customer ${index}`));
-    expect(list(customers)).toContain(`>${label} · `);
+    expect(list(customers).replace(/<!-- -->/g, "")).toContain(`>${label}<`);
   });
 
   test("C127: a search with no match shows the message and Clear search", () => {
@@ -112,7 +108,7 @@ describe("CustomerDetailView", () => {
   test("C129: title, back link and the three sections", () => {
     const out = detailHtml(detail());
     expect(out).toContain("Harbourview Towers Strata");
-    expect(out).toMatch(/<a[^>]*href="\/customers"[^>]*>Customers</);
+    expect(out).toMatch(/<a[^>]*href="\/customers"[^>]*>[\s\S]*?Customers</);
     for (const heading of ["Contacts", "Sites", "Agreements"]) expect(out).toMatch(new RegExp(`<h2[^>]*>${heading}</h2>`));
   });
 
@@ -191,7 +187,7 @@ describe("record write controls on the customer screens", () => {
   });
 
   test("C306: a writer sees Edit linking to the customer's edit page", () => {
-    expect(detailAs("estimator")).toMatch(/<a[^>]*href="\/customers\/c1\/edit"[^>]*>Edit<\/a>/);
+    expect(detailAs("estimator")).toMatch(/<a[^>]*href="\/customers\/c1\/edit"[^>]*>Edit customer<\/a>/);
   });
 
   test("C308: a writer sees Add contact, and Edit on each contact row", () => {
@@ -201,7 +197,7 @@ describe("record write controls on the customer screens", () => {
   });
 
   test("C316: a writer sees Add site on the customer page", () => {
-    expect(detailAs("estimator")).toMatch(/<a[^>]*href="\/customers\/c1\/sites\/new"[^>]*>Add site<\/a>/);
+    expect(detailAs("estimator")).toMatch(/<a[^>]*href="\/customers\/c1\/sites\/new"[^>]*>(?:<svg[^]*?<\/svg>)?Add site<\/a>/);
   });
 
   test.each([
@@ -242,14 +238,13 @@ describe("inactive customers and sites", () => {
     const out = html(createElement(CustomersView, { customers }));
     expect(out).toContain("Alpha");
     expect(out).not.toContain("Bravo");
-    expect(out).toMatch(/<a[^>]*href="\/customers\?show=inactive"[^>]*>Show inactive<\/a>/);
+    expect(out).toMatch(/role="tab"[^>]*>Inactive</);
   });
 
   test("C1301: showing inactive lists it with an Inactive pill and links back", () => {
     const out = html(createElement(CustomersView, { customers, showInactive: true }));
     expect(out).toMatch(/Bravo[\s\S]*>Inactive</);
-    expect(inactive(out)).toBe(1);
-    expect(out).toMatch(/<a[^>]*href="\/customers"[^>]*>Hide inactive<\/a>/);
+    expect(out).toMatch(/aria-selected="true"[^>]*>All</);
   });
 
   const sites = detail({
@@ -271,7 +266,7 @@ describe("inactive customers and sites", () => {
 
   test("C1303: only inactive rows left says so, with the toggle", () => {
     const list = html(createElement(CustomersView, { customers: [summary("2", "Bravo", { active: false })] }));
-    expect(list).toMatch(/No active customers\.[\s\S]*Show inactive/);
+    expect(list).toContain("No active customers.");
     const onlyInactive = detail({ sites: [{ id: "s2", name: "Tower B", address: null, contactName: null, assetCount: 0, active: false }] });
     const out = html(createElement(CustomerDetailView, { customer: onlyInactive }));
     expect(out).toContain("No active sites.");

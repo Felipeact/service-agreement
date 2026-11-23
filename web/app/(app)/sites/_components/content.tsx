@@ -13,8 +13,6 @@ import { EmptyPanel } from "@/components/ui/empty-panel";
 import { Spot } from "@/components/ui/illustrations";
 import { ListPanel, ROW_CLASSES } from "@/components/ui/list-panel";
 import { SearchInput } from "@/components/ui/search-input";
-import { StatCard } from "@/components/ui/stat-card";
-import { BellIcon, FileTextIcon, LayersIcon, MapPinIcon } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { useItemWords } from "@/components/shell/item-words";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -85,22 +83,11 @@ export function SitesListView({ rows, customers, filter }: Props) {
     .filter((row) => (segment === "live" ? Boolean(row.liveAgreement) : segment === "none" ? !row.liveAgreement : true))
     .filter((row) => !needle || [row.name, row.address ?? "", row.customer].some((text) => text.toLowerCase().includes(needle)));
 
-  const assets = rows.reduce((sum, row) => sum + row.assetCount, 0);
-  const live = rows.filter((row) => row.liveAgreement).length;
-  // A site with equipment and no live agreement is ready for one: the next thing to quote.
-  const ready = rows.filter((row) => !row.liveAgreement && row.assetCount > 0).length;
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={`Sites & ${words.plural}`} subtitle={`Every site you maintain, the ${words.plural} on it, and the agreement that covers it.`} />
 
-      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-        <StatCard label="Sites" icon={<MapPinIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : showing ? "Including inactive" : "Active in your workspace"} />
-        <StatCard label="Assets" icon={<LayersIcon />} value={assets.toLocaleString("en-CA")} note="Across these sites" />
-        <StatCard label="Live agreements" icon={<FileTextIcon />} value={String(live)} note="Sites under agreement" />
-        <StatCard label="Ready to quote" icon={<BellIcon />} value={String(ready)} note={`${words.Plural}, no agreement yet`} />
-      </div>
-
+      <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card lg:flex-row lg:items-center lg:justify-between">
         <nav aria-label="Filter by agreement" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:px-0">
           <div className="inline-flex gap-1">
@@ -110,7 +97,7 @@ export function SitesListView({ rows, customers, filter }: Props) {
                 type="button"
                 aria-pressed={segment === item.value}
                 onClick={() => setSegment(item.value)}
-                className={`inline-flex h-11 shrink-0 items-center rounded-[6px] px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
+                className={`inline-flex h-11 shrink-0 items-center rounded-control px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-9 ${
                   segment === item.value ? "bg-action-tint font-semibold text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"
                 }`}
               >
@@ -210,6 +197,7 @@ export function SitesListView({ rows, customers, filter }: Props) {
           ))}
         </ListPanel>
       )}
+      </div>
     </div>
   );
 }

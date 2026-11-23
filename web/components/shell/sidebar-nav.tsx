@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui/icons";
 import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { mainNav, type NavItem } from "./nav-items";
 
-export const ITEM_CLASSES = "flex h-11 items-center gap-3 rounded-xl px-3 font-medium transition-colors duration-150 lg:h-10";
+export const ITEM_CLASSES = "flex h-11 shrink-0 items-center gap-3 rounded-xl px-3 font-medium transition-colors duration-150 lg:h-10";
 
 /** The small count at an item's right edge, e.g. open agreements beside Pipeline. Its number is also in the link's accessible name. */
 function CountBadge({ count, active }: { count: number; active: boolean }) {
@@ -69,7 +69,7 @@ export function SidebarNav({
   const pillId = `nav-pill-${useId()}`;
   return (
     <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col gap-0.5">
-      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {mainNav(words, reports).map((item) => (
         <NavEntry key={item.label} item={item} pathname={pathname} onNavigate={onNavigate} pillId={pillId} count={item.href ? counts[item.href] : undefined} />
       ))}

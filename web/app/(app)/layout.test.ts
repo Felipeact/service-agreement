@@ -57,7 +57,7 @@ describe("(app) layout", () => {
 
   const owner: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Service Pacts", role: "owner" };
 
-  test("the top bar names today and the bell links to the follow-ups with their count", async () => {
+  test("the bell links to the follow-ups with their count", async () => {
     currentMember.mockResolvedValue(owner);
     pipelineBoard.mockResolvedValue([
       { stage: "sent", ageDays: 12 }, // sat past the Sent limit
@@ -66,7 +66,6 @@ describe("(app) layout", () => {
       { stage: "completed", ageDays: 90 }, // closed, never due
     ]);
     const html = await renderLayout();
-    expect(html).toContain("Wednesday, December 1");
     expect(html).toMatch(/<a(?=[^>]*href="\/pipeline\?followups=1")(?=[^>]*aria-label="2 agreements need follow-up")[^>]*>/);
   });
 

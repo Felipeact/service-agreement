@@ -342,7 +342,7 @@ describe("sending an agreement and its customer link", () => {
   test("C901: Send to customer asks first, then submits Send, with a Cancel that does not submit", () => {
     expect(has(sendPrompt(), "Send to customer")).toBe(true);
     const html = sendPrompt({ confirming: true });
-    expect(text(html)).toContain("Email AG-1052 to the customer?");
+    expect(text(html)).toContain("Send AG-1052 to the customer?");
     expect(html).toMatch(/<form[^>]*>.*<button type="submit"[^>]*>Send<\/button>/);
     expect(html).toMatch(/<button type="button"[^>]*>Cancel<\/button>/);
   });
@@ -363,7 +363,7 @@ describe("sending an agreement and its customer link", () => {
 
   test("the sender is asked for the customer's email only when none is on file, and no link is shown", () => {
     const known = sendPrompt({ confirming: true, recipient: "owner@shop.ca" });
-    expect(text(known)).toContain("Email AG-1052 to owner@shop.ca?");
+    expect(text(known)).toContain("Send AG-1052 to owner@shop.ca?");
     expect(known).not.toContain('name="email"');
     const missing = sendPrompt({ confirming: true, recipient: null });
     expect(missing).toContain('name="email"');
@@ -762,15 +762,14 @@ describe("the skipped equipment codes of a template", () => {
 describe("the PDF preview on the agreement page", () => {
   test("it starts closed: a Preview PDF button, no frame and no request until it is asked for", () => {
     const html = renderToStaticMarkup(createElement(AgreementPdfPreview, { agreementId: "a1", versionNo: 2, revision: "x" }));
-    expect(text(html)).toContain("PDF preview");
     expect(text(html)).toContain("Preview PDF");
-    expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("<dialog");
   });
 
   test("every agreement page carries it, beside the existing Download PDF link", () => {
     const html = view(agreement({ status: "draft" }));
-    expect(html).toContain('aria-label="PDF preview"');
+    expect(text(html)).toContain("Preview PDF");
     expect(html).toContain("Download PDF");
   });
 });
@@ -821,9 +820,10 @@ describe("the template on the page", () => {
     const walk = (node: unknown): void => {
       if (Array.isArray(node)) return node.forEach(walk);
       if (typeof node !== "object" || node === null || !("props" in node)) return;
-      const element = node as { type: unknown; props: { children?: unknown; revision?: string } };
+      const element = node as { type: unknown; props: { children?: unknown; action?: unknown; revision?: string } };
       if (element.type === AgreementPdfPreview && typeof element.props.revision === "string") found.push(element.props.revision);
       walk(element.props.children);
+      walk(element.props.action);
     };
     walk(AgreementView({ agreement: a, role: "estimator", actions }));
     expect(found).toHaveLength(1);

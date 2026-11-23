@@ -18,12 +18,13 @@ type PromptProps = {
   action?: (formData: FormData) => void;
   /** `item` is a row of the card menu; `button` stands alone. */
   look?: "item" | "button";
+  className?: string;
 };
 
 const ITEM = "flex min-h-11 w-full items-center px-3 text-left text-[13px] font-medium text-danger hover:bg-ground lg:min-h-9";
 
 /** Two steps, as `RemovePrompt`: Archive only asks, naming the template, and nothing changes until Confirm (agreement-templates AC 20). */
-export function ArchivePrompt({ templateId, name, confirming, pending, state, onStart, onCancel, action, look = "item" }: PromptProps) {
+export function ArchivePrompt({ templateId, name, confirming, pending, state, onStart, onCancel, action, look = "item", className }: PromptProps) {
   const failed = state.status !== "idle" && state.status !== "archived";
   return (
     <div className="flex flex-col gap-2">
@@ -45,7 +46,7 @@ export function ArchivePrompt({ templateId, name, confirming, pending, state, on
         </button>
       ) : (
         <div>
-          <Button onClick={onStart}>Archive</Button>
+          <Button variant="ghost" className={className} onClick={onStart}>Archive</Button>
         </div>
       )}
       {failed && (
@@ -57,7 +58,7 @@ export function ArchivePrompt({ templateId, name, confirming, pending, state, on
   );
 }
 
-export function ArchiveControl({ templateId, name, action, look }: { templateId: string; name: string; action: ArchiveAction; look?: "item" | "button" }) {
+export function ArchiveControl({ templateId, name, action, look, className }: { templateId: string; name: string; action: ArchiveAction; look?: "item" | "button"; className?: string }) {
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState<ArchiveTemplateState, FormData>(() => action(templateId), { status: "idle" });
   return (
@@ -71,6 +72,7 @@ export function ArchiveControl({ templateId, name, action, look }: { templateId:
       onCancel={() => setConfirming(false)}
       action={formAction}
       look={look}
+      className={className}
     />
   );
 }

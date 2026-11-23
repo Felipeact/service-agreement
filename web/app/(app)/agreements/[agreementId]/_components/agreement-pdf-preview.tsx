@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 
 export const PDF_PREVIEW_MESSAGES = {
   drawing: "Drawing the PDF…",
@@ -60,39 +61,32 @@ export function AgreementPdfPreview({ agreementId, versionNo, revision }: Props)
   }, [url]);
 
   return (
-    <section aria-label="PDF preview" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <h2 className="text-[15px] font-semibold tracking-tight">PDF preview</h2>
-        <div role="status" aria-live="polite" className="flex min-h-5 flex-wrap items-center gap-x-3 text-[13px] text-ink-2">
-          {open && status === "drawing" && <span>{PDF_PREVIEW_MESSAGES.drawing}</span>}
-          {open && status === "unavailable" && (
+    <>
+      <Button onClick={() => setOpen(true)} aria-haspopup="dialog">
+        Preview PDF
+      </Button>
+      <Modal open={open} onClose={() => setOpen(false)} title="PDF preview" sub="The agreement as your customer will get it." wide>
+        <div className="flex flex-col gap-3">
+          <div role="status" aria-live="polite" className="flex min-h-5 flex-wrap items-center gap-x-3 text-[13px] text-ink-2">
+            {status === "drawing" && <span>{PDF_PREVIEW_MESSAGES.drawing}</span>}
+            {status === "unavailable" && (
+              <>
+                <span>{PDF_PREVIEW_MESSAGES.unavailable}</span>
+                <Button onClick={() => setAttempt((count) => count + 1)}>Try again</Button>
+              </>
+            )}
+          </div>
+          {url && (
             <>
-              <span>{PDF_PREVIEW_MESSAGES.unavailable}</span>
-              <Button onClick={() => setAttempt((count) => count + 1)}>Try again</Button>
+              <iframe title={`Agreement PDF, version ${versionNo}`} src={`${url}#toolbar=0&view=FitH`} className="hidden h-[60dvh] min-h-[24rem] w-full rounded-control border border-hairline bg-ground md:block" />
+              <p className="text-[13px] text-ink-2 md:hidden">Phones cannot show a PDF on the page. Open it in a new tab to read it.</p>
+              <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[13px] font-medium text-action lg:min-h-0">
+                {PDF_PREVIEW_MESSAGES.newTab}
+              </a>
             </>
           )}
         </div>
-        <div className="sm:ml-auto">
-          <Button
-            variant={open ? undefined : "primary"}
-            onClick={() => {
-              setOpen((was) => !was);
-            }}
-            aria-expanded={open}
-          >
-            {open ? "Hide preview" : "Preview PDF"}
-          </Button>
-        </div>
-      </div>
-      {open && url && (
-        <>
-          <iframe title={`Agreement PDF, version ${versionNo}`} src={`${url}#toolbar=0&view=FitH`} className="hidden h-[75dvh] min-h-[28rem] w-full rounded-control border border-hairline bg-ground md:block" />
-          <p className="text-[13px] text-ink-2 md:hidden">Phones cannot show a PDF on the page. Open it in a new tab to read it.</p>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[13px] font-medium text-action lg:min-h-0">
-            {PDF_PREVIEW_MESSAGES.newTab}
-          </a>
-        </>
-      )}
-    </section>
+      </Modal>
+    </>
   );
 }

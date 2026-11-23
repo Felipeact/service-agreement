@@ -67,15 +67,6 @@ describe("sites list view", () => {
     expect(out.slice(out.search(/<ul class="[^"]*divide-y/))).not.toContain("No live agreement");
   });
 
-  test("C1372: the summary cards count the sites, their assets, the live agreements and the sites ready to quote", () => {
-    const card = (out: string, label: string) => new RegExp(`${label}</p>[\\s\\S]*?text-\\[28px\\][^>]*>([^<]*)<`).exec(out)?.[1];
-    const out = html([row(), row({ id: "s2", assetCount: 5, liveAgreement: { id: "ag1", number: "AG-1", status: "sent" } }), row({ id: "s3", assetCount: 0 })]);
-    expect(card(out, "Sites")).toBe("3");
-    expect(card(out, "Assets")).toBe("8");
-    expect(card(out, "Live agreements")).toBe("1");
-    expect(card(out, "Ready to quote")).toBe("1");
-  });
-
   const types = (n: number) => Array.from({ length: n }, (_, i) => ({ code: `T${i + 1}`, count: n - i }));
 
   test("C1373: up to 3 types show as code and count, a fourth collapses to +1 more", () => {

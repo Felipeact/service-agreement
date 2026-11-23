@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import type { MemberRole, SiteView } from "@/application/ports";
 import type { CreateAgreementState } from "@/components/agreements/state";
 import { ShowInactiveToggle } from "@/components/records/show-inactive";
@@ -12,24 +12,14 @@ import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
 import { LinkButton } from "@/components/ui/link-button";
 import { SearchInput } from "@/components/ui/search-input";
+import { SectionPanel } from "@/components/ui/section-panel";
 import { StatusPill } from "@/components/ui/status-pill";
 import { statusLabel } from "@/domain/agreement";
-import { initialsOf } from "@/lib/initials";
 import { itemVerb } from "@/domain/org-settings";
 import { filterAssets, groupAssets } from "./assets";
 import { NewAgreementControl } from "./new-agreement";
 
 const value = (text: string | null) => text ?? "-";
-
-/** One cell of the site's title block: a small label over a figure. */
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5 px-4 py-3 sm:px-5">
-      <dt className="text-[12px] font-medium text-ink-2">{label}</dt>
-      <dd className="truncate text-[20px] leading-7 font-semibold tracking-tight tabular-nums">{children}</dd>
-    </div>
-  );
-}
 
 type SiteRegisterViewProps = {
   site: SiteView;
@@ -51,6 +41,7 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
   const groups = groupAssets(filterAssets(listed, query));
   const total = site.assets.filter((asset) => asset.active).length;
   const canWrite = role !== undefined && canWriteRecords(role);
+  const GRID_CLASS = canWrite ? "md:grid-cols-[9rem_6rem_minmax(0,2fr)_minmax(0,2fr)_6rem_3rem]" : "md:grid-cols-[9rem_6rem_minmax(0,2fr)_minmax(0,2fr)_6rem]";
   // An inactive site takes no new equipment and starts no agreement (deactivation AC 13).
   const canAdd = canWrite && site.active;
   const toggle = <ShowInactiveToggle href={`/sites/${site.id}`} showing={showInactive} />;
@@ -65,124 +56,118 @@ export function SiteRegisterView({ site, initialQuery = "", role, newAgreement, 
     searchRef.current?.focus();
   }
 
+  const headerActions = canWrite ? (
+    <div className="flex flex-wrap items-start gap-2.5">
+      <LinkButton href={`/sites/${site.id}/edit`}>Edit site</LinkButton>
+      {canAdd && <LinkButton href={`/sites/${site.id}/import`}>{`Import ${words.singular} list`}</LinkButton>}
+      {!site.liveAgreement && canAdd && newAgreement && <NewAgreementControl action={newAgreement} />}
+      {addAsset}
+    </div>
+  ) : undefined;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Link href={`/customers/${site.customerId}`} className="inline-flex min-h-11 items-center text-[13px] font-medium text-action lg:min-h-0">
-          {site.customerName}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
+        <Link href={`/customers/${site.customerId}`} className="inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
+          <span aria-hidden="true">←</span> {site.customerName}
         </Link>
         <PageHeader
           title={site.name}
           badge={
             <span className="flex flex-wrap items-center gap-2">
               {!site.active && <StatusPill tone="neutral" label="Inactive" />}
-              <StatusPill tone="neutral" label={`${total} ${total === 1 ? "asset" : "assets"}`} />
+              {site.liveAgreement && (
+                <Link href={`/agreements/${site.liveAgreement.id}`} className="relative inline-flex h-[22px] items-center rounded-full bg-pill-completed px-2.5 text-[11px] font-semibold text-pill-completed-ink after:absolute after:-inset-y-3 after:inset-x-0 hover:underline">
+                  {`${site.liveAgreement.number} · ${statusLabel(site.liveAgreement.status)}`}
+                </Link>
+              )}
             </span>
           }
-          controls={
-            site.assets.length > 0 ? (
-              <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
-                {listed.length > 0 && (
-                  <SearchInput
-                    ref={searchRef}
-                    label={`Search ${words.plural}`}
-                    placeholder={`Search ${words.plural}…`}
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    className="w-full md:w-60"
-                  />
-                )}
-                {toggle}
-              </div>
-            ) : undefined
-          }
-          action={
-            canWrite ? (
-              <div className="flex flex-wrap gap-2.5">
-                <LinkButton href={`/sites/${site.id}/edit`}>Edit site</LinkButton>
-                {canAdd && <LinkButton href={`/sites/${site.id}/import`}>{`Import ${words.singular} list`}</LinkButton>}
-                {addAsset}
-              </div>
-            ) : undefined
-          }
+          subtitle={`${value(site.address)} · Site contact: ${value(site.contactName)} · Approver: ${value(site.approverName ?? null)}`}
+          action={headerActions}
         />
-        <div className="flex flex-col overflow-hidden rounded-panel border border-hairline bg-surface shadow-card md:flex-row">
-          <div className="flex items-center gap-3 border-b border-hairline bg-action-tint px-4 py-3 text-ink sm:px-5 md:w-56 md:shrink-0 md:border-r md:border-b-0 md:py-4">
-            <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-action text-[15px] font-bold text-surface shadow-md shadow-action/25">
-              {initialsOf(site.name)}
-            </span>
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="text-[12px] text-ink-2">{site.active ? "Active site" : "Inactive site"}</span>
-              <span className="truncate text-[14px] font-semibold">{site.name}</span>
-            </span>
-          </div>
-          <dl className="grid flex-1 grid-cols-3 divide-x divide-hairline">
-            <Fact label={words.Plural}>{total}</Fact>
-            <Fact label="Types">{groupAssets(site.assets.filter((asset) => asset.active)).length}</Fact>
-            <Fact label="Agreement">{site.liveAgreement ? site.liveAgreement.number : "None"}</Fact>
-          </dl>
-        </div>
-        <p className="text-[13px] text-ink-2">
-          {value(site.address)} · Site contact: {value(site.contactName)} · Approver: {value(site.approverName ?? null)}
-        </p>
-        {site.liveAgreement ? (
-          <p className="text-[13px] text-ink-2">
-            Agreement:{" "}
-            <Link href={`/agreements/${site.liveAgreement.id}`} className="inline-flex min-h-11 items-center font-semibold text-action lg:min-h-0">
-              {`${site.liveAgreement.number} · ${statusLabel(site.liveAgreement.status)}`}
-            </Link>
-          </p>
-        ) : (
-          canAdd && newAgreement && <NewAgreementControl action={newAgreement} />
-        )}
       </div>
 
       {site.assets.length === 0 ? (
         <EmptyPanel title={`No ${words.plural} recorded yet`} text={`${words.Plural} ${itemVerb(words, "appears", "appear")} here once ${itemVerb(words, "it is", "they are")} added or imported.`}>
           {addAsset}
         </EmptyPanel>
-      ) : listed.length === 0 ? (
-        <EmptyPanel title="No active assets.">{toggle}</EmptyPanel>
-      ) : groups.length === 0 ? (
-        <EmptyPanel title={`No ${words.plural} ${itemVerb(words, "matches", "match")} "${query}"`}>
-          <Button onClick={clearSearch}>Clear search</Button>
-        </EmptyPanel>
       ) : (
-        groups.map((group) => (
-          <section key={group.code} aria-label={group.heading} className="overflow-hidden rounded-panel border border-hairline bg-surface">
-            <h2 className="flex items-center gap-2 border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">
-              {group.heading}
-              <span className="font-medium text-ink-2">{group.count}</span>
-            </h2>
-            <ul className="divide-y divide-hairline">
-              {group.rows.map((asset) => (
-                <li
-                  key={asset.id}
-                  className={`grid grid-cols-2 gap-x-3 gap-y-1 px-4 py-2.5 md:items-center ${canWrite ? "md:grid-cols-[6rem_minmax(0,2fr)_minmax(0,2fr)_6rem_3rem]" : "md:grid-cols-[6rem_minmax(0,2fr)_minmax(0,2fr)_6rem]"}`}
-                >
-                  <span className="flex flex-wrap items-center gap-2 font-semibold">
-                    {value(asset.unitNo)}
-                    {!asset.active && <StatusPill tone="neutral" label={asset.replacedBy ? `Removed · replaced by ${asset.replacedBy}` : "Removed"} />}
-                  </span>
-                  <span className="col-span-2 text-ink-2 md:col-span-1">{value(asset.typeModel)}</span>
-                  <span className="col-span-2 text-ink-2 md:col-span-1">{value(asset.location)}</span>
-                  <span className="col-start-2 row-start-1 text-right text-ink-2 md:col-start-auto md:row-start-auto md:text-left">
-                    {asset.source === "import" ? "Imported" : "Manual"}
-                  </span>
-                  {canWrite && (
-                    <Link
-                      href={`/assets/${asset.id}/edit`}
-                      aria-label={`Edit ${asset.unitNo ?? group.heading}`}
-                      className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0 md:justify-end"
-                    >
-                      Edit
-                    </Link>
-                  )}
-                </li>
+        <SectionPanel
+          id="site-register"
+          title="Register"
+          note={`${total} ${total === 1 ? "asset" : "assets"}`}
+          flush
+          action={
+            <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+              {listed.length > 0 && (
+                <SearchInput
+                  ref={searchRef}
+                  label={`Search ${words.plural}`}
+                  placeholder={`Search ${words.plural}…`}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="w-full md:w-56"
+                />
+              )}
+              {toggle}
+            </div>
+          }
+        >
+          {listed.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+              <p className="text-[14px] font-semibold">No active assets.</p>
+              {toggle}
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+              <p className="text-[14px] font-semibold">{`No ${words.plural} ${itemVerb(words, "matches", "match")} "${query}"`}</p>
+              <Button onClick={clearSearch}>Clear search</Button>
+            </div>
+          ) : (
+            <>
+              <div aria-hidden="true" className={`hidden h-10 items-center gap-x-3 border-b border-hairline bg-ground/70 px-4 text-[12px] font-semibold text-ink-2 md:grid ${canWrite ? "md:grid-cols-[9rem_6rem_minmax(0,2fr)_minmax(0,2fr)_6rem_3rem]" : "md:grid-cols-[9rem_6rem_minmax(0,2fr)_minmax(0,2fr)_6rem]"}`}>
+                <span>Type</span>
+                <span>Unit</span>
+                <span>Model</span>
+                <span>Location</span>
+                <span>Source</span>
+                {canWrite && <span />}
+              </div>
+              {groups.map((group) => (
+                <section key={group.code} aria-label={group.heading}>
+                  <h2 className="sr-only">
+                    {group.heading}<span className="ml-2">{group.count}</span>
+                  </h2>
+                  <ul className="divide-y divide-hairline border-b border-hairline last:border-b-0">
+                    {group.rows.map((asset) => (
+                      <li
+                        key={asset.id}
+                        className={`grid grid-cols-2 gap-x-3 gap-y-1 px-4 py-3 md:items-center ${GRID_CLASS}`}
+                      >
+                        <span className="col-span-2 text-[12px] font-semibold text-ink-2 md:col-span-1 md:text-[14px] md:font-medium md:text-ink">{group.heading.replace(/^[^-]*-\s*/, "")}</span>
+                        <span className="flex flex-wrap items-center gap-2 font-semibold">
+                          {value(asset.unitNo)}
+                          {!asset.active && <StatusPill tone="neutral" label={asset.replacedBy ? `Removed · replaced by ${asset.replacedBy}` : "Removed"} />}
+                        </span>
+                        <span className="col-span-2 text-ink-nav md:col-span-1">{value(asset.typeModel)}</span>
+                        <span className="col-span-2 text-ink-2 md:col-span-1">{value(asset.location)}</span>
+                        <span className="col-start-2 row-start-2 text-right md:col-start-auto md:row-start-auto md:text-left">
+                          <StatusPill tone={asset.source === "import" ? "attention" : "neutral"} label={asset.source === "import" ? "Imported" : "Manual"} />
+                        </span>
+                        {canWrite && (
+                          <Link href={`/assets/${asset.id}/edit`} aria-label={`Edit ${asset.unitNo ?? group.heading}`} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0 md:justify-end">
+                            Edit
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
-          </section>
-        ))
+            </>
+          )}
+        </SectionPanel>
       )}
     </div>
   );

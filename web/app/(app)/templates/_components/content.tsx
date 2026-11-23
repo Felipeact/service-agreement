@@ -27,9 +27,8 @@ export function TemplatesView({ templates, role, now, actions, dialog, contractW
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Agreement Templates"
-        badge={templates && templates.length > 0 ? <span className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-pill-completed-border bg-pill-completed px-2.5 text-[11px] font-semibold whitespace-nowrap text-pill-completed-ink"><span aria-hidden="true" className="size-1.5 rounded-full bg-stage-completed" />Active Presets</span> : undefined}
-        subtitle={<ItemText>Standardize scope, equipment schedules, and pricing without making every customer agreement feel generic.</ItemText>}
+        title="Agreement templates"
+        subtitle={<ItemText>Layouts your estimators start from. Customers see your logo and colour on every one.</ItemText>}
         action={
           canWrite && (
             <LinkButton href="/templates/new" variant="primary">

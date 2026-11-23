@@ -53,14 +53,6 @@ export function KanbanCard({ card, index = 0 }: { card: PipelineCard; index?: nu
         ) : (
           <span className="text-[12px] text-ink-2">No service lines yet</span>
         )}
-        <span
-          className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-            closed ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700" : card.attention || followUp ? "border-amber-500/20 bg-amber-500/10 text-amber-700" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-          }`}
-        >
-          <span aria-hidden="true" className={`size-1.5 rounded-full ${closed ? "bg-emerald-600" : card.attention || followUp ? "bg-amber-500" : "bg-emerald-500"}`} />
-          {closed ? "Active Contract" : card.attention || followUp ? "Needs Review" : "On Track"}
-        </span>
         <Icon name="chevron" className="size-4 text-ink-2 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-action" />
       </div>
     </Link>

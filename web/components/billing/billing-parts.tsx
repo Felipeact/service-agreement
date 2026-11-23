@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 
 /** The Update card button: disabled and relabelled while the server prepares the card field (billing-page AC 17). */
 export function CardUpdateButton({ pending, onClick }: { pending: boolean; onClick?: () => void }) {
@@ -53,26 +54,21 @@ type CancelPromptProps = {
 
 /** Two steps: the first button only asks, and nothing is cancelled until "Yes, cancel" is pressed (billing-page AC 19, 20). */
 export function CancelPrompt({ confirming, pending, endDate, onStart, onDismiss, onConfirm }: CancelPromptProps) {
-  if (!confirming) {
-    return (
-      <div>
-        <Button variant="secondary" onClick={onStart}>
-          Cancel subscription
-        </Button>
-      </div>
-    );
-  }
   return (
-    <form onSubmit={onConfirm} className="flex flex-col gap-3">
-      <p className="text-[13px] font-medium text-ink">{`Cancel your subscription? Service ends on ${endDate} and you keep access until then.`}</p>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="danger" disabled={pending}>
-          {pending ? "Cancelling…" : "Yes, cancel"}
-        </Button>
-        <Button onClick={onDismiss} disabled={pending}>
-          Keep subscription
-        </Button>
-      </div>
-    </form>
+    <div>
+      <Button variant="danger" onClick={onStart}>
+        Cancel subscription
+      </Button>
+      <Modal open={confirming} onClose={() => onDismiss?.()} title="Cancel your subscription?" sub={`Service ends on ${endDate} and you keep access until then.`}>
+        <form onSubmit={onConfirm} className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button onClick={onDismiss} disabled={pending}>
+            Keep subscription
+          </Button>
+          <Button type="submit" variant="danger" disabled={pending}>
+            {pending ? "Cancelling…" : "Yes, cancel"}
+          </Button>
+        </form>
+      </Modal>
+    </div>
   );
 }

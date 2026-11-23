@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { MemberRow } from "@/application/ports";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { ROLES, ROLE_LABELS } from "@/domain/members";
 import { REMOVE_MESSAGES, SET_ROLE_MESSAGES, type RemoveFormState, type SetRoleFormState } from "./state";
@@ -54,27 +55,22 @@ type PromptProps = {
   action?: (formData: FormData) => void;
 };
 
-/** Two steps, as `DeactivatePrompt`: the first button only asks, and nothing changes until Confirm (members-page AC 32). */
+/** Two steps, as `DeactivatePrompt`: the first button only opens the modal that asks, and nothing changes until Confirm (members-page AC 32). */
 export function RemovePrompt({ member, orgName, confirming, pending, state, onStart, onCancel, action }: PromptProps) {
   return (
     <div className="flex flex-col gap-2">
-      {confirming ? (
-        <form action={action} className="flex flex-col gap-2">
+      <div>
+        <Button onClick={onStart}>Remove</Button>
+      </div>
+      <Modal open={confirming} onClose={() => onCancel?.()} title={`Remove ${member.email}?`} sub={`They lose access to ${orgName} immediately. What they created stays.`}>
+        <form action={action} className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <input type="hidden" name="userId" value={member.userId} />
-          <p className="text-[13px] font-medium text-ink">{`Remove ${member.email}?`}</p>
-          <p className="text-[13px] text-ink-2">{`They lose access to ${orgName} immediately. What they created stays.`}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="danger" disabled={pending}>
-              {pending ? "Removing…" : "Confirm remove"}
-            </Button>
-            <Button onClick={onCancel}>Cancel</Button>
-          </div>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button type="submit" variant="danger" disabled={pending}>
+            {pending ? "Removing…" : "Confirm remove"}
+          </Button>
         </form>
-      ) : (
-        <div>
-          <Button onClick={onStart}>Remove</Button>
-        </div>
-      )}
+      </Modal>
       {state.status !== "idle" && <Outcome ok={state.status === "removed"} message={REMOVE_MESSAGES[state.status]} />}
     </div>
   );

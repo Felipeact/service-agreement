@@ -20,7 +20,7 @@ export function PipelineSummary({ stats, expiring = [] }: { stats: PipelineStats
     <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4">
       <div data-summary="open">
         <StatCard
-          label="Pipeline Value"
+          label="Pipeline value"
           icon={<InfoIcon />}
           value={unpriced ? "Unpriced" : <CountUp value={stats.openCents} format={formatCad} snap={100} />}
           unit={unpriced ? undefined : "CAD"}
@@ -34,7 +34,7 @@ export function PipelineSummary({ stats, expiring = [] }: { stats: PipelineStats
       </div>
       <div data-summary="active">
         <StatCard
-          label="Total Deals Active"
+          label="Total deals active"
           icon={<InfoIcon />}
           value={<CountUp value={stats.openCount} format={formatCount} />}
           unit="total"
@@ -48,7 +48,7 @@ export function PipelineSummary({ stats, expiring = [] }: { stats: PipelineStats
       </div>
       <div data-summary="won">
         <StatCard
-          label="Deals Won (This Month)"
+          label="Deals won (this month)"
           icon={<StarIcon />}
           value={<CountUp value={stats.signedCents} format={formatCad} snap={100} />}
           note={
@@ -61,7 +61,7 @@ export function PipelineSummary({ stats, expiring = [] }: { stats: PipelineStats
       </div>
       <div data-summary="expiring">
         <StatCard
-          label="Expiring Soon"
+          label="Expiring soon"
           icon={<CalendarClockIcon />}
           value={<CountUp value={expiring.length} format={formatCount} />}
           unit="ending"

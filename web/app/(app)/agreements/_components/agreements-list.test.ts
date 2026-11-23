@@ -102,12 +102,12 @@ describe("agreements list", () => {
       row({ id: "d", status: "accepted", annualCents: 400000, updatedAt: "2026-10-30T00:00:00Z" }),
     ];
     const html = renderToStaticMarkup(createElement(AgreementsListView, { rows, filter: {}, role: "estimator", now }));
-    const card = (label: string) => new RegExp(`${label}</p>[\\s\\S]*?text-\\[28px\\][^>]*>([^<]*)<`).exec(html)?.[1];
-    expect(card("Total Agreements")).toBe("4");
-    expect(card("With Customer")).toBe("2");
-    expect(card("Action Required")).toBe("2"); // the sent one that sat 30 days, and the changes request
-    expect(card("Contract Pipeline")).toBe("$7,500"); // every open stage: 1,000 + 2,000 + 500 + 4,000
-    expect(html).toContain("$4,000/yr accepted");
+    const card = (label: string) => new RegExp(`${label}</p>[\\s\\S]*?text-\\[26px\\][^>]*>([^<]*)<`).exec(html)?.[1];
+    expect(card("Active")).toBe("4");
+    expect(card("Accepted per year")).toBeDefined();
+    expect(card("Needs follow-up")).toBe("2"); // the sent one that sat 30 days, and the changes request
+    expect(card("Annual value")).toBe("$7,500"); // every open stage: 1,000 + 2,000 + 500 + 4,000
+    expect(card("Accepted per year")).toBe("$4,000");
   });
 
   test("a row's age turns red once the agreement has sat past its stage's limit", () => {

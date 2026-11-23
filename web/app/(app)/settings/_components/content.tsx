@@ -46,8 +46,8 @@ function SettingsForm({ settings, role, action, billingNav, logoPath = "", prepa
 /** The Settings page body. */
 export function SettingsView(props: SettingsViewProps) {
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Settings" subtitle="Your company profile, the terms new agreements start with, and how renewals work." />
+    <div className="flex max-w-4xl flex-col gap-6">
+      <PageHeader title="Settings" subtitle="Your company, the defaults new agreements start from, and how renewals work." />
       {props.settings && !companyDetailsReady({ legalName: props.settings.legalName, address: props.settings.address, phone: props.settings.phone, confirmedAt: props.settings.companyConfirmedAt ?? null }).ready && (
         <div role="status" className="flex flex-col gap-1 rounded-panel border border-hairline bg-attention-bg px-4 py-3 text-[13px] text-attention-fg">
           <p className="font-semibold">Confirm your company details before you send agreements</p>

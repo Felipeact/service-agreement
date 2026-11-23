@@ -22,7 +22,7 @@ export function Select({ id, label, error, className = "", children, ...props }:
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={cn(FIELD_CLASS, "h-11 lg:h-[34px]", error && "border-danger")}
+        className={cn(FIELD_CLASS, "h-11 lg:h-10", error && "border-danger")}
         {...props}
       >
         {children}

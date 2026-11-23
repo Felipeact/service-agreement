@@ -23,7 +23,7 @@ export function TermSection({ term, action }: TermSectionProps) {
   // Saved is allowed (a renewal can be keyed after the fact); this only says so, and sending asks again.
   const pastStart = action !== undefined && term.start !== null && isStaleStart(term.start, new Date());
   return (
-    <section aria-label="Term" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
+    <section aria-label="Term" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
       <div className="flex flex-col gap-1">
         <h2 className="text-[13px] font-semibold">Term</h2>
         <p data-term className="text-[13px] text-ink-2">

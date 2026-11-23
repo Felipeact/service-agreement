@@ -21,7 +21,7 @@ export function NoteSection({ note, action }: NoteSectionProps) {
   const error = state.status === "invalid" ? state.errors.note : undefined;
   const message = messageFor(state.status);
   return (
-    <section aria-label="Version note" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
+    <section aria-label="Version note" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
       <h2 className="text-[13px] font-semibold">Version note</h2>
       <form action={formAction} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">

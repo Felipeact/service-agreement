@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import type { InvitationRow, MemberRole, MemberRow } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
 import { Icon, type IconName } from "@/components/ui/icons";
-import { StatCard } from "@/components/ui/stat-card";
-import { MailIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { SectionPanel } from "@/components/ui/section-panel";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ROLE_LABELS, isExpired } from "@/domain/members";
@@ -59,17 +57,9 @@ function Rows({ children }: { children: ReactNode }) {
 /** The Members page body: who is in the org, and for owners and admins the invitations and every control (members-page S1-S4). */
 export function MembersView({ members, invitations, currentUserId, role, orgName, now, actions }: Props) {
   const manage = canManageMembers(role);
-  const leaders = members.filter((member) => member.role === "owner" || member.role === "admin").length;
-  const pending = invitations?.length ?? 0;
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex max-w-4xl flex-col gap-6">
       <PageHeader title="Members" subtitle={`Everyone with access to ${orgName}, and what each of them can do.`} />
-
-      <div className={`grid gap-3 lg:gap-4 ${manage && invitations ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"}`}>
-        <StatCard label="Members" icon={<UsersIcon />} value={String(members.length)} note={`In ${orgName}`} />
-        <StatCard label="Owners and admins" icon={<ShieldIcon />} value={String(leaders)} note="Can change settings and people" />
-        {manage && invitations && <StatCard label="Pending invitations" icon={<MailIcon />} value={String(pending)} note="Sent, not yet accepted" />}
-      </div>
 
       {manage && <InviteForm action={actions.invite} />}
 

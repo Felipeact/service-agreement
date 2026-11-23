@@ -26,7 +26,7 @@ export function ImportUploadFields({ state, fileName, onChoose, onSubmit, formRe
   const found = uploadMessage(state);
   const message = found && itemText(found, words);
   return (
-    <form ref={formRef} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
+    <form ref={formRef} onSubmit={onSubmit} noValidate className="flex max-w-xl flex-col gap-3 rounded-panel border border-hairline bg-surface shadow-card p-4">
       <FileDropzone
         id="importFile"
         label={itemText("Equipment list", words)}

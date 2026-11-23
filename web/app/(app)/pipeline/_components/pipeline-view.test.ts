@@ -187,23 +187,23 @@ describe("PipelineView: follow-up", () => {
 
   test("the first card is the open money with the deals in motion, the second the open deals and how many need follow-up", () => {
     const html = render([...stuck(), card({ id: "draft", annualCents: 500000, visitsPerYear: 4 })]);
-    expect(html).toMatch(/Pipeline Value[\s\S]*?\$5,000/);
+    expect(html).toMatch(/Pipeline value[\s\S]*?\$5,000/);
     expect(html).toContain("4 agreements in motion");
-    expect(html).toMatch(/Total Deals Active[\s\S]*?4[\s\S]*?total/);
+    expect(html).toMatch(/Total deals active[\s\S]*?4[\s\S]*?total/);
     expect(html).toMatch(/2 need follow-up/);
   });
 
-  test("the four cards read Pipeline Value, Total Deals Active, Deals Won (This Month) and Expiring Soon", () => {
+  test("the four cards read Pipeline value, Total deals active, Deals won (this month) and Expiring soon", () => {
     const html = render([card()]);
-    for (const label of ["Pipeline Value", "Total Deals Active", "Deals Won (This Month)", "Expiring Soon"]) expect(html).toContain(label);
+    for (const label of ["Pipeline value", "Total deals active", "Deals won (this month)", "Expiring soon"]) expect(html).toContain(label);
   });
 
-  test("the page is titled Sales Pipeline with a Live pill, and the board has a Kanban View and a List View that opens the agreements list", () => {
+  test("the page is titled Sales Pipeline with a Live pill, and the board has a Kanban and a List that opens the agreements list", () => {
     const html = render([card()]);
     expect(html).toMatch(/<h1[^>]*>Sales Pipeline</);
     expect(html).toMatch(/Live CAD<\/span>/);
-    expect(html).toContain("Kanban View");
-    expect(html).toMatch(/<a[^>]*href="\/agreements"[^>]*>[\s\S]*?List View/);
+    expect(html).toContain("Kanban");
+    expect(html).toMatch(/<a[^>]*href="\/agreements"[^>]*>[\s\S]*?List/);
   });
 
   test("the page title is the greeting it is given", () => {
@@ -243,14 +243,13 @@ describe("PipelineView: follow-up", () => {
       ...patch,
     }) as never;
 
-  test("Recent Equipment Imports names the newest lists with how much was recognized, and links to all of them", () => {
+  test("Recent imports names the newest lists with how much was recognized, and links to all of them", () => {
     const html = renderToStaticMarkup(createElement(PipelineView, { cards: [card()], imports: [importJob(), importJob({ id: "j2", originalName: "Riverside.xlsx", status: "uploaded", extraction: undefined })] }));
-    expect(html).toContain("Recent Equipment Imports");
-    expect(html).toContain("Messy contractor CSVs structured into automated priceable asset inventories.");
+    expect(html).toContain("Recent imports");
     expect(html).toContain("Juniper HVAC list.csv");
     expect(html).toContain("Juniper Medical Pavilion · Juniper Health");
     expect(html).toContain("27 of 31 rows recognized");
-    expect(html).toMatch(/<a[^>]*href="\/imports"[^>]*>View all imports →<\/a>/);
+    expect(html).toMatch(/<a[^>]*href="\/imports"[^>]*>All imports<\/a>/);
     // a reviewable list links to its rows, any other to the site's import page
     expect(html).toMatch(/<a[^>]*href="\/imports\/j1"/);
     expect(html).toMatch(/<a[^>]*href="\/sites\/s1\/import"/);
@@ -259,7 +258,7 @@ describe("PipelineView: follow-up", () => {
   test("only the three newest imports are named, and with none the panel is left out", () => {
     const many = ["a", "b", "c", "d", "e"].map((id) => importJob({ id }));
     expect((renderToStaticMarkup(createElement(PipelineView, { cards: [card()], imports: many })).match(/data-import=/g) ?? []).length).toBe(3);
-    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()] }))).not.toContain("Recent Equipment Imports");
+    expect(renderToStaticMarkup(createElement(PipelineView, { cards: [card()] }))).not.toContain("Recent imports");
   });
 
   test("opened from the bell the board starts on the agreements that need follow-up", () => {
@@ -270,7 +269,7 @@ describe("PipelineView: follow-up", () => {
   });
 
   test("the board's toolbar searches deals by site or company, as in the mockup", () => {
-    expect(render([card()])).toContain('placeholder="Search deal name or company..."');
+    expect(render([card()])).toContain('placeholder="Search deal name or company…"');
   });
 
   test("with no agreements there are no summary cards", () => {

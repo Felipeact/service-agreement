@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { AssetTypeOption, ImportReview, ImportRowView } from "@/application/ports";
 import { PageHeader } from "@/components/shell/page-header";
+import { LinkButton } from "@/components/ui/link-button";
+import { SectionPanel } from "@/components/ui/section-panel";
 import { StatusPill } from "@/components/ui/status-pill";
 import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, reviewSummary, unmatchedSpellings, type ReviewFlag, type SiteAssetRef } from "@/domain/imports";
 import { DEFAULT_ITEM_WORDS, itemText, itemVerb, type ItemWords } from "@/domain/org-settings";
@@ -98,16 +100,14 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
     onSite: included.filter((row) => flagsOf(row).some((flag) => flag.kind === "on_site")).length,
     unmatchedGroups: unmatchedSpellings(rows).length,
   });
-  const filter = (active: boolean) => `inline-flex min-h-11 items-center text-[13px] font-medium lg:min-h-0 ${active ? "text-ink" : "text-action"}`;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link href={`/sites/${job.siteId}/import`} className="inline-flex min-h-11 items-center text-[13px] font-medium text-action lg:min-h-0">
-          Back to imports
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
+        <Link href="/imports" className="inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
+          <span aria-hidden="true">←</span> Imports
         </Link>
-        <PageHeader title={job.originalName} badge={<StatusPill tone="neutral" label={open ? "Extracted" : "Added to site"} />} />
-        <p className="text-[13px] text-ink-2">{job.siteName}</p>
+        <PageHeader title={job.originalName} badge={<StatusPill tone="neutral" label={open ? "Extracted" : "Added to site"} />} subtitle={job.siteName} />
       </div>
 
       {agreementId && (
@@ -124,59 +124,58 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
       )}
 
       {job.committed && (
-        <section className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface px-4 py-3">
-          <p className="text-[14px] font-semibold">{committedSummary(job.committed.added, job.committed.skipped)}</p>
-          <Link href={`/sites/${job.siteId}`} className="inline-flex min-h-11 items-center self-start text-[13px] font-medium text-action lg:min-h-0">
-            {`View ${job.siteName}`}
-          </Link>
-        </section>
+        <SectionPanel id="import-committed" title="Added to site" note={committedSummary(job.committed.added, job.committed.skipped)} action={<LinkButton href={`/sites/${job.siteId}`}>{`View ${job.siteName}`}</LinkButton>}>
+          <p className="text-[13px] text-ink-2">The rows below are what went onto the site.</p>
+        </SectionPanel>
       )}
 
       {rows.length === 0 ? (
-        <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">{`No ${words.plural} ${itemVerb(words, "was", "were")} found in this file.`}</p>
+        <p className="rounded-panel border border-hairline bg-surface shadow-card px-4 py-8 text-center text-[13px] text-ink-2">{`No ${words.plural} ${itemVerb(words, "was", "were")} found in this file.`}</p>
       ) : (
         <>
           {writer && (
-            <section aria-label="Where to start" data-review-summary="" className="flex flex-col gap-1 rounded-panel bg-action-tint px-4 py-3">
-              <p className="text-[15px] font-semibold text-ink">{summary.headline}</p>
-              {summary.next && <p className="text-[13px] text-ink">{summary.next}</p>}
-            </section>
-          )}
-
-          {writer && (
-            <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
-              <CommitControl
-                commit={writer.commit}
-                label={addLabel(addable, job.siteName)}
-                siteName={job.siteName}
-                added={addable}
-                blocked={included.length === 0 ? "Include at least one row to add." : addable === 0 ? "Every included row is already on this site." : blocking > 0 ? fixLine(blocking) : null}
-              />
-            </section>
+            <SectionPanel id="import-commit" title={summary.headline} note={summary.next || undefined}>
+              <div data-review-summary="">
+                <CommitControl
+                  commit={writer.commit}
+                  label={addLabel(addable, job.siteName)}
+                  siteName={job.siteName}
+                  added={addable}
+                  blocked={included.length === 0 ? "Include at least one row to add." : addable === 0 ? "Every included row is already on this site." : blocking > 0 ? fixLine(blocking) : null}
+                />
+              </div>
+            </SectionPanel>
           )}
 
           {writer && <MappingSection spellings={spellings} types={types} map={writer.map} suggest={writer.suggest} />}
 
-          <section className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[13px] text-ink">{`${plural(rows.length, "row")} · ${included.length.toLocaleString("en-CA")} included · ${attention.length.toLocaleString("en-CA")} need attention`}</p>
-              <nav aria-label="Filter rows" className="flex gap-4">
-                <Link href={hrefFor(job.id, "all", undefined, agreementId)} aria-current={show === "all" ? "page" : undefined} className={filter(show === "all")}>
-                  All rows
-                </Link>
-                <Link href={hrefFor(job.id, "attention", undefined, agreementId)} aria-current={show === "attention" ? "page" : undefined} className={filter(show === "attention")}>
-                  Needs attention
-                </Link>
+          <SectionPanel
+            id="import-rows"
+            title="Rows"
+            note={`${plural(rows.length, "row")} · ${included.length.toLocaleString("en-CA")} included · ${attention.length.toLocaleString("en-CA")} need attention`}
+            action={
+              <nav aria-label="Filter rows" className="flex gap-1">
+                {([["all", "All rows"], ["attention", "Needs attention"]] as const).map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={hrefFor(job.id, key, undefined, agreementId)}
+                    aria-current={show === key ? "page" : undefined}
+                    className={`inline-flex h-11 items-center rounded-control px-3 text-[13px] font-semibold lg:h-9 ${show === key ? "bg-action-tint text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"}`}
+                  >
+                    {label}
+                  </Link>
+                ))}
               </nav>
-            </div>
-
+            }
+            flush
+          >
             {pageRows.length === 0 ? (
-              <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">Every row is ready to add.</p>
+              <p className="px-4 py-8 text-center text-[13px] text-ink-2">Every row is ready to add.</p>
             ) : (
-              <div className="relative rounded-panel border border-hairline bg-surface md:overflow-x-auto">
+              <div className="relative md:overflow-x-auto">
                 {/* `relative` keeps the `md:sr-only` column labels (absolutely positioned) inside the scroll area. */}
                 <div className="md:min-w-[960px]">
-                  <div aria-hidden="true" className="hidden grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] gap-3 border-b border-hairline px-4 py-2 text-[11px] font-semibold text-ink-2 md:grid">
+                  <div aria-hidden="true" className="hidden grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] gap-3 border-b border-hairline bg-ground/70 px-4 py-2.5 text-[12px] font-semibold text-ink-2 md:grid">
                     {COLUMNS.map((column) => (
                       <span key={column}>{itemText(column, words)}</span>
                     ))}
@@ -216,6 +215,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
                 </div>
               </div>
             )}
+          </SectionPanel>
 
             {pager.pages > 1 && (
               <nav aria-label="Pages" className="flex flex-wrap items-center gap-4 text-[13px]">
@@ -232,7 +232,6 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
                 )}
               </nav>
             )}
-          </section>
         </>
       )}
     </div>

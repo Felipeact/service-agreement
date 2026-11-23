@@ -281,99 +281,29 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
         onClose={reset}
         onCancel={(event) => busy && event.preventDefault()}
         onClick={(event) => event.target === dialogRef.current && !busy && close()}
-        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[min(34rem,calc(100vw-1.5rem))] overflow-y-auto rounded-panel border border-hairline bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
+        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-panel border border-hairline bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
       >
-        <form onSubmit={submit} noValidate className="flex flex-col gap-5 p-5 sm:p-7">
-          <header className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-1">
-              <h2 id="new-agreement-title" className="text-[22px] leading-tight font-semibold tracking-[-0.015em]">
+        <form onSubmit={submit} noValidate className="flex max-h-[calc(100dvh-1.5rem)] flex-col">
+          <header className="flex items-start gap-3 border-b border-hairline px-5 py-4">
+            <div className="mr-auto">
+              <h2 id="new-agreement-title" className="text-[17px] font-bold tracking-tight">
                 New agreement
               </h2>
-              <p className="text-[13px] text-ink-2">{itemText("Start with the customer's equipment list and the service scope is built from what is on site.", words)}</p>
+              <p className="text-[13px] text-ink-2">Pick the customer and site, then bring in what is on site.</p>
             </div>
             <button
               type="button"
               aria-label="Close"
               onClick={close}
               disabled={busy}
-              className="-mt-1 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-ground disabled:opacity-50"
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink disabled:opacity-50 lg:size-8"
             >
-              <Icon name="close" />
+              <Icon name="close" className="size-4" />
             </button>
           </header>
-
-          <div className="flex flex-col gap-2">
-            <div role="tablist" aria-label={itemText("Equipment on site", words)} className="inline-flex gap-1 self-start rounded-control bg-board p-1">
-              {modes.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === option.value}
-                  disabled={busy}
-                  onClick={() => setMode(option.value)}
-                  className={`inline-flex h-11 items-center rounded-[6px] px-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
-                    mode === option.value ? "bg-surface font-semibold text-ink shadow-card" : "text-ink-2 hover:text-ink"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {mode === "upload" && (
-              <FileDropzone
-                id="newAgreementFile"
-                label={itemText("Customer's equipment list (optional)", words)}
-                accept={IMPORT_ACCEPT}
-                hint={FILE_HINT}
-                file={file}
-                sizeLabel={file ? formatFileSize(file.size) : undefined}
-                error={fileError}
-                disabled={busy}
-                onFile={chooseFile}
-              />
-            )}
-            {mode === "pick" && assetTypes && <EquipmentPicker types={assetTypes} picked={picked} onChange={setPicked} disabled={busy} />}
-            {mode === "later" && (
-              <div className="flex flex-col gap-1 rounded-control border border-dashed border-line-strong bg-ground px-4 py-5 text-[13px]">
-                <p className="font-semibold text-ink">{itemText("Skip equipment intake for now", words)}</p>
-                <p className="text-ink-2">{itemText("Start drafting the agreement terms immediately. Once you add or import equipment to the site later, the service lines can be built from what is on site.", words)}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Select
-              id="newAgreementTemplate"
-              label="Template"
-              value={template}
-              disabled={busy}
-              error={errors.templateVersionId}
-              onChange={(event) => {
-                setTemplate(event.target.value);
-                setErrors((current) => ({ ...current, templateVersionId: undefined }));
-                setNotice(null);
-              }}
-            >
-              <option value={STANDARD_CHOICE}>{STANDARD_NAME}</option>
-              {offered.map((option) => (
-                <option key={option.versionId} value={option.versionId}>
-                  {option.name}
-                </option>
-              ))}
-            </Select>
-            {templates === null ? (
-              <p className="text-[12px] text-ink-2">{TEMPLATES_UNAVAILABLE}</p>
-            ) : (
-              <p className="text-[12px] text-ink-2">
-                {chosenTemplate?.description && <span className="block">{chosenTemplate.description}</span>}
-                <span className="block font-medium">{presetLabel(chosenTemplate?.presetLines ?? 0, chosenTemplate?.termMonths ?? null)}</span>
-              </p>
-            )}
-          </div>
-
+          <div className="flex flex-col gap-4 overflow-y-auto px-5 py-4">
           <fieldset disabled={busy} className="flex flex-col gap-4 border-0 p-0">
-            <legend className="pb-1 font-display text-[15px] font-semibold tracking-tight">Who is it for?</legend>
+            <legend className="sr-only">Who is it for?</legend>
             <Select
               id="newAgreementCustomer"
               label="Customer"
@@ -445,6 +375,76 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
             )}
           </fieldset>
 
+          <div className="flex flex-col gap-1.5">
+            <Select
+              id="newAgreementTemplate"
+              label="Template"
+              value={template}
+              disabled={busy}
+              error={errors.templateVersionId}
+              onChange={(event) => {
+                setTemplate(event.target.value);
+                setErrors((current) => ({ ...current, templateVersionId: undefined }));
+                setNotice(null);
+              }}
+            >
+              <option value={STANDARD_CHOICE}>{STANDARD_NAME}</option>
+              {offered.map((option) => (
+                <option key={option.versionId} value={option.versionId}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+            {templates === null ? (
+              <p className="text-[12px] text-ink-2">{TEMPLATES_UNAVAILABLE}</p>
+            ) : (
+              <p className="text-[12px] text-ink-2">
+                {chosenTemplate?.description && <span className="block">{chosenTemplate.description}</span>}
+                <span className="block font-medium">{presetLabel(chosenTemplate?.presetLines ?? 0, chosenTemplate?.termMonths ?? null)}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div role="tablist" aria-label={itemText("Equipment on site", words)} className="relative -mx-1 flex gap-1 overflow-x-auto px-1">
+              {modes.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === option.value}
+                  disabled={busy}
+                  onClick={() => setMode(option.value)}
+                  className={`inline-flex h-11 shrink-0 items-center rounded-control px-3 text-[13px] font-semibold whitespace-nowrap transition-colors duration-150 lg:h-9 ${
+                    mode === option.value ? "bg-action-tint text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {mode === "upload" && (
+              <FileDropzone
+                id="newAgreementFile"
+                label={itemText("Customer's equipment list (optional)", words)}
+                accept={IMPORT_ACCEPT}
+                hint={FILE_HINT}
+                file={file}
+                sizeLabel={file ? formatFileSize(file.size) : undefined}
+                error={fileError}
+                disabled={busy}
+                onFile={chooseFile}
+              />
+            )}
+            {mode === "pick" && assetTypes && <EquipmentPicker types={assetTypes} picked={picked} onChange={setPicked} disabled={busy} />}
+            {mode === "later" && (
+              <div className="flex flex-col gap-1 rounded-control border border-dashed border-line-strong bg-ground px-4 py-5 text-[13px]">
+                <p className="font-semibold text-ink">{itemText("Skip equipment intake for now", words)}</p>
+                <p className="text-ink-2">{itemText("Start drafting the agreement terms immediately. Once you add or import equipment to the site later, the service lines can be built from what is on site.", words)}</p>
+              </div>
+            )}
+          </div>
+
           <div role="status" aria-live="polite" className="min-h-5 text-[13px] text-ink-2">
             <ProgressLine phase={phase} progress={progress} />
           </div>
@@ -459,7 +459,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
             </p>
           )}
 
-          <footer className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+          <footer className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button onClick={close} disabled={busy}>
               Cancel
             </Button>
@@ -467,6 +467,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
               {submitLabel}
             </Button>
           </footer>
+          </div>
         </form>
       </dialog>
     </>

@@ -218,6 +218,8 @@ export type CustomerSummary = {
   siteCount: number;
   /** Active assets on active sites only. */
   assetCount: number;
+  /** What the customer's accepted and completed agreements are worth a year, in cents; 0 when none is priced. */
+  annualCents?: number;
 };
 
 /** What a contact is for: billing (the customer's), or approver / site contact of the named site (contact-roles door 1). */

@@ -29,11 +29,7 @@ describe("shell search entries", () => {
     expect(link).toContain('aria-label="Search"');
     expect(link).toMatch(/class="(?:[^"]*\s)?size-11(?:\s[^"]*)?"/);
     expect(html.indexOf(link)).toBeGreaterThan(html.indexOf("</aside>"));
-    const start = html.indexOf('<div class="sticky top-0 z-10');
-    expect(start).toBeGreaterThan(-1);
-    const topBar = html.slice(start, html.indexOf("</div>", start));
-    expect(tag(topBar, /<div[^>]*>/)).toContain("lg:hidden");
-    expect(topBar).toContain(link);
+    expect(link).toMatch(/class="(?:[^"]*\s)?lg:hidden(?:\s[^"]*)?"/);
     expect(tag(html, /<aside[^>]*>/)).toMatch(/class="[^"]*\bhidden\b[^"]*\blg:block\b/);
   });
 

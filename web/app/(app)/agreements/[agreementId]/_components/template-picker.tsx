@@ -35,7 +35,7 @@ export function TemplatePicker({ name, choices = [], selectedVersionId, change }
   };
 
   return (
-    <section aria-label="Template" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface px-4 py-3">
+    <section aria-label="Template" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
       <p className="text-[13px] text-ink-2">
         {"Template: "}
         <span className="font-medium text-ink">{name}</span>

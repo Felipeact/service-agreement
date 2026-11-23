@@ -5,6 +5,7 @@ import { useActionState, useEffect, useMemo, useState, useTransition, type FormE
 import { useForm, type Resolver, type UseFormRegister } from "react-hook-form";
 import type { AssetTypeOption } from "@/application/ports";
 import { useItemWords } from "@/components/shell/item-words";
+import { SectionPanel } from "@/components/ui/section-panel";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
@@ -277,9 +278,10 @@ export function MappingSection({ spellings, types, map, suggest }: MappingSectio
       setApplied(rows);
     });
   }
+  if (spellings.length === 0 && applied === null) return null;
   return (
-    <section className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface px-4 py-3">
-      {spellings.length > 0 && <h2 className="text-[15px] font-semibold">{itemText("Equipment types not recognised", words)}</h2>}
+    <SectionPanel id="import-mapping" title={spellings.length > 0 ? itemText("Equipment types not recognised", words) : "Types matched"} note="Tell us what each spelling in the file means.">
+      <div className="flex flex-col gap-3">
       {spellings.length > 0 && suggest && (
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={ask} disabled={asking || applyingAll}>
@@ -300,7 +302,8 @@ export function MappingSection({ spellings, types, map, suggest }: MappingSectio
       {spellings.length === 0 && applied !== null && (
         <p role="status" className="text-[13px] text-ink">{itemText(`Applied to ${applied} ${applied === 1 ? "row" : "rows"}. Every equipment type is recognised.`, words)}</p>
       )}
-    </section>
+      </div>
+    </SectionPanel>
   );
 }
 

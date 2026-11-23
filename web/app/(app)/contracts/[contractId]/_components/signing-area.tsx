@@ -187,7 +187,7 @@ export function SigningArea(props: SigningAreaProps) {
 
   if (kind === "none") return null;
   return (
-    <section aria-label="Signature" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface px-4 py-3">
+    <section aria-label="Signature" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
       <h2 className="text-[13px] font-semibold">Signature</h2>
       {kind === "send" && (
         <SendForSignaturePrompt

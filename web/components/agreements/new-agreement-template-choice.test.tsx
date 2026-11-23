@@ -46,11 +46,10 @@ function options(markup: string, id: string) {
 }
 
 describe("the Template choice in the New agreement dialog", () => {
-  test("C5400: a Template select comes above Customer and Site, Standard agreement first and selected, then the templates by name", () => {
+  test("C5400: a Template select comes after Customer and Site, Standard agreement first and selected, then the templates by name", () => {
     const markup = html([QUARTERLY, EMPTY, NO_TERM]);
     expect(markup).toMatch(/<label[^>]*for="newAgreementTemplate"[^>]*>Template</);
-    expect(markup.indexOf('for="newAgreementTemplate"')).toBeLessThan(markup.indexOf('for="newAgreementCustomer"'));
-    expect(markup.indexOf('for="newAgreementTemplate"')).toBeLessThan(markup.indexOf("Who is it for?"));
+    expect(markup.indexOf('for="newAgreementCustomer"')).toBeLessThan(markup.indexOf('for="newAgreementTemplate"'));
     const { texts, selected } = options(markup, "newAgreementTemplate");
     expect(texts).toEqual(["Standard agreement", "Annual plan", "Blank wording", "Quarterly HVAC"]);
     expect(selected).toEqual(["Standard agreement"]);

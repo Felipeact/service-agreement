@@ -5,7 +5,8 @@ import { SEARCH_GROUP_LIMIT, SEARCH_MAX } from "@/domain/records";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { SearchInput } from "@/components/ui/search-input";
+import { SectionPanel } from "@/components/ui/section-panel";
+import { SearchIcon } from "lucide-react";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 
 const ROW = "flex min-h-11 min-w-0 flex-col justify-center gap-0.5 px-4 py-2 hover:bg-ground lg:min-h-0";
@@ -16,18 +17,14 @@ function Group<T extends { id: string }>({ title, group, row }: { title: string;
   if (group.hits.length === 0) return null;
   const id = `search-${title.toLowerCase()}`;
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-2">
-      <h2 id={id} className="flex items-baseline gap-2 text-[13px] font-semibold">
-        {title}
-        <span className="font-normal text-ink-2">{group.hits.length}</span>
-      </h2>
-      <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
+    <SectionPanel id={id} title={title} flush action={<span className="inline-flex h-[22px] items-center rounded-full bg-board px-2.5 text-[11px] font-semibold text-ink-2">{group.hits.length}</span>}>
+      <ul className="divide-y divide-hairline">
         {group.hits.map((hit) => (
           <li key={hit.id}>{row(hit)}</li>
         ))}
       </ul>
-      {group.more && <p className="text-[12px] text-ink-2">{`Showing the first ${SEARCH_GROUP_LIMIT}. Refine your search.`}</p>}
-    </section>
+      {group.more && <p className="border-t border-hairline px-4 py-2 text-[12px] text-ink-2">{`Showing the first ${SEARCH_GROUP_LIMIT}. Refine your search.`}</p>}
+    </SectionPanel>
   );
 }
 
@@ -35,21 +32,33 @@ function Group<T extends { id: string }>({ title, group, row }: { title: string;
 export function SearchView({ query, results, words = DEFAULT_ITEM_WORDS }: { query: string; results: SearchResults | null; words?: ItemWords }) {
   const empty = results !== null && results.customers.hits.length + results.sites.hits.length + results.equipment.hits.length === 0;
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="Search" />
-      <form method="get" action="/search" role="search" className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <SearchInput label="Search" name="q" defaultValue={query} maxLength={SEARCH_MAX} placeholder="Name, address or unit number" className="sm:w-96" />
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Search" subtitle={query && results !== null ? `Results for “${query}”.` : itemText("Customers, sites and equipment, in one box.", words)} />
+      <form method="get" action="/search" role="search" className="flex max-w-2xl flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="relative block flex-1">
+          <span className="sr-only">Search</span>
+          <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-ink-2" />
+          <input
+            type="search"
+            aria-label="Search"
+            name="q"
+            defaultValue={query}
+            maxLength={SEARCH_MAX}
+            placeholder="Name, address or unit number"
+            className="h-11 w-full rounded-control border border-field bg-surface pr-3 pl-11 text-[15px] text-ink shadow-float outline-none transition placeholder:text-ink-2 focus:border-action focus:ring-4 focus:ring-action/15 lg:h-10"
+          />
+        </label>
         <Button type="submit" variant="primary">
           Search
         </Button>
       </form>
 
       {results === null ? (
-        <EmptyPanel title={itemText("Search customers, sites and equipment by name, address or unit number.", words)} />
+        <EmptyPanel title="Start typing" text={itemText("Search customers, sites and equipment by name, address or unit number.", words)} />
       ) : empty ? (
         <EmptyPanel title={`${itemText("No customers, sites or equipment match “", words)}${query}”.`} text="Deactivated records are not searched." />
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           <Group
             title="Customers"
             group={results.customers}

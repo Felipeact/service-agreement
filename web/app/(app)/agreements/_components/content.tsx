@@ -9,7 +9,7 @@ import { canWriteRecords } from "@/components/records/state";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { BellIcon, DownloadIcon, FileTextIcon, MailIcon, TrendingUpIcon } from "lucide-react";
+import { DownloadIcon, FileTextIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icons";
 import { Spot } from "@/components/ui/illustrations";
 import { LinkButton } from "@/components/ui/link-button";
@@ -97,12 +97,14 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
     return sum + (stage && !isClosedStage(stage) ? (row.annualCents ?? 0) : 0);
   }, 0);
   const activeCount = rows.filter((row) => row.status !== "withdrawn" && row.status !== "expired" && row.status !== "refused").length;
+  const acceptedCount = rows.filter((row) => row.status === "accepted").length;
   const wonCents = rows.reduce((sum, row) => sum + (row.status === "accepted" && row.annualCents ? row.annualCents : 0), 0);
 
   // The New agreement control is the dialog launcher the page supplies for writers; there is no page to link to.
   const canCreate = Boolean(role && canWriteRecords(role));
   const newAgreement = canCreate && newAgreementSlot;
 
+  const hasList = rows.length > 0 && shown.length > 0;
   const segments: { key: "all" | StatusFilterValue; label: string; href: string; active: boolean }[] = [
     { key: "all" as const, label: "All", href: agreementsHref({ ...filter, status: undefined }, undefined, filter.expiring), active: !filter.status },
     ...STATUS_FILTER_VALUES.map((value) => ({ key: value, label: FILTER_LABELS[value], href: agreementsHref(filter, value, filter.expiring), active: filter.status === value })),
@@ -110,39 +112,40 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Agreements" badge={<span className="inline-flex h-6 items-center rounded-md border border-hairline bg-board px-2 text-[12px] font-medium text-ink-2">{activeCount} active</span>} subtitle="Lifecycle oversight, commercial milestones, and countersignature statuses." action={
+      <PageHeader title="Agreements" badge={<span className="inline-flex h-[22px] items-center rounded-full bg-action-tint px-2.5 text-[11px] font-semibold whitespace-nowrap text-action-press">{rows.length} total</span>} subtitle="Every agreement, whatever its status." action={
           <>
             {rows.length > 0 && (
               <LinkButton href={agreementsHref(filter, filter.status, filter.expiring).replace("/agreements", "/agreements/export")} prefetch={false} variant="secondary" download>
                 <DownloadIcon aria-hidden="true" className="size-4" />
-                Export
+                Export CSV
               </LinkButton>
             )}
             {newAgreement || undefined}
           </>
         } />
 
-      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4">
-        <StatCard label="Total Agreements" icon={<FileTextIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : "Across all active accounts"} />
-        <StatCard label="With Customer" icon={<MailIcon />} value={String(withCustomer)} indicator={<span className="inline-flex items-center rounded-md bg-board px-2 py-0.5 text-[11px] font-medium text-ink-2">{withCustomer} pending</span>} note="No pending customer action" />
-        <StatCard label="Action Required" icon={<BellIcon />} value={String(needFollowUp)} indicator={<span className="inline-flex items-center rounded-md bg-board px-2 py-0.5 text-[11px] font-medium text-ink-2">{needFollowUp === 0 ? "All on schedule" : `${needFollowUp} overdue`}</span>} note="Changes asked or past SLA" />
-        <StatCard label="Contract Pipeline" icon={<TrendingUpIcon />} value={formatCad(openCents)} unit="ARR" note={`${formatCad(wonCents)}/yr accepted`} />
+      <div className="stagger grid grid-cols-2 gap-3 xl:grid-cols-4 lg:gap-4">
+        <StatCard label="Active" value={String(activeCount)} note={`${withCustomer} pending reply`} />
+        <StatCard label="Annual value" value={formatCad(openCents)} note="ARR across live agreements" />
+        <StatCard label="Needs follow-up" value={String(needFollowUp)} note={needFollowUp === 0 ? "All on schedule" : "Changes asked or past SLA"} />
+        <StatCard label="Accepted per year" value={formatCad(wonCents)} note={`${acceptedCount} ${acceptedCount === 1 ? "agreement" : "agreements"}`} />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card xl:flex-row xl:items-center xl:justify-between">
-        <nav aria-label="Filter by status" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0">
+      <div className="flex flex-col">
+      <div className={`flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card sm:p-4 2xl:flex-row 2xl:items-center 2xl:justify-between ${hasList ? "rounded-b-none shadow-none" : ""}`}>
+        <nav aria-label="Filter by status" className="-mx-4 min-w-0 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0">
           <div className="inline-flex gap-1">
             {segments.map((segment) => (
               <Link
                 key={segment.label}
                 href={segment.href}
                 aria-current={segment.active ? "true" : undefined}
-                className={`inline-flex h-11 shrink-0 items-center rounded-control px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-8 ${
+                className={`inline-flex h-11 shrink-0 items-center rounded-control px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 lg:h-9 ${
                   segment.active ? "bg-action-tint font-semibold text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"
                 }`}
               >
                 {segment.label}
-                {counts?.[segment.key] !== undefined && <span className="ml-1">({counts[segment.key]})</span>}
+                {counts?.[segment.key] !== undefined && <span className={`ml-2 rounded-full px-1.5 text-[11px] ${segment.active ? "bg-blue-100 text-action-press" : "bg-board text-ink-2"}`}>{counts[segment.key]}</span>}
               </Link>
             ))}
           </div>
@@ -187,6 +190,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
         </EmptyPanel>
       ) : (
         <ListPanel
+          joined
           columns={COLUMNS}
           headings={["Agreement & Site", "Customer", "Stage / Status", <span key="value" className="block text-right">Annual Value</span>, "Term End / Age", ""]}
           footer={
@@ -244,6 +248,7 @@ export function AgreementsListView({ rows, filter, role, newAgreement: newAgreem
           })}
         </ListPanel>
       )}
+      </div>
     </div>
   );
 }

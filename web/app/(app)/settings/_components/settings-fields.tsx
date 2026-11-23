@@ -6,10 +6,10 @@ import type { OrgSettingsErrors, OrgSettingsInput } from "@/domain/org-settings"
 import type { UseFormRegister } from "react-hook-form";
 import { PROVINCES } from "@/domain/org-settings";
 import { formatTermDate } from "@/domain/agreement/term";
-import { contrastText, isAccent } from "@/domain/portal";
+import { isAccent } from "@/domain/portal";
+import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { initialsOf } from "@/lib/initials";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
 import { LogoField } from "@/components/settings/logo-field";
@@ -41,6 +41,8 @@ const MESSAGES = {
   unavailable: "We couldn't save your settings. Try again.",
 };
 
+const ACCENT_CHOICES = ["#2563eb", "#0f766e", "#b45309", "#7c3aed", "#be123c"] as const;
+
 const SECTIONS = [
   { id: "company", label: "Company" },
   { id: "terms", label: "Default terms" },
@@ -59,40 +61,16 @@ const SECTION_FIELDS: Record<(typeof SECTIONS)[number]["id"], readonly (keyof Or
   renewal: ["defaultTermMonths", "renewalNoticeDays", "cpiRenegotiationThresholdPct", "renewalCpiPct", "renewalCpiAsOf"],
 };
 
-/** A section of the form: a white card with a heading, a line saying what the section is for, and its fields. */
+/** A section of the form: its fields. The heading and the line under it are for screen readers; the tab already says where you are. */
 function Card({ id, title, text, children, shown }: { id: string; title: string; text: string; children: ReactNode; shown: boolean }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className={`scroll-mt-24 flex-col gap-5 rounded-panel border border-hairline bg-surface p-5 shadow-card sm:p-6 ${shown ? "flex" : "hidden"}`}>
-      <div className="flex flex-col gap-1">
-        <h2 id={`${id}-title`} className="text-[15px] font-semibold tracking-tight">
-          {title}
-        </h2>
-        <p className="text-[13px] text-ink-2">{text}</p>
+    <section id={id} aria-labelledby={`${id}-title`} className={`scroll-mt-24 flex-col gap-5 ${shown ? "flex" : "hidden"}`}>
+      <div className="sr-only">
+        <h2 id={`${id}-title`}>{title}</h2>
+        <p>{text}</p>
       </div>
       {children}
     </section>
-  );
-}
-
-/** How the company will look to a customer: its tile in the accent colour, its name and its contact lines. Follows the form as it is typed. */
-function BrandPreview({ name, accent, address, phone }: { name: string; accent: string; address: string; phone: string }) {
-  const color = isAccent(accent.trim()) ? accent.trim() : null;
-  return (
-    <div className="flex items-center gap-4 rounded-control bg-ground p-4">
-      <span
-        aria-hidden="true"
-        data-brand-tile
-        style={color ? { backgroundColor: color, color: contrastText(color) } : undefined}
-        className={`inline-flex size-14 shrink-0 items-center justify-center rounded-panel font-display text-[20px] font-semibold ${color ? "" : "bg-board text-ink-2"}`}
-      >
-        {initialsOf(name || "Your company")}
-      </span>
-      <div className="flex min-w-0 flex-col">
-        <span className="truncate text-[15px] font-semibold tracking-tight">{name.trim() || "Your company"}</span>
-        <span className="truncate text-[12px] text-ink-2">{[address.trim(), phone.trim()].filter(Boolean).join(" · ") || "Address and phone appear here"}</span>
-        <span className="pt-1 text-[12px] text-ink-2">How customers see you on the review page, agreements and emails.</span>
-      </div>
-    </div>
   );
 }
 
@@ -110,6 +88,15 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
 
   const [brand, setBrand] = useState({ name: values.legalName, accent: values.accentColor, address: values.address, phone: values.phone });
 
+  /** Sets the hidden hex field the form saves, the way typing in it would. */
+  function chooseAccent(color: string) {
+    const input = document.getElementById("accentColor") as HTMLInputElement | null;
+    if (!input) return;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, color);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    setBrand((was) => ({ ...was, accent: color }));
+  }
+
   function onInput(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
     const read = (name: string) => String(data.get(name) ?? "");
@@ -121,7 +108,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
   );
 
   return (
-    <form action={action} onSubmit={onSubmit} onInput={onInput} noValidate className="flex flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} onInput={onInput} noValidate className="flex flex-col gap-6">
       <nav aria-label="Settings sections" className="relative -mx-4 flex items-center gap-1 overflow-x-auto px-4 md:mx-0 md:px-0">
         {SECTIONS.map((section) => (
           <a key={section.id} href={`#${section.id}`} onClick={(event) => choose(section.id, event)} className={menuClass(active === section.id)} aria-current={active === section.id ? "location" : undefined}>
@@ -146,30 +133,49 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
         )}
       </nav>
 
-      <div className="flex max-w-3xl flex-col gap-5">
+      <div className="flex flex-col rounded-panel border border-hairline bg-surface shadow-card">
+      <div className="flex flex-col gap-5 p-5 sm:p-6">
         <Card shown={active === "company"} id="company" title="Company" text="Your legal details and the colour customers see on their agreements.">
           <LogoField key={values.logoPath ?? ""} storedPath={values.logoPath ?? ""} readOnly={readOnly} prepare={prepareLogo} onUploadingChange={setUploading} serverError={errors.logoPath} />
-          <BrandPreview {...brand} />
           <div className="grid gap-4 sm:grid-cols-2">
             {text("legalName", "Legal name")}
             {text("phone", "Phone", { inputMode: "tel" })}
             <div className="sm:col-span-2">{text("address", "Address")}</div>
-            {text("itemSingular", "Item, singular")}
-            {text("itemPlural", "Item, plural")}
-            <p className="text-[13px] text-ink-2 sm:col-span-2">
-              What you call the things you service, as customers read it: &ldquo;station&rdquo; and &ldquo;stations&rdquo;, or &ldquo;equipment&rdquo; for both.
-            </p>
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-end gap-2">
-                <div className="min-w-0 flex-1">{text("accentColor", "Accent colour")}</div>
-                <span
-                  aria-hidden="true"
-                  data-accent-swatch
-                  style={isAccent(brand.accent.trim()) ? { backgroundColor: brand.accent.trim() } : undefined}
-                  className="mb-0 size-11 shrink-0 rounded-control border border-field bg-board lg:size-[34px]"
-                />
-              </div>
+              {text("itemSingular", "Item, singular")}
+              <p className="text-[12px] text-ink-2">What you call one thing you service, as customers read it: &ldquo;station&rdquo;, or &ldquo;equipment&rdquo; for both.</p>
             </div>
+            {text("itemPlural", "Item, plural")}
+            <fieldset className="flex flex-col gap-2 sm:col-span-2">
+              <legend className="mb-2 text-[13px] font-medium">Accent colour</legend>
+              <div className="flex flex-wrap gap-2">
+                {ACCENT_CHOICES.map((color) => {
+                  const picked = brand.accent.trim().toLowerCase() === color;
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      disabled={readOnly}
+                      aria-pressed={picked}
+                      aria-label={`Accent colour ${color}`}
+                      onClick={() => chooseAccent(color)}
+                      style={{ background: color }}
+                      className="flex size-11 items-center justify-center rounded-full ring-2 ring-transparent transition-shadow aria-pressed:ring-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action disabled:opacity-60"
+                    >
+                      {picked && <CheckIcon aria-hidden="true" className="size-5 text-surface" />}
+                    </button>
+                  );
+                })}
+                {isAccent(brand.accent.trim()) && !ACCENT_CHOICES.includes(brand.accent.trim().toLowerCase() as (typeof ACCENT_CHOICES)[number]) && (
+                  <span aria-hidden="true" data-accent-swatch style={{ background: brand.accent.trim() }} className="flex size-11 items-center justify-center rounded-full ring-2 ring-ink">
+                    <CheckIcon className="size-5 text-surface" />
+                  </span>
+                )}
+              </div>
+              <div className="sr-only">{text("accentColor", "Accent colour")}</div>
+              {errors.accentColor && <p className="text-[12px] font-medium text-danger">{errors.accentColor}</p>}
+              <p className="text-[12px] text-ink-2">Customers see this colour on the review page, signing page and PDF.</p>
+            </fieldset>
           </div>
         </Card>
 
@@ -231,23 +237,24 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
           )}
         </Card>
 
+      </div>
         {readOnly ? (
-          <p className="rounded-control bg-board px-4 py-3 text-[13px] text-ink-2">Only owners and admins can edit company settings.</p>
+          <p className="border-t border-hairline bg-ground/60 px-5 py-4 text-[13px] text-ink-2 sm:px-6">Only owners and admins can edit company settings.</p>
         ) : (
-          <div className="sticky bottom-4 z-[5] flex w-fit max-w-full flex-wrap items-center gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-lift">
-            <Button type="submit" variant="primary" disabled={pending || uploading}>
-              {pending ? "Saving…" : uploading ? "Uploading logo" : "Save changes"}
-            </Button>
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-hairline bg-ground/60 px-5 py-4 sm:px-6">
             {state.status === "saved" && (
-              <p role="status" className="text-[13px] font-medium text-ink">
+              <p role="status" className="mr-auto text-[13px] font-medium text-ink">
                 Settings saved
               </p>
             )}
             {(state.status === "forbidden" || state.status === "unavailable") && (
-              <p role="alert" className="text-[13px] font-medium text-danger">
+              <p role="alert" className="mr-auto text-[13px] font-medium text-danger">
                 {MESSAGES[state.status]}
               </p>
             )}
+            <Button type="submit" variant="primary" disabled={pending || uploading}>
+              {pending ? "Saving…" : uploading ? "Uploading logo" : "Save changes"}
+            </Button>
           </div>
         )}
       </div>

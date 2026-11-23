@@ -72,7 +72,7 @@ describe("the contract view", () => {
     expect(out).toContain("Term: Jan 1, 2027 – Dec 31, 2027 · 12 months");
     expect(out).toContain("Total per year $1,800.00");
     expect(out).toContain("Before tax");
-    expect(html).toMatch(/<a[^>]*href="\/agreements\/agr-1"[^>]*>[^<]*<\/a>/);
+    expect(html).toMatch(/<a[^>]*href="\/agreements\/agr-1"[^>]*>[\s\S]*?<\/a>/);
     expect(html).toMatch(/<a[^>]*href="\/contracts\/con-1\/pdf"[^>]*>Download PDF<\/a>/);
   });
 

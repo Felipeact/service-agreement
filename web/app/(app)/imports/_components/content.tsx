@@ -1,16 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ImportHistoryRow } from "@/application/ports";
-import { formatFileSize, IMPORT_STATUS_FILTERS, type ImportFilter } from "@/domain/imports";
+import { IMPORT_STATUS_FILTERS, type ImportFilter } from "@/domain/imports";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { Icon } from "@/components/ui/icons";
 import { Spot } from "@/components/ui/illustrations";
 import { FilterChips, type Chip } from "@/components/ui/list-panel";
 import { Select } from "@/components/ui/select";
-import { StatCard } from "@/components/ui/stat-card";
-import { CheckCircle2Icon, FileUpIcon, TriangleAlertIcon } from "lucide-react";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { ATTENTION, date, outcomeLine, REVIEWABLE, STATUS_LABELS } from "@/components/imports/job-list";
@@ -49,25 +46,14 @@ function importsHref(filter: ImportFilter, status?: ImportFilter["status"]): str
 /** The Imports page body: header with a count, the filters, then one row per import job (imports-page S1, S2). */
 export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT_ITEM_WORDS }: Props) {
   const filtered = Boolean(filter.status || filter.siteId);
-  const attention = rows.filter((job) => ATTENTION.has(job.status)).length;
-  const added = rows.filter((job) => job.status === "committed").length;
-  const standing = [`${rows.length} ${rows.length === 1 ? "import" : "imports"}`, attention > 0 ? `${attention} need attention` : null].filter(Boolean).join(" · ");
   const chips: Chip[] = [
     { label: "All", href: importsHref(filter), active: !filter.status },
     ...IMPORT_STATUS_FILTERS.map((status): Chip => ({ label: FILTER_LABELS[status], href: importsHref(filter, status), active: filter.status === status })),
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="Imports" subtitle={rows.length > 0 ? standing : "Turn inconsistent spreadsheets and PDFs into clean, priceable asset schedules."} />
-
-      {rows.length > 0 && (
-        <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-3 lg:gap-4">
-          <StatCard label="Imports" icon={<FileUpIcon />} value={String(rows.length)} note={filtered ? "Matching this view" : "Lists uploaded to sites"} />
-          <StatCard label="Need attention" icon={<TriangleAlertIcon />} value={String(attention)} note={attention === 0 ? "Nothing waiting on a person" : "Open them to review the rows"} />
-          <StatCard label="Added to sites" icon={<CheckCircle2Icon />} value={String(added)} note="Reviewed and committed" />
-        </div>
-      )}
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Imports" subtitle="Every list you have brought in, and how much of it we recognized." />
 
       {banner}
 
@@ -104,7 +90,7 @@ export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT
           </EmptyPanel>
         )
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((job) => {
             const found0 = outcomeLine(job);
             const line = found0 && itemText(found0, words);
@@ -115,14 +101,13 @@ export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT
               ? { href: `/imports/${job.id}`, label: "Review rows" }
               : { href: `/sites/${job.site.id}/import`, label: "Open on site" };
             return (
-              <li key={job.id} className="overflow-hidden rounded-panel border border-hairline bg-surface shadow-card">
-                <div className="flex flex-wrap items-start gap-3 p-4 sm:flex-nowrap sm:items-center">
-                  <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-board text-ink-2">
-                    <Icon name="file" />
-                  </span>
-                  <div className="flex min-w-[12rem] flex-1 flex-col">
-                    <p className="text-[14px] font-semibold break-all">{job.originalName}</p>
-                    <p className="flex flex-wrap items-center gap-x-1 text-[12px] text-ink-2">
+              <li key={job.id} className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-5 shadow-card">
+                <div className="flex items-start gap-2">
+                  <div className="mr-auto min-w-0">
+                    <Link href={link.href} aria-label={`${link.label}: ${job.originalName}`} className="flex min-h-11 max-w-full items-center truncate text-[15px] font-semibold text-ink hover:text-action lg:min-h-0">
+                      {job.originalName}
+                    </Link>
+                    <p className="flex min-w-0 items-center gap-x-1 overflow-hidden text-[12px] whitespace-nowrap text-ink-2">
                       <Link href={`/sites/${job.site.id}`} className={LINK}>
                         {job.site.name}
                       </Link>
@@ -131,38 +116,25 @@ export function ImportHistoryView({ rows, sites, filter, banner, words = DEFAULT
                         {job.customer.name}
                       </Link>
                       <span aria-hidden="true">·</span>
-                      <span>{`${formatFileSize(job.sizeBytes)} · ${job.uploadedBy ?? "Former member"} · ${date.format(job.createdAt)}`}</span>
+                      <span className="truncate">{`${job.uploadedBy ?? "Former member"} · ${date.format(job.createdAt)}`}</span>
                     </p>
                   </div>
-                  <span className="ml-14 sm:ml-0">
-                    <StatusPill tone={ATTENTION.has(job.status) ? "attention" : "neutral"} label={STATUS_LABELS[job.status]} />
-                  </span>
+                  <StatusPill {...(ATTENTION.has(job.status) ? { tone: "attention" as const } : job.status === "committed" ? { stage: "completed" as const, filled: true } : { tone: "neutral" as const })} label={STATUS_LABELS[job.status]} />
                 </div>
-                <div className="flex flex-col gap-3 border-t border-hairline p-4 sm:flex-row sm:items-center sm:gap-6">
-                  {found ? (
-                    <>
-                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <span className="text-[12px] text-ink-2">Recognition</span>
-                        <span className="flex items-center gap-3">
-                          <span role="img" aria-label={`${percent}% of rows recognized`} className="h-2 flex-1 overflow-hidden rounded-full bg-board">
-                            <span className="block h-full rounded-full bg-action" style={{ width: `${percent}%` }} />
-                          </span>
-                          <span className="text-[12px] font-semibold">{percent}%</span>
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-0.5 sm:w-52">
-                        <span className="text-[12px] text-ink-2">Rows</span>
-                        <span className="text-[13px] font-semibold text-ink">{`${recognized} recognized · ${found.unmatched} flagged`}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="min-w-0 flex-1 text-[13px] text-ink-2">{line ?? "Not read yet"}</p>
-                  )}
-                  <Link href={link.href} className={`${LINK} shrink-0 gap-1 text-[13px] font-semibold`}>
-                    {link.label}
-                    <Icon name="chevron" className="size-3.5" />
-                  </Link>
-                </div>
+                {found ? (
+                  <div>
+                    <div className="flex justify-between text-[12px] text-ink-nav">
+                      <span>Recognition</span>
+                      <span className="font-semibold">{`${recognized} of ${found.rows} rows`}</span>
+                    </div>
+                    <span role="img" aria-label={`${percent}% of rows recognized`} className="mt-1.5 block h-2 overflow-hidden rounded-full bg-board">
+                      <span className="block h-full rounded-full bg-stage-completed" style={{ width: `${percent}%` }} />
+                    </span>
+                    <p className="sr-only">{`${recognized} recognized · ${found.unmatched} flagged`}</p>
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-ink-2">{line ?? "Not read yet"}</p>
+                )}
               </li>
             );
           })}

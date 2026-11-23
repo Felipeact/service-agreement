@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { messageFor, type MoveState } from "@/components/agreements/state";
 
 function Alert({ state }: { state: MoveState }) {
@@ -24,25 +25,21 @@ type WithdrawPromptProps = {
   action?: () => void;
 };
 
-/** Two steps: "Withdraw" asks first and says what withdrawing does. */
+/** Two steps: "Withdraw" opens a modal that says what withdrawing does and asks first. */
 export function WithdrawPrompt({ number, confirming, pending, state, onStart, onCancel, action }: WithdrawPromptProps) {
   return (
     <div className="flex flex-col gap-2">
-      {confirming ? (
-        <form action={action} className="flex flex-col gap-2">
-          <p className="text-[13px] font-medium text-ink">{`Withdraw ${number}? It leaves the pipeline and frees the site for a new agreement.`}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="danger" disabled={pending}>
-              Withdraw
-            </Button>
-            <Button onClick={onCancel}>Cancel</Button>
-          </div>
+      <div>
+        <Button onClick={onStart}>Withdraw</Button>
+      </div>
+      <Modal open={confirming} onClose={() => onCancel?.()} title={`Withdraw ${number}?`} sub="It leaves the pipeline and frees the site for a new agreement.">
+        <form action={action} className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button type="submit" variant="danger" disabled={pending}>
+            Withdraw
+          </Button>
         </form>
-      ) : (
-        <div>
-          <Button onClick={onStart}>Withdraw</Button>
-        </div>
-      )}
+      </Modal>
       <Alert state={state} />
     </div>
   );

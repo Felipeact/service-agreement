@@ -50,7 +50,7 @@ const job = (patch: Partial<ImportJobView> = {}): ImportJobView => ({
 describe("staff screens, item words", () => {
   test("C2012: the Sites page names the item in its title, subtitle, note, column and empty cell", () => {
     const out = asStations(createElement(SitesListView, { rows: [siteRow({ equipment: [], assetCount: 0 }), siteRow({ id: "s2" })], customers, filter: {} }));
-    for (const text of ["Sites &amp; stations", "the stations on it", "Stations, no agreement yet", "No stations"]) expect(out).toContain(text);
+    for (const text of ["Sites &amp; stations", "the stations on it", "No stations"]) expect(out).toContain(text);
     expect(out).toContain(">Stations<");
     noEquipment(out);
     noEquipment(asStations(createElement(SitesListView, { rows: [], customers, filter: { q: "zzz" } })));
@@ -93,7 +93,7 @@ describe("staff screens, item words", () => {
       })),
     ];
     const joined = parts.join("\n");
-    for (const text of ["Drop a customer station list here", "Choose a station list", "import station lists", "Extract stations", "This document lists more stations than", "Station types not recognised", "Station type", "Choose a station type", "No station lists imported yet", "need a station type", "Station lists you upload", "Finish reading the station list", "Import station list", "No stations were found in this file."]) {
+    for (const text of ["station list</p>", "Choose a station list", "import station lists", "Extract stations", "This document lists more stations than", "Station types not recognised", "Station type", "Choose a station type", "No station lists imported yet", "need a station type", "Station lists you upload", "Finish reading the station list", "Import station list", "No stations were found in this file."]) {
       expect(joined, text).toContain(text);
     }
     noEquipment(joined);
@@ -101,7 +101,6 @@ describe("staff screens, item words", () => {
 
   test("C2015: the New agreement dialog names the item in its intro and its file field", () => {
     const dialog = asStations(createElement(NewAgreementDialog, { customers: [], sites: [], templates: [], actions: { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() } } as unknown as Parameters<typeof NewAgreementDialog>[0]));
-    expect(dialog).toContain("Start with the customer's station list");
     expect(dialog).toContain("Customer's station list (optional)");
     noEquipment(dialog);
   });
@@ -127,7 +126,7 @@ describe("staff screens, item words", () => {
     const imports: ImportHistoryRow[] = [{ ...job(), site: { id: "s1", name: "Harbourview Towers" }, customer: { id: "c1", name: "Harbourview Strata" } }];
     const out = asStations(createElement(PipelineView, { cards: [], imports }));
     expect(out).toContain("from stations intake to signed contract");
-    expect(out).toContain("Recent Station Imports");
+    expect(out).toContain("Recent imports");
     noEquipment(out);
   });
 

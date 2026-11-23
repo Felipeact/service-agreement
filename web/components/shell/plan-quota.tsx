@@ -38,7 +38,7 @@ export function PlanQuota({ planName, used, limit, canManage }: PlanQuotaFigure)
       <div className="mt-2 flex items-center justify-between text-[12px] text-blue-100">
         <span>{planName} plan</span>
         {canManage && (
-          <Link href={BILLING_HREF} className="inline-flex min-h-11 items-center font-semibold text-surface underline-offset-2 hover:underline lg:min-h-0">
+          <Link href={BILLING_HREF} className="inline-flex min-h-11 min-w-11 items-center justify-center font-semibold text-surface underline-offset-2 hover:underline lg:min-h-0">
             Manage
           </Link>
         )}

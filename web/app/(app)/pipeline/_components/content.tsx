@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ImportHistoryRow, PipelineCard } from "@/application/ports";
-import { FilterIcon, LayoutGridIcon, ListIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { LayoutGridIcon, ListIcon, SearchIcon, SparklesIcon } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/ui/empty-panel";
-import { Select } from "@/components/ui/select";
 import { RooftopScene, Spot } from "@/components/ui/illustrations";
 import { FOLLOW_UP_AFTER_DAYS, needsFollowUp, sortForColumn, type ExpiringAgreement } from "@/domain/pipeline";
 import { PIPELINE_STAGES, STAGE_META, type PipelineStage } from "@/lib/pipeline-stage";
@@ -156,50 +155,50 @@ export function PipelineView({ cards, title = "Sales Pipeline", canCreate = fals
               Deal pipeline
             </h2>
             <div className="flex flex-wrap items-end gap-x-2.5 gap-y-3 rounded-panel border border-hairline bg-surface p-3 shadow-card">
-              <div className="relative w-full sm:w-[240px]">
+              <label className="relative block w-full sm:w-60">
+                <span className="sr-only">Search deal name or company</span>
                 <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-ink-2" />
                 <input
                   type="search"
-                  aria-label="Search deal name or company"
-                  placeholder="Search deal name or company..."
+                  placeholder="Search deal name or company…"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  className="h-11 w-full rounded-control border border-field bg-surface pr-3 pl-8 text-[12px] text-ink placeholder:text-ink-2 focus:border-action focus:ring-1 focus:ring-action focus:outline-none lg:h-[34px]"
+                  className="h-11 w-full rounded-control border border-field bg-surface pr-3 pl-8 text-[13px] text-ink placeholder:text-ink-2 focus:border-action focus:ring-1 focus:ring-action focus:outline-none lg:h-10"
                 />
-              </div>
+              </label>
               <button
                 type="button"
                 data-summary="follow-ups"
                 aria-pressed={followUpOnly}
                 onClick={() => setFollowUpOnly((on) => !on)}
                 title={FOLLOW_UP_RULE}
-                className="inline-flex h-11 items-center gap-2 rounded-control border border-hairline bg-surface px-3 text-[13px] font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-line-strong hover:bg-ground aria-pressed:border-action aria-pressed:bg-action-tint aria-pressed:text-action lg:h-[38px]"
+                className="inline-flex h-11 items-center gap-2 rounded-control border border-hairline bg-surface px-3 text-[13px] font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-line-strong aria-pressed:border-action aria-pressed:bg-action-tint aria-pressed:text-action-press lg:h-10"
               >
-                <FilterIcon className="size-4" aria-hidden="true" />
                 Follow-ups due
-                <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] leading-none font-semibold ${stats.followUpCount > 0 ? "bg-attention-bg text-attention-fg" : "bg-board text-ink-2"}`}>
-                  {stats.followUpCount}
-                </span>
+                <span className={`rounded-full px-1.5 text-[11px] ${stats.followUpCount > 0 ? "bg-attention-bg text-attention-fg" : "bg-board text-ink-2"}`}>{stats.followUpCount}</span>
               </button>
-              <Select id="board-age" label="Time in stage" value={minAge} onChange={(event) => setMinAge(Number(event.target.value))} className="w-40">
-                {AGE_CHOICES.map((choice) => (
-                  <option key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </option>
-                ))}
-              </Select>
-              <p className="pb-2.5 text-[12px] text-ink-2 max-lg:hidden">Press j and k to move between cards.</p>
-              <div className="ml-auto flex flex-col items-end gap-1">
-                <div className="inline-flex rounded-control bg-board p-0.5 text-[13px] font-semibold">
-                  <span aria-current="true" className="inline-flex h-11 items-center gap-1.5 rounded-control bg-surface px-3 text-action shadow-card lg:h-8">
-                    <LayoutGridIcon className="size-4" aria-hidden="true" />
-                    Kanban View
-                  </span>
-                  <Link href="/agreements" className="inline-flex h-11 items-center gap-1.5 rounded-control px-3 text-ink-2 transition-colors duration-150 hover:text-ink lg:h-8">
-                    <ListIcon className="size-4" aria-hidden="true" />
-                    List View
-                  </Link>
-                </div>
+              <label className="flex flex-col gap-1">
+                <span className="sr-only">Time in stage</span>
+                <select id="board-age" value={minAge} onChange={(event) => setMinAge(Number(event.target.value))} className="h-11 w-40 rounded-control border border-field bg-surface px-3 text-[13px] text-ink lg:h-10">
+                  {AGE_CHOICES.map((choice) => (
+                    <option key={choice.value} value={choice.value}>
+                      {choice.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="sr-only">Press j and k to move between cards.</p>
+              <div className="ml-auto inline-flex rounded-control bg-board p-0.5 text-[13px] font-semibold">
+                <span aria-current="true" className="inline-flex h-11 items-center gap-1.5 rounded-control bg-surface px-3 text-action shadow-card lg:h-8">
+                  <LayoutGridIcon className="size-4" aria-hidden="true" />
+                  Kanban
+                </span>
+                <Link href="/agreements" className="inline-flex h-11 items-center gap-1.5 rounded-control px-3 text-ink-2 transition-colors duration-150 hover:text-ink lg:h-8">
+                  <ListIcon className="size-4" aria-hidden="true" />
+                  List
+                </Link>
+              </div>
+              <div className="sr-only">
                 <LiveRefresh />
               </div>
             </div>

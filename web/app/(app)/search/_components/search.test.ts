@@ -21,10 +21,10 @@ const headings = (html: string) => [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].m
 describe("search results", () => {
   test("C1581: groups come in the order Customers, Sites, Equipment, each with its count, and an empty group is left out", () => {
     const full = render("x", results({ customers: group([customer, { id: "c2", name: "Two" }]), sites: group([site()]), equipment: group([unit]) }));
-    expect(headings(full)).toEqual(["Customers 2", "Sites 1", "Equipment 1"]);
+    expect(headings(full)).toEqual(["Customers", "Sites", "Equipment"]);
 
     const partial = render("x", results({ sites: group([site()]) }));
-    expect(headings(partial)).toEqual(["Sites 1"]);
+    expect(headings(partial)).toEqual(["Sites"]);
   });
 
   test("C1582: a customer row links to /customers/<id> and shows the name", () => {
@@ -94,14 +94,14 @@ describe("search results", () => {
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Search<\/button>/);
   });
 
-  test("C1591: the page field and button are 44 px tall below 1024 px and 34 px from there up", () => {
+  test("C1591: the page field and button are 44 px tall below 1024 px and 40 px (38 px for the button) from there up", () => {
     const html = render("", null);
     const input = html.match(/<input[^>]*>/)?.[0] ?? "";
     const button = html.match(/<button[^>]*>/)?.[0] ?? "";
     // The field is still the legacy 34px control until the inputs move to shadcn; the button is Field Protocol's 38px standard.
-    for (const [element, desktopHeight] of [[input, "34px"], [button, "38px"]] as const) {
+    for (const [element, desktopClass] of [[input, "lg:h-10"], [button, "lg:h-[38px]"]] as const) {
       expect(element, element).toMatch(/class="(?:[^"]*\s)?h-11(?:\s[^"]*)?"/);
-      expect(element, element).toContain(`lg:h-[${desktopHeight}]`);
+      expect(element, element).toContain(desktopClass);
     }
   });
 });

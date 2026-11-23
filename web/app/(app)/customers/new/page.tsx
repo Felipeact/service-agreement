@@ -11,7 +11,7 @@ export default async function NewCustomerPage() {
   const role = await loadMemberRole();
 
   return (
-    <RecordPage title="New customer" canWrite={canWriteRecords(role)}>
+    <RecordPage title="New customer" back={{ href: "/customers", label: "Customers" }} canWrite={canWriteRecords(role)}>
       <CustomerForm initial={{ name: "" }} submitLabel="Add customer" cancelHref={cancelHrefFor("new-customer")} action={createCustomerAction} />
     </RecordPage>
   );

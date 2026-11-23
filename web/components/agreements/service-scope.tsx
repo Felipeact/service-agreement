@@ -22,7 +22,7 @@ type SectionLook = { title?: string; showFrequency?: boolean; uppercase?: boolea
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
-const panel = "overflow-hidden rounded-panel border border-hairline bg-surface";
+const panel = "overflow-hidden rounded-panel border border-hairline bg-surface shadow-card";
 const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 const note = "px-4 py-6 text-center text-[13px] text-ink-2";
 

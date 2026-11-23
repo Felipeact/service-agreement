@@ -31,7 +31,7 @@ type ReviewViewProps = {
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
-const panel = "overflow-hidden rounded-panel border border-hairline bg-surface";
+const panel = "overflow-hidden rounded-panel border border-hairline bg-surface shadow-card";
 const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 
 const DECIDED = {
@@ -69,7 +69,7 @@ function TemplateTable({ item }: { item: TableItem }) {
   const head = item.header ? item.rows[0] : undefined;
   const body = item.header ? item.rows.slice(1) : item.rows;
   return (
-    <div className="overflow-x-auto rounded-panel border border-hairline bg-surface">
+    <div className="overflow-x-auto rounded-panel border border-hairline bg-surface shadow-card">
       <table className="w-full min-w-[320px] text-left text-[14px]">
         {head && (
           <thead className="border-b border-hairline bg-ground">

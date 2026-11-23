@@ -41,10 +41,10 @@ describe("SiteRegisterView", () => {
     const out = view(Array.from({ length: 5 }, () => asset()));
     expect(out).toContain("Harbourview Towers");
     expect(out).toContain("2150 Harbour Lane, North Vancouver, BC");
-    expect(out).toMatch(/<a[^>]*href="\/customers\/cust-1"[^>]*>Harbourview Towers Strata</);
+    expect(out).toMatch(/<a[^>]*href="\/customers\/cust-1"[^>]*>[\s\S]*?Harbourview Towers Strata</);
     expect(out).toContain("Dana Whitfield");
-    expect(out).toContain(">5 assets<");
-    expect(view([asset()])).toContain(">1 asset<");
+    expect(out.replace(/<!-- -->/g, "")).toContain("5 assets");
+    expect(view([asset()]).replace(/<!-- -->/g, "")).toContain("1 asset");
   });
 
   test("C136: the rendered view shows each group heading with its count", () => {
