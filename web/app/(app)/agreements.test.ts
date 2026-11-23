@@ -307,13 +307,15 @@ describe("the agreement page", () => {
     container.agreementReader.get.mockResolvedValue(detail());
     const html = await render();
     expect(html).toContain("Preventive maintenance visit");
-    for (const label of ["New agreement", "Add line", "Edit", "Remove", "Start version", "Withdraw"]) expect(html, label).not.toContain(`>${label}`);
+    for (const label of ["New agreement", "Add a line", "Edit", "Remove", "Start version", "Withdraw"]) expect(html, label).not.toContain(`>${label}`);
+    expect(html).not.toMatch(/Add a line<\/button>/);
   });
 
   test("C740: a writer sees the controls on the same draft", async () => {
     container.agreementReader.get.mockResolvedValue(detail());
     const html = await render();
-    for (const label of ["Add line", "Edit", "Remove", "Withdraw"]) expect(html, label).toContain(`>${label}</button>`);
+    for (const label of ["Edit", "Remove", "Withdraw"]) expect(html, label).toContain(`>${label}</button>`);
+    expect(html).toMatch(/<button[^>]*>.*?Add a line<\/button>/);
   });
 
   test("C824: the page shows the reader's service scope as it comes", async () => {
@@ -330,9 +332,10 @@ describe("the agreement page", () => {
       }),
     );
     const html = await render();
-    const day = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" }).format(takenAt);
-    expect(html).toContain(`As recorded on ${day}`);
-    expect(html).toContain("Rooftop unit, 1 unit");
+    // A sent version lists what it recorded, by type with its count (the PDF prints the recorded date).
+    const equipment = /<section[^>]*aria-label="Equipment on site"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    expect(equipment).toMatch(/Rooftop unit<\/span><span[^>]*>1 unit</);
+    expect(equipment).not.toContain("<input");
   });
 
   test("C741: a malformed id and a missing agreement are 404", async () => {

@@ -5,6 +5,8 @@ import type { AgreementDetail, ServiceLineView } from "@/application/ports";
 import type { ScheduleRow, ScopeType } from "@/domain/agreement";
 import { AgreementView, type AgreementActions } from "./content";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
+import { ServiceIncludedSection } from "@/components/agreements/service-scope";
+import { visitSchedule } from "@/domain/agreement";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/agreements" }));
 
@@ -71,17 +73,19 @@ const actions: AgreementActions = {
   saveNote: async () => ({ status: "idle" as const }),
 };
 const view = (a: AgreementDetail) => text(renderToStaticMarkup(createElement(AgreementView, { agreement: a, role: "estimator", actions })));
-const included = (out: string) => between(out, "Service included", "Equipment");
+/** "Service included" with the lines, as the staff side draws it: a seasonal task no line visits is flagged. */
+const included = (a: AgreementDetail) =>
+  text(renderToStaticMarkup(createElement(ServiceIncludedSection, { scope: a.serviceScope, siteId: "s1", canAddEquipment: true, lines: a.shown.lines })));
 
 describe("the agreement view's checklist", () => {
   test("C1113: a seasonal task shows its months; a task for every visit shows its description alone", () => {
-    const list = included(view(agreement([rtuLine([3, 6, 9, 12])])));
+    const list = included(agreement([rtuLine([3, 6, 9, 12])]));
     expect(list).toContain("Check belts (Apr–Sep visits)");
     expect(list).toMatch(/Replace filters (?!\()/);
   });
 
   test("C1117: a seasonal task no line visits is flagged after its label; a reached one is not", () => {
-    const list = included(view(agreement([rtuLine([6])])));
+    const list = included(agreement([rtuLine([6])]));
     expect(list).toContain(`${HEAT_TASK} (Oct–Mar visits) No visit in these months`);
     expect(list).toContain(`${COOL_TASK} (Apr–Sep visits)`);
     expect(list).not.toContain(`${COOL_TASK} (Apr–Sep visits) No visit in these months`);
@@ -103,8 +107,9 @@ describe("the visit schedule's seasonal tasks", () => {
     expect(text(april)).not.toContain(":");
   });
 
-  test("C1121: the agreement view's March row lists the heating task", () => {
-    const html = renderToStaticMarkup(createElement(AgreementView, { agreement: agreement([rtuLine([3, 6, 9, 12])]), role: "estimator", actions }));
+  test("C1121: the agreement's March row lists the heating task", () => {
+    const a = agreement([rtuLine([3, 6, 9, 12])]);
+    const html = renderToStaticMarkup(createElement(VisitScheduleSection, { schedule: visitSchedule(a.shown.lines, a.serviceScope.source === "not_recorded" ? [] : a.serviceScope.types) }));
     const march = /<li[^>]*data-month="3"[^>]*>.*?<\/li>/.exec(html)?.[0] ?? "";
     expect(text(march)).toContain(`Rooftop unit: ${HEAT_TASK}`);
   });

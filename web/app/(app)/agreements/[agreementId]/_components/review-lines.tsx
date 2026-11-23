@@ -235,14 +235,21 @@ function SuggestedRow({ row }: { row: ProposalRow }) {
  * New, Changed (old values struck through) or Kept, with the lines it would remove and the old and new total. Otherwise it shows
  * the lines as they are.
  */
-export function ReviewableLines({ children, footer }: { children: ReactNode; footer: ReactNode }) {
+export function ReviewableLines({ children, footer, bare = false }: { children: ReactNode; footer: ReactNode; bare?: boolean }) {
   const review = useReview();
   const ready = review?.state.status === "ready" ? review.state : null;
   const delta = ready ? ready.diff.totalToCents - ready.diff.totalFromCents : 0;
 
   return (
-    <section aria-label="Service lines" className={`overflow-hidden rounded-panel border bg-surface shadow-card ${ready ? "border-violet-400 ring-2 ring-violet-200" : "border-hairline"}`}>
-      <h2 className="border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">{ready ? "Service lines: suggested" : "Service lines"}</h2>
+    <div
+      data-service-lines
+      className={bare ? (ready ? "border-y-2 border-violet-300" : "") : `overflow-hidden rounded-panel border bg-surface shadow-card ${ready ? "border-violet-400 ring-2 ring-violet-200" : "border-hairline"}`}
+    >
+      {bare ? (
+        ready && <p className="border-b border-violet-200 bg-violet-50 px-5 py-2 text-[13px] font-semibold text-violet-900">Suggested by the AI review. Apply all or Discard at the top of the page.</p>
+      ) : (
+        <h2 className="border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">{ready ? "Service lines: suggested" : "Service lines"}</h2>
+      )}
       {ready ? (
         <>
           <ul className="divide-y divide-hairline">
@@ -278,6 +285,6 @@ export function ReviewableLines({ children, footer }: { children: ReactNode; foo
           {footer}
         </>
       )}
-    </section>
+    </div>
   );
 }

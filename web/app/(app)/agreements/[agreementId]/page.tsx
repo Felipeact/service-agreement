@@ -16,6 +16,7 @@ import {
 } from "../../agreement-actions";
 import { generateContractAction } from "../../contract-actions";
 import { applyReviewAction, reviewAgreementAction } from "./_actions/review";
+import { setAgreementContactAction, setSiteTypeCountAction } from "./_actions/site";
 import { AgreementView, type AgreementActions } from "./_components/content";
 import { loadAgreement } from "./_data-access/agreement";
 
@@ -25,7 +26,7 @@ type AgreementProps = { agreementId: string; searchParams: PageProps<"/agreement
 
 /** Reads the agreement and `?version` at request time. */
 export async function AgreementForRequest({ agreementId, searchParams }: AgreementProps) {
-  const { role, canWrite, agreement, words, skippedCodes, recipient, templateChoices } = await loadAgreement(agreementId, await searchParams);
+  const { role, canWrite, agreement, words, skippedCodes, recipient, templateChoices, company, siteEquipment, addableTypes, contactName, siteAddress } = await loadAgreement(agreementId, await searchParams);
 
   const actions: AgreementActions | undefined = canWrite
     ? {
@@ -41,6 +42,8 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
         saveNote: saveVersionNoteAction.bind(null, agreementId),
         generate: generateContractAction.bind(null, agreementId),
         generateLines: generateServiceLinesAction.bind(null, agreementId),
+        setTypeCount: setSiteTypeCountAction.bind(null, agreementId),
+        setContact: setAgreementContactAction.bind(null, agreementId),
       }
     : undefined;
 
@@ -56,6 +59,11 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
       recipient={recipient}
       templateChoices={templateChoices}
       review={review}
+      company={company}
+      siteEquipment={siteEquipment}
+      addableTypes={addableTypes}
+      contactName={contactName}
+      siteAddress={siteAddress}
     />
   );
 }

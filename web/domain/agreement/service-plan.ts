@@ -143,9 +143,9 @@ export function planServiceLines(types: readonly PlanType[], rates: PricingRates
       const label = frequencyLabel(group.months);
       const units = group.types.reduce((sum, type) => sum + type.units, 0);
       const sorted = [...group.types].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
-      const visits = group.months.length;
       return {
-        description: `${label} preventive maintenance: ${visits} ${visits === 1 ? "visit" : "visits"} a year, ${units} ${units === 1 ? "unit" : "units"}`,
+        // The visits and units show in their own columns; in the description they went stale as soon as a line was edited.
+        description: `${label} preventive maintenance`,
         visitMonths: group.months,
         costPerVisitCents: suggestedCostPerVisit(group.minutes, rates),
         assetTypeIds: sorted.map((type) => type.id),

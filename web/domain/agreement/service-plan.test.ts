@@ -24,7 +24,7 @@ describe("planServiceLines", () => {
     const lines = planServiceLines(site);
     const quarterly = lines[1];
     expect(quarterly.units).toBe(25);
-    expect(quarterly.description).toBe("Quarterly preventive maintenance: 4 visits a year, 25 units");
+    expect(quarterly.description).toBe("Quarterly preventive maintenance");
     expect(lines.flatMap((line) => line.assetTypeIds)).toHaveLength(site.length);
   });
 

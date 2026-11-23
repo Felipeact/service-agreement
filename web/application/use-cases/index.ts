@@ -59,6 +59,8 @@ export { makeReadImport, outcomeOf, type ReadImportResult } from "./read-import"
 export { makeGenerateServiceLines, type GenerateServiceLinesResult } from "./generate-service-lines";
 export { makeReviewAgreement, planTypesOf, type AgreementReviewOutcome } from "./review-agreement";
 export { makeApplyServiceLines, type ApplyServiceLinesResult } from "./apply-service-lines";
+export { makeSetSiteTypeCount, type SiteTypeCountResult } from "./site-type-count";
+export { makeSetAgreementContact, type AgreementContactResult } from "./agreement-contact";
 export { makeSuggestImportTypes, type SuggestImportTypesResult, type TypeSuggestionForReview } from "./suggest-import-types";
 export { makeExtractImport, makeImportProgress, type ExtractImportResult } from "./extract-import";
 export { makeReissueLink, makeSendAgreement, type LinkIssueResult } from "./portal-links";

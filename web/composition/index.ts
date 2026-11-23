@@ -20,6 +20,8 @@ import {
   makeGenerateServiceLines,
   makeReviewAgreement,
   makeApplyServiceLines,
+  makeSetSiteTypeCount,
+  makeSetAgreementContact,
   makeImportProgress,
   makeNotify,
   makeReadImport,
@@ -322,6 +324,20 @@ export async function getContainer() {
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
     reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
     applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
+    // The agreement page edits a site's equipment by type (count and location) and who the agreement goes to.
+    setSiteTypeCount: makeSetSiteTypeCount({ get: sites.get }, supabaseAssetTypeCatalog(supabase), assetStore),
+    setAgreementContact: makeSetAgreementContact({ get: sites.get }, { contact: customers.contact }, contactStore, {
+      async get(agreementId: string) {
+        const { data, error } = await supabase.rpc("agreement_recipient", { p_agreement_id: agreementId });
+        if (error) throw new Error(`agreement_recipient failed: ${error.code}`);
+        return data;
+      },
+      async set(agreementId: string, email: string) {
+        const { data, error } = await supabase.rpc("set_agreement_recipient", { p_agreement_id: agreementId, p_email: email });
+        if (error) throw new Error(`set_agreement_recipient failed: ${error.code}`);
+        return data === true;
+      },
+    }),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.
