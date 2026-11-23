@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PLAN_KEYS, type PlanKey } from "@/domain/billing";
+import { PLAN_KEYS, intervalFromParam, type PlanKey } from "@/domain/billing";
 import { Content } from "./_components/content";
 import { RegisterForm } from "./register-form";
 
 export const metadata: Metadata = { title: "Register" };
 
-/** Reads `?plan=` at request time (the pricing page's plan buttons carry it); the plain form is the prerendered fallback. */
+/** Reads `?plan=` and `?billing=annual` at request time (the pricing page's plan buttons carry it); the plain form is the prerendered fallback. */
 export async function RegisterFormForRequest({ searchParams }: Pick<PageProps<"/register">, "searchParams">) {
-  const { plan } = await searchParams;
+  const { plan, billing } = await searchParams;
   const initialPlan = PLAN_KEYS.find((key) => key === plan) as PlanKey | undefined;
-  return <RegisterForm initialPlan={initialPlan} />;
+  return <RegisterForm initialPlan={initialPlan} initialInterval={intervalFromParam(billing)} />;
 }
 
 /**

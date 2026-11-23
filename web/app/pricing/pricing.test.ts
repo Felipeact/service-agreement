@@ -4,12 +4,13 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
-import PricingPage, { metadata } from "./page";
+import { Content as PricingContent } from "./_components/content";
+import { metadata } from "./page";
 
 /** React escapes apostrophes in text as &#x27;. */
 const decode = (html: string) => html.replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
 const textOf = (html: string) => decode(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
-const renderPage = () => renderToStaticMarkup(createElement(PricingPage));
+const renderPage = () => renderToStaticMarkup(createElement(PricingContent));
 
 /**
  * The page is the owner's pricing mockup (docs/service_pacts_pricing), whose copy is shown verbatim. It names the plans
@@ -66,5 +67,55 @@ describe("seats are charged beyond the included ones (register-seats)", () => {
       expect(code, file).not.toContain("unlimited seats");
       expect(code, file).not.toContain("seats are never charged");
     }
+  });
+});
+
+describe("the monthly/annual switch", () => {
+  const annual = () => renderToStaticMarkup(createElement(PricingContent, { interval: "year" }));
+
+  test("the switch is two links; monthly is current by default and the buttons say Get started", () => {
+    const html = renderPage();
+    expect(html).toContain('href="/pricing?billing=annual"');
+    expect(html).toContain('href="/pricing"');
+    expect(textOf(html)).toContain("Get started");
+    expect(textOf(html)).not.toMatch(/free trial|start free/i);
+  });
+
+  test("annual quotes a twelfth of the yearly price, the yearly total and the saving, and carries the interval into /register", () => {
+    const html = annual();
+    const text = textOf(html);
+    for (const [plan, perMonth, yearly] of [["starter", "$63", "$758"], ["team", "$119", "$1,430"]] as const) {
+      expect(text).toContain(perMonth);
+      expect(text).toContain(`Billed ${yearly} CAD yearly, save 20%`);
+      expect(html).toContain(`href="/register?plan=${plan}&amp;billing=annual"`);
+    }
+    expect(html).toMatch(/aria-current="true"[^>]*><span>Annual/);
+  });
+});
+
+describe("the landing page pricing section", () => {
+  const home = async (interval?: "year") => {
+    const { Content } = await import("../_components/home-content");
+    return renderToStaticMarkup(createElement(Content, { interval }));
+  };
+
+  test("monthly quotes the catalog prices and Get started goes to /register with the plan", async () => {
+    const html = await home();
+    for (const plan of PLANS) expect(textOf(html)).toContain(formatPlanPrice(plan.monthlyCents));
+    expect(html).toContain('href="/register?plan=starter"');
+    expect(html).toContain('href="/register?plan=team"');
+  });
+
+  test("annual quotes the yearly price per month and carries the interval to /register", async () => {
+    const html = await home("year");
+    expect(textOf(html)).toContain("$63");
+    expect(textOf(html)).toContain("$119");
+    expect(textOf(html)).toContain("Billed $1,430 CAD yearly, save 20%");
+    expect(html).toContain('href="/register?plan=team&amp;billing=annual"');
+  });
+
+  test("the product page no longer shows the engine version badges", () => {
+    const source = readFileSync(path.join(__dirname, "..", "product", "_components", "content.tsx"), "utf8");
+    expect(source).not.toMatch(/Engine Core v3|ENGINE ARCHITECTURE/);
   });
 });

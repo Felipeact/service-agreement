@@ -1,5 +1,5 @@
 import type { BillingGateway, GatewayFailure, StripeIds } from "@/application/ports";
-import { EXTRA_SEAT_CENTS, PLANS, PLAN_KEYS, type PlanKey } from "@/domain/billing";
+import { EXTRA_SEAT_CENTS, PLANS, PLAN_KEYS, intervalCents, type BillingInterval, type PlanKey } from "@/domain/billing";
 import type { BillingOverview, CardSummary, InvoiceSummary } from "@/domain/billing/overview";
 import { INVOICE_LIMIT } from "@/domain/billing/overview";
 import { STRIPE_TIMEOUT_MS, STRIPE_VERSION, encodeForm, errorCode } from "./http";
@@ -20,7 +20,7 @@ function cardOf(paymentMethod: unknown): CardSummary | null {
   return { brand, last4, expMonth, expYear };
 }
 
-type Tagged = { id: string; kind: "plan" | "seat"; plan: PlanKey | null; quantity: number };
+type Tagged = { id: string; kind: "plan" | "seat"; plan: PlanKey | null; quantity: number; interval: BillingInterval };
 
 /**
  * The subscription items whose product is tagged `sa_kind` plan or seat (plan-change door 1), with the plan key the plan item's
@@ -37,7 +37,8 @@ function taggedItems(subscription: Json): Tagged[] {
     if (kind !== "plan" && kind !== "seat") return [];
     const planValue = product.metadata.sa_plan;
     const plan = kind === "plan" ? (PLAN_KEYS.find((key) => key === planValue) ?? null) : null;
-    return [{ id, kind, plan, quantity: num(raw.quantity) ?? 0 }];
+    const recurring = isRecord(raw.price) && isRecord(raw.price.recurring) ? raw.price.recurring.interval : null;
+    return [{ id, kind, plan, quantity: num(raw.quantity) ?? 0, interval: recurring === "year" ? "year" : "month" }];
   });
 }
 
@@ -172,6 +173,8 @@ export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: 
         console.error("Stripe plan change refused: no plan item");
         return { ok: false, code: "unsupported" } as const;
       }
+      // A yearly subscription stays yearly: Stripe refuses items with different intervals on one subscription.
+      const interval = planItem.interval;
       const planChanges = planItem.plan !== change.plan;
       const seatQuantity = seatItem?.quantity ?? 0;
       if (!planChanges && seatQuantity === change.extraSeats) return { ok: true, changed: false } as const;
@@ -182,7 +185,7 @@ export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: 
         if (!(await ensureProduct(`sa_plan_${change.plan}`, `${definition.name} plan`, { sa_kind: "plan", sa_plan: change.plan }))) return unavailable;
         entries.push({
           id: planItem.id,
-          price_data: { currency: "cad", unit_amount: definition.monthlyCents, recurring: { interval: "month" }, product: `sa_plan_${change.plan}` },
+          price_data: { currency: "cad", unit_amount: intervalCents(definition.monthlyCents, interval), recurring: { interval }, product: `sa_plan_${change.plan}` },
         });
       }
       if (seatItem) {
@@ -190,7 +193,7 @@ export function stripeBillingGateway(options: { secretKey: string; appBaseUrl?: 
       } else if (change.extraSeats > 0) {
         if (!(await ensureProduct("sa_extra_seat", "Extra seat", { sa_kind: "seat" }))) return unavailable;
         entries.push({
-          price_data: { currency: "cad", unit_amount: EXTRA_SEAT_CENTS, recurring: { interval: "month" }, product: "sa_extra_seat" },
+          price_data: { currency: "cad", unit_amount: intervalCents(EXTRA_SEAT_CENTS, interval), recurring: { interval }, product: "sa_extra_seat" },
           quantity: change.extraSeats,
         });
       }

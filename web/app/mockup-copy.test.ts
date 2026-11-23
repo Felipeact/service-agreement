@@ -67,6 +67,8 @@ type Case = {
   render: () => Promise<ReactElement>;
   /** Runs the mockup shows as a demonstration of a state the live page shows only when it is true. */
   conditional?: string[];
+  /** Runs the page adds on purpose and the mockup never had (the monthly/annual switch). */
+  extra?: string[];
 };
 
 const fromPage = (load: () => Promise<{ default: ComponentType }>) => async () => createElement((await load()).default);
@@ -80,6 +82,7 @@ const CASES: Record<string, Case> = {
   "404": { mockup: "service_pacts_404_not_found", render: fromPage(() => import("./not-found")) },
   "/register": {
     mockup: "service_pacts_register",
+    extra: ["Monthly", "Annual", "-20%"],
     render: async () => {
       const { Content } = await import("./register/_components/content");
       const { RegisterFields } = await import("./register/register-fields");
@@ -106,12 +109,12 @@ const CASES: Record<string, Case> = {
 };
 
 describe.skipIf(!existsSync(DOCS))("pages match the owner's mockups, text for text", () => {
-  test.each(Object.entries(CASES))("%s", async (_route, { mockup, render, conditional = [] }) => {
+  test.each(Object.entries(CASES))("%s", async (_route, { mockup, render, conditional = [], extra: allowedExtra = [] }) => {
     const expected = textRuns(readFileSync(path.join(DOCS, mockup, "code.html"), "utf8"));
     const actual = textRuns(renderToStaticMarkup(await render()));
     const { missing, extra } = difference(expected, actual);
     expect(missing.filter((run) => !conditional.includes(run)), "text in the mockup but not on the page").toEqual([]);
-    expect(extra, "text on the page but not in the mockup").toEqual([]);
+    expect(extra.filter((run) => !allowedExtra.includes(run)), "text on the page but not in the mockup").toEqual([]);
     expect(actual.length).toBeGreaterThan(30);
   });
 });

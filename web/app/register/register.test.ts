@@ -27,6 +27,8 @@ const REFUSALS = [
 const renderFields = (state: PricingState, pending = false, initialPlan?: PlanKey) =>
   renderToStaticMarkup(createElement(RegisterFields, { state, pending, initialPlan }));
 const inputs = (html: string, type: string) => [...html.matchAll(/<input([^>]*)\/?>/g)].filter((m) => m[1].includes(`type="${type}"`)).map((m) => m[1]);
+/** The plan radios only: the monthly/annual switch is a radio group of its own (name="interval"). */
+const planRadios = (html: string) => inputs(html, "radio").filter((attrs) => attrs.includes('name="plan"'));
 const value = (attrs: string) => attrs.match(/value="([^"]+)"/)?.[1];
 
 describe("the register page", () => {
@@ -49,14 +51,14 @@ describe("the form", () => {
   });
 
   test("three plan radios named plan, in order, with Team chosen by default", () => {
-    const radios = inputs(renderFields(IDLE), "radio");
+    const radios = planRadios(renderFields(IDLE));
     expect(radios.map(value)).toEqual(["starter", "team", "business"]);
     expect(radios.filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["team"]);
     for (const attrs of radios) expect(attrs).toContain('name="plan"');
   });
 
   test.each(["starter", "team", "business"] as const)("the plan carried from the pricing page (%s) starts chosen", (plan) => {
-    const radios = inputs(renderFields(IDLE, false, plan), "radio");
+    const radios = planRadios(renderFields(IDLE, false, plan));
     expect(radios.filter((attrs) => attrs.includes("checked")).map(value)).toEqual([plan]);
   });
 
@@ -143,7 +145,7 @@ describe("the contact fields (register-seats)", () => {
     expect(attrsOf(html, "phone")).toContain('value="604-555-0199"');
     expect(attrsOf(html, "seats")).toContain('value="12"');
     expect(inputs(html, "checkbox").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["plumbing"]);
-    expect(inputs(html, "radio").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["business"]);
+    expect(planRadios(html).filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["business"]);
   });
 
   test.each([
@@ -174,7 +176,7 @@ describe("the contact fields (register-seats)", () => {
     expect(attrsOf(html, "company")).toContain('value="Shop Ltd"');
     expect(attrsOf(html, "phone")).toContain('value="604-555-0199"');
     expect(attrsOf(html, "seats")).toContain('value="4"');
-    expect(inputs(html, "radio").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["starter"]);
+    expect(planRadios(html).filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["starter"]);
     expect(inputs(html, "checkbox").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["hvac", "other"]);
   });
 
@@ -203,7 +205,7 @@ describe("the contact fields (register-seats)", () => {
     expect(attrsOf(html, "company")).toContain('value="Shop Ltd"');
     expect(attrsOf(html, "phone")).toContain('value="604-555-0199"');
     expect(attrsOf(html, "seats")).toContain('value="4"');
-    expect(inputs(html, "radio").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["starter"]);
+    expect(planRadios(html).filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["starter"]);
     expect(inputs(html, "checkbox").filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["hvac", "other"]);
     expect(attrsOf(html, "company")).not.toContain("aria-invalid");
   });
@@ -213,5 +215,28 @@ describe("the contact fields (register-seats)", () => {
     const message = textOf(html.match(/<p id="register-email-message"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? "");
     expect(message).toBe("This email already has a workspace. Sign in");
     expect(message).not.toMatch(/owner|admin|member|invit|org|\d/i);
+  });
+});
+
+describe("the billing interval (monthly or annual)", () => {
+  const render = (initialInterval?: "month" | "year") => renderToStaticMarkup(createElement(RegisterFields, { state: IDLE, pending: false, initialInterval }));
+  const intervalRadios = (html: string) => inputs(html, "radio").filter((attrs) => attrs.includes('name="interval"'));
+
+  test("the form offers monthly and annual, monthly chosen by default, and quotes monthly prices", () => {
+    const html = render();
+    const radios = intervalRadios(html);
+    expect(radios.map(value)).toEqual(["month", "year"]);
+    expect(radios.filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["month"]);
+    expect(textOf(html)).toContain("$149 CAD");
+    expect(textOf(html)).toContain("billed monthly");
+  });
+
+  test("arriving from the annual pricing page chooses annual and quotes the yearly price per month", () => {
+    const html = render("year");
+    expect(intervalRadios(html).filter((attrs) => attrs.includes("checked")).map(value)).toEqual(["year"]);
+    // Team: $149 x 12 less 20% = $1,430.40 a year, $119 a month.
+    expect(textOf(html)).toContain("$119 CAD");
+    expect(textOf(html)).toContain("billed $1,430 yearly");
+    expect(textOf(html)).toContain("Card charged yearly");
   });
 });
