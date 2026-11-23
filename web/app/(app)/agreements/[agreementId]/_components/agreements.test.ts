@@ -277,7 +277,7 @@ describe("the agreement view: service included and equipment", () => {
     return match ? match[1] : "";
   };
 
-  test("C805: types in order with unit counts and their tasks; equipment in closed groups per type", () => {
+  test("C805: types in order with unit counts and their tasks; equipment as one row per type with readable unit details", () => {
     const html = view(agreement({ serviceScope: live([BOILER, RTU]) }));
     const included = section(html, "Service included");
     const includedText = text(included);
@@ -287,13 +287,12 @@ describe("the agreement view: service included and equipment", () => {
     expect(included).not.toContain("<details");
 
     const equipment = section(html, "Equipment");
-    expect(equipment.match(/<details/g)).toHaveLength(2);
-    expect(equipment).not.toMatch(/<details[^>]*\sopen/);
-    expect(equipment).toMatch(/<summary[^>]*>[\s\S]*?Boiler · 1[\s\S]*?<\/summary>/);
-    expect(equipment).toMatch(/<summary[^>]*>[\s\S]*?Rooftop unit · 2[\s\S]*?<\/summary>/);
+    expect(equipment).not.toContain("<details");
     const equipmentText = text(equipment);
+    expect(equipmentText).toContain("Boiler 1 unit");
+    expect(equipmentText).toContain("Rooftop unit 2 units");
     for (const value of ["RTU-1", "Carrier 48TC", "Roof", "RTU-2", "B-1", "Condensing", "P1"]) expect(equipmentText).toContain(value);
-    expect(equipmentText).toMatch(/RTU-2 — —/);
+    expect(equipmentText).not.toContain("—");
   });
 
   test("C806: a type with no checklist says so", () => {
@@ -314,7 +313,7 @@ describe("the agreement view: service included and equipment", () => {
     const html = view(agreement({ status: "sent", serviceScope: frozen([RTU]) }));
     for (const label of ["Service included", "Equipment"]) expect(text(section(html, label))).toContain(recorded);
     expect(text(section(html, "Service included"))).toContain("Rooftop unit, 2 units");
-    expect(section(html, "Equipment")).toMatch(/<summary[^>]*>[\s\S]*?Rooftop unit · 2/);
+    expect(text(section(html, "Equipment"))).toContain("Rooftop unit 2 units");
     expect(html).not.toContain("Add equipment");
   });
 

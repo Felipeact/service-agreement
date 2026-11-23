@@ -18,7 +18,8 @@ import {
   makeExtractImport,
   makeSuggestImportTypes,
   makeGenerateServiceLines,
-  makeAgreementInsight,
+  makeReviewAgreement,
+  makeApplyServiceLines,
   makeImportProgress,
   makeNotify,
   makeReadImport,
@@ -50,7 +51,7 @@ import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
-import { claudeAgreementInsighter } from "@/infrastructure/claude/agreement-insighter";
+import { claudeAgreementReviewer } from "@/infrastructure/claude/agreement-reviewer";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
@@ -319,7 +320,8 @@ export async function getContainer() {
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
-    agreementInsight: makeAgreementInsight(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementInsighter({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.

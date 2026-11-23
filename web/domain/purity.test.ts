@@ -52,6 +52,7 @@ const ITEM_COPY_ALLOWED = [
   // message tables, spoken in the org's words by itemText where they are displayed
   "components/imports/state.ts",
   "components/agreements/new-agreement-state.ts",
+  "app/(app)/agreements/[agreementId]/_components/review-lines.tsx",
   // outside the feature: the product's own login copy (roadmap Phase 4.5 item 6) and the settings help that names the example word
   "app/login/page.tsx",
   "app/(app)/settings/_components/settings-fields.tsx",
@@ -65,6 +66,8 @@ const ITEM_COPY_LITERALS = [
   "components/shell/nav-items.ts: Sites & equipment",
   "components/agreements/new-agreement-state.ts: Sending the equipment list…",
   "components/agreements/new-agreement-state.ts: Finding the equipment…",
+  // a status code, never shown
+  "components/agreements/state.ts: no_equipment",
 ];
 
 function appSources(dir: string): string[] {

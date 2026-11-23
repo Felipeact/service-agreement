@@ -503,25 +503,36 @@ export interface TypeSuggester {
   suggest(spellings: string[], types: { code: string; name: string }[], tradeContext: string | null): Promise<TypeSuggestResult>;
 }
 
-/** What the model is told about an agreement: figures and equipment, never a customer, site, contact or address. */
-export type AgreementFacts = {
-  status: string;
-  versionNo: number;
-  term: { months: number; start: string | null };
-  totalPerYearCents: number;
-  lines: { description: string; visitMonths: number[]; costPerVisitCents: number; annualCents: number; equipment: string[] }[];
-  /** Equipment on the site by type, with how many units, and whether a line covers the type. */
-  equipment: { type: string; units: number; covered: boolean }[];
+/**
+ * What the reviewer is told about a draft, the whole agreement: each equipment type by catalog code with its unit count, its
+ * standard recipe, how the current lines treat it and how many units are left out of scope; the term; the yearly total; and
+ * the shop rate. Never a customer, site, contact or address.
+ */
+export type AgreementReviewFacts = {
+  equipment: {
+    code: string;
+    name: string;
+    units: number;
+    standard: { frequency: string; minutesPerUnit: number } | null;
+    current: { visitMonths: number[]; costPerVisitCents: number; typesOnLine: number } | null;
+    /** Units of this type the contractor left out of this agreement. */
+    leftOut: number;
+  }[];
+  agreement: { lineCount: number; totalPerYearCents: number; termMonths: number; termStartSet: boolean };
+  rates: { hourlyRateCents: number; minimumVisitCents: number };
   tradeContext: string | null;
 };
 
-export type AgreementInsightNote = { kind: "risk" | "opportunity" | "next_step"; text: string };
-export type AgreementInsight = { summary: string; notes: AgreementInsightNote[] };
-export type AgreementInsightResult = { ok: true; insight: AgreementInsight } | { ok: false; code: "unavailable" };
+/** The reviewer's judgement: a short summary and, for each equipment type, how often and how long, and why. */
+export type AgreementReview = {
+  summary: string;
+  types: { code: string; frequency: string; minutesPerUnit: number; reason: string }[];
+};
+export type AgreementReviewResult = { ok: true; review: AgreementReview } | { ok: false; code: "unavailable" };
 
-/** Reads an agreement's facts and says what a person should look at before sending it. */
-export interface AgreementInsighter {
-  insight(facts: AgreementFacts): Promise<AgreementInsightResult>;
+/** Reads a draft and judges how often each equipment type should be serviced and how long it takes. Never saves. */
+export interface AgreementReviewer {
+  review(facts: AgreementReviewFacts): Promise<AgreementReviewResult>;
 }
 
 export interface ImportAllowance {

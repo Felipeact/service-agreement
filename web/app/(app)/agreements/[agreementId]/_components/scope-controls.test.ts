@@ -25,7 +25,7 @@ describe("the Scope panel", () => {
     const html = scope();
     expect(html).toMatch(/<button type="button"[^>]*aria-label="Leave out RTU-1 · Roof"[^>]*>Leave out<\/button>/);
     expect(html).toMatch(/<button type="button"[^>]*aria-label="Include RTU-2"[^>]*>Include<\/button>/);
-    expect(text(html)).toContain("Rooftop unit, 1 unit in scope of 2");
+    expect(text(html)).toContain("Rooftop unit 1 of 2 units");
     expect(text(html)).toContain("Left out");
   });
 

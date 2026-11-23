@@ -1,5 +1,6 @@
 import type { PlanLimitNotice } from "@/domain/billing/plan-limits";
-import type { AgreementTermInput, ServiceLineErrors, ServiceLineInput, UncoveredType } from "@/domain/agreement";
+import type { AgreementTermInput, ServiceLineErrors, ServiceLineInput, ServiceLineValue, UncoveredType } from "@/domain/agreement";
+import type { ProposalDiff } from "@/domain/agreement/proposal";
 import type { CompanyProblem } from "@/domain/org-settings";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
@@ -96,7 +97,10 @@ export function linkMessageFor(status: string): string | null {
 /** What `generateServiceLinesAction` answers: how many lines it added from the site's equipment (0 when every type was covered). */
 export type GenerateLinesState = { status: "idle" | "forbidden" | "not_found" | "locked" | "unavailable" } | { status: "generated"; added: number };
 
-/** What `agreementInsightAction` answers: the model's read of the agreement, or why there is none. */
-export type InsightState =
-  | { status: "idle" | "forbidden" | "not_found" | "unavailable" }
-  | { status: "ready"; summary: string; notes: { kind: "risk" | "opportunity" | "next_step"; text: string }[] };
+/** What `reviewAgreementAction` answers: the suggested lines and what applying them changes, or why there are none. */
+export type ReviewState =
+  | { status: "idle" | "forbidden" | "not_found" | "locked" | "unavailable" | "no_equipment" }
+  | { status: "ready"; source: "ai" | "standard"; summary: string; proposal: ServiceLineValue[]; diff: ProposalDiff };
+
+/** What `applyReviewAction` answers. */
+export type ApplyReviewState = { status: "idle" | "forbidden" | "not_found" | "locked" | "invalid" | "unavailable" } | { status: "applied"; lines: number };

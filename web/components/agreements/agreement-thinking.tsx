@@ -23,7 +23,7 @@ type Props = {
 
 /**
  * The screen over the New agreement form while it works. It sits inside the same dialog (a second modal would stack on the
- * first): a dark layer with an animated ground and the steps as they happen ("Creating the agreement…", "Finding the equipment…
+ * first): a layer in the app's light colours with an animated ground and the steps as they happen ("Creating the agreement…", "Finding the equipment…
  * 2 of 5", "Building the service lines…"). The current step is bright with a pulse; finished steps turn past tense and fade out
  * as new ones arrive. Every line is a real step the dialog is on, not a script. Renders nothing while idle.
  */
@@ -52,12 +52,12 @@ export function AgreementThinking({ phase, progress, leaving }: Props) {
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="absolute inset-0 z-10 flex flex-col justify-end overflow-hidden bg-[#020617] text-white"
+      className="absolute inset-0 z-10 flex flex-col justify-end overflow-hidden bg-ground text-ink"
     >
       <GlowBackdrop />
-      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#020617] via-[#020617]/80 to-transparent" />
+      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ground via-ground/85 to-transparent" />
       <div role="status" aria-live="polite" className="relative flex flex-col gap-3 px-6 pb-8 sm:px-8">
-        <p className="text-[12px] font-semibold tracking-[0.05em] text-cyan-300/80 uppercase">Setting up your agreement</p>
+        <p className="text-[12px] font-semibold tracking-[0.05em] text-action uppercase">Setting up your agreement</p>
         <ul className="flex flex-col gap-2.5">
           <AnimatePresence initial={false} mode="popLayout">
             {shown.map((step, index) => (
@@ -72,11 +72,11 @@ export function AgreementThinking({ phase, progress, leaving }: Props) {
               >
                 {index === 0 ? (
                   <span aria-hidden="true" className="relative flex size-2.5 shrink-0">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-cyan-300 opacity-70 motion-reduce:animate-none" />
-                    <span className="relative inline-flex size-2.5 rounded-full bg-cyan-300" />
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-action-glow opacity-70 motion-reduce:animate-none" />
+                    <span className="relative inline-flex size-2.5 rounded-full bg-action" />
                   </span>
                 ) : (
-                  <span aria-hidden="true" className="flex size-2.5 shrink-0 items-center justify-center text-[11px] leading-none text-cyan-300">
+                  <span aria-hidden="true" className="flex size-2.5 shrink-0 items-center justify-center text-[11px] leading-none text-action">
                     ✓
                   </span>
                 )}

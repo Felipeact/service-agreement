@@ -9,7 +9,7 @@ import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
 import { isUuid } from "@/domain/imports";
 import { portalLinkUrl } from "@/domain/portal";
 import type { AgreementInput, LinkIssueResult } from "@/application/use-cases";
-import type { CreateAgreementState, GenerateLinesState, InsightState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
+import type { CreateAgreementState, GenerateLinesState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 import { canWriteRecords } from "@/components/records/state";
 import { linkBase } from "./link-base";
 
@@ -70,8 +70,8 @@ export async function addServiceLineAction(agreementId: string, formData: FormDa
 }
 
 /**
- * Builds the draft's service lines from the equipment on its site: one per type no line covers, with the type's best months
- * and no price. Safe to press twice: a covered type is skipped.
+ * Builds the draft's service lines from the equipment on its site: the standard plan for equipment no line covers, one line per
+ * frequency with a suggested price. Safe to press twice: a covered type is skipped.
  */
 export async function generateServiceLinesAction(agreementId: string): Promise<GenerateLinesState> {
   const container = await writer();
@@ -83,17 +83,6 @@ export async function generateServiceLinesAction(agreementId: string): Promise<G
     revalidatePath("/pipeline");
   }
   return result.ok ? { status: "generated", added: result.added } : { status: result.code };
-}
-
-/** The AI Insight on an agreement: read-only, so any member of the org may ask, and nothing is saved. */
-export async function agreementInsightAction(agreementId: string): Promise<InsightState> {
-  const container = await getContainer();
-  const member = await container.currentMember();
-  if (member.status !== "member") redirect("/login");
-  if (!isUuid(agreementId)) return NOT_FOUND;
-  const result = await container.agreementInsight(agreementId);
-  if (!result.ok) return { status: result.code };
-  return { status: "ready", summary: result.insight.summary, notes: result.insight.notes };
 }
 
 export async function updateServiceLineAction(lineId: string, formData: FormData): Promise<LineState> {

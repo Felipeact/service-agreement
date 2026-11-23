@@ -12,7 +12,7 @@ import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-setti
 import { formatCadExact } from "@/lib/money";
 import { GenerateContractControl } from "./contract-controls";
 import { GenerateLinesControl } from "./generate-lines-control";
-import { InsightControl } from "./insight-control";
+import { ReviewBanner, ReviewButton, ReviewProvider, ReviewableLines } from "./review-lines";
 import { LineFormControl } from "@/components/agreements/line-form";
 import { LineRow } from "@/components/agreements/line-row";
 import { ReviseControl, WithdrawControl } from "./move-controls";
@@ -29,7 +29,7 @@ import { VersionsSection, hasVersionStory } from "./versions-section";
 import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { ProgressSteps } from "./progress-steps";
 import type { GenerateContractState } from "@/components/agreements/contract-state";
-import type { GenerateLinesState, InsightState, LineState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
+import type { ApplyReviewState, GenerateLinesState, LineState, ReviewState, LinkState, MoveState, NoteState, ScopeState, TemplateState, TermState } from "@/components/agreements/state";
 
 /** The page's Server Actions, bound to this agreement (or, for line writes, to one line). */
 export type AgreementActions = {
@@ -66,8 +66,11 @@ type AgreementViewProps = {
   recipient?: string | null;
   /** The templates a writer can switch a draft to, the pinned one included; absent for a version that cannot change its template. */
   templateChoices?: { choices: TemplateChoice[]; selected: string };
-  /** The AI Insight, bound to this agreement. Read-only, so it is offered to every role; absent in a fixture that has none. */
-  insight?: () => Promise<InsightState>;
+  /**
+   * "Review with AI" and its "Apply all", bound to this agreement. Offered to writers on an editable draft; absent in a fixture
+   * that has none.
+   */
+  review?: { review: () => Promise<ReviewState>; apply: (proposal: unknown) => Promise<ApplyReviewState> };
 };
 
 /** A short fingerprint of what the PDF would say, so an open preview knows when to redraw. */
@@ -93,7 +96,7 @@ function deliveryLine(email: LinkEmailView | null): string {
 }
 
 /** The agreement page body: who and where, the version shown, its lines and total, and the versions list. */
-export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient, templateChoices, insight }: AgreementViewProps) {
+export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_WORDS, skippedCodes = [], recipient, templateChoices, review }: AgreementViewProps) {
   const writer = canWriteRecords(role) ? actions : undefined;
   const { shown } = agreement;
   const latest = agreement.versions[0]?.versionNo ?? shown.versionNo;
@@ -106,6 +109,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
   const canGenerate = writer?.generate !== undefined && agreement.status === "accepted" && !agreement.contract;
 
   return (
+    <ReviewProvider actions={lineActions ? review : undefined}>
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-6">
         <Link href="/agreements" className="inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
@@ -141,7 +145,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
               <a href={`/agreements/${agreement.id}/pdf?version=${shown.versionNo}`} className={buttonClass("secondary", "")}>
                 Download PDF
               </a>
-              {insight && <InsightControl action={insight} />}
+              <ReviewButton />
               {canRevise && <ReviseControl nextVersion={latest + 1} action={writer.revise} />}
               {canWithdraw && <WithdrawControl number={agreement.number} action={writer.withdraw} />}
             </div>
@@ -171,6 +175,8 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         )}
       </div>
 
+      <ReviewBanner />
+
       {agreement.stage && <ProgressSteps stage={agreement.stage} />}
 
       {canGenerate && writer.generate && (
@@ -191,8 +197,16 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         </p>
       )}
 
-      <section aria-label="Service lines" className="overflow-hidden rounded-panel border border-hairline bg-surface shadow-card">
-        <h2 className="border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight">Service lines</h2>
+      <ReviewableLines
+        footer={
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
+            <p className="text-[14px] font-semibold">
+              Total per year <span>{formatCadExact(shown.annualCents)}</span>
+            </p>
+            <p className="text-[12px] text-ink-2">Before tax</p>
+          </div>
+        }
+      >
         {shown.lines.length === 0 ? (
           <p className="px-4 py-6 text-center text-[13px] text-ink-2">No service lines yet.</p>
         ) : (
@@ -222,13 +236,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         {lineActions?.generateLines && agreement.equipmentChoices.length > 0 && (agreement.scopeDraft?.uncovered.length ?? 0) > 0 && (
           <GenerateLinesControl action={lineActions.generateLines} uncoveredCount={agreement.scopeDraft?.uncovered.length ?? 0} />
         )}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
-          <p className="text-[14px] font-semibold">
-            Total per year <span>{formatCadExact(shown.annualCents)}</span>
-          </p>
-          <p className="text-[12px] text-ink-2">Before tax</p>
-        </div>
-      </section>
+      </ReviewableLines>
 
       {lineActions && (
         <section aria-label="Add a line" className="rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
@@ -296,5 +304,6 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
         </aside>
       </div>
     </div>
+    </ReviewProvider>
   );
 }

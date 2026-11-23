@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { ScopeControl, UncoveredType } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
+import { staffUnitLabel } from "@/domain/agreement/unit-details";
 import { SCOPE_MESSAGES, type ScopeState } from "@/components/agreements/state";
 
 type ScopeControlsProps = {
@@ -17,7 +18,7 @@ type ScopeControlsProps = {
 const panel = "overflow-hidden rounded-panel border border-hairline bg-surface shadow-card";
 const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 
-const unitLabel = (control: ScopeControl) => [control.unitNo ?? "No unit #", control.typeModel, control.location].filter(Boolean).join(" · ");
+const unitLabel = (control: ScopeControl) => staffUnitLabel(control);
 const count = (n: number) => `${n} ${n === 1 ? "unit" : "units"}`;
 
 /**
@@ -41,7 +42,7 @@ export function ScopeControls({ controls, uncovered, setExcluded, words = DEFAUL
     <section aria-label="Scope" className={panel}>
       <h2 className={heading}>Scope</h2>
       <p className="border-b border-hairline px-4 py-2 text-[13px] text-ink-2">
-        {itemText("The agreement covers the equipment of the types its service lines cover. Leave a unit out and it stays on the site, just not in this agreement.", words)}
+        {itemText("The agreement covers the equipment of the types its service lines cover. Open a type to leave a unit out: it stays on the site, just not in this agreement.", words)}
       </p>
       {message && (
         <p role="alert" className="px-4 pt-2 text-[13px] font-medium text-danger">
@@ -56,9 +57,15 @@ export function ScopeControls({ controls, uncovered, setExcluded, words = DEFAUL
             const rows = controls.filter((control) => control.typeName === typeName);
             const left = rows.filter((row) => !row.excluded).length;
             return (
-              <div key={typeName} className="flex flex-col">
-                <p className="px-4 pt-3 text-[14px] font-medium">{`${typeName}, ${count(left)} in scope${left === rows.length ? "" : ` of ${rows.length}`}`}</p>
-                <ul className="divide-y divide-hairline">
+              <details key={typeName} className="group">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-[14px] [&::-webkit-details-marker]:hidden">
+                  <span className="font-medium">{typeName}</span>
+                  <span className="flex items-center gap-2 text-[13px] text-ink-2">
+                    <span className="tabular-nums">{left === rows.length ? count(left) : `${left} of ${count(rows.length)}`}</span>
+                    <span aria-hidden="true" className="transition-transform group-open:rotate-90">›</span>
+                  </span>
+                </summary>
+                <ul className="divide-y divide-hairline border-t border-hairline bg-ground">
                   {rows.map((row) => (
                     <li key={row.assetId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-1.5 text-[13px]">
                       <span className={row.excluded ? "text-ink-2 line-through" : ""}>
@@ -79,7 +86,7 @@ export function ScopeControls({ controls, uncovered, setExcluded, words = DEFAUL
                     </li>
                   ))}
                 </ul>
-              </div>
+              </details>
             );
           })}
         </div>

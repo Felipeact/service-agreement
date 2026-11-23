@@ -70,7 +70,7 @@ const long = (): Partial<ContractDocument> => ({
       code: `T${t}`,
       name: `Type ${t + 1}`,
       tasks: [{ description: "Inspect", visitMonths: null }],
-      assets: Array.from({ length: 18 }, (_, a) => asset(`T${t}-${a}`)),
+      assets: Array.from({ length: 40 }, (_, a) => asset(`T${t}-${a}`)),
     })),
   },
 });

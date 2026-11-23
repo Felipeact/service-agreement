@@ -115,7 +115,7 @@ export function ReviewView({ review, types, siteAssets, show, page, actions, agr
           <p className="text-[13px] text-ink">
             {job.committed
               ? `The ${words.plural} ${itemVerb(words, "is", "are")} on the site. Your agreement is ready to build.`
-              : `This list is for the agreement you just started. Check the rows, add them to ${job.siteName}, then continue.`}
+              : `This list is for the agreement you just started. Check the rows and add them to ${job.siteName}: the service lines are built from them and the agreement opens.`}
           </p>
           <Link href={`/agreements/${agreementId}`} className="inline-flex min-h-11 shrink-0 items-center font-semibold text-action lg:min-h-0">
             {job.committed ? "Continue to the agreement" : "Skip to the agreement"}

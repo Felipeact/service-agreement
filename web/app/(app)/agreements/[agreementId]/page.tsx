@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { PageLoading } from "@/components/shell/page-loading";
 import {
   addServiceLineAction,
-  agreementInsightAction,
   generateServiceLinesAction,
   removeServiceLineAction,
   reviseAgreementAction,
@@ -16,6 +15,7 @@ import {
   withdrawAgreementAction,
 } from "../../agreement-actions";
 import { generateContractAction } from "../../contract-actions";
+import { applyReviewAction, reviewAgreementAction } from "./_actions/review";
 import { AgreementView, type AgreementActions } from "./_components/content";
 import { loadAgreement } from "./_data-access/agreement";
 
@@ -44,7 +44,20 @@ export async function AgreementForRequest({ agreementId, searchParams }: Agreeme
       }
     : undefined;
 
-  return <AgreementView agreement={agreement} role={role} actions={actions} words={words} skippedCodes={skippedCodes} recipient={recipient} templateChoices={templateChoices} insight={agreementInsightAction.bind(null, agreementId)} />;
+  const review = canWrite ? { review: reviewAgreementAction.bind(null, agreementId), apply: applyReviewAction.bind(null, agreementId) } : undefined;
+
+  return (
+    <AgreementView
+      agreement={agreement}
+      role={role}
+      actions={actions}
+      words={words}
+      skippedCodes={skippedCodes}
+      recipient={recipient}
+      templateChoices={templateChoices}
+      review={review}
+    />
+  );
 }
 
 export default async function AgreementPage({ params, searchParams }: PageProps<"/agreements/[agreementId]">) {
