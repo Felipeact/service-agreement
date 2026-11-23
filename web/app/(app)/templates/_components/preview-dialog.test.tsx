@@ -11,7 +11,7 @@ type Values = { title: string };
 let container: HTMLDivElement;
 let root: Root;
 const fetchSpy = vi.fn();
-const pdf = (type = "application/pdf", status = 200) => new Response(new Blob(["%PDF-1.4"]), { status, headers: { "Content-Type": type } });
+const pdf = (type = "application/pdf", status = 200) => new Response("%PDF-1.4", { status, headers: { "Content-Type": type } });
 
 beforeEach(() => {
   fetchSpy.mockReset();
