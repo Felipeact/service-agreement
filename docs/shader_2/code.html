@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<!-- STITCH_SHADER_START:ANIMATION_86 class="fixed inset-0 w-full h-full" -->
+<div class="fixed inset-0 w-full h-full" style="display:block;">
+<canvas id="shader-canvas-ANIMATION_86" style="display:block;width:100%;height:100%"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_86');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+varying vec2 v_texCoord;
+
+// Simplex-ish / grid noise
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+    u.y
+  );
+}
+
+// Glowing energy pipeline / circuit flow
+void main() {
+  vec2 uv = v_texCoord;
+  float t = u_time * 0.4;
+
+  // Grid coordinates for subtle digital circuit matrix
+  vec2 gridUV = fract(uv * vec2(24.0, 12.0)) - 0.5;
+  float gridLines = smoothstep(0.46, 0.49, max(abs(gridUV.x), abs(gridUV.y)));
+
+  // Flowing energy waves moving horizontally across the 6-step lifecycle
+  float wave1 = sin(uv.x * 6.283 - t * 2.0 + uv.y * 3.0) * 0.5 + 0.5;
+  float wave2 = cos(uv.x * 12.566 + t * 1.5 - uv.y * 4.0) * 0.5 + 0.5;
+  
+  // Neon pipeline beam running horizontally near middle/bottom
+  float beam = exp(-pow(abs(uv.y - 0.5 + sin(uv.x * 4.0 + t) * 0.12), 1.8) * 45.0);
+  float beamParticles = noise(vec2(uv.x * 18.0 - t * 4.0, uv.y * 8.0));
+  beam *= (0.6 + 0.4 * beamParticles);
+
+  // Soft digital pulses traversing nodes
+  float nodes = 0.0;
+  for (int i = 0; i < 6; i++) {
+    float nodeX = (float(i) + 0.5) / 6.0;
+    float dist = length(vec2(uv.x - nodeX, (uv.y - 0.5) * 1.5));
+    float pulse = sin(t * 3.0 - float(i) * 1.047) * 0.5 + 0.5;
+    nodes += exp(-dist * 18.0) * pulse;
+  }
+
+  // Dark background base (#0a0f1d / #030712)
+  vec3 bgCol = vec3(0.02, 0.04, 0.08);
+  vec3 circuitCol = vec3(0.08, 0.15, 0.30) * gridLines * 0.25;
+
+  // Vibrant neon cyan / electric blue energy colors
+  vec3 neonBlue = vec3(0.145, 0.388, 0.921); // #2563eb
+  vec3 cyanGlow = vec3(0.0, 0.85, 0.95);     // #00d9f2
+  vec3 purpleHaze = vec3(0.45, 0.2, 0.9);   // indigo/violet highlight
+
+  vec3 finalColor = bgCol + circuitCol;
+  finalColor += mix(neonBlue, cyanGlow, wave1) * beam * 1.2;
+  finalColor += cyanGlow * nodes * 0.7;
+  finalColor += purpleHaze * (wave2 * 0.12);
+
+  // Subtle vignette on edges
+  float vignette = smoothstep(1.2, 0.2, length(uv - 0.5));
+  finalColor *= vignette;
+
+  gl_FragColor = vec4(finalColor, 0.95);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_86 -->
+</body></html>

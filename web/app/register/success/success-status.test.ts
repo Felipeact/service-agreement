@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let query = "";
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(query) }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(query), usePathname: () => "/register/success" }));
 const checkWorkspaceAction = vi.fn(async () => "pending" as const);
 vi.mock("./actions", () => ({ checkWorkspaceAction }));
 

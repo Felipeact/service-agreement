@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { canWriteTemplates } from "@/components/templates/state";
+import { canWriteTemplates } from "@/app/(app)/templates/_components/state";
 import { getContainer } from "@/composition";
 import { buildContractPreviewDocument } from "@/domain/contract";
 import { bodyFromContractForm, readContractFormInput } from "@/domain/contract/layout-form";

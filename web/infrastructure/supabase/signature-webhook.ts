@@ -2,11 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SignatureWebhooks, WebhookAnswer } from "@/application/ports";
 import { SIGNED_DOCUMENT_KINDS, type SignedDocumentKind } from "@/domain/contract";
 import type { Database, Json } from "./database.types";
+import { isRecord } from "@/domain/guards";
 
 type Client = SupabaseClient<Database>;
 
-type Raw = Record<string, unknown>;
-const isRecord = (value: unknown): value is Raw => typeof value === "object" && value !== null && !Array.isArray(value);
 const REASONS = ["event_not_handled", "unknown_submission", "signer_mismatch", "request_closed"] as const;
 
 function toAnswer(json: unknown): WebhookAnswer {

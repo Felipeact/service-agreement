@@ -26,6 +26,13 @@ export type Plan = {
 /** One flat monthly price for every seat beyond a plan's included ones, in CAD cents (draft, decision 10). */
 export const EXTRA_SEAT_CENTS = cents(1900);
 
+/** How often a subscription bills. `year` charges twelve months at once, less `ANNUAL_DISCOUNT_PERCENT`. */
+export const BILLING_INTERVALS = ["month", "year"] as const;
+export type BillingInterval = (typeof BILLING_INTERVALS)[number];
+
+/** What paying a year up front saves, as a whole percent of twelve monthly payments. */
+export const ANNUAL_DISCOUNT_PERCENT = 20;
+
 /** The most seats a visitor can pick at sign-up; a larger team talks to us. */
 export const MAX_SEATS = 50;
 
@@ -55,6 +62,8 @@ export type CheckoutSelection = {
   email: string;
   company: string;
   phone: string;
+  /** How the subscription bills; absent means monthly. */
+  interval?: BillingInterval;
 };
 
 /** The plan and trades alone: what the choice part of the form validates. */
@@ -67,7 +76,7 @@ export type SelectionResult =
   | { ok: false; code: "no_trade" | "invalid_choice" | "invalid_details"; fields: FieldErrors };
 
 /** What a form posted, before anything is trusted. */
-export type SelectionInput = { plan: unknown; trades: readonly unknown[]; seats: unknown; email: unknown; company: unknown; phone: unknown };
+export type SelectionInput = { plan: unknown; trades: readonly unknown[]; seats: unknown; email: unknown; company: unknown; phone: unknown; interval?: unknown };
 
 const PRICE_FORMAT = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
@@ -77,6 +86,7 @@ export function formatPlanPrice(monthly: Cents): string {
 }
 
 const isPlanKey = (value: unknown): value is PlanKey => (PLAN_KEYS as readonly unknown[]).includes(value);
+export const isBillingInterval = (value: unknown): value is BillingInterval => (BILLING_INTERVALS as readonly unknown[]).includes(value);
 const isTradeCode = (value: unknown): value is TradeCode => (TRADE_CODES as readonly unknown[]).includes(value);
 
 /** The known trades among `values`, once each, in `TRADE_CODES` order; anything else is left out. */
@@ -119,10 +129,13 @@ function parseDetails(plan: PlanKey | null, input: SelectionInput): { fields: Fi
  */
 export function parseCheckoutSelection(input: SelectionInput): SelectionResult {
   const choice = parseChoice(input.plan, input.trades);
+  const hasInterval = input.interval !== undefined && input.interval !== null && input.interval !== "";
+  if (hasInterval && !isBillingInterval(input.interval)) return { ok: false, code: "invalid_choice", fields: parseDetails(choice.ok ? choice.value.plan : null, input).fields };
   const details = parseDetails(choice.ok ? choice.value.plan : null, input);
   if (!choice.ok) return { ok: false, code: choice.code, fields: details.fields };
   if (Object.keys(details.fields).length > 0) return { ok: false, code: "invalid_details", fields: details.fields };
-  return { ok: true, value: { ...choice.value, ...details.value } };
+  const interval: BillingInterval = hasInterval && isBillingInterval(input.interval) ? input.interval : "month";
+  return { ok: true, value: { ...choice.value, ...details.value, ...(interval === "year" ? { interval } : {}) } };
 }
 
 /** The seat count after the visitor picks another plan (register-seats AC 11). */
@@ -135,4 +148,19 @@ export function seatsAfterPlanChange(from: PlanKey, to: PlanKey, seats: number):
 /** The monthly total for a plan with `seats` seats, in cents. */
 export function monthlyTotalCents(plan: Plan, seats: number): Cents {
   return cents(plan.monthlyCents + Math.max(0, seats - plan.includedSeats) * EXTRA_SEAT_CENTS);
+}
+
+/** What `monthlyCents` costs for one interval: the monthly amount, or twelve of them less the annual discount, in cents. */
+export function intervalCents(monthly: Cents, interval: BillingInterval): Cents {
+  return interval === "year" ? cents(Math.round((monthly * 12 * (100 - ANNUAL_DISCOUNT_PERCENT)) / 100)) : monthly;
+}
+
+/** The monthly equivalent of an interval's price, in cents (annual: a twelfth of the yearly charge, rounded). */
+export function perMonthCents(monthly: Cents, interval: BillingInterval): Cents {
+  return interval === "year" ? cents(Math.round(intervalCents(monthly, "year") / 12)) : monthly;
+}
+
+/** Reads a `?billing=` or posted value into an interval; `annual`, `yearly` and `year` mean year, anything else month. */
+export function intervalFromParam(value: unknown): BillingInterval {
+  return value === "annual" || value === "yearly" || value === "year" ? "year" : "month";
 }

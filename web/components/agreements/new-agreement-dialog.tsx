@@ -1,16 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
-import type { SiteOption } from "@/application/ports";
+import type { AssetTypeOption, SiteOption } from "@/application/ports";
+import type { AddEquipmentState } from "@/app/(app)/new-agreement-actions";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
+import { EquipmentPicker, pickedItems, pickedTotal, type PickedCounts } from "./pick-list";
 import { NoticeText, ProgressLine } from "./new-agreement-text";
-import { EquipmentPicker, type PickableType } from "./equipment-picker";
+import { AgreementThinking } from "./agreement-thinking";
 import { useItemWords } from "@/components/shell/item-words";
 import { formatFileSize, IMPORT_ACCEPT, validateImportFile } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
@@ -30,7 +32,6 @@ import {
   type NewAgreementInput,
   type Phase,
   type StartAgreementState,
-  EQUIPMENT_FAILED,
 } from "./new-agreement-state";
 
 type Customer = { id: string; name: string };
@@ -43,20 +44,14 @@ export type NewAgreementActions = {
   extractImport: (jobId: string) => Promise<ExtractState>;
   /** Adds a clean list to the site without a review; `needs_review` when something in it needs a person. */
   commitCleanImport?: (jobId: string) => Promise<{ status: string }>;
-  /** Adds hand-picked equipment to the site (no file to upload). */
-  addEquipment?: (siteId: string, picks: { assetTypeId: string; count: number }[]) => Promise<{ status: string }>;
-  /** Adds the recommended service lines for the site's equipment to the new draft (recommended-lines). */
-  recommend?: (agreementId: string) => Promise<{ status: string }>;
+  /** Adds equipment picked by hand to the site; with `assetTypes`, it turns on the Pick by hand tab. */
+  addEquipment?: (siteId: string, items: { assetTypeId: string; quantity: number }[]) => Promise<AddEquipmentState>;
+  /** Builds the new agreement's service lines from the equipment now on its site. A failure is not fatal: the agreement page offers the same button. */
+  generateLines?: (agreementId: string) => Promise<{ status: string }>;
 };
 
-/** Where the site's equipment comes from: the customer's list, picked by hand, or added later. */
-type Source = "file" | "pick" | "later";
-
-const SOURCES: { key: Source; label: string }[] = [
-  { key: "file", label: "Upload a list" },
-  { key: "pick", label: "Pick by hand" },
-  { key: "later", label: "Add later" },
-];
+/** How the equipment gets onto the site: a list uploaded now, units picked by hand, or nothing yet. */
+type IntakeMode = "upload" | "pick" | "later";
 
 type Props = {
   customers: Customer[];
@@ -73,8 +68,8 @@ type Props = {
   onClose?: () => void;
   /** A file already chosen or dropped, taken into the drop zone when the dialog opens. */
   initialFile?: File | null;
-  /** The org's equipment types, for picking equipment by hand when the customer has no list. */
-  equipmentTypes?: PickableType[];
+  /** The equipment types the org services, for Pick by hand. */
+  assetTypes?: AssetTypeOption[];
 };
 
 /**
@@ -83,9 +78,10 @@ type Props = {
  * missing, starts the draft, sends the list to the site and carries on to the list's review, so the estimator never
  * leaves the flow to add a customer or a site first.
  */
-export function NewAgreementDialog({ customers, sites, actions, templates, initialTemplateVersionId, open: controlledOpen, onClose, initialFile, equipmentTypes = [] }: Props) {
+export function NewAgreementDialog({ customers, sites, actions, templates, initialTemplateVersionId, open: controlledOpen, onClose, initialFile, assetTypes }: Props) {
   const words = useItemWords();
   const router = useRouter();
+  const pathname = usePathname();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const offered = [...(templates ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   const startingTemplate = offered.some((template) => template.versionId === initialTemplateVersionId) ? (initialTemplateVersionId as string) : STANDARD_CHOICE;
@@ -95,15 +91,31 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   const [site, setSite] = useState("");
   const [siteName, setSiteName] = useState("");
   const [address, setAddress] = useState("");
+  const [mode, setMode] = useState<IntakeMode>("upload");
+  const [picked, setPicked] = useState<PickedCounts>({});
   const [file, setFile] = useState<File | null>(null);
-  const [source, setSource] = useState<Source>("file");
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const [fileError, setFileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [notice, setNotice] = useState<{ text: string; href?: string; linkText?: string } | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [created, setCreated] = useState<{ customerId?: string; siteId?: string }>({});
+  // Set when the work is done and the browser is on its way to the agreement; the thinking screen stays until the page changes.
+  const [leavingTo, setLeavingTo] = useState<string | null>(null);
+  const leaving = leavingTo !== null && pathname !== leavingTo;
+  const thinking = phase !== "idle" || leaving;
+  // The dialog stays open, under the thinking screen, until the browser reaches the agreement; then it closes.
+  useEffect(() => {
+    if (leavingTo !== null && pathname === leavingTo && dialogRef.current?.open) dialogRef.current.close();
+  }, [pathname, leavingTo]);
+  // A page kept hidden after the browser leaves it must not bring the dialog back when it is shown again.
+  useEffect(() => {
+    if (leavingTo === null) return;
+    const dialog = dialogRef.current;
+    return () => {
+      if (dialog?.open) dialog.close();
+    };
+  }, [leavingTo]);
   const [pending, startTransition] = useTransition();
 
   const newCustomer = customer === NEW_CHOICE;
@@ -112,10 +124,6 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   const newSite = newCustomer || site === NEW_CHOICE;
   const busy = pending || phase !== "idle";
   const chosenTemplate = offered.find((option) => option.versionId === template);
-  const picks = Object.entries(counts)
-    .filter(([, count]) => count > 0)
-    .map(([assetTypeId, count]) => ({ assetTypeId, count }));
-  const pickedUnits = picks.reduce((sum, pick) => sum + pick.count, 0);
 
   function open() {
     dialogRef.current?.showModal();
@@ -141,14 +149,16 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     dialogRef.current?.close();
   }
 
-  /** Leaves for another page with the dialog shut: a modal left open would stay on top of the page it navigates to. */
+  /** Leaves for another page. The dialog stays open under the thinking screen and closes itself once the page has changed. */
   function go(href: string) {
-    const dialog = dialogRef.current;
-    if (dialog?.open) dialog.close();
+    setLeavingTo(href.split("?")[0] ?? href);
+    // Should the page never change, the thinking screen does not stay forever.
+    setTimeout(() => setLeavingTo(null), 15000);
     router.push(href);
   }
 
   function reset() {
+    setLeavingTo(null);
     setTemplate(startingTemplate);
     setCustomer(firstCustomerChoice(customers));
     setCustomerName("");
@@ -156,8 +166,8 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     setSiteName("");
     setAddress("");
     setFile(null);
-    setSource("file");
-    setCounts({});
+    setMode("upload");
+    setPicked({});
     setFileError(null);
     setErrors({});
     setNotice(null);
@@ -177,7 +187,6 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
 
   function chooseFile(next: File | null) {
     setFile(next);
-    if (next) setSource("file");
     if (!next) return setFileError(null);
     const checked = validateImportFile({ name: next.name, size: next.size });
     setFileError(checked.ok ? null : checked.message);
@@ -186,12 +195,14 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    if (source === "file" && file && fileError) return;
+    if (mode === "upload" && file && fileError) return;
     setErrors({});
     setNotice(null);
+    if (mode === "pick" && pickedTotal(picked) === 0) return setNotice({ text: itemText("Pick at least one piece of equipment, or choose Add later.", words) });
 
+    // Set before the transition, so the first step shows at once: an update made inside an async transition waits for it to end.
+    setPhase("creating");
     startTransition(async () => {
-      setPhase("creating");
       const input = {
         // A customer or site made on an earlier try is used as it is, never created twice.
         customer: created.customerId ?? customer,
@@ -223,28 +234,19 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       }
 
       const agreementHref = `/agreements/${started.agreementId}`;
-      // Recommended lines are a head start, never a blocker: if they cannot be added the agreement still opens.
-      const recommend = async () => {
-        setPhase("recommending");
-        await actions.recommend?.(started.agreementId).catch(() => null);
-      };
-
-      if (source === "pick" && picks.length > 0 && actions.addEquipment) {
-        setPhase("adding");
-        const added = await actions.addEquipment(started.siteId, picks).catch(() => ({ status: "unavailable" }));
-        if (added.status !== "added") {
-          setNotice({ text: EQUIPMENT_FAILED, href: agreementHref, linkText: "Open the agreement" });
+      if (mode === "pick") {
+        const added = await actions.addEquipment?.(started.siteId, pickedItems(picked));
+        if (added?.status !== "added") {
+          const partial = added?.status === "unavailable" && added.added > 0 ? ` ${added.added} of ${pickedTotal(picked)} were added; add only the rest from the site.` : "";
+          setNotice({ text: itemText(`The agreement was created, but the equipment could not be added.${partial || " Add it from the site."}`, words), href: agreementHref, linkText: "Open the agreement" });
           setPhase("idle");
-          return setCreated({ siteId: started.siteId });
+          return setCreated({ customerId: started.customerId, siteId: started.siteId });
         }
-        await recommend();
+        setPhase("building");
+        await actions.generateLines?.(started.agreementId).catch(() => null);
         return go(agreementHref);
       }
-      if (source !== "file" || !file) {
-        // An existing site may already have equipment: recommend from it straight away.
-        if (site !== NEW_CHOICE && !newCustomer) await recommend();
-        return go(agreementHref);
-      }
+      if (!file || mode !== "upload") return go(agreementHref);
 
       // The list goes to the site the agreement is on; then it is read and its equipment found.
       let jobId: string | null = null;
@@ -264,7 +266,7 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       if (sent.status !== "parsed" || !jobId) {
         setNotice({ text: uploadMessage(sent) ?? LIST_FAILED, href: agreementHref, linkText: "Open the agreement" });
         setPhase("idle");
-        return setCreated({ siteId: started.siteId });
+        return setCreated({ customerId: started.customerId, siteId: started.siteId });
       }
 
       setPhase("extracting");
@@ -273,7 +275,8 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
       if (extracted.status === "extracted" && actions.commitCleanImport) {
         const committed = await actions.commitCleanImport(jobId).catch(() => ({ status: "needs_review" }));
         if (committed.status === "committed") {
-          await recommend();
+          setPhase("building");
+          await actions.generateLines?.(started.agreementId).catch(() => null);
           return go(agreementHref);
         }
       }
@@ -284,13 +287,14 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
     });
   }
 
-  const submitLabel = busy
-    ? "Working…"
-    : source === "file" && file
-      ? "Create agreement and read the list"
-      : source === "pick" && pickedUnits > 0
-        ? `Create agreement with ${pickedUnits} ${pickedUnits === 1 ? "unit" : "units"}`
-        : "Create agreement";
+  const useFile = mode === "upload" ? file : null;
+  const submitLabel = busy ? "Working…" : useFile ? "Create agreement and read the list" : "Create agreement";
+  const canPick = Boolean(assetTypes && assetTypes.length > 0 && actions.addEquipment);
+  const modes: { value: IntakeMode; label: string }[] = [
+    { value: "upload", label: "Upload a list" },
+    ...(canPick ? [{ value: "pick" as const, label: "Pick by hand" }] : []),
+    { value: "later", label: "Add later" },
+  ];
 
   return (
     <>
@@ -304,98 +308,31 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
         ref={dialogRef}
         aria-labelledby="new-agreement-title"
         onClose={reset}
-        onCancel={(event) => busy && event.preventDefault()}
-        onClick={(event) => event.target === dialogRef.current && !busy && close()}
-        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[min(34rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[16px] bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
+        onCancel={(event) => (busy || thinking) && event.preventDefault()}
+        onClick={(event) => event.target === dialogRef.current && !busy && !thinking && close()}
+        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-panel border border-hairline bg-surface p-0 text-ink shadow-panel backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
       >
-        <form onSubmit={submit} noValidate className="flex flex-col gap-5 p-5 sm:p-7">
-          <header className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-1">
-              <h2 id="new-agreement-title" className="font-display text-[22px] leading-tight font-semibold tracking-tight">
+        <form onSubmit={submit} noValidate inert={thinking} className="flex max-h-[calc(100dvh-1.5rem)] flex-col">
+          <header className="flex items-start gap-3 border-b border-hairline px-5 py-4">
+            <div className="mr-auto">
+              <h2 id="new-agreement-title" className="text-[17px] font-bold tracking-tight">
                 New agreement
               </h2>
-              <p className="text-[13px] text-ink-2">{itemText("Upload the customer's equipment list or pick what is on site, and we recommend the service lines, visit schedule and scope.", words)}</p>
+              <p className="text-[13px] text-ink-2">Pick the customer and site, then bring in what is on site.</p>
             </div>
             <button
               type="button"
               aria-label="Close"
               onClick={close}
               disabled={busy}
-              className="-mt-1 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-ground disabled:opacity-50"
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink disabled:opacity-50 lg:size-8"
             >
-              <Icon name="close" />
+              <Icon name="close" className="size-4" />
             </button>
           </header>
-
-          <fieldset className="flex min-w-0 flex-col gap-3 border-0 p-0" disabled={busy}>
-            <legend className="pb-2 font-display text-[15px] font-semibold tracking-tight">{itemText("Equipment on site", words)}</legend>
-            <div role="radiogroup" aria-label={itemText("Where the equipment comes from", words)} className="grid grid-cols-3 gap-1 rounded-control bg-board p-1">
-              {SOURCES.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={source === option.key}
-                  onClick={() => setSource(option.key)}
-                  className="h-11 rounded-[6px] px-2 text-[12px] font-semibold text-ink-2 transition-[color,background-color,box-shadow] duration-150 hover:text-ink aria-checked:bg-surface aria-checked:text-ink aria-checked:shadow-card sm:text-[13px] lg:h-8"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {source === "file" && (
-              <FileDropzone
-                id="newAgreementFile"
-                label={itemText("Customer's equipment list", words)}
-                accept={IMPORT_ACCEPT}
-                hint={FILE_HINT}
-                file={file}
-                sizeLabel={file ? formatFileSize(file.size) : undefined}
-                error={fileError}
-                disabled={busy}
-                onFile={chooseFile}
-              />
-            )}
-            {source === "pick" && <EquipmentPicker types={equipmentTypes} counts={counts} onChange={setCounts} disabled={busy} words={words} />}
-            {source === "later" && (
-              <p className="rounded-control bg-ground px-3 py-3 text-[13px] text-ink-2">
-                {itemText("No list? Start the agreement now. When equipment is on the site, the agreement recommends service lines for it.", words)}
-              </p>
-            )}
-          </fieldset>
-
-          <div className="flex flex-col gap-1.5">
-            <Select
-              id="newAgreementTemplate"
-              label="Template"
-              value={template}
-              disabled={busy}
-              error={errors.templateVersionId}
-              onChange={(event) => {
-                setTemplate(event.target.value);
-                setErrors((current) => ({ ...current, templateVersionId: undefined }));
-                setNotice(null);
-              }}
-            >
-              <option value={STANDARD_CHOICE}>{STANDARD_NAME}</option>
-              {offered.map((option) => (
-                <option key={option.versionId} value={option.versionId}>
-                  {option.name}
-                </option>
-              ))}
-            </Select>
-            {templates === null ? (
-              <p className="text-[12px] text-ink-2">{TEMPLATES_UNAVAILABLE}</p>
-            ) : (
-              <p className="text-[12px] text-ink-2">
-                {chosenTemplate?.description && <span className="block">{chosenTemplate.description}</span>}
-                <span className="block font-medium">{presetLabel(chosenTemplate?.presetLines ?? 0, chosenTemplate?.termMonths ?? null)}</span>
-              </p>
-            )}
-          </div>
-
+          <div className="flex flex-col gap-4 overflow-y-auto px-5 py-4">
           <fieldset disabled={busy} className="flex flex-col gap-4 border-0 p-0">
-            <legend className="pb-1 font-display text-[15px] font-semibold tracking-tight">Who is it for?</legend>
+            <legend className="sr-only">Who is it for?</legend>
             <Select
               id="newAgreementCustomer"
               label="Customer"
@@ -467,6 +404,76 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
             )}
           </fieldset>
 
+          <div className="flex flex-col gap-1.5">
+            <Select
+              id="newAgreementTemplate"
+              label="Template"
+              value={template}
+              disabled={busy}
+              error={errors.templateVersionId}
+              onChange={(event) => {
+                setTemplate(event.target.value);
+                setErrors((current) => ({ ...current, templateVersionId: undefined }));
+                setNotice(null);
+              }}
+            >
+              <option value={STANDARD_CHOICE}>{STANDARD_NAME}</option>
+              {offered.map((option) => (
+                <option key={option.versionId} value={option.versionId}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+            {templates === null ? (
+              <p className="text-[12px] text-ink-2">{TEMPLATES_UNAVAILABLE}</p>
+            ) : (
+              <p className="text-[12px] text-ink-2">
+                {chosenTemplate?.description && <span className="block">{chosenTemplate.description}</span>}
+                <span className="block font-medium">{presetLabel(chosenTemplate?.presetLines ?? 0, chosenTemplate?.termMonths ?? null)}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div role="tablist" aria-label={itemText("Equipment on site", words)} className="relative -mx-1 flex gap-1 overflow-x-auto px-1">
+              {modes.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === option.value}
+                  disabled={busy}
+                  onClick={() => setMode(option.value)}
+                  className={`inline-flex h-11 shrink-0 items-center rounded-control px-3 text-[13px] font-semibold whitespace-nowrap transition-colors duration-150 lg:h-9 ${
+                    mode === option.value ? "bg-action-tint text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {mode === "upload" && (
+              <FileDropzone
+                id="newAgreementFile"
+                label={itemText("Customer's equipment list (optional)", words)}
+                accept={IMPORT_ACCEPT}
+                hint={FILE_HINT}
+                file={file}
+                sizeLabel={file ? formatFileSize(file.size) : undefined}
+                error={fileError}
+                disabled={busy}
+                onFile={chooseFile}
+              />
+            )}
+            {mode === "pick" && assetTypes && <EquipmentPicker types={assetTypes} picked={picked} onChange={setPicked} disabled={busy} />}
+            {mode === "later" && (
+              <div className="flex flex-col gap-1 rounded-control border border-dashed border-line-strong bg-ground px-4 py-5 text-[13px]">
+                <p className="font-semibold text-ink">{itemText("Skip equipment intake for now", words)}</p>
+                <p className="text-ink-2">{itemText("Start drafting the agreement terms immediately. Once you add or import equipment to the site later, the service lines can be built from what is on site.", words)}</p>
+              </div>
+            )}
+          </div>
+
           <div role="status" aria-live="polite" className="min-h-5 text-[13px] text-ink-2">
             <ProgressLine phase={phase} progress={progress} />
           </div>
@@ -481,15 +488,18 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
             </p>
           )}
 
-          <footer className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+          <footer className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button onClick={close} disabled={busy}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" disabled={busy || Boolean(source === "file" && file && fileError)}>
+            <Button type="submit" variant="primary" disabled={busy || Boolean(mode === "upload" && file && fileError)}>
               {submitLabel}
             </Button>
           </footer>
+          </div>
         </form>
+        {/* Over the form, inside this same dialog: a second modal would stack one on another. */}
+        <AgreementThinking phase={phase} progress={progress} leaving={leaving} />
       </dialog>
     </>
   );

@@ -1,28 +1,19 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
 import { AssetForm } from "@/components/records/asset-form";
-import { DeactivateControl, ReactivateControl, replacementOptions } from "@/components/records/active-control";
+import { DeactivateControl, ReactivateControl } from "@/components/records/active-control";
 import { RecordPage } from "@/components/records/record-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
-import { getContainer } from "@/composition";
+import { loadAssetToEdit } from "../_data-access/asset";
 import { reactivateAssetAction, removeAssetAction, updateAssetAction } from "../../../record-actions";
 
 export const metadata: Metadata = { title: "Edit asset" };
 
 export default async function EditAssetPage({ params }: PageProps<"/assets/[assetId]/edit">) {
   const { assetId } = await params;
-  const { currentMember, assetForEdit, listAssetTypes, siteRegister } = await getContainer();
-  const member = await currentMember();
-  if (member.status !== "member") redirect("/login");
-  const asset = await assetForEdit(assetId);
-  if (!asset) notFound();
-  const types = await listAssetTypes();
-  const type = types.find((option) => option.id === asset.assetTypeId);
-  const name = [type?.code ?? "Asset", asset.unitNo].filter(Boolean).join(" ");
-  const replacements = asset.active ? replacementOptions((await siteRegister(asset.siteId))?.assets ?? [], assetId) : [];
+  const { role, asset, types, name, replacements } = await loadAssetToEdit(assetId);
 
   return (
-    <RecordPage title="Edit asset" canWrite={canWriteRecords(member.role)}>
+    <RecordPage title="Edit asset" canWrite={canWriteRecords(role)}>
       <AssetForm
         initial={{ assetTypeId: asset.assetTypeId, unitNo: asset.unitNo ?? "", typeModel: asset.typeModel ?? "", location: asset.location ?? "" }}
         types={types}

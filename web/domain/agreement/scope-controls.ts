@@ -1,3 +1,4 @@
+import { isRecord } from "../guards";
 /** One asset of a covered type on a draft: left in or out of the agreement's scope. Never stored in a snapshot (p0-launch-fixes door 1). */
 export type ScopeControl = {
   assetId: string;
@@ -14,7 +15,6 @@ export type UncoveredType = { code: string; name: string; assetCount: number };
 
 export type ScopeDraft = { controls: ScopeControl[]; uncovered: UncoveredType[] };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
 
 /**

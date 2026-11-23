@@ -111,7 +111,7 @@ describe("POST /templates/preview, the document", () => {
     expect(ok.status).toBe(200);
     expect(renderAgreement).toHaveBeenCalledTimes(1);
     const document: AgreementDocument = renderAgreement.mock.calls[0][0];
-    expect(document.layout?.map((item) => (item.kind === "section" ? item.key : item.type))).toEqual(["price", "schedule", "included", "equipment", "terms"]);
+    expect(document.layout?.map((item) => (item.kind === "section" ? item.key : item.kind === "block" ? item.type : "table"))).toEqual(["price", "schedule", "included", "equipment", "terms"]);
     expect(document.doc).toMatchObject({ title: "Maintenance schedule", pageHeader: "every" });
     renderAgreement.mockClear();
     const bad = await post({ ...posted, layout: [...posted.layout.slice(0, 1), { kind: "block", type: "paragraph", text: "{{nope}}", level: 2, indent: 0, pageBreakBefore: false }] });

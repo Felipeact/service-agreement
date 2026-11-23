@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
+import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 
 const ItemWordsContext = createContext<ItemWords>(DEFAULT_ITEM_WORDS);
 
@@ -11,3 +11,8 @@ export function ItemWordsProvider({ words, children }: { words: ItemWords; child
 }
 
 export const useItemWords = () => useContext(ItemWordsContext);
+
+/** Copy written for the default word, spoken in the org's: for server components, which cannot call `useItemWords`. */
+export function ItemText({ children }: { children: string }) {
+  return <>{itemText(children, useItemWords())}</>;
+}

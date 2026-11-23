@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Contact" };
 export default function ContactPage() {
   return (
     <SiteShell>
-      <PageHero title="Talk to us." text="Questions about a trade, a list you quote from, or the legal side of e-signature? Write to us and a person answers." />
+      <PageHero title="Talk to us." accent="to us." text="Questions about a trade, a list you quote from, or the legal side of e-signature? Write to us and a person answers." />
       <section className="bg-surface">
         <Wrap className="grid gap-6 py-14 md:grid-cols-2 lg:py-20">
           <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-ground p-6">

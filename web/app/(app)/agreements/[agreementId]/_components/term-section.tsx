@@ -1,0 +1,72 @@
+"use client";
+
+import { useActionState } from "react";
+import { isStaleStart, termSummary, type AgreementTerm } from "@/domain/agreement";
+import { Button } from "@/components/ui/button";
+import { TextInput } from "@/components/ui/text-input";
+import { messageFor, type TermState } from "@/components/agreements/state";
+
+type TermSectionProps = {
+  term: AgreementTerm;
+  /** The save action of a writer on the current version of a draft; without it the term is read-only. */
+  action?: (formData: FormData) => Promise<TermState>;
+};
+
+const IDLE: TermState = { status: "idle" };
+
+/** The Term section of the agreement page; writers set the start date and months of a draft here. */
+export function TermSection({ term, action }: TermSectionProps) {
+  const [state, formAction, pending] = useActionState<TermState, FormData>((_, formData) => (action ? action(formData) : Promise.resolve(IDLE)), IDLE);
+  const values = state.status === "invalid" ? state.values : { start: term.start ?? "", months: String(term.months) };
+  const errors = state.status === "invalid" ? state.errors : {};
+  const message = messageFor(state.status);
+  // Saved is allowed (a renewal can be keyed after the fact); this only says so, and sending asks again.
+  const pastStart = action !== undefined && term.start !== null && isStaleStart(term.start, new Date());
+  return (
+    <section aria-label="Term" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface shadow-card px-4 py-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-[13px] font-semibold">Term</h2>
+        <p data-term className="text-[13px] text-ink-2">
+          {termSummary(term)}
+        </p>
+      </div>
+      {action && (
+        <form action={formAction} className="flex flex-col gap-3 md:flex-row md:items-end">
+          <TextInput
+            id="term-start"
+            name="termStart"
+            type="date"
+            label="Start date"
+            min="2000-01-01"
+            max="2099-12-31"
+            defaultValue={values.start}
+            error={errors.start}
+            className="md:w-48"
+          />
+          <TextInput
+            id="term-months"
+            name="termMonths"
+            inputMode="numeric"
+            label="Term (months)"
+            defaultValue={values.months}
+            error={errors.months}
+            className="md:w-36"
+          />
+          <Button type="submit" variant="secondary" disabled={pending}>
+            {pending ? "Saving…" : "Save term"}
+          </Button>
+        </form>
+      )}
+      {pastStart && (
+        <p data-past-start className="text-[13px] font-medium text-attention-fg">
+          This start date is more than 30 days in the past and prints on the agreement. Check it is not a slip, such as 2019 for 2029.
+        </p>
+      )}
+      {message && (
+        <p role="alert" className="text-[13px] font-medium text-danger">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}

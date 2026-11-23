@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { default: SettingsPage } = await import("./page");
-const { SettingsView } = await import("@/components/settings/settings-view");
+const { SettingsView } = await import("@/app/(app)/settings/_components/content");
 
 beforeEach(() => {
   vi.clearAllMocks();

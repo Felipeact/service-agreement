@@ -6,8 +6,8 @@ export function ReviewLoading() {
         <p role="status" className="text-[13px] text-ink-2">
           Loading…
         </p>
-        <div aria-hidden className="h-24 rounded-panel border border-hairline bg-surface" />
-        <div aria-hidden className="h-48 rounded-panel border border-hairline bg-surface" />
+        <div aria-hidden className="h-24 rounded-panel border border-hairline bg-surface shadow-card" />
+        <div aria-hidden className="h-48 rounded-panel border border-hairline bg-surface shadow-card" />
       </div>
     </div>
   );

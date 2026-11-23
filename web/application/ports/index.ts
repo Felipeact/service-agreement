@@ -13,7 +13,6 @@ import type {
   UncoveredType,
 } from "@/domain/agreement";
 import type { ContractDocument, ContractParties, ContractStatus, SignatureRequestStatus, SignedDocumentKind, ContractWordingBody } from "@/domain/contract";
-import type { SiteEquipmentType } from "@/domain/agreement/recommend";
 import type { ItemWords, OrgSettingsValue } from "@/domain/org-settings";
 import type { SetupCatalogType, SetupProfileValue } from "@/domain/org-settings/setup";
 import type { DraftType } from "@/domain/catalog-draft";
@@ -108,6 +107,8 @@ export type PipelineCard = {
   versionNo: number;
   /** Whole days since the last status change. */
   ageDays: number;
+  /** The business day (`YYYY-MM-DD`) of the last status change; closed cards are counted into a month by it. */
+  changedOn?: string;
   attention?: string;
   visitsPerYear?: number;
   annualCents?: number;
@@ -126,6 +127,8 @@ export type AgreementListRow = {
   id: string;
   number: string | null;
   status: AgreementStatus;
+  /** The pipeline stage the status and contract put it in. */
+  stage: PipelineStage | null;
   site: string;
   customer: string;
   versionNo: number;
@@ -199,12 +202,24 @@ export type CustomerSummary = {
   name: string;
   /** The contact created first; null when the customer has none. */
   primaryContact: string | null;
+  /** The primary contact id, for the Edit link; null when there is no contact. */
+  primaryContactId: string | null;
+  /** The primary contact phone; null when none. */
+  primaryPhone: string | null;
+  /** The primary contact's email; null when there is no contact or it has none. */
+  primaryEmail: string | null;
+  /** The numbers of the customer's agreements, newest first ("AG-1005"); agreements not yet numbered are left out. */
+  agreementNumbers: string[];
+  /** How many agreements the customer's sites hold, numbered or not. */
+  agreementCount: number;
   /** False once deactivated (deactivation door 1). */
   active: boolean;
   /** Active sites only. */
   siteCount: number;
   /** Active assets on active sites only. */
   assetCount: number;
+  /** What the customer's accepted and completed agreements are worth a year, in cents; 0 when none is priced. */
+  annualCents?: number;
 };
 
 /** What a contact is for: billing (the customer's), or approver / site contact of the named site (contact-roles door 1). */
@@ -399,8 +414,6 @@ export interface SiteStore {
 export interface AssetStore {
   /** Writes `source = 'manual'`. */
   create(orgId: string, siteId: string, value: AssetValue): Promise<CreateResult>;
-  /** Several units in one insert, all `source = 'manual'` (the New agreement equipment picker); answers how many were written. */
-  createMany(orgId: string, siteId: string, values: AssetValue[]): Promise<{ ok: true; count: number } | { ok: false; code: WriteFailure }>;
   /** Leaves `source` as it is. */
   update(id: string, value: AssetValue): Promise<WriteResult>;
   /** Assets are never deleted (deactivation door 2); a removed one may name the active unit on its site that replaced it. */
@@ -488,6 +501,27 @@ export type TypeSuggestResult = { ok: true; suggestions: TypeSuggestion[] } | { 
 /** Matches the spellings a list used that the org's types did not recognise to the org's types. */
 export interface TypeSuggester {
   suggest(spellings: string[], types: { code: string; name: string }[], tradeContext: string | null): Promise<TypeSuggestResult>;
+}
+
+/** What the model is told about an agreement: figures and equipment, never a customer, site, contact or address. */
+export type AgreementFacts = {
+  status: string;
+  versionNo: number;
+  term: { months: number; start: string | null };
+  totalPerYearCents: number;
+  lines: { description: string; visitMonths: number[]; costPerVisitCents: number; annualCents: number; equipment: string[] }[];
+  /** Equipment on the site by type, with how many units, and whether a line covers the type. */
+  equipment: { type: string; units: number; covered: boolean }[];
+  tradeContext: string | null;
+};
+
+export type AgreementInsightNote = { kind: "risk" | "opportunity" | "next_step"; text: string };
+export type AgreementInsight = { summary: string; notes: AgreementInsightNote[] };
+export type AgreementInsightResult = { ok: true; insight: AgreementInsight } | { ok: false; code: "unavailable" };
+
+/** Reads an agreement's facts and says what a person should look at before sending it. */
+export interface AgreementInsighter {
+  insight(facts: AgreementFacts): Promise<AgreementInsightResult>;
 }
 
 export interface ImportAllowance {
@@ -671,8 +705,6 @@ export type ServiceLineView = {
   visitMonths: number[];
   /** The equipment types the line covers, by name (cadence door 2). */
   equipment: { id: string; code: string; name: string }[];
-  /** Proposed by the app from the site's equipment and not yet reviewed (recommended-lines). Absent in older fixtures: not recommended. */
-  recommended?: boolean;
 };
 
 /** What the history of a version records: who acted is a role, or the customer (versioning AC 6). */
@@ -858,13 +890,6 @@ export interface ServiceLineStore {
   add(agreementId: string, value: ServiceLineValue): Promise<AddServiceLineResult>;
   update(lineId: string, value: ServiceLineValue): Promise<ServiceLineWriteResult>;
   remove(lineId: string): Promise<ServiceLineWriteResult>;
-  /** Tags a line as the app's recommendation, or clears the tag once a person kept it (recommended-lines). */
-  setRecommended(lineId: string, recommended: boolean): Promise<ServiceLineWriteResult>;
-}
-
-/** The active equipment on an agreement's site, by type with its unit count (recommended-lines); `null` for no such agreement. */
-export interface SiteEquipmentReader {
-  forAgreement(agreementId: string): Promise<{ siteId: string; types: SiteEquipmentType[] } | null>;
 }
 
 export type AgreementTermWriteResult = { ok: true } | { ok: false; code: WriteFailure | "locked" | "invalid" };

@@ -16,7 +16,7 @@ describe("importedWordingForm", () => {
     ];
     const form = importedWordingForm(blocks)!;
     expect(form.doc).toEqual(DEFAULT_CONTRACT_DOC);
-    expect(form.layout.map((row) => (row.kind === "block" ? `${row.type}:${row.text}` : `section:${row.key}`))).toEqual([
+    expect(form.layout.map((row) => (row.kind === "block" ? `${row.type}:${row.text}` : row.kind === "section" ? `section:${row.key}` : "table"))).toEqual([
       "section:price",
       "heading:Terms",
       "paragraph:This contract is between {{tenant.legalName}} and {{customer.name}}.",

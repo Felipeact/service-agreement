@@ -52,8 +52,6 @@ export type MoveState = { status: "idle" | "withdrawn" | "conflict" | "invalid_t
 /** What `sendAgreementAction` and `reissueLinkAction` answer: the full link once, or why nothing was written. */
 export type LinkState =
   | { status: "idle" | "no_lines" | "no_term_start" | "conflict" | "needs_email" | "invalid_email" | Failure }
-  /** Lines the app recommended are still unreviewed: keep or edit each before the customer sees a price (recommended-lines). */
-  | { status: "recommended_unreviewed"; count: number }
   | { status: "sent" | "reissued"; url: string }
   | { status: "company_unconfirmed"; problems: CompanyProblem[] }
   | { status: "needs_confirmation"; uncovered: UncoveredType[] }
@@ -64,7 +62,6 @@ export type LinkState =
 export const LINK_MESSAGES = {
   no_lines: "Add at least one service line before sending.",
   no_term_start: "Set the term start date before sending.",
-  recommended_unreviewed: "Review the recommended lines first: keep or edit each one so the prices are yours.",
   conflict: "This agreement was changed by someone else. Reload the page.",
   company_unconfirmed: "Confirm your company details in Settings before sending agreements.",
   needs_email: "Enter the customer's email so we can send the agreement.",
@@ -96,10 +93,10 @@ export function linkMessageFor(status: string): string | null {
   return status in LINK_MESSAGES ? LINK_MESSAGES[status as keyof typeof LINK_MESSAGES] : null;
 }
 
-/** What `recommendServiceLinesAction` answers (recommended-lines). */
-export type RecommendState =
-  | { status: "idle" | "locked" | "no_equipment" | Failure }
-  | { status: "recommended"; added: number };
+/** What `generateServiceLinesAction` answers: how many lines it added from the site's equipment (0 when every type was covered). */
+export type GenerateLinesState = { status: "idle" | "forbidden" | "not_found" | "locked" | "unavailable" } | { status: "generated"; added: number };
 
-/** What `keepRecommendedLineAction` answers: the line is no longer tagged as the app's suggestion. */
-export type KeepState = { status: "idle" | "kept" | "locked" | Failure };
+/** What `agreementInsightAction` answers: the model's read of the agreement, or why there is none. */
+export type InsightState =
+  | { status: "idle" | "forbidden" | "not_found" | "unavailable" }
+  | { status: "ready"; summary: string; notes: { kind: "risk" | "opportunity" | "next_step"; text: string }[] };

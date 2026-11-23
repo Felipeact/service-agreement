@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { isOwnLogoPath, LOGO_PATH_ERROR } from "@/domain/org-settings/logo";
 import { setupGate, validateSetupProfile, type SetupProfileInput } from "@/domain/org-settings/setup";
-import type { SetupFormState } from "@/components/setup/state";
+import type { SetupFormState } from "./_components/state";
 
 function readInput(formData: FormData): SetupProfileInput {
   const text = (name: keyof SetupProfileInput) => String(formData.get(name) ?? "");

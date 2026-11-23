@@ -61,28 +61,29 @@ export function validateNewAgreement(input: NewAgreementInput): NewAgreementVali
   return { ok: true, value: version === "" ? { customer, site } : { customer, site, templateVersionId: version } };
 }
 
-/** One equipment type chosen by hand in the New agreement dialog, and how many units of it the site has. */
-export type EquipmentPick = { assetTypeId: string; count: number };
+/** Equipment picked by hand in the New agreement dialog: a type and how many of it are on site. */
+export type PickedEquipment = { assetTypeId: string; quantity: number };
 
-export const MAX_UNITS_PER_TYPE = 99;
-export const MAX_PICKED_UNITS = 500;
+/** The most units one pick can add in one go, so a slip of the keyboard does not fill a site's register. */
+export const MAX_PICKED_UNITS = 200;
+
+export type PickedEquipmentCheck = { ok: true; items: PickedEquipment[] } | { ok: false; message: string };
 
 /**
- * The hand-picked equipment, kept only for the org's own types and whole counts from 1 to `MAX_UNITS_PER_TYPE`; a type
- * named twice is counted once with the larger count. More than `MAX_PICKED_UNITS` units in all is refused.
+ * Checks what was picked against the org's equipment types: at least one unit, every type known, each quantity a whole
+ * number from 1 to 99, no more than `MAX_PICKED_UNITS` units in all. A type picked twice is added up.
  */
-export function validateEquipmentPicks(
-  picks: readonly EquipmentPick[],
-  allowedTypeIds: readonly string[],
-): { ok: true; value: EquipmentPick[] } | { ok: false; error: string } {
-  const allowed = new Set(allowedTypeIds);
-  const byType = new Map<string, number>();
-  for (const pick of picks) {
-    if (!allowed.has(pick.assetTypeId)) return { ok: false, error: "Choose equipment types from the list" };
-    if (!Number.isInteger(pick.count) || pick.count < 1 || pick.count > MAX_UNITS_PER_TYPE) return { ok: false, error: `Each type takes 1 to ${MAX_UNITS_PER_TYPE} units` };
-    byType.set(pick.assetTypeId, Math.max(byType.get(pick.assetTypeId) ?? 0, pick.count));
+export function validatePickedEquipment(items: unknown, allowedTypeIds: readonly string[]): PickedEquipmentCheck {
+  if (!Array.isArray(items) || items.length === 0) return { ok: false, message: "Pick at least one piece of equipment." };
+  const totals = new Map<string, number>();
+  for (const item of items) {
+    const { assetTypeId, quantity } = (item ?? {}) as Partial<PickedEquipment>;
+    if (typeof assetTypeId !== "string" || !allowedTypeIds.includes(assetTypeId)) return { ok: false, message: "Choose equipment from the list." };
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) return { ok: false, message: "Each quantity must be a whole number from 1 to 99." };
+    totals.set(assetTypeId, (totals.get(assetTypeId) ?? 0) + quantity);
   }
-  const value = [...byType].map(([assetTypeId, count]) => ({ assetTypeId, count }));
-  if (value.reduce((sum, pick) => sum + pick.count, 0) > MAX_PICKED_UNITS) return { ok: false, error: `Add at most ${MAX_PICKED_UNITS} units here; import a list for more` };
-  return { ok: true, value };
+  const merged = [...totals].map(([assetTypeId, quantity]) => ({ assetTypeId, quantity }));
+  if (merged.some((item) => item.quantity > 99)) return { ok: false, message: "Each type can have at most 99 units; a type picked twice is added up." };
+  if (merged.reduce((sum, item) => sum + item.quantity, 0) > MAX_PICKED_UNITS) return { ok: false, message: `Add at most ${MAX_PICKED_UNITS} units at a time.` };
+  return { ok: true, items: merged };
 }

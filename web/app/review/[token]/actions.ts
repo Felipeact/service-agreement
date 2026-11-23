@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getContainer } from "@/composition";
 import { portalViewState } from "@/application/use-cases";
-import type { DecideState, RecordViewState } from "@/components/review/state";
+import type { DecideState, RecordViewState } from "./_components/state";
 
 const DECISIONS = ["accept", "refuse", "request_changes"] as const;
 

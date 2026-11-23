@@ -23,7 +23,28 @@ export const NAV: readonly NavLink[] = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-export const FOOTER_LINKS: readonly NavLink[] = [...NAV, { href: "/about", label: "About" }, { href: "/faq", label: "FAQ" }, { href: "/contact", label: "Contact" }, { href: "/terms", label: "Terms" }, { href: "/privacy", label: "Privacy" }, { href: "/security", label: "Security" }];
+/** The footer's three columns. Every link points at a page that exists (site-pages.test.ts). */
+export const FOOTER_GROUPS: readonly { title: string; links: readonly NavLink[] }[] = [
+  { title: "Product", links: NAV },
+  {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/terms", label: "Terms" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/security", label: "Security" },
+    ],
+  },
+];
+
+export const FOOTER_LINKS: readonly NavLink[] = FOOTER_GROUPS.flatMap((group) => group.links);
 
 /** The public pages a search engine may list, in sitemap order (qa-p1-p2 C7009). */
 export const SITEMAP_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/contact", "/register", "/terms", "/privacy", "/security"];
@@ -74,19 +95,6 @@ export const STEPS: readonly Step[] = [
     detail: "Near the end of the term, a low-CPI contract renews on its own with the increase applied. A high-CPI one becomes a renewal draft for staff.",
     who: "Automatic, staff",
   },
-];
-
-export type Feature = { title: string; text: string };
-
-export const FEATURES: readonly Feature[] = [
-  { title: "Messy lists welcome", text: "Excel, CSV, Word or PDF, as the customer sent it. Doubtful rows are flagged for review, never hidden." },
-  { title: "Scope that writes itself", text: "\"Service included\" is built from the item types on site, with a checklist for each, editable by you." },
-  { title: "Cadence by month", text: "Pick visit months on a 12-month grid per service line, with quarterly, spring and fall, and monthly presets." },
-  { title: "A pipeline that never goes quiet", text: "Every deal sits in one stage with its age, so you see what is stuck and what needs a reply." },
-  { title: "Their link, your brand", text: "The review page, PDFs and emails carry your name, logo and colour. The signing page is run by our signature provider and shows its name." },
-  { title: "E-signature with evidence", text: "The customer signs, you countersign, and the signed PDF and audit log are stored with the contract." },
-  { title: "Reminders on their own", text: "Emails, nudges and follow-ups run in the background. Your team does not build workflows." },
-  { title: "Renewals with CPI", text: "A renewal is a new agreement linked to the old one, with the increase applied inside your cap." },
 ];
 
 export type TradePage = {
@@ -148,8 +156,6 @@ export const FAQS: readonly Faq[] = [
   { q: "What does it not do?", a: "Dispatch, GPS, payroll, construction or project contracts, and a Word-style document editor." },
   { q: "Can I use more than one trade?", a: "Yes. Pick every trade you work in when you register, and your workspace is set up for all of them." },
 ];
-
-export const NOT_IN_PRODUCT = ["Dispatch and GPS", "Payroll", "Project or construction contracts", "A Word-style document editor"] as const;
 
 /** The recorded walkthrough video, when there is one. A file under /public or an https URL; null leaves the video out and says nothing about one. */
 export const DEMO_VIDEO_URL: string | null = null;

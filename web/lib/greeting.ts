@@ -25,9 +25,3 @@ export function firstNameFromEmail(email: string): string | null {
   if (first.length === local.length && first.length > 9) return null;
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
-
-/** "Good morning, Jamie", or just "Good morning" when no name is known. */
-export function greetingLine(now: Date, email: string, timeZone?: string): string {
-  const name = firstNameFromEmail(email);
-  return `${greetingFor(now, timeZone)}${name ? `, ${name}` : ""}`;
-}

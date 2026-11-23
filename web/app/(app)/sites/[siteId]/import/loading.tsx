@@ -1,4 +1,4 @@
-import { ImportLoading } from "@/components/sites/loading-titles";
+import { ImportLoading } from "../../_components/loading-titles";
 
 export default function Loading() {
   return <ImportLoading />;

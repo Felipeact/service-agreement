@@ -1,5 +1,5 @@
 import type { AgreementDetail, AgreementTemplateReader } from "@/application/ports";
-import type { TemplateChoice } from "@/components/agreements/template-picker";
+import type { TemplateChoice } from "./_components/template-picker";
 
 /** The templates a draft can switch to, or `undefined` when they cannot be read or none is pinned. The pinned version is always in the list. */
 export async function templateChoicesOf(read: () => ReturnType<AgreementTemplateReader["list"]>, agreement: AgreementDetail): Promise<{ choices: TemplateChoice[]; selected: string } | undefined> {

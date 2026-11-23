@@ -5,7 +5,7 @@ import { planLimitMessage } from "@/domain/billing/plan-limits";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
-const { NewAgreementPrompt } = await import("@/components/sites/new-agreement");
+const { NewAgreementPrompt } = await import("@/app/(app)/sites/[siteId]/_components/new-agreement");
 const { startNotice } = await import("./new-agreement-state");
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node).replace(/&#x27;/g, "'");

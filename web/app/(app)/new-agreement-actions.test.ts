@@ -16,10 +16,12 @@ const createCustomer = vi.fn();
 const createSite = vi.fn();
 const customerDetail = vi.fn();
 const siteRegister = vi.fn();
-const container = { currentMember, agreementStore: { create }, createCustomer, createSite, customerDetail, siteRegister };
+const listAssetTypes = vi.fn();
+const createAsset = vi.fn();
+const container = { listAssetTypes, createAsset, currentMember, agreementStore: { create }, createCustomer, createSite, customerDetail, siteRegister };
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
 
-const { startAgreementAction } = await import("./new-agreement-actions");
+const { addEquipmentAction, startAgreementAction } = await import("./new-agreement-actions");
 
 const input = (patch: Record<string, string> = {}) => ({ customer: CUSTOMER, customerName: "", site: SITE, siteName: "", address: "", ...patch });
 
@@ -36,14 +38,14 @@ describe("startAgreementAction, the template choice", () => {
     const state = await startAgreementAction(input({ templateVersionId: VERSION }));
     expect(create).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledWith(SITE, VERSION);
-    expect(state).toEqual({ status: "started", agreementId: "ag-1", siteId: SITE });
+    expect(state).toEqual({ status: "started", agreementId: "ag-1", siteId: SITE, customerId: expect.any(String) });
   });
 
   test.each([["no version", undefined], ["an empty version", ""]])("C5404: Standard agreement (%s) calls the store with the site alone", async (_label, templateVersionId) => {
     const state = await startAgreementAction(input(templateVersionId === undefined ? {} : { templateVersionId }));
     expect(create).toHaveBeenCalledTimes(1);
     expect(create.mock.calls[0]).toEqual([SITE]);
-    expect(state).toEqual({ status: "started", agreementId: "ag-1", siteId: SITE });
+    expect(state).toEqual({ status: "started", agreementId: "ag-1", siteId: SITE, customerId: expect.any(String) });
   });
 
   test("C5407: a forged version that is not a UUID is refused as a field error and never reaches the store", async () => {
@@ -106,5 +108,28 @@ describe("startAgreementAction, the other answers", () => {
   test("C5404: a store that refuses the member answers forbidden", async () => {
     create.mockResolvedValue({ ok: false, code: "forbidden" });
     expect(await startAgreementAction(input())).toEqual({ status: "forbidden", customerId: CUSTOMER, siteId: SITE });
+  });
+});
+
+describe("addEquipmentAction", () => {
+  const items = [{ assetTypeId: "rtu", quantity: 2 }];
+  beforeEach(() => {
+    siteRegister.mockResolvedValue({ customerId: CUSTOMER, active: true, customerActive: true });
+    listAssetTypes.mockResolvedValue([{ id: "rtu" }]);
+    createAsset.mockResolvedValue({ ok: true });
+  });
+
+  test("a site id that is not a uuid, a missing site, or an inactive site writes nothing", async () => {
+    expect(await addEquipmentAction("nope", items)).toMatchObject({ status: "invalid" });
+    siteRegister.mockResolvedValueOnce(null);
+    expect(await addEquipmentAction(SITE, items)).toMatchObject({ status: "invalid" });
+    siteRegister.mockResolvedValueOnce({ customerId: CUSTOMER, active: false, customerActive: true });
+    expect(await addEquipmentAction(SITE, items)).toMatchObject({ status: "invalid" });
+    expect(createAsset).not.toHaveBeenCalled();
+  });
+
+  test("a failure part way says how many units were already added", async () => {
+    createAsset.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false });
+    expect(await addEquipmentAction(SITE, items)).toEqual({ status: "unavailable", added: 1 });
   });
 });

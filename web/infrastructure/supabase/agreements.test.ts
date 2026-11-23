@@ -69,7 +69,6 @@ describe("agreement reader", () => {
       costPerVisitCents: 89250,
       annualCents: 357000,
       visitMonths: [3, 6, 9, 12],
-      recommended: false,
       equipment: [{ id: TYPE, code: "RTU", name: "Rooftop unit" }],
     });
   });

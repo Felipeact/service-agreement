@@ -179,7 +179,7 @@ describe("the reports page (reporting S1 to S4)", () => {
     expect(html).toMatch(/name="from"[^>]*value="2026-06-16"/);
     expect(html).toMatch(/name="to"[^>]*value="2027-06-15"/);
     expect(html).toContain("50% dropped off");
-    expect(html).toContain('<h1 class="font-display leading-tight font-semibold tracking-tight text-[26px]">Reports</h1>');
+    expect(html).toContain('<h1 class="tracking-[-0.02em] text-[28px] leading-9 font-extrabold lg:text-[34px] lg:leading-10">Reports</h1>');
   });
 
   test("C5765: the type revenue rows, the range controls, the pipeline stat and an expired group render", async () => {
@@ -189,7 +189,7 @@ describe("the reports page (reporting S1 to S4)", () => {
     expect(html).toContain("$100.00 a year");
     expect(html).toContain("Apply range");
     expect(html).toMatch(/<a href="\/reports"[^>]*>Last 12 months/);
-    expect(html).toMatch(/Pipeline value<\/dt><dd[^>]*>\$2,399\.98</);
+    expect(html).toMatch(/Pipeline<\/dt><dd[^>]*>\$2,399\.98</);
     expect(html).toMatch(/Recurring revenue<\/dt><dd[^>]*>\$1,199\.99</);
     expect(html).toContain("Expired · 1");
     expect(html).not.toContain("Reason:");

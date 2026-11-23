@@ -1,20 +1,6 @@
 import { formatTermDate } from "../agreement/term";
 import { contrastText, isAccent } from "../portal";
 
-/** One email the system decided to send or skip (outbox-dispatch door 4). */
-export type NotificationKind =
-  | "customer_link"
-  | "customer_reminder"
-  | "staff_decision"
-  | "staff_stale"
-  | "customer_renewal"
-  | "staff_renewal"
-  | "staff_expired"
-  | "staff_contract_ready"
-  | "customer_signing_link"
-  | "contract_signed_copy"
-  | "staff_contract_signed";
-
 /** Why W7 drafted a renewal instead of renewing on its own (renewal door 3). */
 export type RenewalReason = "at_threshold" | "cpi_unset" | "cpi_stale";
 
@@ -303,11 +289,6 @@ const REFUSAL_WORDS: Record<ContractRefusal, string> = {
   no_term_start: "the agreement has no start date",
   no_signer: "nobody at the site has an email address to sign",
 };
-
-/** The reason a contract was not made, in words for the office. */
-export function refusalWords(refusal: ContractRefusal): string {
-  return REFUSAL_WORDS[refusal];
-}
 
 export function isContractRefusal(value: unknown): value is ContractRefusal {
   return typeof value === "string" && value in REFUSAL_WORDS;

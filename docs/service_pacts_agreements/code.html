@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#f8fafc]" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Agreements - Service Pacts</title>
+<!-- Tailwind CSS CDN with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {theme: {extend: {colors: {sidebar: "#0b1120", sidebarHover: "#172237", sidebarBorder: "#1c283f", subtleGray: "#64748b", cardBg: "#ffffff", pageBg: "#f8fafc", brandBlue: "#2563eb", brandBlueHover: "#1d4ed8", "on-primary-container": "#eeefff", "on-primary-fixed-variant": "#003ea8", "secondary-fixed-dim": "#bec6e0", "primary-container": "#2563eb", "on-tertiary-fixed": "#002113", "surface-container-low": "#eff4ff", "on-surface-variant": "#434655", "surface-tint": "#0053db", "surface-bright": "#f8f9ff", "secondary-container": "#dae2fd", "inverse-surface": "#213145", "surface-container-highest": "#d3e4fe", "surface-container": "#e5eeff", "surface-dim": "#cbdbf5", error: "#ba1a1a", "on-primary": "#ffffff", "inverse-primary": "#b4c5ff", "on-primary-fixed": "#00174b", "secondary-fixed": "#dae2fd", outline: "#737686", "surface-container-lowest": "#ffffff", tertiary: "#006242", "on-background": "#0b1c30", "on-tertiary-container": "#bdffdb", "primary-fixed": "#dbe1ff", "on-error-container": "#93000a", "primary-fixed-dim": "#b4c5ff", "tertiary-fixed-dim": "#4edea3", "on-secondary-container": "#5c647a", "inverse-on-surface": "#eaf1ff", "on-tertiary-fixed-variant": "#005236", "on-secondary-fixed-variant": "#3f465c", "on-tertiary": "#ffffff", "tertiary-fixed": "#6ffbbe", "on-surface": "#0b1c30", "tertiary-container": "#007d55", "on-error": "#ffffff", surface: "#f8f9ff", primary: "#004ac6", "on-secondary-fixed": "#131b2e", "outline-variant": "#c3c6d7", secondary: "#565e74", background: "#f8f9ff", "error-container": "#ffdad6", "on-secondary": "#ffffff", "surface-variant": "#d3e4fe", "surface-container-high": "#dce9ff"}, fontFamily: {sans: ["Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"], "headline-sm": ["Inter"], "body-sm": ["Inter"], "headline-lg-mobile": ["Inter"], "headline-xl-mobile": ["Inter"], "label-md": ["Inter"], "headline-md": ["Inter"], "headline-xl": ["Inter"], "label-sm": ["Inter"], "body-md": ["Inter"], "mono-tabular": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Inter"]}, fontSize: {"headline-sm": ["16px", {lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600"}], "body-sm": ["12px", {lineHeight: "16px", letterSpacing: "0em", fontWeight: "400"}], "headline-lg-mobile": ["22px", {lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600"}], "headline-xl-mobile": ["28px", {lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "700"}], "label-md": ["14px", {lineHeight: "20px", letterSpacing: "-0.005em", fontWeight: "500"}], "headline-md": ["20px", {lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600"}], "headline-xl": ["36px", {lineHeight: "44px", letterSpacing: "-0.025em", fontWeight: "700"}], "label-sm": ["12px", {lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "600"}], "body-md": ["14px", {lineHeight: "20px", letterSpacing: "0em", fontWeight: "400"}], "mono-tabular": ["13px", {lineHeight: "18px", letterSpacing: "-0.01em", fontWeight: "500"}], "body-lg": ["16px", {lineHeight: "24px", letterSpacing: "-0.005em", fontWeight: "400"}], "headline-lg": ["28px", {lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600"}]}, spacing: {"space-sm": "0.5rem", gutter: "1rem", "space-xs": "0.25rem", "space-md": "1rem", "margin-md": "1.5rem", margin: "1rem", "gutter-md": "1.5rem", "space-lg": "1.5rem", "margin-lg": "2.5rem", "space-2xl": "3rem", "gutter-lg": "2rem", "space-xl": "2rem"}, borderRadius: {DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem"}}}}
+  </script>
+<style data-purpose="base-styling">
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/></head>
+<body class="h-full flex overflow-hidden text-slate-800 antialiased font-sans bg-[#f8fafc]">
+<!-- BEGIN: Sidebar -->
+<!-- END: Sidebar -->
+<!-- BEGIN: MainContentWrapper -->
+<aside class="w-64 flex-shrink-0 bg-[#0b1320] text-slate-300 flex flex-col justify-between border-r border-slate-800 transition-all duration-200 select-none z-20" id="main-sidebar">
+<!-- Top Section -->
+<div class="flex flex-col flex-1 overflow-y-auto">
+<!-- Navigation Header & Toggle -->
+<div class="flex items-center justify-between px-5 pt-5 pb-3 text-slate-400">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Navigation</span>
+<button class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors" id="sidebar-toggle-btn" title="Toggle Sidebar">
+<span class="material-symbols-outlined text-[18px]">menu_open</span>
+</button>
+</div>
+<!-- Workspace Card -->
+<div class="mx-4 mb-4 p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-between text-slate-200 shadow-sm">
+<div class="flex items-center space-x-2.5 overflow-hidden">
+<div class="w-8 h-8 rounded-md bg-blue-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm">SP</div>
+<div class="truncate">
+<div class="flex items-center space-x-1.5 leading-tight">
+<span class="font-semibold text-xs text-white truncate">Service Pacts</span>
+<span class="px-1.5 py-0.2 bg-blue-500/20 text-blue-400 text-[10px] font-semibold rounded border border-blue-400/30">Pro</span>
+</div>
+<div class="text-[11px] text-slate-400 truncate mt-0.5">HVAC &amp; Facility Maint.</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-[18px] flex-shrink-0">unfold_more</span>
+</div>
+<!-- Quick Search -->
+<div class="mx-4 mb-4 relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
+<input class="w-full bg-slate-900/80 border border-slate-700/60 text-slate-200 text-xs pl-8 pr-8 py-1.5 rounded-lg placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Search app..." type="text"/>
+<span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-slate-800 text-slate-400 px-1 py-0.5 rounded border border-slate-700">⌘K</span>
+</div>
+<!-- Nav Menu -->
+<nav class="px-3 space-y-1">
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">view_kanban</span>
+<span>Pipeline</span>
+</div>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">12</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium bg-blue-600 text-white rounded-lg shadow-sm" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">description</span>
+<span class="font-semibold">Agreements</span>
+</div>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/20 text-white">28</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">layers</span>
+<span>Templates</span>
+</div>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">2</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">group</span>
+<span>Customers</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">domain</span>
+<span>Sites &amp; equipment</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+<span>Imports</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">bar_chart</span>
+<span>Reports</span>
+</div>
+</a>
+</nav>
+</div>
+<!-- Bottom Section -->
+<div class="p-4 border-t border-slate-800/90 space-y-4 bg-[#09101c]">
+<!-- Active Agreements Meter -->
+<div class="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3">
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="text-slate-400 font-medium text-[11px]">Active Agreements</span>
+<span class="text-slate-200 font-semibold text-[11px]">4 / 50</span>
+</div>
+<div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden mb-2">
+<div class="bg-blue-500 h-full rounded-full" style="width: 8%"></div>
+</div>
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-slate-400">Pro Plan Quota</span>
+<a class="text-blue-400 hover:text-blue-300 font-medium" href="#">Manage</a>
+</div>
+</div>
+<!-- User Profile & Account -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center space-x-2.5 overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-slate-700 text-slate-200 font-semibold flex items-center justify-center text-xs flex-shrink-0 border border-slate-600">FV</div>
+<div class="truncate">
+<div class="font-medium text-xs text-white truncate">Felipe Viana</div>
+<div class="text-[11px] text-slate-400 truncate">Admin / Owner</div>
+</div>
+</div>
+<div class="flex items-center space-x-1 text-slate-400">
+<button class="p-1 hover:text-white rounded hover:bg-slate-800 transition-colors" title="Settings">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+<button class="p-1 hover:text-white rounded hover:bg-slate-800 transition-colors" title="Sign out">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+</button>
+</div>
+</div>
+</div>
+</aside><div class="flex-1 flex flex-col h-full overflow-hidden bg-[#f8fafc]"><header class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-8 py-3.5 flex items-center justify-between flex-shrink-0">
+<!-- Global Search Bar -->
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
+<input class="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg placeholder-slate-400 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all" placeholder="Search agreements, contracts, customers..." type="text"/>
+<span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-slate-100 text-slate-400 px-1 py-0.5 rounded border border-slate-200">⌘S</span>
+</div>
+<!-- Top Right Actions -->
+<div class="flex items-center space-x-3">
+<!-- Ask AI Button -->
+<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200/80 transition-colors border border-slate-200/60" type="button"><span class="material-symbols-outlined text-[16px] text-slate-500">terminal</span><span>Command</span><kbd class="text-[10px] font-mono text-slate-400 bg-white px-1 py-0.5 rounded border border-slate-200">⌘K</kbd></button>
+<!-- Notification Bell -->
+<button class="relative p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white"></span>
+</button>
+<!-- User Dropdown Pill -->
+<div class="flex items-center space-x-2 pl-2 border-l border-slate-200 cursor-pointer">
+<div class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center shadow-xs">FV</div>
+<div class="hidden md:block text-left text-xs leading-tight">
+<div class="font-semibold text-slate-800">Felipe Viana</div>
+<div class="text-[10px] text-slate-400">Admin &amp; Owner</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-[16px]">expand_more</span>
+</div>
+</div>
+</header>
+<!-- BEGIN: TopBar -->
+<!-- END: TopBar -->
+<!-- Scrollable Page Area -->
+<main class="flex-1 overflow-y-auto px-8 py-7" data-purpose="agreements-dashboard"><div class="max-w-7xl mx-auto space-y-6"><section class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2"><div class="space-y-1"><div class="flex items-center space-x-3"><h1 class="text-2xl font-bold tracking-tight text-slate-900">Agreements</h1><span class="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">6 active</span></div><p class="text-xs text-slate-500">Lifecycle oversight, commercial milestones, and countersignature statuses.</p></div><div class="flex items-center space-x-2.5"><button class="inline-flex items-center px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-all" type="button"><span class="material-symbols-outlined text-[16px] mr-1.5 text-slate-500">cloud_download</span>Export</button><button class="inline-flex items-center justify-center px-3.5 py-1.5 border border-transparent rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all focus:outline-none" type="button"><span class="material-symbols-outlined text-[16px] mr-1.5">add</span>New agreement</button></div></section><section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-purpose="stats-overview"><div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs"><div class="flex items-center justify-between text-slate-500 mb-2"><span class="text-xs font-medium text-slate-500">Total Agreements</span><span class="material-symbols-outlined text-[18px] text-slate-400">description</span></div><div class="flex items-baseline justify-between"><div class="text-2xl font-semibold text-slate-900 tracking-tight">6</div><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">+2 this mo</span></div><p class="text-[11px] text-slate-400 mt-1.5">Across all active accounts</p></div><div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs"><div class="flex items-center justify-between text-slate-500 mb-2"><span class="text-xs font-medium text-slate-500">With Customer</span><span class="material-symbols-outlined text-[18px] text-slate-400">forward_to_inbox</span></div><div class="flex items-baseline justify-between"><div class="text-2xl font-semibold text-slate-900 tracking-tight">0</div><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">0 pending</span></div><p class="text-[11px] text-slate-400 mt-1.5">No pending customer action</p></div><div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs"><div class="flex items-center justify-between text-slate-500 mb-2"><span class="text-xs font-medium text-slate-500">Action Required</span><span class="material-symbols-outlined text-[18px] text-slate-400">pending_actions</span></div><div class="flex items-baseline justify-between"><div class="text-2xl font-semibold text-slate-900 tracking-tight">0</div><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">All on schedule</span></div><p class="text-[11px] text-slate-400 mt-1.5">Changes asked or past SLA</p></div><div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs"><div class="flex items-center justify-between text-slate-500 mb-2"><span class="text-xs font-medium text-slate-500">Contract Pipeline</span><span class="material-symbols-outlined text-[18px] text-slate-400">attach_money</span></div><div class="flex items-baseline justify-between"><div class="text-2xl font-semibold text-slate-900 tracking-tight">$36,100</div><span class="text-xs font-medium text-slate-500">ARR</span></div><p class="text-[11px] text-slate-400 mt-1.5">$25,600/yr accepted</p></div></section><section class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs space-y-3"><div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"><div class="flex items-center space-x-1.5 overflow-x-auto pb-1 lg:pb-0"><button class="px-3 py-1.5 text-xs font-semibold bg-slate-900 text-white rounded-lg whitespace-nowrap shadow-xs">All (6)</button><button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">In progress (2)</button><button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">Sent (0)</button><button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">Accepted (2)</button><button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">Completed (2)</button><button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">Refused (0)</button><button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">Expiring soon (0)</button></div><div class="flex items-center space-x-2"><div class="relative flex-1 sm:w-72"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span><input class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg placeholder-slate-400 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all" placeholder="Search agreements, sites, or customers..." type="text"/></div><button class="inline-flex items-center px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-xs"><span class="material-symbols-outlined text-[16px] mr-1.5 text-slate-500">filter_list</span>Filters</button></div></div></section><section class="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs" data-purpose="agreements-list"><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider"><th class="py-3.5 px-5 font-semibold" scope="col">Agreement &amp; Site</th><th class="py-3.5 px-5 font-semibold" scope="col">Customer</th><th class="py-3.5 px-5 font-semibold" scope="col">Stage / Status</th><th class="py-3.5 px-5 text-right font-semibold" scope="col">Annual Value</th><th class="py-3.5 px-5 text-right font-semibold" scope="col">Term End / Age</th><th class="py-3.5 px-5 text-center font-semibold w-12" scope="col"></th></tr></thead><tbody class="divide-y divide-slate-100 text-xs"><tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer"><td class="py-3.5 px-5"><div class="flex items-center space-x-3"><div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-200 transition-colors"><span class="material-symbols-outlined text-[18px]">description</span></div><div><div class="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">New Customer</div><div class="text-[11px] text-slate-400 mt-0.5 font-mono">AG-1006 · v1</div></div></div></td><td class="py-3.5 px-5"><span class="text-slate-700 font-normal">ZZ TEST Round3 Customer</span></td><td class="py-3.5 px-5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5"></span>Withdrawn</span></td><td class="py-3.5 px-5 text-right font-medium text-slate-900"><span class="font-mono">$2,180</span><span class="text-slate-400 text-[11px]">/yr</span></td><td class="py-3.5 px-5 text-right"><div class="text-slate-900 font-normal">Ends 2027-11-30</div><div class="text-[11px] text-slate-400 mt-0.5 inline-flex items-center"><span class="material-symbols-outlined text-[13px] mr-1">schedule</span>1 day ago</div></td><td class="py-3.5 px-5 text-center"><button class="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button></td></tr><tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer"><td class="py-3.5 px-5"><div class="flex items-center space-x-3"><div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 flex-shrink-0"><span class="material-symbols-outlined text-[18px]">pending_actions</span></div><div><div class="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">439 Railway Street</div><div class="text-[11px] text-slate-400 mt-0.5 font-mono">AG-1005 · v1</div></div></div></td><td class="py-3.5 px-5"><span class="text-slate-700 font-normal">ZZ TEST Round3 Customer</span></td><td class="py-3.5 px-5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200"><span class="w-1.5 h-1.5 rounded-full bg-blue-600 mr-1.5"></span>In Review</span></td><td class="py-3.5 px-5 text-right font-medium text-slate-900"><span class="font-mono">$450</span><span class="text-slate-400 text-[11px]">/yr</span></td><td class="py-3.5 px-5 text-right"><div class="text-slate-900 font-normal">Ends 2027-11-30</div><div class="text-[11px] text-slate-400 mt-0.5 inline-flex items-center"><span class="material-symbols-outlined text-[13px] mr-1">schedule</span>2 days ago</div></td><td class="py-3.5 px-5 text-center"><button class="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button></td></tr><tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer"><td class="py-3.5 px-5"><div class="flex items-center space-x-3"><div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-200 transition-colors"><span class="material-symbols-outlined text-[18px]">description</span></div><div><div class="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">439 Railway Street</div><div class="text-[11px] text-slate-400 mt-0.5 font-mono">AG-1004 · v1</div></div></div></td><td class="py-3.5 px-5"><span class="text-slate-700 font-normal">ZZ TEST Round3 Customer</span></td><td class="py-3.5 px-5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5"></span>Withdrawn</span></td><td class="py-3.5 px-5 text-right font-medium text-slate-900"><span class="font-mono">$1,710</span><span class="text-slate-400 text-[11px]">/yr</span></td><td class="py-3.5 px-5 text-right"><div class="text-slate-400 italic">Unspecified</div><div class="text-[11px] text-slate-400 mt-0.5 inline-flex items-center"><span class="material-symbols-outlined text-[13px] mr-1">schedule</span>2 days ago</div></td><td class="py-3.5 px-5 text-center"><button class="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button></td></tr><tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer"><td class="py-3.5 px-5"><div class="flex items-center space-x-3"><div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 flex-shrink-0"><span class="material-symbols-outlined text-[18px]">pending_actions</span></div><div><div class="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">ZZ TEST Round3 Site</div><div class="text-[11px] text-slate-400 mt-0.5 font-mono">AG-1003 · v1</div></div></div></td><td class="py-3.5 px-5"><span class="text-slate-700 font-normal">ZZ TEST Round3 Customer</span></td><td class="py-3.5 px-5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200"><span class="w-1.5 h-1.5 rounded-full bg-blue-600 mr-1.5"></span>In Review</span></td><td class="py-3.5 px-5 text-right font-medium text-slate-900"><span class="font-mono">$10,050</span><span class="text-slate-400 text-[11px]">/yr</span></td><td class="py-3.5 px-5 text-right"><div class="text-slate-900 font-normal">Ends 2027-11-30</div><div class="text-[11px] text-slate-400 mt-0.5 inline-flex items-center"><span class="material-symbols-outlined text-[13px] mr-1">schedule</span>2 days ago</div></td><td class="py-3.5 px-5 text-center"><button class="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button></td></tr><tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer"><td class="py-3.5 px-5"><div class="flex items-center space-x-3"><div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-700 flex-shrink-0"><span class="material-symbols-outlined text-[18px]">verified</span></div><div><div class="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">ZZ TEST Round4 Site</div><div class="text-[11px] text-slate-400 mt-0.5 font-mono">AG-1002 · v1</div></div></div></td><td class="py-3.5 px-5"><span class="text-slate-700 font-normal">ZZ TEST Round4 Customer</span></td><td class="py-3.5 px-5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-700 mr-1.5"></span>Active</span></td><td class="py-3.5 px-5 text-right font-medium text-slate-900"><span class="font-mono">$16,000</span><span class="text-slate-400 text-[11px]">/yr</span></td><td class="py-3.5 px-5 text-right"><div class="text-slate-900 font-normal">Ends 2027-12-31</div><div class="text-[11px] text-slate-400 mt-0.5 inline-flex items-center"><span class="material-symbols-outlined text-[13px] mr-1">schedule</span>2 days ago</div></td><td class="py-3.5 px-5 text-center"><button class="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button></td></tr><tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer"><td class="py-3.5 px-5"><div class="flex items-center space-x-3"><div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-700 flex-shrink-0"><span class="material-symbols-outlined text-[18px]">verified</span></div><div><div class="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">ZZ TEST Round3 Site</div><div class="text-[11px] text-slate-400 mt-0.5 font-mono">AG-1001 · v1</div></div></div></td><td class="py-3.5 px-5"><span class="text-slate-700 font-normal">ZZ TEST Round3 Customer</span></td><td class="py-3.5 px-5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-700 mr-1.5"></span>Active</span></td><td class="py-3.5 px-5 text-right font-medium text-slate-900"><span class="font-mono">$9,600</span><span class="text-slate-400 text-[11px]">/yr</span></td><td class="py-3.5 px-5 text-right"><div class="text-slate-900 font-normal">Ends 2027-12-31</div><div class="text-[11px] text-slate-400 mt-0.5 inline-flex items-center"><span class="material-symbols-outlined text-[13px] mr-1">schedule</span>3 days ago</div></td><td class="py-3.5 px-5 text-center"><button class="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button></td></tr></tbody></table></div><div class="py-3.5 px-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/40"><span>Showing <strong class="text-slate-800 font-semibold">6</strong> of <strong class="text-slate-800 font-semibold">6</strong> agreements</span><div class="flex items-center space-x-2"><button class="px-2.5 py-1 border border-slate-200 rounded text-slate-400 bg-white cursor-not-allowed text-xs">Previous</button><button class="px-2.5 py-1 border border-slate-200 rounded text-slate-400 bg-white cursor-not-allowed text-xs">Next</button></div></div></section></div></main>
+</div>
+<!-- END: MainContentWrapper -->
+<script data-purpose="sidebar-toggle">(function() { const toggleBtn = document.getElementById('sidebar-toggle-btn'); const sidebar = document.getElementById('main-sidebar'); if (!toggleBtn || !sidebar) return; function toggleSidebar() { sidebar.classList.toggle('w-64'); sidebar.classList.toggle('w-0'); sidebar.classList.toggle('overflow-hidden'); } toggleBtn.addEventListener('click', toggleSidebar); window.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleSidebar(); } }); })();</script>
+</body></html>

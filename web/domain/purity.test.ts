@@ -54,14 +54,14 @@ const ITEM_COPY_ALLOWED = [
   "components/agreements/new-agreement-state.ts",
   // outside the feature: the product's own login copy (roadmap Phase 4.5 item 6) and the settings help that names the example word
   "app/login/page.tsx",
-  "components/settings/settings-fields.tsx",
+  "app/(app)/settings/_components/settings-fields.tsx",
   "components/ui/illustrations.tsx",
 ];
 
 /** Strings that stay literal because they are a default or a table row, spoken in the org's words where they are shown. */
 const ITEM_COPY_LITERALS = [
-  "components/agreements/version-compare.tsx: Equipment",
-  "components/imports/review-view.tsx: Equipment type",
+  "app/(app)/agreements/[agreementId]/_components/version-compare.tsx: Equipment",
+  "app/(app)/imports/[jobId]/_components/content.tsx: Equipment type",
   "components/shell/nav-items.ts: Sites & equipment",
   "components/agreements/new-agreement-state.ts: Sending the equipment list…",
   "components/agreements/new-agreement-state.ts: Finding the equipment…",
@@ -103,6 +103,8 @@ describe("item copy goes through the org's words", () => {
       for (const file of appSources(root)) {
         const relative = path.relative(webRoot, file).split(path.sep).join("/");
         if (ITEM_COPY_ALLOWED.includes(relative)) continue;
+        // Public marketing pages generated from the owner's mockups (decided 2026-11-22) speak for the product, not for an org, so no org words apply.
+        if (readFileSync(file, "utf8").includes("docs/service_pacts_")) continue;
         for (const copy of unlocalisedItemCopy(readFileSync(file, "utf8"), relative)) offenders.push(`${relative}: ${copy}`);
       }
     }

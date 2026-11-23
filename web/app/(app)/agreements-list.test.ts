@@ -34,18 +34,20 @@ beforeEach(() => {
 });
 
 describe("/agreements", () => {
-  test("C1356: the parsed filter and the Vancouver business day go to the lister, and the view renders", async () => {
+  test("C1356: the site and expiring filters and the Vancouver business day go to the lister (the status tab is applied to that one read), and the view renders", async () => {
     const out = await render({ status: "sent", site: SITE, expiring: "1" });
-    expect(listAgreements).toHaveBeenCalledWith({ status: "sent", siteId: SITE, expiring: true }, "2027-12-01");
+    expect(listAgreements).toHaveBeenCalledWith({ siteId: SITE, expiring: true }, "2027-12-01");
     expect(out).toContain("Agreements");
     expect(out).toContain("No agreements match");
   });
 
   test("C1356: an invalid status reads the same rows as no status", async () => {
     await render({ status: "bogus", site: "nope", expiring: "yes" });
+    const first = listAgreements.mock.calls[0];
+    listAgreements.mockClear();
     await render({});
-    expect(listAgreements).toHaveBeenNthCalledWith(1, {}, "2027-12-01");
-    expect(listAgreements).toHaveBeenNthCalledWith(2, {}, "2027-12-01");
+    expect(first).toEqual([{}, "2027-12-01"]);
+    expect(listAgreements.mock.calls[0]).toEqual([{}, "2027-12-01"]);
   });
 
   test("C1357: signed out goes to /login and nothing is read", async () => {

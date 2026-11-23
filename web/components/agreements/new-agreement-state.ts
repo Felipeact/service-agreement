@@ -13,7 +13,7 @@ type Failure = "forbidden" | "not_found" | "unavailable";
  */
 export type StartAgreementState =
   | { status: "idle" | Failure; customerId?: string; siteId?: string }
-  | { status: "started"; agreementId: string; siteId: string }
+  | { status: "started"; agreementId: string; siteId: string; customerId: string }
   | { status: "invalid"; errors: Partial<Record<NewAgreementField, string>> }
   /** The database refused the chosen template version; the ids are only those this call created, so a retry reuses them. */
   | { status: "invalid_template"; customerId?: string; siteId?: string }
@@ -46,9 +46,6 @@ export function startNotice(state: Extract<StartAgreementState, { status: "plan_
 /** What the dialog says after the agreement exists but the equipment list could not be sent. */
 export const LIST_FAILED = "The agreement was created, but we couldn't read the equipment list. You can add it from the agreement's site.";
 
-/** What the dialog says after the agreement exists but the picked equipment could not be added. */
-export const EQUIPMENT_FAILED = "The agreement was created, but we couldn't add the equipment. Add it from the agreement's site.";
-
 export const FILE_HINT = "Excel, CSV, Word or PDF, up to 20 MB";
 
 /** The dialog's start choice for a customer: the only customer when there is just one, otherwise none yet. */
@@ -56,15 +53,23 @@ export function firstCustomerChoice(customers: readonly { id: string }[]): strin
   return customers.length === 0 ? NEW_CHOICE : "";
 }
 
-export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting" | "adding" | "recommending";
+export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting" | "building";
 
 const PHASE_TEXT: Record<Exclude<Phase, "idle">, string> = {
   creating: "Creating the agreement…",
   uploading: "Sending the equipment list…",
   reading: "Reading the file…",
   extracting: "Finding the equipment…",
-  adding: "Adding the equipment to the site…",
-  recommending: "Recommending service lines…",
+  building: "Building the service lines…",
+};
+
+/** The same steps once done, for the thinking screen's fading history. */
+export const PHASE_DONE_TEXT: Record<Exclude<Phase, "idle">, string> = {
+  creating: "Created the agreement",
+  uploading: "Sent the equipment list",
+  reading: "Read the file",
+  extracting: "Found the equipment",
+  building: "Built the service lines",
 };
 
 /** The progress line under the form, in the org's words ("Finding the stations… 2 of 5"). */

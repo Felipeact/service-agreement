@@ -1,3 +1,4 @@
+import { isRecord } from "../guards";
 /**
  * Who a contract binds, frozen when staff generate it (contract-generation door 1). The stored document is
  * `{"schema": 1, "contractor": {...}, "customer": {...}, "site": {...}, "signer": {...} | null}`; `{}` means not recorded.
@@ -10,7 +11,6 @@ export type ContractParties = {
   signer: { name: string; email: string } | null;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value : null);
 
 /** The parties of a stored document, or `null` when it is not schema 1 or lacks a name the contract cannot do without. */

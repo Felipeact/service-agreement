@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
 import { MAX_DRAFT_FILE_BYTES } from "@/application/use-cases/draft-catalog";
-import type { AcceptFormState, DraftFormState } from "@/components/setup/draft-state";
+import type { AcceptFormState, DraftFormState } from "./_components/draft-state";
 
 /** The attached file, or `undefined` when the owner chose none (an empty file input still posts a nameless, empty File). */
 function readFile(formData: FormData): File | undefined {

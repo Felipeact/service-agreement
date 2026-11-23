@@ -44,7 +44,7 @@ describe("contractLayoutOf", () => {
 
   test("C5521: the system wording gives the layout the contract PDF drew before: the sections, the Terms heading and six clauses, then the signatures", () => {
     const { layout } = contractLayoutOf(SYSTEM_CONTRACT_BODY);
-    expect(layout.map((item) => (item.kind === "section" ? item.key : item.type))).toEqual([
+    expect(layout.map((item) => (item.kind === "section" ? item.key : item.kind === "block" ? item.type : "table"))).toEqual([
       "price",
       "schedule",
       "included",
@@ -211,7 +211,7 @@ describe("buildContractPreviewDocument", () => {
 
   test("C5531: a schema 1 body is drawn too, as the layout the contract always had", () => {
     const document = buildContractPreviewDocument(SYSTEM_CONTRACT_BODY, SETTINGS, null, "2026-11-13");
-    expect(document.layout?.map((item) => (item.kind === "section" ? item.key : item.type))[0]).toBe("price");
+    expect(document.layout?.map((item) => (item.kind === "section" ? item.key : item.kind === "block" ? item.type : "table"))[0]).toBe("price");
     expect(document.body.filter((block) => block.type === "clause")).toHaveLength(6);
   });
 });

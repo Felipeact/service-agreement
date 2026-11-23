@@ -6,8 +6,8 @@ import { ImportBanner } from "@/components/imports/import-banner";
 import { Button } from "@/components/ui/button";
 import { getContainer } from "@/composition";
 import { commitCleanImportAction, confirmImportAction, extractImportAction, readImportAction, startImportAction } from "./import-actions";
+import { generateServiceLinesAction } from "./agreement-actions";
 import { addEquipmentAction, startAgreementAction } from "./new-agreement-actions";
-import { recommendServiceLinesAction } from "./agreement-actions";
 
 /**
  * The org's own templates as the Template choice lists them. Standard agreement is the dialog's own first option, so the system
@@ -28,19 +28,13 @@ export function dialogTemplates(listed: TemplateListResult): DialogTemplate[] | 
 
 /** What the dialog needs: the customers and sites it offers, the templates it lists and the actions it calls. */
 export async function dialogProps(known?: TemplateListResult) {
-  const { listCustomers, listActiveSites, listAgreementTemplates, listEquipmentTypes } = await getContainer();
-  const [customers, sites, listed, equipmentTypes] = await Promise.all([
-    listCustomers(),
-    listActiveSites(),
-    known ?? listAgreementTemplates(),
-    // The picker is a convenience: a catalog that cannot be read leaves only the upload and "Add later".
-    listEquipmentTypes().catch(() => []),
-  ]);
+  const { listCustomers, listActiveSites, listAgreementTemplates, listAssetTypes } = await getContainer();
+  const [customers, sites, listed, types] = await Promise.all([listCustomers(), listActiveSites(), known ?? listAgreementTemplates(), listAssetTypes()]);
   return {
     customers: customers.filter((customer) => customer.active).map(({ id, name }) => ({ id, name })),
     sites,
     templates: dialogTemplates(listed),
-    equipmentTypes,
+    assetTypes: types.map(({ id, code, name }) => ({ id, code, name })),
     actions: {
       start: startAgreementAction,
       startImport: startImportAction,
@@ -49,7 +43,7 @@ export async function dialogProps(known?: TemplateListResult) {
       extractImport: extractImportAction,
       commitCleanImport: commitCleanImportAction,
       addEquipment: addEquipmentAction,
-      recommend: recommendServiceLinesAction,
+      generateLines: generateServiceLinesAction,
     },
   };
 }

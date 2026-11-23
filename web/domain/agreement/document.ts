@@ -6,7 +6,7 @@ import type { AgreementTerms, ScopeType } from "./index";
 import { sectionOptions, type DocOptions, type IncludedOptions, type LayoutItem } from "./layout";
 import { agreementTemplateValues, renderAgreementLayout, SYSTEM_AGREEMENT_BODY, type AgreementTemplateBody } from "./template";
 import { formatTermDate, termLine, termMonthsLabel, type AgreementTerm } from "./term";
-import type { RenderedBlock } from "../contract/template";
+import { days, type RenderedBlock } from "../contract/template";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
 export const NEUTRAL_ACCENT = "#374151";
@@ -100,8 +100,6 @@ export function typeFrequencies(lines: readonly DocumentSourceLine[], types: rea
   }
   return frequencies;
 }
-
-const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 
 /** The renewal clause, from the frozen or current terms and the version's term months (term-dates AC 20). */
 export function renewalClause(terms: AgreementTerms, termMonths: number): string | null {

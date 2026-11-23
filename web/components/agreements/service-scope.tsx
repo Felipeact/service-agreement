@@ -22,8 +22,8 @@ type SectionLook = { title?: string; showFrequency?: boolean; uppercase?: boolea
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
 
-const panel = "overflow-hidden rounded-panel border border-hairline bg-surface";
-const heading = "border-b border-hairline bg-ground px-4 py-2 text-[13px] font-semibold";
+const panel = "overflow-hidden rounded-panel border border-hairline bg-surface shadow-card";
+const heading = "border-b border-hairline px-4 py-3 text-[15px] font-semibold tracking-tight";
 const note = "px-4 py-6 text-center text-[13px] text-ink-2";
 
 const units = (count: number) => `${count} ${count === 1 ? "unit" : "units"}`;

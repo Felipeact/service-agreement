@@ -12,7 +12,8 @@ const redirect = vi.fn((path: string) => {
 const pipelineBoard = vi.fn(async () => [] as unknown[]);
 const workspaceState = vi.fn<() => Promise<"none" | "pending" | "refused">>();
 const getItemWords = vi.fn(async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }));
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, workspaceState, signOut, pipelineBoard, getItemWords, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
+const loadBillingUsage = vi.fn(async (_member: { orgId: string; role: string }) => null as unknown);
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, workspaceState, signOut, pipelineBoard, getItemWords, loadBillingUsage, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
 vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline" }));
 
 const { MemberGate } = await import("./member-gate");
@@ -27,6 +28,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getItemWords.mockResolvedValue({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
   workspaceState.mockResolvedValue("none");
+  loadBillingUsage.mockResolvedValue(null);
 });
 
 describe("(app) layout", () => {
@@ -55,7 +57,7 @@ describe("(app) layout", () => {
 
   const owner: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Service Pacts", role: "owner" };
 
-  test("the top bar names today and the bell links to the follow-ups with their count", async () => {
+  test("the bell links to the follow-ups with their count", async () => {
     currentMember.mockResolvedValue(owner);
     pipelineBoard.mockResolvedValue([
       { stage: "sent", ageDays: 12 }, // sat past the Sent limit
@@ -64,7 +66,6 @@ describe("(app) layout", () => {
       { stage: "completed", ageDays: 90 }, // closed, never due
     ]);
     const html = await renderLayout();
-    expect(html).toContain("Wednesday, December 1");
     expect(html).toMatch(/<a(?=[^>]*href="\/pipeline\?followups=1")(?=[^>]*aria-label="2 agreements need follow-up")[^>]*>/);
   });
 
@@ -139,5 +140,52 @@ describe("(app) layout, item words", () => {
     const out = await renderLayout();
     expect(out).toContain("Sites &amp; stations");
     expect(getItemWords).toHaveBeenCalledWith("org-9");
+  });
+});
+
+describe("(app) layout, plan card and counts", () => {
+  const owner: CurrentMember = { status: "member", userId: "u1", email: "owner@example.com", orgId: "o1", orgName: "Service Pacts", role: "owner" };
+  const card = (stage: string) => ({ stage, id: stage, annualCents: 1000, updatedAt: "2027-11-30T00:00:00Z" });
+
+  test("an owner sees their plan, its live-agreement use and a Manage link to billing", async () => {
+    currentMember.mockResolvedValue(owner);
+    loadBillingUsage.mockResolvedValue({ plan: "pro", liveAgreements: { used: 4, limit: 50 }, aiImports: { used: 0, limit: 10 }, resetsOn: "2027-12-01" });
+    const html = await renderLayout();
+
+    expect(loadBillingUsage).toHaveBeenCalledWith({ orgId: "o1", role: "owner" });
+    expect(html).toContain("Active agreements");
+    expect(html).toContain("4 / 50");
+    expect(html).toMatch(/<a[^>]*href="\/settings\/billing"[^>]*>Manage<\/a>/);
+  });
+
+  test("a member the usage reader returns nothing for sees no plan card", async () => {
+    currentMember.mockResolvedValue(owner);
+    loadBillingUsage.mockResolvedValue(null);
+
+    expect(await renderLayout()).not.toContain("Active agreements");
+  });
+
+  test("a plan with no live-agreement limit shows no card, and a failed read leaves the shell up", async () => {
+    currentMember.mockResolvedValue(owner);
+    loadBillingUsage.mockResolvedValue({ plan: "pro", liveAgreements: { used: 4, limit: null }, aiImports: { used: 0, limit: null }, resetsOn: "2027-12-01" });
+    expect(await renderLayout()).not.toContain("Active agreements");
+
+    loadBillingUsage.mockRejectedValue(new Error("down"));
+    expect(await renderLayout()).toContain("page body");
+  });
+
+  test("Pipeline's badge counts the open agreements, not the closed ones", async () => {
+    currentMember.mockResolvedValue(owner);
+    pipelineBoard.mockResolvedValue([card("in_progress"), card("sent"), card("accepted"), card("completed"), card("refused")]);
+
+    expect(await renderLayout()).toContain('aria-label="Pipeline, 3"');
+  });
+
+  test("the account row shows the role and the avatar initials", async () => {
+    currentMember.mockResolvedValue(owner);
+    const html = await renderLayout();
+
+    expect(html).toContain("Owner");
+    expect(html).toContain(">OW<");
   });
 });

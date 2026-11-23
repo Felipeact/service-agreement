@@ -46,11 +46,10 @@ function options(markup: string, id: string) {
 }
 
 describe("the Template choice in the New agreement dialog", () => {
-  test("C5400: a Template select comes above Customer and Site, Standard agreement first and selected, then the templates by name", () => {
+  test("C5400: a Template select comes after Customer and Site, Standard agreement first and selected, then the templates by name", () => {
     const markup = html([QUARTERLY, EMPTY, NO_TERM]);
     expect(markup).toMatch(/<label[^>]*for="newAgreementTemplate"[^>]*>Template</);
-    expect(markup.indexOf('for="newAgreementTemplate"')).toBeLessThan(markup.indexOf('for="newAgreementCustomer"'));
-    expect(markup.indexOf('for="newAgreementTemplate"')).toBeLessThan(markup.indexOf("Who is it for?"));
+    expect(markup.indexOf('for="newAgreementCustomer"')).toBeLessThan(markup.indexOf('for="newAgreementTemplate"'));
     const { texts, selected } = options(markup, "newAgreementTemplate");
     expect(texts).toEqual(["Standard agreement", "Annual plan", "Blank wording", "Quarterly HVAC"]);
     expect(selected).toEqual(["Standard agreement"]);
@@ -148,7 +147,7 @@ describe("the dialog's answer to a rejected template", () => {
     expect(pick("newAgreementTemplate").value).toBe(V1);
     expect(pick("newAgreementTemplate").disabled).toBe(false);
 
-    start.mockResolvedValueOnce({ status: "started", agreementId: "ag-1", siteId: SITE });
+    start.mockResolvedValueOnce({ status: "started", agreementId: "ag-1", siteId: SITE, customerId: CUSTOMER });
     await change(pick("newAgreementTemplate"), V2);
     await act(async () => container.querySelector("form")!.requestSubmit());
     expect(start).toHaveBeenLastCalledWith(expect.objectContaining({ templateVersionId: V2 }));
@@ -156,7 +155,7 @@ describe("the dialog's answer to a rejected template", () => {
   });
 
   test("C5404: choosing Standard agreement sends an empty version, which the action treats as none", async () => {
-    const start = vi.fn(async (): Promise<StartAgreementState> => ({ status: "started", agreementId: "ag-2", siteId: SITE }));
+    const start = vi.fn(async (): Promise<StartAgreementState> => ({ status: "started", agreementId: "ag-2", siteId: SITE, customerId: CUSTOMER }));
     await act(async () => root.render(createElement(NewAgreementDialog, props([QUARTERLY], { actions: actions(start) }) as never)));
     await change(pick("newAgreementCustomer"), CUSTOMER);
     await change(pick("newAgreementSite"), SITE);

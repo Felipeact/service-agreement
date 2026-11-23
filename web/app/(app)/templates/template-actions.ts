@@ -12,7 +12,7 @@ import {
   type CustomizeTemplateState,
   type DuplicateTemplateState,
   type SaveTemplateState,
-} from "@/components/templates/state";
+} from "@/app/(app)/templates/_components/state";
 
 /** The container of a member who may write templates, `null` for one who may not; signed out goes to /login. The org is the member's own. */
 async function writer() {

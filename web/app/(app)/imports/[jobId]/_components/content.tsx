@@ -1,0 +1,239 @@
+import Link from "next/link";
+import type { AssetTypeOption, ImportReview, ImportRowView } from "@/application/ports";
+import { PageHeader } from "@/components/shell/page-header";
+import { LinkButton } from "@/components/ui/link-button";
+import { SectionPanel } from "@/components/ui/section-panel";
+import { StatusPill } from "@/components/ui/status-pill";
+import { addLabel, committedSummary, fixLine, flagRows, isBlocking, pageOf, REVIEW_PAGE_ROWS, reviewSummary, unmatchedSpellings, type ReviewFlag, type SiteAssetRef } from "@/domain/imports";
+import { DEFAULT_ITEM_WORDS, itemText, itemVerb, type ItemWords } from "@/domain/org-settings";
+import { CommitControl, MappingSection, RowControls } from "./review-controls";
+import type { CommitState, MapState, RowState, SuggestState } from "@/components/imports/state";
+
+export type ReviewActions = {
+  update: (rowId: string) => (formData: FormData) => Promise<RowState>;
+  /** Sets the row's `skipped` to the value given. */
+  skip: (rowId: string, skipped: boolean) => () => Promise<RowState>;
+  map: (formData: FormData) => Promise<MapState>;
+  /** Asks the model for a type for each unrecognised spelling. */
+  suggest?: () => Promise<SuggestState>;
+  commit: () => Promise<CommitState>;
+};
+
+type ReviewViewProps = {
+  review: ImportReview;
+  /** The org's asset types, ordered by name. */
+  types: AssetTypeOption[];
+  /** The site's current assets, for "Already on this site". */
+  siteAssets: SiteAssetRef[];
+  show: "all" | "attention";
+  /** The raw `?page` value. */
+  page?: string;
+  /** The writer's actions; absent for a viewer, who sees the rows and flags only. */
+  actions?: ReviewActions;
+  /** The agreement this list was sent for, when it came from the New agreement dialog (`?agreement=`): the page links back to it. */
+  agreementId?: string;
+  words?: ItemWords;
+};
+
+const CONFIDENCE = { low: "Low", medium: "Medium", high: "High" } as const;
+
+const plural = (n: number, word: string) => `${n.toLocaleString("en-CA")} ${word}${n === 1 ? "" : "s"}`;
+
+function flagLabel(flag: ReviewFlag): string {
+  switch (flag.kind) {
+    case "needs_type":
+      return "Needs a type";
+    case "too_long":
+      return `Too long: ${flag.field}`;
+    case "check":
+      return "Check this row";
+    case "same_as":
+      return `Same as row ${flag.position}`;
+    case "on_site":
+      return "Already on this site";
+  }
+}
+
+const COLUMNS = ["#", "Equipment type", "In file", "Unit #", "Type/model", "Location/access", "Confidence", "Source"];
+
+/** One cell: its column name above the value below 768px, a table cell from 768px. */
+function Cell({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`min-w-0 break-words ${className}`}>
+      <span className="block text-[11px] font-medium text-ink-2 md:sr-only">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function hrefFor(jobId: string, show: "all" | "attention", page?: number, agreementId?: string) {
+  const params = new URLSearchParams();
+  if (agreementId) params.set("agreement", agreementId);
+  if (show === "attention") params.set("show", "attention");
+  if (page && page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return `/imports/${jobId}${query ? `?${query}` : ""}`;
+}
+
+/** The review grid of an extracted job, or the read-only record of a committed one. */
+export function ReviewView({ review, types, siteAssets, show, page, actions, agreementId, words = DEFAULT_ITEM_WORDS }: ReviewViewProps) {
+  const { job, rows } = review;
+  const open = job.status === "extracted";
+  const writer = open ? actions : undefined;
+  const typeLabel = new Map(types.map((type) => [type.id, `${type.name} (${type.code})`]));
+  // Once committed, the site holds the rows' own assets, so comparing against it would flag every added row.
+  const flags = flagRows(rows, open ? siteAssets : []);
+  const flagsOf = (row: ImportRowView) => flags.get(row.id) ?? [];
+  const included = rows.filter((row) => !row.skipped);
+  const attention = included.filter((row) => flagsOf(row).length > 0);
+  // The commit never adds a row the site already has, so the button counts only the rest.
+  const addable = included.filter((row) => !flagsOf(row).some((flag) => flag.kind === "on_site")).length;
+  const blocking = included.filter((row) => flagsOf(row).some(isBlocking)).length;
+  const shown = show === "attention" ? attention : rows;
+  const pager = pageOf(shown.length, page);
+  const pageRows = [...shown].sort((a, b) => a.position - b.position).slice((pager.page - 1) * REVIEW_PAGE_ROWS, pager.page * REVIEW_PAGE_ROWS);
+  const spellings = writer ? unmatchedSpellings(rows) : [];
+  const summary = reviewSummary({
+    included: included.length,
+    ready: included.filter((row) => flagsOf(row).length === 0).length,
+    needType: included.filter((row) => flagsOf(row).some((flag) => flag.kind === "needs_type")).length,
+    onSite: included.filter((row) => flagsOf(row).some((flag) => flag.kind === "on_site")).length,
+    unmatchedGroups: unmatchedSpellings(rows).length,
+  });
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
+        <Link href="/imports" className="inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
+          <span aria-hidden="true">←</span> Imports
+        </Link>
+        <PageHeader title={job.originalName} badge={<StatusPill tone="neutral" label={open ? "Extracted" : "Added to site"} />} subtitle={job.siteName} />
+      </div>
+
+      {agreementId && (
+        <section aria-label="Your agreement" className="flex flex-col gap-2 rounded-panel bg-action-tint px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] text-ink">
+            {job.committed
+              ? `The ${words.plural} ${itemVerb(words, "is", "are")} on the site. Your agreement is ready to build.`
+              : `This list is for the agreement you just started. Check the rows, add them to ${job.siteName}, then continue.`}
+          </p>
+          <Link href={`/agreements/${agreementId}`} className="inline-flex min-h-11 shrink-0 items-center font-semibold text-action lg:min-h-0">
+            {job.committed ? "Continue to the agreement" : "Skip to the agreement"}
+          </Link>
+        </section>
+      )}
+
+      {job.committed && (
+        <SectionPanel id="import-committed" title="Added to site" note={committedSummary(job.committed.added, job.committed.skipped)} action={<LinkButton href={`/sites/${job.siteId}`}>{`View ${job.siteName}`}</LinkButton>}>
+          <p className="text-[13px] text-ink-2">The rows below are what went onto the site.</p>
+        </SectionPanel>
+      )}
+
+      {rows.length === 0 ? (
+        <p className="rounded-panel border border-hairline bg-surface shadow-card px-4 py-8 text-center text-[13px] text-ink-2">{`No ${words.plural} ${itemVerb(words, "was", "were")} found in this file.`}</p>
+      ) : (
+        <>
+          {writer && (
+            <SectionPanel id="import-commit" title={summary.headline} note={summary.next || undefined}>
+              <div data-review-summary="">
+                <CommitControl
+                  commit={writer.commit}
+                  label={addLabel(addable, job.siteName)}
+                  siteName={job.siteName}
+                  added={addable}
+                  blocked={included.length === 0 ? "Include at least one row to add." : addable === 0 ? "Every included row is already on this site." : blocking > 0 ? fixLine(blocking) : null}
+                />
+              </div>
+            </SectionPanel>
+          )}
+
+          {writer && <MappingSection spellings={spellings} types={types} map={writer.map} suggest={writer.suggest} />}
+
+          <SectionPanel
+            id="import-rows"
+            title="Rows"
+            note={`${plural(rows.length, "row")} · ${included.length.toLocaleString("en-CA")} included · ${attention.length.toLocaleString("en-CA")} need attention`}
+            action={
+              <nav aria-label="Filter rows" className="flex gap-1">
+                {([["all", "All rows"], ["attention", "Needs attention"]] as const).map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={hrefFor(job.id, key, undefined, agreementId)}
+                    aria-current={show === key ? "page" : undefined}
+                    className={`inline-flex h-11 items-center rounded-control px-3 text-[13px] font-semibold lg:h-9 ${show === key ? "bg-action-tint text-action-press" : "text-ink-nav hover:bg-board hover:text-ink"}`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+            }
+            flush
+          >
+            {pageRows.length === 0 ? (
+              <p className="px-4 py-8 text-center text-[13px] text-ink-2">Every row is ready to add.</p>
+            ) : (
+              <div className="relative md:overflow-x-auto">
+                {/* `relative` keeps the `md:sr-only` column labels (absolutely positioned) inside the scroll area. */}
+                <div className="md:min-w-[960px]">
+                  <div aria-hidden="true" className="hidden grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] gap-3 border-b border-hairline bg-ground/70 px-4 py-2.5 text-[12px] font-semibold text-ink-2 md:grid">
+                    {COLUMNS.map((column) => (
+                      <span key={column}>{itemText(column, words)}</span>
+                    ))}
+                  </div>
+                  <ul className="flex flex-col divide-y divide-hairline">
+                    {pageRows.map((row) => {
+                      const rowFlags = flagsOf(row);
+                      const ink = row.skipped ? "text-ink-2" : "text-ink";
+                      return (
+                        <li key={row.id} data-row={row.position} className="flex flex-col gap-2 px-4 py-3">
+                          <div className={`grid grid-cols-2 gap-x-3 gap-y-2 text-[13px] md:grid-cols-[40px_1.3fr_1fr_0.8fr_1fr_1.2fr_0.7fr_0.8fr] ${ink}`}>
+                            <Cell label="#">{row.position}</Cell>
+                            <Cell label={itemText("Equipment type", words)} className="font-medium">
+                              {row.assetTypeId ? (typeLabel.get(row.assetTypeId) ?? "Unknown type") : "Needs a type"}
+                            </Cell>
+                            <Cell label="In file">{row.assetTypeRaw ?? "-"}</Cell>
+                            <Cell label="Unit #">{row.unitNo ?? "-"}</Cell>
+                            <Cell label="Type/model">{row.typeModel ?? "-"}</Cell>
+                            <Cell label="Location/access">{row.location ?? "-"}</Cell>
+                            <Cell label="Confidence">{CONFIDENCE[row.confidence]}</Cell>
+                            <Cell label="Source">{row.sourceRef ?? "-"}</Cell>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {!open && <StatusPill tone="neutral" label={row.skipped ? "Skipped" : "Added"} />}
+                            {open && row.skipped && <StatusPill tone="neutral" label="Skipped" />}
+                            {rowFlags.map((flag) => (
+                              <StatusPill key={flagLabel(flag)} tone="attention" label={flagLabel(flag)} />
+                            ))}
+                          </div>
+                          {writer && (
+                            <RowControls row={row} types={types} update={writer.update(row.id)} toggleSkip={writer.skip(row.id, !row.skipped)} />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </SectionPanel>
+
+            {pager.pages > 1 && (
+              <nav aria-label="Pages" className="flex flex-wrap items-center gap-4 text-[13px]">
+                {pager.page > 1 && (
+                  <Link href={hrefFor(job.id, show, pager.page - 1, agreementId)} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
+                    Previous
+                  </Link>
+                )}
+                <span className="text-ink-2">{`Rows ${pager.from}-${pager.to} of ${shown.length.toLocaleString("en-CA")}`}</span>
+                {pager.page < pager.pages && (
+                  <Link href={hrefFor(job.id, show, pager.page + 1, agreementId)} className="inline-flex min-h-11 items-center font-medium text-action lg:min-h-0">
+                    Next
+                  </Link>
+                )}
+              </nav>
+            )}
+        </>
+      )}
+    </div>
+  );
+}

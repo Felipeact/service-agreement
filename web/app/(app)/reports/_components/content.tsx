@@ -1,0 +1,351 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import type { ReportResult } from "@/application/ports";
+import { PageHeader } from "@/components/shell/page-header";
+import { Button } from "@/components/ui/button";
+import { EmptyPanel } from "@/components/ui/empty-panel";
+import { LinkButton } from "@/components/ui/link-button";
+import { DownloadIcon } from "lucide-react";
+import { SectionPanel } from "@/components/ui/section-panel";
+import { TextInput } from "@/components/ui/text-input";
+import {
+  dropOff,
+  signLabel,
+  winRate,
+  type Aging,
+  type CustomerRevenue,
+  type FunnelRow,
+  type Headline,
+  type LossRow,
+  type RenewalRow,
+  type ReportKey,
+  type ReportRange,
+  type TypeRevenue,
+} from "@/domain/reports";
+import { formatCad, formatCadExact } from "@/lib/money";
+
+/** A section the member's role does not see is `null`; one the database could not read is a failed result. */
+type Part<T> = ReportResult<T> | null;
+
+export type ReportsViewProps = {
+  range: ReportRange;
+  notice: string | null;
+  /** The org has no agreements at all, so there is nothing to report on yet (AC 16). */
+  empty: boolean;
+  headline: Part<Headline>;
+  funnel: Part<FunnelRow[]>;
+  aging: Part<Aging>;
+  losses: Part<LossRow[]>;
+  renewals: Part<RenewalRow[]>;
+  revenueByCustomer: Part<CustomerRevenue[]>;
+  revenueByType: Part<TypeRevenue[]>;
+};
+
+const STAGE_LABEL = { created: "Created", sent: "Sent", accepted: "Accepted", signed: "Signed" } as const;
+const STAGE_BAR = { created: "bg-stage-in-progress", sent: "bg-stage-sent", accepted: "bg-stage-accepted", signed: "bg-stage-completed" } as const;
+const OUTCOME_LABEL = { refused: "Refused", expired: "Expired", withdrawn: "Withdrawn" } as const;
+
+function Section({ id, title, note, download, range, children, bare = false }: { id: string; title: string; note?: string; download?: ReportKey; range: ReportRange; children: ReactNode; /** The headline's own cards are the panels, so it has no frame. */ bare?: boolean }) {
+  const action = download ? (
+    <LinkButton href={`/reports/export?report=${download}&from=${range.from}&to=${range.to}`} prefetch={false} variant="secondary" download>
+      <DownloadIcon aria-hidden="true" />
+      Download CSV
+    </LinkButton>
+  ) : undefined;
+  if (bare) {
+    return (
+      <section aria-labelledby={id} className="flex flex-col gap-3">
+        <h2 id={id} className="sr-only">
+          {title}
+        </h2>
+        {children}
+      </section>
+    );
+  }
+  return (
+    <SectionPanel id={id} title={title} note={note} action={action}>
+      <div className="flex flex-col gap-3">{children}</div>
+    </SectionPanel>
+  );
+}
+
+function Failed({ what }: { what: string }) {
+  return (
+    <p role="alert" className="rounded-control bg-ground px-3 py-2.5 text-[13px] text-ink-2">
+      {what} could not be read right now. The other reports are unaffected; reload to try again.
+    </p>
+  );
+}
+
+const Empty = ({ children }: { children: ReactNode }) => <p className="rounded-control bg-ground px-3 py-2.5 text-[13px] text-ink-2">{children}</p>;
+
+function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 rounded-panel border border-hairline bg-surface p-4 shadow-card">
+      <dt className="text-[13px] font-medium text-ink-2">{label}</dt>
+      <dd className="text-[28px] leading-9 font-semibold tracking-tight break-words tabular-nums">{value}</dd>
+      {note && <dd className="border-t border-hairline pt-2 text-[12px] text-ink-2">{note}</dd>}
+    </div>
+  );
+}
+
+function Rows({ children }: { children: ReactNode }) {
+  return <ul className="divide-y divide-hairline">{children}</ul>;
+}
+
+function Row({ children }: { children: ReactNode }) {
+  return <li className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5 py-2.5 text-[13px]">{children}</li>;
+}
+
+const AgreementLink = ({ id, number }: { id: string; number: string }) => (
+  <Link href={`/agreements/${id}`} className="inline-flex min-h-11 items-center font-semibold text-action underline-offset-2 hover:underline lg:min-h-0">
+    {number || "Agreement"}
+  </Link>
+);
+
+function HeadlineSection({ part, range }: { part: Part<Headline>; range: ReportRange }) {
+  if (!part) return null;
+  return (
+    <Section id="rep-headline" title="Headline" note={`Decisions and signatures from ${range.from} to ${range.to}; revenue and pipeline as of today.`} range={range} bare={part.ok}>
+      {!part.ok ? (
+        <Failed what="The headline" />
+      ) : (
+        <dl className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label="Recurring revenue" value={formatCad(part.value.recurringCents)} note="a year, agreements in term" />
+          <Stat label="Pipeline" value={formatCad(part.value.pipelineCents)} note="a year, sent or awaiting a start" />
+          <Stat label="Win rate" value={winRate({ accepted: part.value.accepted, refused: part.value.refused, expired: part.value.expired })} note={`${part.value.accepted} accepted, ${part.value.refused} refused, ${part.value.expired} expired`} />
+          <Stat label="Avg. days to sign" value={signLabel(part.value.avgDaysToSign)} note={`${part.value.signed} signed`} />
+        </dl>
+      )}
+    </Section>
+  );
+}
+
+function FunnelSection({ part, range, money }: { part: Part<FunnelRow[]>; range: ReportRange; money: boolean }) {
+  if (!part) return null;
+  const rows = part.ok ? part.value : [];
+  const drops = dropOff(rows.map((r) => r.n));
+  const top = Math.max(1, ...rows.map((r) => r.n));
+  return (
+    <Section id="rep-funnel" title="Funnel" note="Where agreements drop off." download="funnel" range={range}>
+      {!part.ok ? (
+        <Failed what="The funnel" />
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {rows.map((r, i) => (
+            <li key={r.stage} className="flex flex-col gap-0.5">
+              <div className="grid grid-cols-[5rem_1fr_2rem] items-center gap-3 text-[13px]">
+                <span className="font-medium">{STAGE_LABEL[r.stage]}</span>
+                <span aria-hidden="true" className="h-6 overflow-hidden rounded-control bg-board">
+                  <span className={`block h-full rounded-control ${STAGE_BAR[r.stage]}`} style={{ width: `${(r.n / top) * 100}%` }} />
+                </span>
+                <span className="text-right font-semibold">{r.n}<span className="sr-only"> {r.n === 1 ? "agreement" : "agreements"}</span></span>
+              </div>
+              <p className="pl-[5.75rem] text-[12px] text-ink-2">
+                {money && r.valueCents !== null && `${formatCad(r.valueCents)} a year`}
+                {money && r.valueCents !== null && i > 0 && " · "}
+                {i > 0 && (r.n === 0 && rows[i - 1].n === 0 ? "No agreements at this stage" : `${drops[i]}% dropped off`)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+function AgingSection({ part, range }: { part: Part<Aging>; range: ReportRange }) {
+  if (!part) return null;
+  return (
+    <Section id="rep-aging" title="Speed and stuck deals" note="Median days, and the oldest open." download="aging" range={range}>
+      {!part.ok ? (
+        <Failed what="Speed and stuck deals" />
+      ) : (
+        <>
+          <Rows>
+            {part.value.medians.map((m) => (
+              <Row key={m.stage}>
+                <span className="w-44 font-semibold">{m.stage}</span>
+                <span>{m.days === null ? "No data in this range" : `${m.days.toFixed(1)} days (median)`}</span>
+              </Row>
+            ))}
+          </Rows>
+          {part.value.stuck.length === 0 ? (
+            <Empty>Nothing is waiting. Every agreement has been decided or signed.</Empty>
+          ) : (
+            <Rows>
+              {part.value.stuck.map((s) => (
+                <Row key={s.agreementId}>
+                  <AgreementLink id={s.agreementId} number={s.number} />
+                  <span>{s.customer}, {s.site}</span>
+                  <span className="ml-auto inline-flex h-[22px] items-center rounded-full bg-attention-bg px-2.5 text-[11px] font-semibold whitespace-nowrap text-attention-fg">{s.status.replaceAll("_", " ")} for {s.ageDays} {s.ageDays === 1 ? "day" : "days"}</span>
+                </Row>
+              ))}
+            </Rows>
+          )}
+        </>
+      )}
+    </Section>
+  );
+}
+
+function LossesSection({ part, range, money }: { part: Part<LossRow[]>; range: ReportRange; money: boolean }) {
+  if (!part) return null;
+  const counts = part.ok ? (["refused", "expired", "withdrawn"] as const).map((o) => `${part.value.filter((r) => r.outcome === o).length} ${OUTCOME_LABEL[o].toLowerCase()}`).join(", ") : "";
+  return (
+    <Section id="rep-losses" title="Lost deals" note={part.ok ? counts : undefined} download="losses" range={range}>
+      {!part.ok ? (
+        <Failed what="Lost deals" />
+      ) : part.value.length === 0 ? (
+        <Empty>No agreements were refused, expired or withdrawn in this range.</Empty>
+      ) : (
+        (["refused", "expired", "withdrawn"] as const).map((outcome) => {
+          const rows = part.value.filter((r) => r.outcome === outcome);
+          if (rows.length === 0) return null;
+          return (
+            <div key={outcome} className="flex flex-col gap-1">
+              <h3 className="text-[13px] font-semibold">{OUTCOME_LABEL[outcome]} · {rows.length}</h3>
+              <Rows>
+                {rows.map((r) => (
+                  <Row key={`${r.agreementId}-${r.outcome}`}>
+                    <AgreementLink id={r.agreementId} number={r.number} />
+                    <span>{r.customer}, {r.site}</span>
+                    <span className="text-ink-2">{r.occurred}</span>
+                    {money && r.valueCents !== null && <span className="text-ink-2">{formatCad(r.valueCents)} a year</span>}
+                    {r.reason && <span className="basis-full text-ink-2">Reason: {r.reason}</span>}
+                  </Row>
+                ))}
+              </Rows>
+            </div>
+          );
+        })
+      )}
+    </Section>
+  );
+}
+
+function RenewalsSection({ part, range, money }: { part: Part<RenewalRow[]>; range: ReportRange; money: boolean }) {
+  if (!part) return null;
+  return (
+    <Section id="rep-renewals" title="Renewals due" note="Ending in 90 days, no renewal yet." download="renewals" range={range}>
+      {!part.ok ? (
+        <Failed what="Renewals" />
+      ) : part.value.length === 0 ? (
+        <Empty>No term ends in the next 90 days.</Empty>
+      ) : (
+        ([30, 60, 90] as const).map((bucket) => {
+          const rows = part.value.filter((r) => r.bucket === bucket);
+          const low = bucket === 30 ? 0 : bucket - 29;
+          return (
+            <div key={bucket} className="flex flex-col gap-1">
+              <h3 className="text-[13px] font-semibold">{low} to {bucket} days · {rows.length}</h3>
+              {rows.length === 0 ? (
+                <p className="text-[13px] text-ink-2">None.</p>
+              ) : (
+                <Rows>
+                  {rows.map((r) => (
+                    <Row key={r.agreementId}>
+                      <AgreementLink id={r.agreementId} number={r.number} />
+                      <span>{r.customer}, {r.site}</span>
+                      <span className="text-ink-2">ends {r.termEnd}</span>
+                      <span className="font-semibold">{r.kind === "auto" ? "Auto-renews" : "Needs negotiation"}</span>
+                      {money && r.valueCents !== null && <span className="text-ink-2">{formatCad(r.valueCents)} a year</span>}
+                    </Row>
+                  ))}
+                </Rows>
+              )}
+            </div>
+          );
+        })
+      )}
+    </Section>
+  );
+}
+
+function RevenueSection({ id, title, note, download, range, part, label }: { id: string; title: string; note: string; download: ReportKey; range: ReportRange; part: Part<{ name: string; valueCents: number; extra?: string }[]>; label: string }) {
+  if (!part) return null;
+  return (
+    <Section id={id} title={title} note={note} download={download} range={range}>
+      {!part.ok ? (
+        <Failed what={title} />
+      ) : part.value.length === 0 ? (
+        <Empty>No agreement is in term yet, so there is no revenue to split by {label}.</Empty>
+      ) : (
+        <Rows>
+          {part.value.map((r) => (
+            <Row key={r.name}>
+              <span className="font-semibold">{r.name}</span>
+              {r.extra && <span className="text-ink-2">{r.extra}</span>}
+              <span className="ml-auto">{formatCadExact(r.valueCents)} a year</span>
+              <span aria-hidden="true" className="order-last h-2.5 basis-full overflow-hidden rounded-full bg-board">
+                <span className="block h-full rounded-full bg-action" style={{ width: `${Math.max(2, (r.valueCents / Math.max(1, ...part.value.map((row) => row.valueCents))) * 100)}%` }} />
+              </span>
+            </Row>
+          ))}
+        </Rows>
+      )}
+    </Section>
+  );
+}
+
+const named = <T, R>(part: Part<T[]>, to: (row: T) => R): Part<R[]> => (part === null ? null : part.ok ? { ok: true, value: part.value.map(to) } : part);
+
+/** The Reports screen: headline, funnel, speed, losses, renewals and revenue, each with its own error line and CSV download. */
+export function ReportsView({ range, notice, empty, headline, funnel, aging, losses, renewals, revenueByCustomer, revenueByType }: ReportsViewProps) {
+  const money = headline !== null;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Reports" subtitle={`${range.from} to ${range.to}`} />
+      <form method="get" action="/reports" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 shadow-card sm:flex-row sm:items-end">
+        <TextInput id="rep-from" name="from" type="date" label="From" defaultValue={range.from} required className="sm:w-44" />
+        <TextInput id="rep-to" name="to" type="date" label="To" defaultValue={range.to} required className="sm:w-44" />
+        <Button type="submit" variant="primary">
+          Apply range
+        </Button>
+        <LinkButton href="/reports" variant="secondary">
+          Last 12 months
+        </LinkButton>
+      </form>
+      {notice && (
+        <p role="status" className="rounded-control bg-action-tint px-3 py-2.5 text-[13px] text-ink">
+          {notice}
+        </p>
+      )}
+      {empty ? (
+        <EmptyPanel title="Nothing to report yet" text="Reports fill in as you send agreements. Start your first one and the figures appear here.">
+          <LinkButton href="/agreements" variant="primary">
+            New agreement
+          </LinkButton>
+        </EmptyPanel>
+      ) : (
+        <>
+          <HeadlineSection part={headline} range={range} />
+          <div className="grid items-start gap-6 xl:grid-cols-2">
+          <FunnelSection part={funnel} range={range} money={money} />
+          <AgingSection part={aging} range={range} />
+          <LossesSection part={losses} range={range} money={money} />
+          <RenewalsSection part={renewals} range={range} money={money} />
+          <RevenueSection
+            id="rep-customer"
+            title="Revenue by customer"
+            note="In term today, a year each."
+            download="revenue_customer"
+            range={range}
+            label="customer"
+            part={named(revenueByCustomer, (r) => ({ name: r.customer, valueCents: r.valueCents, extra: `${r.agreements} ${r.agreements === 1 ? "agreement" : "agreements"}` }))}
+          />
+          <RevenueSection
+            id="rep-type"
+            title="Revenue by type"
+            note="Each line split over its types."
+            download="revenue_type"
+            range={range}
+            label="type"
+            part={named(revenueByType, (r) => ({ name: r.type, valueCents: r.valueCents }))}
+          />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

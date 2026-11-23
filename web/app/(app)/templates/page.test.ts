@@ -15,8 +15,7 @@ const listAssetTypes = vi.fn();
 const getContractWording = vi.fn(async () => ({ ok: true as const, body: SYSTEM_CONTRACT_BODY, own: false }));
 const listCustomers = vi.fn(async () => []);
 const listActiveSites = vi.fn(async () => []);
-const listEquipmentTypes = vi.fn(async () => []);
-const container = { currentMember, listAgreementTemplates, ensureStarterTemplates, listAssetTypes, listEquipmentTypes, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
+const container = { currentMember, listAgreementTemplates, ensureStarterTemplates, listAssetTypes, getContractWording, listCustomers, listActiveSites, clock: { now: () => new Date("2026-11-12T18:00:00Z") } };
 
 const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT ${to}`);
@@ -33,9 +32,9 @@ const { TemplatesForRequest } = await import("./page");
 const { default: NewTemplatePage } = await import("./new/page");
 const { default: ContractWordingPage } = await import("./contract/page");
 const { EditTemplateForRequest } = await import("./[templateId]/page");
-const { TemplatesView } = await import("@/components/templates/templates-view");
-const { TemplateEditor } = await import("@/components/templates/template-editor");
-const { ContractWordingEditor } = await import("@/components/templates/contract-wording-editor");
+const { TemplatesView } = await import("@/app/(app)/templates/_components/content");
+const { TemplateEditor } = await import("@/app/(app)/templates/_components/template-editor");
+const { ContractWordingEditor } = await import("@/app/(app)/templates/_components/contract-wording-editor");
 
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role });
 const ID = "7f9c2d3e-1a2b-4c5d-8e9f-0a1b2c3d4e5f";

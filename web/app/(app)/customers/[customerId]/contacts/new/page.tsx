@@ -1,22 +1,18 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
 import { ContactForm } from "@/components/records/contact-form";
 import { RecordPage } from "@/components/records/record-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
-import { getContainer } from "@/composition";
+import { loadCustomer } from "../../_data-access/customer";
 import { createContactAction } from "../../../../record-actions";
 
 export const metadata: Metadata = { title: "New contact" };
 
 export default async function NewContactPage({ params }: PageProps<"/customers/[customerId]/contacts/new">) {
   const { customerId } = await params;
-  const { currentMember, customerDetail } = await getContainer();
-  const member = await currentMember();
-  if (member.status !== "member") redirect("/login");
-  if (!(await customerDetail(customerId))) notFound();
+  const { role } = await loadCustomer(customerId);
 
   return (
-    <RecordPage title="New contact" canWrite={canWriteRecords(member.role)}>
+    <RecordPage title="New contact" canWrite={canWriteRecords(role)}>
       <ContactForm
         initial={{ name: "", email: "", phone: "" }}
         submitLabel="Add contact"

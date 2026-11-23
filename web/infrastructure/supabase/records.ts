@@ -164,20 +164,6 @@ export function supabaseAssetStore(client: Client): AssetStore {
         ),
       );
     },
-    async createMany(orgId, siteId, values) {
-      if (values.length === 0) return { ok: true, count: 0 };
-      const { data, error } = await client
-        .from("assets")
-        .insert(values.map((value) => ({ org_id: orgId, site_id: siteId, ...assetRow(value), source: "manual" })))
-        .select("id");
-      if (error) {
-        if (error.code === "42501") return { ok: false, code: "forbidden" };
-        if (error.code === "23503") return { ok: false, code: "not_found" };
-        console.error(`Creating assets failed: ${error.code} ${error.message}`);
-        return { ok: false, code: "unavailable" };
-      }
-      return { ok: true, count: (data ?? []).length };
-    },
     async update(id, value) {
       return updated(await write("Updating an asset", "update", () => client.from("assets").update(assetRow(value)).eq("id", id).select("id")));
     },

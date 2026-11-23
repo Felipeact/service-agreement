@@ -226,4 +226,22 @@ describe("the Stripe checkout starter", () => {
     const line = String(errorLog.mock.calls.flat().join(" "));
     for (const secret of ["secret.owner", "shop.ca", "Secret Plumbing", "604-555-0188"]) expect(line).not.toContain(secret);
   });
+
+  test("annual: the plan and each extra seat bill yearly at twelve months less 20%, and the interval rides in the metadata", async () => {
+    await start({ plan: "team", trades: ["hvac"], interval: "year", seats: 7 });
+    const body = form();
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("143040");
+    expect(body.get("line_items[0][price_data][recurring][interval]")).toBe("year");
+    expect(body.get("line_items[1][quantity]")).toBe("2");
+    expect(body.get("line_items[1][price_data][unit_amount]")).toBe("18240");
+    expect(body.get("line_items[1][price_data][recurring][interval]")).toBe("year");
+    expect(body.get("subscription_data[metadata][billing_interval]")).toBe("year");
+    expect(body.get("cancel_url")).toBe(`${BASE}/register?plan=team&billing=annual`);
+  });
+
+  test("monthly stays the default when no interval is given", async () => {
+    await start({ plan: "team", trades: ["hvac"], seats: 5 });
+    expect(form().get("line_items[0][price_data][recurring][interval]")).toBe("month");
+    expect(form().get("line_items[0][price_data][unit_amount]")).toBe("14900");
+  });
 });
