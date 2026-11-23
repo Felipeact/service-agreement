@@ -220,7 +220,7 @@ export function AgreementView({ agreement, role, actions, words = DEFAULT_ITEM_W
           </>
         )}
         {lineActions?.generateLines && agreement.equipmentChoices.length > 0 && (agreement.scopeDraft?.uncovered.length ?? 0) > 0 && (
-          <GenerateLinesControl action={lineActions.generateLines} uncoveredCount={agreement.scopeDraft?.uncovered.length ?? 0} />
+          <GenerateLinesControl action={lineActions.generateLines} uncoveredCount={agreement.scopeDraft?.uncovered.length ?? 0} words={words} />
         )}
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-hairline px-4 py-3">
           <p className="text-[14px] font-semibold">

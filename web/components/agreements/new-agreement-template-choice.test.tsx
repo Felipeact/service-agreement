@@ -10,7 +10,7 @@ import type { StartAgreementState, DialogTemplate } from "./new-agreement-state"
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }), usePathname: () => "/agreements" }));
 vi.mock("@/composition", () => ({ getContainer: async () => ({}) }));
 
 const { NewAgreementDialog } = await import("./new-agreement-dialog");
