@@ -1,8 +1,8 @@
 import { Document, Page, renderToBuffer, Text, View } from "@react-pdf/renderer";
-import { hasSection, letterheadOf, type IncludedOptions, type LayoutItem, type PriceOptions, type SignatureOptions, type TitleOptions } from "@/domain/agreement";
+import { accentOf, hasSection, letterheadOf, type IncludedOptions, type LayoutItem, type PriceOptions, type SignatureOptions, type TitleOptions } from "@/domain/agreement";
 import { DEFAULT_CONTRACT_DOC, legacyContractLayout, type ContractDocument, type RenderedBlock } from "@/domain/contract";
 import { renderWithoutLogoOnFailure } from "./logo-fallback";
-import { EquipmentSection, IncludedSection, LayoutBlock, LetterHead, LetterheadFooter, PageFooter, PriceSection, ScheduleSection, styles } from "./pdf-sections";
+import { EquipmentSection, IncludedSection, LayoutBlock, LayoutTable, LetterHead, LetterheadFooter, PageFooter, PriceSection, ScheduleSection, pageFamily, styles } from "./pdf-sections";
 
 /**
  * The DocuSeal text tags of one signer (signature-provider door 5). The provider finds each tag in the PDF, turns it into a
@@ -69,28 +69,31 @@ export function TermsBlocks({ body, accent }: { body: RenderedBlock[]; accent: {
 /** The contract as a Letter-size document, drawn with the same sections as the agreement. */
 export function ContractPdf({ document }: { document: ContractDocument }) {
   const { contractor, signer } = document;
-  const accent = { color: contractor.accent };
   // A document built before layouts existed has none: it draws as the system layout does.
   const doc = document.doc ?? DEFAULT_CONTRACT_DOC;
+  const color = accentOf(doc, contractor.accent);
+  const accent = { color };
+  const font = doc.theme?.font;
   const layout = document.layout ?? legacyContractLayout(document.body, true);
-  const letterhead = <LetterHead name={contractor.name} address={contractor.address} phone={contractor.phone} accent={contractor.accent} logo={contractor.logo} options={letterheadOf(doc)} />;
+  const letterhead = <LetterHead name={contractor.name} address={contractor.address} phone={contractor.phone} accent={color} logo={contractor.logo} options={letterheadOf(doc)} />;
   const includedDrawn = hasSection(layout, "included");
 
   const draw = (item: LayoutItem, index: number) => {
-    if (item.kind === "block") return <LayoutBlock key={index} item={item} accent={contractor.accent} />;
+    if (item.kind === "block") return <LayoutBlock key={index} item={item} accent={color} font={font} />;
+    if (item.kind === "table") return <LayoutTable key={index} item={item} accent={color} font={font} />;
     switch (item.key) {
       case "price": {
         const options: PriceOptions = item.options ?? {};
         return (
           <View key={index}>
-            <PriceSection lines={document.lines} totalCents={document.totalCents} accent={contractor.accent} title={options.title} columns={options.columns} visitsFormat={options.visitsFormat} />
+            <PriceSection lines={document.lines} totalCents={document.totalCents} accent={color} title={options.title} columns={options.columns} visitsFormat={options.visitsFormat} />
             {document.taxNote && <Text style={[styles.muted, { textAlign: "right" }]}>{document.taxNote}</Text>}
           </View>
         );
       }
       case "schedule": {
         const options: TitleOptions = item.options ?? {};
-        return <ScheduleSection key={index} schedule={document.schedule} accent={contractor.accent} title={options.title} />;
+        return <ScheduleSection key={index} schedule={document.schedule} accent={color} title={options.title} />;
       }
       case "included": {
         const options: IncludedOptions = item.options ?? {};
@@ -98,7 +101,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
           <IncludedSection
             key={index}
             scope={document.scope}
-            accent={contractor.accent}
+            accent={color}
             words={document.words}
             title={options.title}
             showFrequency={options.showFrequency}
@@ -109,7 +112,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
       }
       case "equipment": {
         const options: TitleOptions = item.options ?? {};
-        return <EquipmentSection key={index} scope={document.scope} accent={contractor.accent} words={document.words} title={options.title} sayNotRecorded={!includedDrawn} />;
+        return <EquipmentSection key={index} scope={document.scope} accent={color} words={document.words} title={options.title} sayNotRecorded={!includedDrawn} />;
       }
       case "signatures": {
         const options: SignatureOptions = item.options ?? {};
@@ -133,7 +136,7 @@ export function ContractPdf({ document }: { document: ContractDocument }) {
 
   return (
     <Document title={`${document.number} contract`} author={contractor.name}>
-      <Page size="LETTER" style={styles.page}>
+      <Page size="LETTER" style={[styles.page, { fontFamily: pageFamily(font) }]}>
         {doc.pageHeader === "every" ? <View fixed>{letterhead}</View> : letterhead}
 
         {doc.title.trim() !== "" && <Text style={styles.title}>{doc.title}</Text>}

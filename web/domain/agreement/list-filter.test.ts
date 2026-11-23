@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { matchesStatusFilter, parseAgreementFilter } from "./list-filter";
+import { matchesStatusFilter, parseAgreementFilter, statusCounts } from "./list-filter";
 import type { AgreementStatus } from "./index";
 import type { ContractStatus } from "../contract";
 
@@ -49,5 +49,17 @@ describe("matchesStatusFilter", () => {
   ] as const)("C1348: %s keeps %j", (value, kept) => {
     const names = ROWS.filter(([, status, contract]) => matchesStatusFilter(value, status, contract)).map(([name]) => name);
     expect(names).toEqual(kept);
+  });
+});
+
+describe("statusCounts", () => {
+  test("counts every tab from one list; an expired agreement is in both Refused and Expired", () => {
+    const rows = [
+      { status: "draft", stage: "in_progress" },
+      { status: "sent", stage: "sent" },
+      { status: "expired", stage: "refused" },
+      { status: "withdrawn", stage: null },
+    ] as const;
+    expect(statusCounts([...rows])).toEqual({ all: 4, in_progress: 1, sent: 1, accepted: 0, completed: 0, refused: 1, expired: 1, withdrawn: 1 });
   });
 });

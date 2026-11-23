@@ -49,10 +49,10 @@ type ImportJobListProps = {
 /** A site's import jobs, in the order given (newest first). */
 export function ImportJobList({ jobs, discard, read, extract, words = DEFAULT_ITEM_WORDS }: ImportJobListProps) {
   if (jobs.length === 0) {
-    return <p className="rounded-panel border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-2">{itemText("No equipment lists imported yet", words)}</p>;
+    return <p className="rounded-panel border border-hairline bg-surface shadow-card px-4 py-8 text-center text-[13px] text-ink-2">{itemText("No equipment lists imported yet", words)}</p>;
   }
   return (
-    <ul className="flex flex-col divide-y divide-hairline rounded-panel border border-hairline bg-surface">
+    <ul className="flex flex-col divide-y divide-hairline rounded-panel border border-hairline bg-surface shadow-card">
       {jobs.map((job) => {
         const found = outcomeLine(job);
         const line = found && itemText(found, words);

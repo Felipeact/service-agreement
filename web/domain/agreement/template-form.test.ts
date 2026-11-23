@@ -108,7 +108,7 @@ describe("a schema 1 template opened in the block editor", () => {
   test("C5547: it opens as its layoutOf rows and document options", () => {
     const form = layoutFormFromBody(V1);
     expect(form.doc).toEqual({ title: "Preventive maintenance service agreement", showMeta: true, pageHeader: "first", pageFooter: "number" });
-    expect(form.layout.map((row) => (row.kind === "block" ? `${row.type}:${row.text}` : row.key))).toEqual([
+    expect(form.layout.map((row) => (row.kind === "block" ? `${row.type}:${row.text}` : row.kind === "section" ? row.key : "table"))).toEqual([
       "heading:About this agreement",
       "paragraph:Welcome {{customer.name}}.",
       "price",
@@ -181,7 +181,7 @@ describe("a schema 1 template opened in the block editor", () => {
   });
 
   test("C5547: a new template starts from the Standard layout and today's options, and the preview draws it before it is named", () => {
-    expect(EMPTY_LAYOUT_FORM.layout.map((row) => (row.kind === "section" ? row.key : row.type))).toEqual(["price", "schedule", "included", "equipment", "terms"]);
+    expect(EMPTY_LAYOUT_FORM.layout.map((row) => (row.kind === "section" ? row.key : row.kind === "block" ? row.type : "table"))).toEqual(["price", "schedule", "included", "equipment", "terms"]);
     expect(EMPTY_LAYOUT_FORM.doc.title).toBe("Preventive maintenance service agreement");
     expect(bodyFromLayoutForm(EMPTY_LAYOUT_FORM).ok).toBe(false);
     expect(previewBodyFromLayoutForm(EMPTY_LAYOUT_FORM).ok).toBe(true);

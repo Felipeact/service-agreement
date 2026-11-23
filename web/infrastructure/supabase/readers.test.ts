@@ -622,6 +622,7 @@ describe("agreement lister (agreements-page)", () => {
       id: "w",
       number: "AG-w",
       status: "withdrawn",
+      stage: null,
       site: "Site w",
       customer: "Customer w",
       versionNo: 1,

@@ -4,7 +4,7 @@ import { DocusealForm } from "@docuseal/react";
 import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
-const BOX = "block min-h-[560px] w-full overflow-hidden rounded-panel border border-hairline bg-surface";
+const BOX = "block min-h-[560px] w-full overflow-hidden rounded-panel border border-hairline bg-surface shadow-card";
 
 const subscribe = () => () => {};
 

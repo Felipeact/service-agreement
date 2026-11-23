@@ -10,9 +10,10 @@ import {
   type RemoveFormState,
   type RevokeFormState,
   type SetRoleFormState,
-} from "@/components/members/state";
+} from "./_components/state";
 
-const text = (formData: FormData, name: string) => String(formData.get(name) ?? "");
+import { readFields } from "@/lib/forms/server-input";
+const text = (formData: FormData, name: string) => readFields(formData, [name])[name];
 
 /** The signed-in member, or a redirect to sign in. The org is the member's own: no action reads one from the form (AD-029). */
 async function signedInMember() {

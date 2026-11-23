@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { PLANS, formatPlanPrice, type PlanKey } from "@/domain/billing";
 import { formatInvoiceAmount } from "@/domain/billing/overview";
 import { planChangeSummary } from "@/domain/billing/plan-change";
@@ -55,20 +56,24 @@ export function PlanSwitcher({ current, seats, trialEndsOn, readOnlyReason, acti
 
   return (
     <div className="flex flex-col gap-3">
-      <ul className="flex flex-col divide-y divide-hairline rounded-control border border-hairline">
-        {PLANS.map((plan) => (
-          <li key={plan.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-            <span className="min-w-0 flex-1 basis-40 text-[13px] font-semibold text-ink">
-              {plan.name}
-              <span className="block text-[12px] font-normal text-ink-2">{`${formatPlanPrice(plan.monthlyCents)}/month · ${plan.includedSeats} seats included`}</span>
-            </span>
-            {plan.key === current ? (
-              <span className="rounded-control bg-board px-2 py-0.5 text-[12px] font-medium text-ink-2">Current plan</span>
-            ) : (
-              !readOnlyReason &&
-              current && (
+      <ul className="grid gap-4 md:grid-cols-3">
+        {PLANS.map((plan) => {
+          const isCurrent = plan.key === current;
+          return (
+            <li key={plan.key} className={`flex flex-col gap-3 rounded-card border p-4 ${isCurrent ? "border-action bg-action-tint ring-1 ring-action/30" : "border-hairline"}`}>
+              <div className="flex items-center gap-2">
+                <h3 className="mr-auto text-[16px] font-bold">{plan.name}</h3>
+                {isCurrent && <span className="inline-flex h-[22px] items-center rounded-full bg-blue-100 px-2.5 text-[11px] font-semibold whitespace-nowrap text-action-press">Current plan</span>}
+              </div>
+              <p className="text-[26px] font-bold tracking-tight">
+                {formatPlanPrice(plan.monthlyCents)}
+                <span className="text-[13px] font-medium text-ink-2"> /month CAD</span>
+              </p>
+              <p className="text-[12px] text-ink-2">{`${plan.liveAgreements} live agreements · ${plan.includedSeats} seats included`}</p>
+              {!isCurrent && !readOnlyReason && current && (
                 <Button
-                  variant="secondary"
+                  variant="primary"
+                  className="mt-auto"
                   disabled={pending}
                   onClick={() => {
                     setNotice(null);
@@ -77,27 +82,28 @@ export function PlanSwitcher({ current, seats, trialEndsOn, readOnlyReason, acti
                 >
                   {`Switch to ${plan.name}`}
                 </Button>
-              )
-            )}
-          </li>
-        ))}
+              )}
+            </li>
+          );
+        })}
       </ul>
       {readOnlyReason && <p className="text-[13px] text-ink-2">{readOnlyReason}</p>}
       {summary && (
-        <form onSubmit={confirm} className="flex flex-col gap-3 rounded-control bg-board p-4">
-          <p className="text-[13px] font-medium text-ink">{`Switch to ${summary.plan.name}? ${formatPlanPrice(summary.plan.monthlyCents)}/month.`}</p>
-          <p className="text-[13px] text-ink-2">{`Included seats: ${summary.plan.includedSeats}. Extra seats: ${summary.extraSeats}.`}</p>
-          <p className="text-[13px] text-ink-2">{`New monthly total: ${formatInvoiceAmount(summary.totalCents, "cad")}.`}</p>
-          <p className="text-[13px] text-ink-2">{trialEndsOn ? `Nothing is charged until your trial ends on ${trialEndsOn}.` : "The change takes effect now and the difference is prorated."}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? "Switching…" : "Confirm switch"}
-            </Button>
-            <Button disabled={pending} onClick={() => setTarget(null)}>
-              Keep my plan
-            </Button>
-          </div>
-        </form>
+        <Modal open onClose={() => setTarget(null)} title={`Switch to ${summary.plan.name}?`} sub={`${formatPlanPrice(summary.plan.monthlyCents)}/month.`}>
+          <form onSubmit={confirm} className="flex flex-col gap-3">
+            <p className="text-[13px] text-ink-2">{`Included seats: ${summary.plan.includedSeats}. Extra seats: ${summary.extraSeats}.`}</p>
+            <p className="text-[13px] text-ink-2">{`New monthly total: ${formatInvoiceAmount(summary.totalCents, "cad")}.`}</p>
+            <p className="text-[13px] text-ink-2">{trialEndsOn ? `Nothing is charged until your trial ends on ${trialEndsOn}.` : "The change takes effect now and the difference is prorated."}</p>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button disabled={pending} onClick={() => setTarget(null)}>
+                Keep my plan
+              </Button>
+              <Button type="submit" variant="primary" disabled={pending}>
+                {pending ? "Switching…" : "Confirm switch"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
       {notice && (
         <p role="alert" className="text-[13px] font-medium text-danger">

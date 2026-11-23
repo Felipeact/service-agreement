@@ -1,5 +1,6 @@
 import type { CheckoutStarter, WorkspaceEmailCheck } from "@/application/ports";
 import { parseCheckoutSelection, type FieldErrors, type SelectionInput } from "@/domain/billing";
+import { isHttps } from "@/domain/guards";
 
 export type StartTrialOutcome =
   | { status: "redirect"; url: string }
@@ -8,14 +9,6 @@ export type StartTrialOutcome =
 
 /** What a form posted, before anything is trusted (pricing-page S2, register-seats). */
 export type StartTrialInput = SelectionInput;
-
-const isHttps = (url: string) => {
-  try {
-    return new URL(url).protocol === "https:";
-  } catch {
-    return false;
-  }
-};
 
 /**
  * Validates the selection, asks whether the email already belongs to an org (when a check is given; a failed check is

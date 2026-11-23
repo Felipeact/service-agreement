@@ -1304,7 +1304,6 @@ export type Database = {
           id: string
           org_id: string
           position: number
-          recommended: boolean
           visit_months: number[]
           visits_per_year: number
         }
@@ -1316,7 +1315,6 @@ export type Database = {
           id?: string
           org_id: string
           position?: number
-          recommended?: boolean
           visit_months: number[]
           visits_per_year: number
         }
@@ -1328,7 +1326,6 @@ export type Database = {
           id?: string
           org_id?: string
           position?: number
-          recommended?: boolean
           visit_months?: number[]
           visits_per_year?: number
         }

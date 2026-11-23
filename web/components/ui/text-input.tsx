@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { Input } from "@/components/ui/input";
 
 type TextInputProps = Omit<ComponentProps<"input">, "id"> & {
   id: string;
@@ -8,7 +9,7 @@ type TextInputProps = Omit<ComponentProps<"input">, "id"> & {
   error?: string;
 };
 
-/** 44px tall below desktop for touch, 34px on desktop, like the search field. */
+/** A labelled shadcn `Input`: 44px tall below desktop for touch, 34px on desktop, like the search field. */
 export function TextInput({ id, label, error, className = "", ...props }: TextInputProps) {
   const errorId = `${id}-error`;
   return (
@@ -16,13 +17,7 @@ export function TextInput({ id, label, error, className = "", ...props }: TextIn
       <label htmlFor={id} className="text-[13px] font-medium text-ink">
         {label}
       </label>
-      <input
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        className={`h-11 w-full rounded-control border bg-surface px-3 text-[13px] text-ink placeholder:text-ink-2 lg:h-[34px] ${error ? "border-danger" : "border-field"}`}
-        {...props}
-      />
+      <Input id={id} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined} {...props} />
       {error && (
         <p id={errorId} className="text-[12px] font-medium text-danger">
           {error}

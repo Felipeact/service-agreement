@@ -5,35 +5,20 @@ import { getContainer } from "@/composition";
 import { validateOrgSettings, type OrgSettingsInput } from "@/domain/org-settings";
 import { isOwnLogoPath, LOGO_PATH_ERROR } from "@/domain/org-settings/logo";
 import type { SettingsFormState } from "@/components/settings/state";
+import { readFields, readPostedFields } from "@/lib/forms/server-input";
 
-function readInput(formData: FormData): OrgSettingsInput {
-  const text = (name: keyof OrgSettingsInput) => String(formData.get(name) ?? "");
-  return {
-    legalName: text("legalName"),
-    address: text("address"),
-    phone: text("phone"),
-    accentColor: text("accentColor"),
-    repairDiscountPct: text("repairDiscountPct"),
-    cpiCapPct: text("cpiCapPct"),
-    cancellationNoticeDays: text("cancellationNoticeDays"),
-    paymentDays: text("paymentDays"),
-    governingProvince: text("governingProvince"),
-    taxNote: text("taxNote"),
-    defaultTermMonths: text("defaultTermMonths"),
-    renewalNoticeDays: text("renewalNoticeDays"),
-    cpiRenegotiationThresholdPct: text("cpiRenegotiationThresholdPct"),
-    renewalCpiPct: text("renewalCpiPct"),
-    renewalCpiAsOf: text("renewalCpiAsOf"),
-    proposalValidityDays: text("proposalValidityDays"),
-    itemSingular: text("itemSingular"),
-    itemPlural: text("itemPlural"),
-  };
-}
+/** Every settings field is text; only these names are read (Zod, `readFields`). */
+const SETTINGS_FIELDS = [
+  "legalName", "address", "phone", "accentColor", "repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "governingProvince", "taxNote",
+  "defaultTermMonths", "renewalNoticeDays", "cpiRenegotiationThresholdPct", "renewalCpiPct", "renewalCpiAsOf", "proposalValidityDays", "itemSingular", "itemPlural",
+] as const;
+
+const readInput = (formData: FormData): OrgSettingsInput => readFields(formData, SETTINGS_FIELDS);
 
 /** Validates the form, then overwrites the member's org settings. Never throws for a refusal. */
 export async function saveSettingsAction(_state: SettingsFormState, formData: FormData): Promise<SettingsFormState> {
   const carriesLogo = formData.has("logoPath");
-  const values = { ...readInput(formData), ...(carriesLogo && { logoPath: String(formData.get("logoPath") ?? "") }) };
+  const values = { ...readInput(formData), ...readPostedFields(formData, ["logoPath"]) };
   const { currentMember, saveOrgSettings, logo } = await getContainer();
 
   const member = await currentMember();

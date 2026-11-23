@@ -7,9 +7,14 @@ import { LinkButton } from "@/components/ui/link-button";
 import { RECORD_MESSAGES } from "./state";
 
 /** The page around a record form; a member who may not write gets the reason instead of the form. */
-export function RecordPage({ title, canWrite, children }: { title: string; canWrite: boolean; children: ReactNode }) {
+export function RecordPage({ title, canWrite, children, back }: { title: string; canWrite: boolean; children: ReactNode; back?: { href: string; label: string } }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-3xl flex-col gap-6">
+      {back && (
+        <Link href={back.href} className="inline-flex min-h-11 w-fit items-center gap-1 text-[13px] font-semibold text-action hover:underline lg:min-h-8">
+          <span aria-hidden="true">←</span> {back.label}
+        </Link>
+      )}
       <PageHeader title={title} />
       {canWrite ? children : <EmptyPanel title={RECORD_MESSAGES.noAccess} />}
     </div>
@@ -41,6 +46,8 @@ export function FormAlert({ status }: { status: string }) {
 type RecordFormProps = {
   /** The form action; absent in tests that only render markup. */
   action?: (formData: FormData) => void;
+  /** Instead of `action`: a submit handler, for a form that validates in the browser first (React Hook Form). */
+  onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
   status: string;
   pending: boolean;
   submitLabel: string;
@@ -48,17 +55,19 @@ type RecordFormProps = {
   children: ReactNode;
 };
 
-/** Fields, the failure alert, then Save and Cancel. Presentational: the caller owns the state. */
-export function RecordForm({ action, status, pending, submitLabel, cancelHref, children }: RecordFormProps) {
+/** The fields in a framed card, the failure alert under them, then a footer bar with Cancel and Save. Presentational: the caller owns the state. */
+export function RecordForm({ action, onSubmit, status, pending, submitLabel, cancelHref, children }: RecordFormProps) {
   return (
-    <form action={action} noValidate className="flex max-w-xl flex-col gap-5">
-      <div className="flex flex-col gap-3">{children}</div>
-      <FormAlert status={status} />
-      <div className="flex flex-wrap items-center gap-3">
+    <form action={action} onSubmit={onSubmit} noValidate className="flex flex-col rounded-panel border border-hairline bg-surface shadow-card">
+      <div className="flex flex-col gap-4 p-4 sm:p-6">
+        {children}
+        <FormAlert status={status} />
+      </div>
+      <div className="flex flex-col-reverse gap-2 rounded-b-panel border-t border-hairline bg-ground/60 p-4 sm:flex-row sm:justify-end sm:px-6">
+        <LinkButton href={cancelHref}>Cancel</LinkButton>
         <Button type="submit" variant="primary" disabled={pending}>
           {pending ? "Saving…" : submitLabel}
         </Button>
-        <LinkButton href={cancelHref}>Cancel</LinkButton>
       </div>
     </form>
   );

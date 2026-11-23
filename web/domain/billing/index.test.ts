@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { cents } from "@/domain/money";
-import { PLAN_KEYS, PLANS, TRADE_CODES, TRADES, formatPlanPrice, knownTrades, parseChoice, parseCheckoutSelection, seatsAfterPlanChange, EXTRA_SEAT_CENTS, MAX_SEATS } from "./index";
+import { PLAN_KEYS, PLANS, TRADE_CODES, TRADES, formatPlanPrice, knownTrades, parseChoice, parseCheckoutSelection, seatsAfterPlanChange, EXTRA_SEAT_CENTS, MAX_SEATS, ANNUAL_DISCOUNT_PERCENT, intervalCents, intervalFromParam, perMonthCents } from "./index";
 
 const file = () => new File(["x"], "x.txt");
 
@@ -171,5 +171,37 @@ describe("seat text the form can post", () => {
   test("a leading zero or surrounding spaces are read as the number they spell", () => {
     expect(parseCheckoutSelection({ ...OK, seats: "08" })).toMatchObject({ ok: true, value: { seats: 8 } });
     expect(parseCheckoutSelection({ ...OK, seats: " 5 " })).toMatchObject({ ok: true, value: { seats: 5 } });
+  });
+});
+
+describe("annual billing", () => {
+  test("a year costs twelve months less the annual discount, in whole cents", () => {
+    expect(ANNUAL_DISCOUNT_PERCENT).toBe(20);
+    expect(intervalCents(cents(7900), "year")).toBe(75840);
+    expect(intervalCents(cents(14900), "year")).toBe(143040);
+    expect(intervalCents(cents(7900), "month")).toBe(7900);
+  });
+
+  test("the per-month figure of a yearly price is a twelfth of it", () => {
+    expect(perMonthCents(cents(7900), "year")).toBe(6320);
+    expect(perMonthCents(cents(7900), "month")).toBe(7900);
+  });
+
+  test("the interval param reads annual, yearly and year as year and anything else as month", () => {
+    expect(["annual", "yearly", "year"].map(intervalFromParam)).toEqual(["year", "year", "year"]);
+    expect([undefined, "month", "monthly", "x", ["annual"]].map(intervalFromParam)).toEqual(["month", "month", "month", "month", "month"]);
+  });
+
+  test("the selection carries year when asked, and stays unset (monthly) otherwise", () => {
+    expect(parseCheckoutSelection({ ...OK, interval: "year" })).toMatchObject({ ok: true, value: { interval: "year" } });
+    const monthly = parseCheckoutSelection({ ...OK, interval: "month" });
+    expect(monthly.ok && monthly.value.interval).toBeUndefined();
+    const absent = parseCheckoutSelection(OK);
+    expect(absent.ok && absent.value.interval).toBeUndefined();
+  });
+
+  test("a forged interval is an invalid choice", () => {
+    expect(parseCheckoutSelection({ ...OK, interval: "weekly" })).toMatchObject({ ok: false, code: "invalid_choice" });
+    expect(parseCheckoutSelection({ ...OK, interval: 12 })).toMatchObject({ ok: false, code: "invalid_choice" });
   });
 });

@@ -7,7 +7,7 @@ describe("contract wording opened in the block editor", () => {
   test("C5552: the system wording opens as the rows of contractLayoutOf, with the signatures title as a heading row", () => {
     const form = contractFormFromBody(SYSTEM_CONTRACT_BODY);
     expect(form.doc.title).toBe("Service Contract");
-    const keys = form.layout.map((row) => (row.kind === "section" ? row.key : row.type));
+    const keys = form.layout.map((row) => (row.kind === "section" ? row.key : row.kind === "block" ? row.type : "table"));
     expect(keys.slice(0, 4)).toEqual(["price", "schedule", "included", "equipment"]);
     expect(keys.at(-1)).toBe("signatures");
     expect(form.layout.at(-2)).toMatchObject({ kind: "block", type: "heading", text: "Signatures" });

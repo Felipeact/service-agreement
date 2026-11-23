@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import type { ImportContractWordingState } from "@/components/templates/state";
+import type { ImportContractWordingState } from "@/app/(app)/templates/_components/state";
 
 /**
  * Reads the attached contract into the editor's form for the signed-in owner or admin. It returns the form or the reason there is

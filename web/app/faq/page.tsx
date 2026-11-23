@@ -26,7 +26,7 @@ export default function FaqPage() {
   const groups = [...GROUPS.map((group) => ({ title: group.title, items: FAQS.filter((f) => group.questions.includes(f.q)) })), { title: "More", items: FAQS.filter((f) => !listed.has(f.q)) }].filter((group) => group.items.length > 0);
   return (
     <SiteShell>
-      <PageHero title="Questions, answered plainly." text="If yours is not here, write to us from the contact page." />
+      <PageHero title="Questions, answered plainly." accent="answered plainly." text="If yours is not here, write to us from the contact page." />
       <section className="bg-ground">
         <Wrap className="flex max-w-[860px] flex-col gap-10 pb-14 lg:pb-20">
           {groups.map((group) => (

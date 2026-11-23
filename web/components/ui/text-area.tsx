@@ -1,4 +1,6 @@
 import type { ComponentProps } from "react";
+import { FIELD_CLASS } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type TextAreaProps = Omit<ComponentProps<"textarea">, "id"> & {
   id: string;
@@ -29,7 +31,7 @@ export function TextArea({ id, label, hint, error, className = "", rows = 5, ...
         rows={rows}
         aria-invalid={error ? true : undefined}
         aria-describedby={[hint ? hintId : "", error ? errorId : ""].filter(Boolean).join(" ") || undefined}
-        className={`w-full rounded-control border bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-ink-2 ${error ? "border-danger" : "border-field"}`}
+        className={cn(FIELD_CLASS, "py-2", error && "border-danger")}
         {...props}
       />
       {error && (

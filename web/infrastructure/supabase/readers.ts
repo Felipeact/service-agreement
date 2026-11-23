@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { LIVE_STATUSES, matchesStatusFilter, type AgreementStatus } from "@/domain/agreement";
+import { LIVE_STATUSES, matchesStage, type AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { addDays, EXPIRING_WINDOW_DAYS, pipelineStage, type ExpiringAgreement } from "@/domain/pipeline";
@@ -25,6 +25,7 @@ import type {
 } from "@/application/ports";
 import { SEARCH_GROUP_LIMIT, type SiteFilter } from "@/domain/records";
 import type { Database } from "./database.types";
+import { today } from "@/lib/business-day";
 
 type Client = SupabaseClient<Database>;
 
@@ -116,6 +117,7 @@ export function supabasePipelineReader(client: Client, clock: Clock): PipelineRe
           number: row.number,
           versionNo: version?.version_no ?? 1,
           ageDays: Math.max(0, Math.floor((now - new Date(row.updated_at).getTime()) / DAY_MS)),
+          changedOn: today(new Date(row.updated_at)),
           ...(attention && { attention }),
           ...amounts(version),
           isRenewal: Boolean(row.renews_agreement_id),
@@ -200,9 +202,20 @@ const isActive = (row: Inactive) => !row.deactivated_at;
 
 type ContactRow = { id: string; name: string; email: string | null; phone: string | null; created_at: string };
 
+function firstContact(contacts: ContactRow[]): ContactRow | undefined {
+  return [...contacts].sort((a, b) => a.created_at.localeCompare(b.created_at) || byName(a.name, b.name))[0];
+}
+
 function primaryContact(contacts: ContactRow[]): string | null {
-  const [first] = [...contacts].sort((a, b) => a.created_at.localeCompare(b.created_at) || byName(a.name, b.name));
-  return first?.name ?? null;
+  return firstContact(contacts)?.name ?? null;
+}
+
+/** What the accepted and completed agreements are worth a year, in cents. */
+function signedCents(agreements: AgreementRow[]): number {
+  return agreements.reduce((total, agreement) => {
+    const stage = stageOf(agreement).stage;
+    return total + (stage === "accepted" || stage === "completed" ? (amounts(latestVersion(agreement)).annualCents ?? 0) : 0);
+  }, 0);
 }
 
 export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
@@ -210,7 +223,7 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
     async list() {
       const { data, error } = await client
         .from("customers")
-        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at))")
+        .select("id, name, deactivated_at, contacts!contacts_customer_id_org_id_fkey(id, name, email, phone, created_at), sites(deactivated_at, assets(deactivated_at), agreements(id, number, created_at, status, updated_at, agreement_versions(version_no, contracts(status), service_lines(visits_per_year, cost_per_visit_cents))))")
         .order("name")
         .limit(ROW_CAP);
       if (error) throw unexpected(error);
@@ -220,18 +233,25 @@ export function supabaseCustomerDirectory(client: Client): CustomerDirectory {
         name: string;
         deactivated_at: string | null;
         contacts: ContactRow[];
-        sites: { deactivated_at: string | null; assets: Inactive[] }[];
+        sites: { deactivated_at: string | null; assets: Inactive[]; agreements: (AgreementRow & { created_at: string })[] }[];
       }[];
       return rows
         .map<CustomerSummary>((row) => {
           const sites = row.sites.filter(isActive);
+          const agreements = sites.flatMap((site) => site.agreements ?? []).sort((a, b) => b.created_at.localeCompare(a.created_at));
           return {
             id: row.id,
             name: row.name,
             primaryContact: primaryContact(row.contacts),
+            primaryEmail: firstContact(row.contacts)?.email ?? null,
+            primaryContactId: firstContact(row.contacts)?.id ?? null,
+            primaryPhone: firstContact(row.contacts)?.phone ?? null,
+            agreementNumbers: agreements.flatMap((agreement) => (agreement.number ? [agreement.number] : [])),
+            agreementCount: agreements.length,
             active: isActive(row),
             siteCount: sites.length,
             assetCount: sites.reduce((total, site) => total + site.assets.filter(isActive).length, 0),
+            annualCents: signedCents(agreements),
           };
         })
         .sort((a, b) => byName(a.name, b.name));
@@ -444,15 +464,6 @@ async function sharedAliases(client: Client): Promise<Map<string, string[]>> {
   return byCode;
 }
 
-/** The org's equipment types with the pack each was seeded from, for the New agreement equipment picker (recommended-lines). */
-export function supabaseEquipmentTypeList(client: Client) {
-  return async function listEquipmentTypes(): Promise<{ id: string; code: string; name: string; pack: string | null }[]> {
-    const { data, error } = await client.from("asset_types").select("id, code, name, pack").order("name").limit(ROW_CAP);
-    if (error) throw unexpected(error);
-    return data.map(({ id, code, name, pack }) => ({ id, code, name, pack }));
-  };
-}
-
 export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
   return {
     async list() {
@@ -496,12 +507,14 @@ export function supabaseAgreementLister(client: Client): AgreementLister {
         const termEnd = version?.term_end ?? null;
         const status = row.status as AgreementStatus;
         if (filter.siteId && row.site_id !== filter.siteId) continue;
-        if (filter.status && !matchesStatusFilter(filter.status, status, version?.contracts[0]?.status as ContractStatus | undefined)) continue;
+        const stage = pipelineStage(status, version?.contracts[0]?.status as ContractStatus | undefined);
+        if (filter.status && !matchesStage(filter.status, status, stage)) continue;
         if (filter.expiring && !(status === "accepted" && termEnd && termEnd >= today && termEnd <= last)) continue;
         rows.push({
           id: row.id,
           number: row.number,
           status,
+          stage,
           site: row.sites.name,
           customer: row.sites.customers.name,
           versionNo: version?.version_no ?? 1,

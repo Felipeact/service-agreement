@@ -3,6 +3,7 @@ import { isUuid } from "../imports";
 import { pipelineStage, STAGE_LABELS, type PipelineStage } from "../pipeline";
 import type { DomainEvent, TransitionErrorCode, TransitionResult } from "../transition";
 import { isVisitMonths } from "./cadence";
+import { isRecord } from "../guards";
 
 /** Same values as the `agreements.status` check in the init migration. */
 export const AGREEMENT_STATUSES = [
@@ -81,9 +82,6 @@ export function applyAgreementCommand(
 /** A site has at most one agreement in these statuses (agreement-builder door 2). */
 export const LIVE_STATUSES: readonly AgreementStatus[] = ["draft", "sent", "changes_requested"];
 
-/** The most lines one version holds (app-side; a race can reach one more). */
-export const MAX_SERVICE_LINES = 50;
-
 /** As the form sends it: `visitMonths` and `assetTypeIds` are every checked box's value (cadence door 1, 2). */
 export type ServiceLineInput = { description: string; visitMonths: string[]; costPerVisit: string; assetTypeIds: string[] };
 /** Visits per year is not typed: it is the number of `visitMonths` (cadence AC 2). */
@@ -144,7 +142,6 @@ export type ScopeType = { code: string; name: string; tasks: ScopeTask[]; assets
 export type ServiceScope = { takenAt: string | null; types: ScopeType[] };
 
 const compareText = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true, sensitivity: "base" });
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const isText = (value: unknown): value is string => typeof value === "string";
 const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === "string";
 

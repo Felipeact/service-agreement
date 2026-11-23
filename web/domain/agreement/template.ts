@@ -20,6 +20,7 @@ import {
   type DocOptions,
   type LayoutItem,
 } from "./layout";
+import { isRecord, isWhole, unknownKeys } from "../guards";
 
 /** A preset service line: copied into version 1 of a new agreement (agreement-templates door 2). */
 export type AgreementTemplateLine = {
@@ -91,11 +92,7 @@ export type AgreementTemplateValidation =
   | { ok: true; body: AgreementTemplateBody }
   | { ok: false; reason: string; errors: AgreementTemplateError[] };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-const isWhole = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value);
 
-/** The keys of `value` that are not in `allowed`. */
-const unknownKeys = (value: Record<string, unknown>, allowed: readonly string[]) => Object.keys(value).filter((key) => !allowed.includes(key));
 
 function checkBlocks(field: "intro" | "footer", label: string, input: unknown, errors: AgreementTemplateError[]) {
   if (!Array.isArray(input)) {
@@ -264,34 +261,6 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 /** `3 lines · 12 months term`, `3 lines` for a preset with no term, or `No preset lines`. */
 export function presetLabel(lineCount: number, termMonths: number | null): string {
   return lineCount === 0 ? "No preset lines" : `${plural(lineCount, "line", "lines")}${termMonths === null ? "" : ` · ${plural(termMonths, "month", "months")} term`}`;
-}
-
-export type PreviewSummary = {
-  /** `N sections`: the optional sections shown. */
-  sections: string;
-  /** `M clauses`: the clause blocks of the intro and the closing text. */
-  clauses: string;
-  /** The preset's equipment type codes in first-seen order, as the org's own type names (a code with no type stays the code). */
-  equipmentTypes: string[];
-  /** `3 lines · 12 months term`, `3 lines` for a preset with no term, or `No preset lines`. */
-  preset: string;
-};
-
-/** What the preview panel counts, from the body and the org's types (`typeNames` maps a code to the org's name for it). */
-export function previewSummary(body: AgreementTemplateBody, typeNames: Record<string, string>): PreviewSummary {
-  const clauses =
-    body.schema === 2
-      ? body.layout.filter((item) => item.kind === "block" && item.type === "clause").length
-      : [...body.intro, ...body.footer].filter((block) => block.type === "clause").length;
-  const optional = body.schema === 2 ? body.layout.filter((item) => item.kind === "section" && item.key !== "price").length : Number(body.sections.schedule) + Number(body.sections.scope);
-  const codes = [...new Set(body.preset.lines.flatMap((line) => line.assetTypeCodes))];
-  const { lines, termMonths } = body.preset;
-  return {
-    sections: plural(optional, "section", "sections"),
-    clauses: plural(clauses, "clause", "clauses"),
-    equipmentTypes: codes.map((code) => typeNames[code] ?? code),
-    preset: presetLabel(lines.length, termMonths),
-  };
 }
 
 /** The preset's equipment type codes that name no type of the org, in first-seen order (plan AC 25). */

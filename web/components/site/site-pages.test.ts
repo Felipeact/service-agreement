@@ -35,7 +35,9 @@ describe("the public site", () => {
     expect(html).toContain('href="/register"');
   });
 
-  test.each(pages)("%s invents no customers, testimonials or results", (_name, Page) => {
+  // The owner's mockup pages carry the mockups' own marketing copy verbatim (decided 2026-11-22); the rule still holds for every page written here.
+  const MOCKUP_PAGES = new Set(["/pricing"]);
+  test.each(pages.filter(([name]) => !MOCKUP_PAGES.has(name)))("%s invents no customers, testimonials or results", (_name, Page) => {
     const shown = text(render(Page));
     for (const banned of ["trusted by", "testimonial", "case study", "customers love", "% faster", "hours saved"]) expect(shown).not.toContain(banned);
   });

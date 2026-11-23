@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
-import { validateEquipmentPicks, validateNewAgreement, type EquipmentPick, type NewAgreementInput } from "@/domain/agreement/new-agreement";
 import { isUuid } from "@/domain/imports";
+import { audienceOf, planLimitMessage } from "@/domain/billing/plan-limits";
+import { validateNewAgreement, validatePickedEquipment, type NewAgreementInput, type PickedEquipment } from "@/domain/agreement/new-agreement";
 import type { StartAgreementState } from "@/components/agreements/new-agreement-state";
 import { canWriteRecords } from "@/components/records/state";
 
@@ -47,7 +47,7 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
 
   // Standard agreement pins nothing, so the store is called as it always was.
   const agreement = templateVersionId ? await container.agreementStore.create(siteId, templateVersionId) : await container.agreementStore.create(siteId);
-  if (agreement.ok) return { status: "started", agreementId: agreement.id, siteId };
+  if (agreement.ok) return { status: "started", agreementId: agreement.id, siteId, customerId };
   if (agreement.code === "plan_limit") return { status: "plan_limit", ...planLimitMessage("agreements", agreement, audienceOf(member.role)) };
   if (agreement.code === "open_exists") return { status: "open_exists", agreementId: agreement.agreementId, number: agreement.number };
   if (agreement.code === "invalid_template") {
@@ -57,31 +57,34 @@ export async function startAgreementAction(input: NewAgreementInput): Promise<St
   return { status: agreement.code, customerId, siteId };
 }
 
-export type AddEquipmentState = { status: "added"; count: number } | { status: "invalid"; error: string } | { status: "forbidden" | "not_found" | "unavailable" };
+/** What adding picked equipment to the site answered. */
+export type AddEquipmentState = { status: "added"; count: number } | { status: "invalid"; message: string } | { status: "forbidden" } | { status: "unavailable"; added: number };
 
 /**
- * Adds hand-picked equipment to the agreement's site (the New agreement dialog without a file), one unit per count, numbered
- * `<CODE>-1`, `<CODE>-2` and so on so the site register can tell them apart. Only the org's own types are accepted.
+ * Adds the equipment picked by hand in the New agreement dialog to the agreement's site: one asset per unit, of the chosen
+ * type, with no unit number yet. The org comes from the member; the site and the types are checked against it. A failure part
+ * way answers how many units were already added, so the dialog never invites a retry that would add them twice.
  */
-export async function addEquipmentAction(siteId: string, picks: EquipmentPick[]): Promise<AddEquipmentState> {
+export async function addEquipmentAction(siteId: string, items: PickedEquipment[]): Promise<AddEquipmentState> {
   const container = await getContainer();
   const member = await container.currentMember();
   if (member.status !== "member") redirect("/login");
   if (!canWriteRecords(member.role)) return { status: "forbidden" };
-  if (!isUuid(siteId) || !Array.isArray(picks)) return { status: "not_found" };
-  try {
-    const types = await container.listEquipmentTypes();
-    const checked = validateEquipmentPicks(picks, types.map((type) => type.id));
-    if (!checked.ok) return { status: "invalid", error: checked.error };
-    const codes = new Map(types.map((type) => [type.id, type.code]));
-    const values = checked.value.flatMap((pick) =>
-      Array.from({ length: pick.count }, (_, index) => ({ assetTypeId: pick.assetTypeId, unitNo: `${codes.get(pick.assetTypeId)}-${index + 1}`, typeModel: null, location: null })),
-    );
-    const created = await container.createAssets(member.orgId, siteId, values);
-    if (!created.ok) return { status: created.code };
-    return { status: "added", count: created.count };
-  } catch (cause) {
-    console.error(`Adding picked equipment failed: ${cause instanceof Error ? cause.message : String(cause)}`);
-    return { status: "unavailable" };
+
+  // The site comes from the client: it must be a real, active site of the member's org before anything is written under it.
+  const site = isUuid(siteId) ? await container.siteRegister(siteId) : null;
+  if (!site || !site.active || !site.customerActive) return { status: "invalid", message: "That site is not available." };
+
+  const checked = validatePickedEquipment(items, (await container.listAssetTypes()).map((type) => type.id));
+  if (!checked.ok) return { status: "invalid", message: checked.message };
+
+  let added = 0;
+  for (const { assetTypeId, quantity } of checked.items) {
+    for (let unit = 0; unit < quantity; unit++) {
+      const saved = await container.createAsset(member.orgId, siteId, { assetTypeId, unitNo: null, typeModel: null, location: null });
+      if (!saved.ok) return { status: "unavailable", added };
+      added++;
+    }
   }
+  return { status: "added", count: added };
 }

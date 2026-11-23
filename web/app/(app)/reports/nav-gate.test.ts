@@ -9,6 +9,7 @@ vi.mock("@/composition", () => ({
     pipelineBoard: async () => [],
     clock: { now: () => new Date("2027-06-15T20:00:00Z") },
     getItemWords: async () => ({ singular: "equipment", plural: "equipment" }),
+    loadBillingUsage: async () => null,
     workspaceState: async () => "none",
   }),
 }));

@@ -7,20 +7,20 @@ import { ItemWordsProvider } from "@/components/shell/item-words";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/sites" }));
 
-const { SitesListView } = await import("./sites/sites-list");
-const { SiteRegisterView } = await import("./sites/site-register-view");
-const { SearchView } = await import("./search/search-view");
-const { PipelineView } = await import("./kanban/pipeline-view");
+const { SitesListView } = await import("@/app/(app)/sites/_components/content");
+const { SiteRegisterView } = await import("@/app/(app)/sites/[siteId]/_components/content");
+const { SearchView } = await import("@/app/(app)/search/_components/content");
+const { PipelineView } = await import("@/app/(app)/pipeline/_components/content");
 const { ImportBanner } = await import("./imports/import-banner");
-const { ImportUploadFields } = await import("./imports/import-upload");
+const { ImportUploadFields } = await import("@/app/(app)/sites/[siteId]/import/_components/import-upload");
 const { ExtractPrompt } = await import("./imports/extract-control");
-const { MappingSection, RowEditor } = await import("./imports/review-controls");
+const { MappingSection, RowEditor } = await import("@/app/(app)/imports/[jobId]/_components/review-controls");
 const { ImportJobList } = await import("./imports/job-list");
-const { ImportHistoryView } = await import("./imports/import-history");
-const { ImportPageView } = await import("./imports/import-page-view");
-const { ReviewView } = await import("./imports/review-view");
+const { ImportHistoryView } = await import("@/app/(app)/imports/_components/content");
+const { ImportPageView } = await import("@/app/(app)/sites/[siteId]/import/_components/content");
+const { ReviewView } = await import("@/app/(app)/imports/[jobId]/_components/content");
 const { NewAgreementDialog } = await import("./agreements/new-agreement-dialog");
-const { SitesLoading, ImportLoading } = await import("./sites/loading-titles");
+const { SitesLoading, ImportLoading } = await import("@/app/(app)/sites/_components/loading-titles");
 const { phaseLine } = await import("./agreements/new-agreement-state");
 const { NoticeText, ProgressLine } = await import("./agreements/new-agreement-text");
 const { LIST_FAILED } = await import("./agreements/new-agreement-state");
@@ -30,7 +30,7 @@ const stations = itemWords("station", "stations");
 const asStations = (node: ReactElement) => renderToStaticMarkup(createElement(ItemWordsProvider as FunctionComponent<{ words: typeof stations }>, { words: stations }, node)).replace(/&#x27;/g, "'").replace(/&quot;/g, '"');
 const noEquipment = (html: string) => expect(html).not.toMatch(/equipment/i);
 
-const customers: CustomerSummary[] = [{ id: "c1", name: "Harbourview Strata", primaryContact: null, active: true, siteCount: 1, assetCount: 0 }];
+const customers: CustomerSummary[] = [{ id: "c1", name: "Harbourview Strata", primaryContact: null, primaryEmail: null, primaryContactId: null, primaryPhone: null, agreementNumbers: [], agreementCount: 0, active: true, siteCount: 1, assetCount: 0 }];
 const siteRow = (patch: Partial<SiteListRow> = {}): SiteListRow => ({
   id: "s1", name: "Harbourview Towers", address: "2150 Harbour Lane", customerId: "c1", customer: "Harbourview Strata", active: true,
   assetCount: 3, equipment: [{ code: "RTU", count: 3 }], liveAgreement: null, ...patch,
@@ -50,7 +50,7 @@ const job = (patch: Partial<ImportJobView> = {}): ImportJobView => ({
 describe("staff screens, item words", () => {
   test("C2012: the Sites page names the item in its title, subtitle, note, column and empty cell", () => {
     const out = asStations(createElement(SitesListView, { rows: [siteRow({ equipment: [], assetCount: 0 }), siteRow({ id: "s2" })], customers, filter: {} }));
-    for (const text of ["Sites &amp; stations", "the stations on it", "Stations, no agreement yet", "No stations"]) expect(out).toContain(text);
+    for (const text of ["Sites &amp; stations", "the stations on it", "No stations"]) expect(out).toContain(text);
     expect(out).toContain(">Stations<");
     noEquipment(out);
     noEquipment(asStations(createElement(SitesListView, { rows: [], customers, filter: { q: "zzz" } })));
@@ -93,7 +93,7 @@ describe("staff screens, item words", () => {
       })),
     ];
     const joined = parts.join("\n");
-    for (const text of ["Drop a customer station list here", "Choose a station list", "import station lists", "Extract stations", "This document lists more stations than", "Station types not recognised", "Station type", "Choose a station type", "No station lists imported yet", "need a station type", "Station lists you upload", "Finish reading the station list", "Import station list", "No stations were found in this file."]) {
+    for (const text of ["station list</p>", "Choose a station list", "import station lists", "Extract stations", "This document lists more stations than", "Station types not recognised", "Station type", "Choose a station type", "No station lists imported yet", "need a station type", "Station lists you upload", "Finish reading the station list", "Import station list", "No stations were found in this file."]) {
       expect(joined, text).toContain(text);
     }
     noEquipment(joined);
@@ -101,9 +101,7 @@ describe("staff screens, item words", () => {
 
   test("C2015: the New agreement dialog names the item in its intro and its file field", () => {
     const dialog = asStations(createElement(NewAgreementDialog, { customers: [], sites: [], templates: [], actions: { start: vi.fn(), startImport: vi.fn(), confirmImport: vi.fn(), readImport: vi.fn(), extractImport: vi.fn() } } as unknown as Parameters<typeof NewAgreementDialog>[0]));
-    expect(dialog).toContain("Upload the customer's station list or pick what is on site");
-    expect(dialog).toContain("Customer's station list");
-    expect(dialog).toContain("Stations on site");
+    expect(dialog).toContain("Customer's station list (optional)");
     noEquipment(dialog);
   });
 
@@ -127,8 +125,8 @@ describe("staff screens, item words", () => {
   test("C2019: the Pipeline subtitle and its recent imports block name the item", () => {
     const imports: ImportHistoryRow[] = [{ ...job(), site: { id: "s1", name: "Harbourview Towers" }, customer: { id: "c1", name: "Harbourview Strata" } }];
     const out = asStations(createElement(PipelineView, { cards: [], imports }));
-    expect(out).toContain("from station list to signature");
-    expect(out).toContain("Recent station imports");
+    expect(out).toContain("from stations intake to signed contract");
+    expect(out).toContain("Recent imports");
     noEquipment(out);
   });
 

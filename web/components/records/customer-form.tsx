@@ -1,12 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
 import type { ContactView } from "@/application/ports";
 import type { CustomerInput } from "@/domain/records";
 import { Select } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-input";
+import { domainSchema, text } from "@/lib/forms/domain-schema";
+import { validateCustomer } from "@/domain/records";
 import { RecordForm } from "./record-form";
-import { fieldErrors, shownValues, type RecordFormState } from "./state";
+import { fieldErrors, type RecordFormState } from "./state";
+import { useRecordForm } from "./use-record-form";
+import type { UseFormRegister } from "react-hook-form";
 
 export type CustomerFormState = RecordFormState<CustomerInput>;
 
@@ -19,21 +22,25 @@ type FieldsProps = {
   submitLabel: string;
   cancelHref: string;
   action?: (formData: FormData) => void;
+  /** The browser-side form (React Hook Form); without it the fields are plain and post through `action`. */
+  onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
+  register?: UseFormRegister<CustomerInput>;
+  /** Messages from the browser's check; they win over the server's. */
+  errors?: Partial<Record<string, string>>;
 };
 
-export function CustomerFields({ values, state, contacts = [], ...form }: FieldsProps) {
-  const errors = fieldErrors(state);
+export function CustomerFields({ values, state, contacts = [], register, errors: live, ...form }: FieldsProps) {
+  const errors = { ...fieldErrors(state), ...live };
   const byName = [...contacts].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
   return (
     <RecordForm status={state.status} {...form}>
-      <TextInput id="name" name="name" label="Customer name" defaultValue={values.name} error={errors.name} autoComplete="organization" />
+      <TextInput id="name" label="Customer name" error={errors.name} autoComplete="organization" defaultValue={values.name} {...(register ? register("name") : { name: "name" })} />
       {byName.length > 0 && (
         <Select
           id="billingContactId"
-          name="billingContactId"
           label="Billing contact"
-          defaultValue={values.billingContactId ?? ""}
           error={errors.billingContactId}
+          defaultValue={values.billingContactId ?? ""} {...(register ? register("billingContactId") : { name: "billingContactId" })}
         >
           <option value="">No billing contact</option>
           {byName.map((contact) => (
@@ -55,7 +62,9 @@ type FormProps = {
   action: (state: CustomerFormState, formData: FormData) => Promise<CustomerFormState>;
 };
 
-export function CustomerForm({ initial, action, ...props }: FormProps) {
-  const [state, formAction, pending] = useActionState(action, { status: "idle" });
-  return <CustomerFields values={shownValues(state, initial)} state={state} pending={pending} action={formAction} {...props} />;
+/** The customer form: checked in the browser first, then sent to the server action, which checks it again. */
+export function CustomerForm({ initial, action, contacts = [], ...props }: FormProps) {
+  const schema = domainSchema({ name: text(), billingContactId: text().optional() }, (input) => validateCustomer(input, contacts.map((contact) => contact.id)));
+  const { state, pending, register, onSubmit, errors } = useRecordForm<CustomerInput, CustomerFormState>({ schema, initial, action });
+  return <CustomerFields values={initial} state={state} contacts={contacts} pending={pending} onSubmit={onSubmit} register={register} errors={errors} {...props} />;
 }

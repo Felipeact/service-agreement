@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { CustomerDetailView } from "@/components/customers/customer-detail-view";
-import { getContainer } from "@/composition";
 import { showInactive } from "@/domain/records";
+import { CustomerDetailView } from "./_components/content";
+import { loadCustomer } from "./_data-access/customer";
 
 export const metadata: Metadata = { title: "Customer" };
 
 export default async function CustomerPage({ params, searchParams }: PageProps<"/customers/[customerId]">) {
   const { customerId } = await params;
-  const { currentMember, customerDetail } = await getContainer();
-  const member = await currentMember();
-  if (member.status !== "member") redirect("/login");
-  const customer = await customerDetail(customerId);
-  if (!customer) notFound();
-  return <CustomerDetailView customer={customer} role={member.role} showInactive={showInactive(await searchParams)} />;
+  const { role, customer } = await loadCustomer(customerId);
+  return <CustomerDetailView customer={customer} role={role} showInactive={showInactive(await searchParams)} />;
 }

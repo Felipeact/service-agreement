@@ -54,7 +54,7 @@ Price points were set by the owner on 2026-11-13 (decision 10), in CAD. Revisit 
 | Business | $299 | 200 | 120 | 10 |
 
 - **Axis:** plans limit volume and include some seats; every seat beyond that is $19 a month in CAD, one price for all plans (decisions 10 and 20, set 2026-11-13). Features, templates and reports are the same on every plan. What counts as a "live agreement" is defined in Phase 5.
-- **Billing:** no free trial (decision 8 was reversed on 2026-11-13). The card is charged at Checkout, then monthly. An annual option at two months free is worth testing. Stripe handles Checkout, the Customer Portal and failed-payment retries. A company whose subscription ends (canceled, unpaid or expired) can still sign in but its workspace is read-only until it renews from Billing; nothing is deleted, and an org with no subscription record (the demo org) is never frozen.
+- **Billing:** no free trial (decision 8 was reversed on 2026-11-13). The card is charged at Checkout, then monthly or yearly: the annual option (20% off) shipped on 2026-11-22. Stripe handles Checkout, the Customer Portal and failed-payment retries. A company whose subscription ends (canceled, unpaid or expired) can still sign in but its workspace is read-only until it renews from Billing; nothing is deleted, and an org with no subscription record (the demo org) is never frozen.
 - **Cost floor per tenant (third-party figures, unchecked against Stripe's own page):** Stripe takes about 2.9% + C$0.30 per card payment, and Stripe Billing adds about 0.7% on US pricing. On a $149 plan that is about $6 a month. Each completed signature costs about US$0.20. Claude extraction is the cost to measure: tokens are recorded per import job (built 2026-11-13, see Phase 5) so the allowances can be sized from real numbers with the `ai-pricing` skill; until a pilot has produced some, the figures are estimates (about $0.20 to $0.25 per 100-row chunk on `claude-opus-5-5`).
 - **Where it sits:** the market anchors below are third-party reports that disagree with each other; check each vendor's page before quoting them.
 
@@ -82,7 +82,10 @@ Dispatch and GPS, visit scheduling (who performs which visit, and when), payroll
 | PDF generation | `@react-pdf/renderer`, behind `DocumentRenderer` | Serverless-friendly, no headless Chrome |
 | Email | Resend, domain `felipeviana.com` | Transactional email |
 | SaaS billing | Stripe (subscriptions, Checkout, Customer Portal) | Idempotent webhook handling |
-| Design workflow | Impeccable skill (`/impeccable init`, `shape`, `document`) | Product context, variant directions, and a DESIGN.md generated from the chosen direction |
+| Design workflow | `/frontend-design` and `/shadcn` skills, with `docs/DESIGN.md` (Field Protocol) as the source of truth | Replaced Impeccable on 2026-11-21; the root DESIGN.md and `.impeccable/` are retired |
+| UI kit and forms | shadcn/ui on Radix, React Hook Form, Zod | The standard in `cursor/rules/rules.mdc`; every form and server action input is validated with a Zod schema (Phase 0.6) |
+| Page structure | `page.tsx` (server) with `_components`, `_actions`, `_data-access` per route | `cursor/rules/page-rules.mdc`; thin adapters over `web/application` use cases (Phase 0.6) |
+| Tests | Vitest for unit and integration, `npm run test:db` for SQL, Playwright MCP live (nothing committed) | See `AGENTS.md` |
 
 ## Modules
 
@@ -104,7 +107,8 @@ Dispatch and GPS, visit scheduling (who performs which visit, and when), payroll
 | M14 | SaaS billing & onboarding | Public pricing page, Stripe plans per tenant, plan limits, workspace provisioning from the Stripe webhook, setup screen on first login | 5 |
 | M15 | Audit, files, security | Org-scoped storage, event log, portal rate limits, Supabase advisors clean | 1+ |
 | M16 | Post-contract operations | Annual CPI adjustment, renewals and cancellations, mid-term amendments. No deficiency reports, visit scheduling or per-visit invoicing (decision 23) | 6 |
-| M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in DESIGN.md and `.impeccable/design.json`, tokens and components | 0.5 |
+| M17 | Design system & UX | PRODUCT.md, variant mockups (three directions plus the category standard), the chosen direction recorded in `docs/DESIGN.md` (Field Protocol, since 2026-11-21; the root DESIGN.md and `.impeccable/` are retired), tokens and components | 0.5 |
+| M22 | Standards migration | Move every existing page to the page structure, shadcn, React Hook Form and Zod, and roll the Field Protocol look out to every screen and customer-facing surface | 0.6 |
 | M18 | Trades, packs & vocabulary | Starter packs per trade (types, checklists, default months, synonyms, extraction context), a per-org label for the serviced item ("Equipment", "Areas", "Stations"), per-org synonyms, catalog drafted by Claude for other trades | 4.5, 5 |
 | M19 | Document templates | Tenant-owned agreement and contract templates built from text blocks with merge variables and fixed system blocks, versioned and frozen into each agreement and contract | 5.5 |
 | M21 | Public site | Marketing front door at `/`: home, product, demo, trades, pricing, about, FAQ, contact and register. Sample-data visuals, no invented proof. Sign-in is a link | 5 |
@@ -235,7 +239,7 @@ Tenant reports for the contractor's owner and office, read from data that alread
 
 ## Phases
 
-When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` with what was built (see `AGENTS..md`).
+When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` with what was built (see `AGENTS.md`).
 
 ### Phase 0.5: Design system & UX (M17)
 - [x] PRODUCT.md: users, positioning, constraints and principles (`/impeccable init`)
@@ -243,6 +247,25 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Chosen direction (category standard, benchmarked against Linear, Stripe Dashboard, Attio/HubSpot and Jobber/Housecall Pro) recorded as a seed DESIGN.md, plus the Pipeline surface brief
 - [x] Tokens and base components (sidebar, page header, buttons, search input, status pill, kanban column and card) implemented in `web/`. Text input, select and the field error state moved to Phase 1
 - [x] DESIGN.md regenerated from code with real tokens, and `.impeccable/design.json` written (`/impeccable document`)
+
+### Phase 0.6: Standards migration (M22)
+Decision 24. The Cursor rules (`cursor/rules/page-rules.mdc`, `rules.mdc`) and `docs/DESIGN.md` apply to every page, new and existing. Migrate one route group at a time; each one ships on its own.
+- [x] Install shadcn (`components.json`, Tailwind 4), add Zod and React Hook Form (2026-11-22; components added by hand from `shadcn view` because the CLI tried to install an npm package named `cn`; `web/.npmrc` sets `allow-remote=all` so npm 12 can fetch the pinned `xlsx` tarball)
+- [x] Map the `docs/DESIGN.md` tokens (colours, Inter, radii, shadows, tabular numerals) into `web/app/globals.css`; the navy shell was kept at first and replaced by the white Floating Panel sidebar the same day (2026-11-22)
+- [ ] Replace hand-built primitives in `web/components` (button, inputs, select, dialog and so on) with shadcn equivalents where one exists. Done 2026-11-22: `Button`, `Input` (and `TextInput`, `Select`, `TextArea` share its field style), `StatusPill` on `Badge`, `EmptyPanel` on `Empty`. Left on purpose: the native `Select` (forms post native selects), the New agreement `<dialog>` (behavior pinned by tests), `ListPanel` and `StatCard`
+- [x] Staff pages in `web/app/(app)` to the page structure: agreements, billing, contracts, customers, imports, kanban, members, motion, records, reports (2026-11-22, one route group per commit: Customers and Sites, Agreements and Pipeline, Templates and Contracts, Imports, Reports and Members and Settings and Billing, the record form pages and Search; every route reads through `_data-access`. Shared pieces stay in `web/components` on purpose: the record forms, the New agreement dialog, the job list, the logo field, billing, signing)
+- [x] Customer-facing and account pages to the page structure: login, setup, register, review (portal), sign, auth (2026-11-22: review, sign and setup now read through `_data-access` with their components in the route; login, register and the auth confirm route read no data, so they already fit: a thin page, `_components`, `actions.ts`)
+- [x] Public site to the page structure: home, product, demo, trades, pricing, about, FAQ, contact, privacy, terms, security. The Field Protocol look is done for the public site, sign-in and register (2026-11-22, shaders included). These pages read no data, so a `_data-access` or `_actions` folder would be empty; the eight mockup pages keep their content in `_components`, and About, FAQ, contact and the legal pages compose the shared site sections (`web/components/site`)
+- [ ] Every form on shadcn inputs with React Hook Form and a Zod schema; every server action validates its input with Zod, checks auth and returns a typed result. Done 2026-11-22: customer, contact, site, asset, Settings, invite and sign-in forms (browser check through `domainSchema` over the existing domain validators; the server actions stay the authority). and the import row editor. Not converted, on purpose: the template and contract-wording editors (a nested block layout with drag and drop), the billing card, plan-change and renew forms (they confirm through Stripe's own elements), the register form (its messages are the mockup's fixed copy) and the per-member role form (one select)
+- [x] Choose the staff-app design and port it: concept B "Floating Panel" (white floating sidebar, tinted board columns, Expiring soon kept as the sixth column), done 2026-11-22; the A and C layouts are no longer used
+- [x] Private-pages design chosen (B, Floating Panel, 2026-11-22) and the real pages rebuilt to it
+- [ ] Delete the previews at `/concepts/app` (`web/app/concepts/app/`) once the owner has confirmed the real pages
+- [x] Rebuild every real page from the approved "Floating Panel" preview (2026-11-22): tokens, shell, Pipeline with Expiring soon, agreement layout, customer and site headers, filters
+- [x] Rich template editor, slice 1 (2026-11-22): theme (colour and font), text style (align, bold, italic) and tables, in the editor, both PDFs and the customer page. Needs the owner to apply migration `20261122100000_template_design` before a designed template can be saved; run `npm run test:db template_design`
+- [ ] Rich template editor, next slices: images, columns, page background, text size and colour per block, the template's colour on the customer page, starter designs; a PRD first (`/prd-generator`, `docs/prd/`)
+- [x] Every staff page copied block by block to design B (2026-11-22): shell with a hideable sidebar (Ctrl or Cmd + B), Pipeline, Agreements, agreement page, Customers, Sites, Templates, Imports, Reports, Search, Settings, Members and the framed modals (`modal.tsx`)
+- [ ] Floating Panel look on the portal, signing page, PDFs and emails (the tenant accent leads there). Staff pages are done (line above). Next: the portal, signing page, PDFs and emails
+- [ ] Per route group: Playwright validation at 375, 768 and 1440 px, a CONTEXT.md entry, and `web/boundaries.test.ts` still passing
 
 ### Phase 1: Foundation
 - [x] Supabase project and `0001_init` migration (orgs, memberships, settings, customers, contacts, sites, asset types/tasks, assets, agreements, service lines, contracts, events, outbox) with RLS on every table
@@ -287,7 +310,6 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Global search across customers, sites and unit numbers
 - [x] A clean equipment list goes straight from New agreement to the agreement page; the review grid opens only when a row needs a person (2026-11-13, `commitCleanImportAction`; typechecked, no test of its own yet). The dialog also closes before it navigates, so it no longer stays open over the new page
 - [x] PDF preview on the agreement page, drawn on demand and redrawn after an edit; phones get "Open in a new tab" (2026-11-13). Versions and Activity redesigned: the version on screen is marked, history and older events fold away (2026-11-13)
-- [x] Recommended service lines from the equipment on site (every trade), tagged Recommended until kept or edited; New agreement without a file (pick by hand or add later); agreement page redesigned with a pdf.js document viewer that works on phones (2026-11-18, migration `20261118100000` to apply)
 
 ### Phase 4: Contract & e-signature
 - [x] Contract generated from the accepted agreement version
@@ -319,6 +341,7 @@ When you complete a roadmap item, mark it done here **and** update `CONTEXT.md` 
 - [x] Change plan from the billing page: list Starter, Team and Business, switch with a confirming step, prorated, seats follow the sign-up rule, the app's record of the plan follows (`.specs/features/plan-change/`, planned 2026-11-10, built 2026-11-10, AD-179; the `set_org_plan` migration (`20261110190000`) was applied by the owner and the live Stripe sandbox run passed (author-run). Ticked 2026-11-10 at the owner's instruction: Verifier round 2 failed only on that author-run live check, which a Verifier cannot observe; the two small gaps it listed were fixed)
 - [x] Plan limits by live agreements and an AI-import allowance (`.specs/features/plan-limits/`, planned and built 2026-11-12, AD-185, migration `20261112220000_plan_limits.sql`, written and proven in a rolled-back recipe, applied by the owner 2026-11-12). `create_agreement` refuses at the plan's live-agreement limit and extraction refuses its first chunk at the monthly allowance, with the refusal shown on the New agreement form, the site page, the start dialog and the extract control, and a Usage card on `/settings/billing`. Verifier round 3 PASS (31 of 31 checks, 44 faults injected and killed; rounds 1 and 2 failed on weak limit-equals-used assertions, a missing admin case and unproven wiring, all closed); the live browser pass was not run; the draft limits wait on decision 10. Seats beyond the included ones are billed through the Stripe quantity set at sign-up (register-seats), and enforcing the paid seat count at invite time is a later item
 - [x] No free trial, and the owner's price points: $79, $149 and $299 a month with $19 extra seats (2026-11-13, no migration). Checkout sends no `trial_period_days`; pricing, register, FAQ and footer copy follow. Subscriptions already trialing still display correctly
+- [x] Annual billing and "Get started" copy (2026-11-22, no migration): the Monthly/Annual switch on `/pricing` works, carries into `/register` and bills yearly at 20% off in Stripe Checkout; "free trial" and "no credit card" copy removed from the public pages.
 - [x] One workspace per company name and per person (2026-11-13, migrations `20261113110000` and `20261113120000`, applied): `/register` refuses a company name or an email (ignoring a `+tag`) that already has a workspace, before Checkout; provisioning refuses a duplicate name as a backstop
 - [x] Frozen workspace when the subscription ends, and renewal (2026-11-13, migration `20261113130000`, applied): `org_billing.status` follows Stripe's subscription events; a canceled, unpaid or expired org signs in read-only with a banner (the member holds the viewer's role), and an owner or admin renews from `/settings/billing` through a Checkout for the same customer, which thaws the org. Proven on rolled-back SQL and fakes. Not built: database-level enforcement of the read-only state (the app layer enforces it today); the live Stripe renewal run
 - [x] Sending an agreement emails the site contact and asks for the email when none is on file; the customer link is no longer shown (2026-11-13, migration `20261113120000`). The earlier "no email" was n8n skipping with `no_recipient` because the contact had no email, not an n8n fault. "Get a new link" is no longer offered
@@ -418,6 +441,7 @@ The 22 questions raised on 2026-11-06 were delegated to Claude to answer from re
 | 21 | Build order | Finish Phase 4, then 4.5, 5, 5.5, then reporting (5.6) | Nobody can be sold a contract that cannot complete (the DocuSeal webhook, signed PDF and audit log are still open). Templates decide whether a contractor adopts the product; reports need real tenant data to say anything |
 | 22 | Planning | One feature at a time, starting with the type editor and `seed_org_catalog(pack)` | The `tlc-spec-lean` workflow in this repo is built for it |
 | 23 | Scheduling | The product does not schedule visits or track who performs them, so Phase 6 has no visit schedule or per-visit invoicing. Visit months on the agreement grid stay: they are cadence, not scheduling (added 2026-11-15 by the owner) | Same line as the dispatch and GPS non-goal; the product feeds a field-service suite rather than replacing one |
+| 24 | Standards and design source (2026-11-21, owner) | The Cursor rules apply to all existing and new pages (migration is Phase 0.6). `docs/DESIGN.md` (Field Protocol) is the design source of truth. The owner's mockups in `docs/service_pacts_*/` keep a dark navy sidebar with a light canvas, so the navy shell stays (amended 2026-11-22). UI work uses `/frontend-design` and `/shadcn` instead of `/impeccable` | One page structure, one UI kit and one visual system are cheaper to maintain than two. Unit tests stay on Vitest and the ports-and-adapters layers stay (AGENTS.md) |
 
 **Needs you:** see Phase 5.9. Plan prices were set on 2026-11-13.
 

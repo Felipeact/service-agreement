@@ -21,7 +21,7 @@ import {
 
 const block = (text: string): LayoutRow => ({ ...newBlockRow("paragraph"), text });
 const part = (key: Parameters<typeof newSectionRow>[0]): LayoutRow => newSectionRow(key);
-const texts = (rows: LayoutRow[]) => rows.map((row) => (row.kind === "block" ? row.text : row.key));
+const texts = (rows: LayoutRow[]) => rows.map((row) => (row.kind === "block" ? row.text : row.kind === "section" ? row.key : "table"));
 
 describe("required parts", () => {
   test("[C5] the price table is required in both documents and signatures only in the contract", () => {

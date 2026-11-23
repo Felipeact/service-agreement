@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Service Pacts - The Commercial Agreement Operating Engine</title>
+<!-- Inter Google Font & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04)',
+            'card-hover': '0 12px 28px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+            'float': '0 20px 45px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05)',
+            'neon-blue': '0 0 30px -4px rgba(37, 99, 235, 0.35)',
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #f8f9ff;
+      color: #0f172a;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .subtle-grid {
+      background-size: 32px 32px;
+      background-image:
+        linear-gradient(to right, rgba(37, 99, 235, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 99, 235, 0.035) 1px, transparent 1px);
+    }
+
+    .radial-fade {
+      mask-image: radial-gradient(ellipse 85% 70% at 50% 25%, #000 45%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 25%, #000 45%, transparent 100%);
+    }
+
+    /* Ambient float animations */
+    @keyframes floatOrb1 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(45px, -35px) scale(1.08); }
+    }
+    @keyframes floatOrb2 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(-50px, 40px) scale(1.06); }
+    }
+    @keyframes floatOrb3 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(30px, 45px) scale(1.05); }
+    }
+    @keyframes subtlePulse {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.03); opacity: 1; }
+    }
+    @keyframes shimmerGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .orb-1 { animation: floatOrb1 15s ease-in-out infinite; will-change: transform; }
+    .orb-2 { animation: floatOrb2 19s ease-in-out infinite; will-change: transform; }
+    .orb-3 { animation: floatOrb3 22s ease-in-out infinite; will-change: transform; }
+
+    .gradient-hero-text {
+      background: linear-gradient(120deg, #1d4ed8 0%, #2563eb 30%, #06b6d4 70%, #2563eb 100%);
+      background-size: 250% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmerGradient 8s ease infinite;
+    }
+
+    .interactive-hover-lift {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .interactive-hover-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 32px -8px rgba(37, 99, 235, 0.12), 0 0 0 1px rgba(37, 99, 235, 0.15);
+    }
+
+    .reveal-section {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform;
+    }
+    .reveal-section.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body class="selection:bg-blue-600 selection:text-white">
+<!-- Ambient Blurred Orbs Background -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+<div class="absolute -top-28 left-1/4 w-[540px] h-[540px] rounded-full bg-blue-500/15 blur-3xl orb-1"></div>
+<div class="absolute top-96 -right-20 w-[480px] h-[480px] rounded-full bg-cyan-400/15 blur-3xl orb-2"></div>
+<div class="absolute top-[1300px] -left-20 w-[600px] h-[600px] rounded-full bg-indigo-500/12 blur-3xl orb-3"></div>
+<div class="absolute top-[2300px] right-10 w-[520px] h-[520px] rounded-full bg-blue-600/10 blur-3xl orb-1"></div>
+</div>
+<!-- BEGIN: MainHeader -->
+<header class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 border-b border-slate-200/80">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+<!-- Brand Logo Left -->
+<a class="flex items-center gap-3 group" href="/">
+<div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:bg-blue-700 transition-colors">
+<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewbox="0 0 24 24">
+<path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="flex items-center gap-2.5">
+<span class="text-xl font-bold tracking-tight text-slate-900">Service Pacts</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80">
+<span>🍁</span> CAD
+          </span>
+</div>
+</a>
+<!-- Center Navigation Links -->
+<nav class="hidden md:flex items-center gap-8 text-sm font-medium">
+<a class="text-blue-600 font-semibold text-sm flex items-center gap-1.5 transition-colors" href="/product">
+<span>Product</span>
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+</a>
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors" href="/demo">Demo</a>
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors" href="/trades">Trades</a>
+<a class="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors" href="/pricing">Pricing</a>
+</nav>
+<!-- Right Action Area -->
+<div class="flex items-center gap-4">
+<a class="text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors" href="/sign-in">Sign in</a>
+<a class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm hover:shadow transition-all group" href="/register">
+<span>Get started</span>
+<span class="material-symbols-outlined text-base group-hover:translate-x-0.5 transition-transform">east</span>
+</a>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<main class="relative z-10 flex flex-col w-full">
+<!-- Quick Architectural Breadcrumb Sub-Bar -->
+<div class="w-full bg-white/70 backdrop-blur-sm border-b border-slate-200/70 py-2.5 px-4 sm:px-6">
+<div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+<div class="flex items-center gap-2">
+<span class="text-slate-500 font-medium hidden sm:inline">Engineered for Canadian Commercial Mechanical, Electrical &amp; Hydronic Trades</span>
+</div>
+<div class="flex items-center gap-2 sm:gap-3 text-slate-500 font-medium">
+<a class="hover:text-blue-600 transition-colors" href="#intake">1. Parsing &amp; OCR</a>
+<span class="text-slate-300">/</span>
+<a class="hover:text-blue-600 transition-colors" href="#matrix">2. 12-Mo Matrix</a>
+<span class="text-slate-300">/</span>
+<a class="hover:text-blue-600 transition-colors" href="#portal">3. E-Sign Portal</a>
+<span class="text-slate-300">/</span>
+<a class="hover:text-blue-600 transition-colors" href="#lifecycle">4. Lifecycle &amp; CPI</a>
+</div>
+</div>
+</div>
+<!-- 1. HERO SECTION -->
+<section class="relative pt-12 pb-20 sm:pt-16 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] border-b border-slate-200/80">
+<!-- WebGL Shader Canvas Embedded -->
+<!-- STITCH_SHADER_START:ANIMATION_100 class="absolute inset-0 w-full h-full opacity-70 pointer-events-none" -->
+<div class="absolute inset-0 w-full h-full opacity-70 pointer-events-none" style="display:block;">
+<canvas height="1089" id="shader-canvas-ANIMATION_100" style="display:block;width:100%;height:100%" width="1280"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_100');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+varying vec2 v_texCoord;
+
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+    u.y
+  );
+}
+
+void main() {
+  vec2 uv = v_texCoord;
+  vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+  float t = u_time * 0.25;
+
+  // Gentle, elegant light-mode gradient backdrop with glowing cyan and royal blue orbs
+  vec2 orb1 = vec2(sin(t * 0.8) * 0.55 + 0.1, cos(t * 0.6) * 0.35 + 0.2);
+  vec2 orb2 = vec2(cos(t * 0.7) * 0.6 - 0.2, sin(t * 0.5) * 0.4 - 0.1);
+  vec2 orb3 = vec2(sin(t * 0.5 + 2.0) * 0.45, cos(t * 0.75 + 1.5) * 0.35);
+
+  float d1 = length(p - orb1);
+  float d2 = length(p - orb2);
+  float d3 = length(p - orb3);
+
+  // Soft radiant light energy
+  float glow1 = 0.45 / (1.0 + d1 * d1 * 3.8);
+  float glow2 = 0.38 / (1.0 + d2 * d2 * 4.2);
+  float glow3 = 0.32 / (1.0 + d3 * d3 * 4.5);
+
+  // Subtle fluid digital mesh caustics
+  float n = noise(uv * 4.0 + vec2(t * 0.2, -t * 0.15));
+  float grid = sin((uv.x + uv.y * 0.5 + n * 0.15) * 45.0 + t) * 0.5 + 0.5;
+  grid = pow(grid, 4.0) * 0.035;
+
+  // Base luminous light background (soft slate-blue and pristine ice white)
+  vec3 bg = mix(vec3(0.97, 0.985, 1.0), vec3(0.93, 0.96, 1.0), uv.y);
+
+  // Brand electric blue (#2563eb) and energetic bright cyan (#38bdf8 / #06b6d4)
+  vec3 blueGlow = vec3(0.145, 0.388, 0.921);
+  vec3 cyanGlow = vec3(0.02, 0.71, 0.89);
+  vec3 violetAccent = vec3(0.48, 0.38, 0.96);
+
+  vec3 col = bg;
+  col += blueGlow * glow1 * 0.22;
+  col += cyanGlow * glow2 * 0.20;
+  col += violetAccent * glow3 * 0.16;
+  col += vec3(grid * 0.8);
+
+  // Vignette
+  float vig = smoothstep(1.8, 0.4, length(p));
+  col = mix(bg, col, vig);
+
+  gl_FragColor = vec4(col, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_100 -->
+<div class="absolute inset-0 subtle-grid radial-fade pointer-events-none"></div>
+<div class="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
+<!-- Eyebrow Badge -->
+<!-- Main Headline -->
+<h1 class="text-4xl sm:text-5xl lg:text-[54px] font-extrabold text-slate-900 tracking-tight leading-[1.12] max-w-4xl mb-6">
+          The operating engine for commercial <span class="gradient-hero-text">service agreements.</span>
+</h1>
+<!-- Subtitle -->
+<p class="text-base sm:text-lg text-slate-600 max-w-3xl mb-8 leading-relaxed font-normal">
+          From messy customer equipment schedules to legally enforceable recurring maintenance pacts with automated visit schedules, Canadian CPI indexing, and frictionless white-label approvals.
+        </p>
+<!-- Dual CTAs -->
+<div class="flex flex-col sm:flex-row items-center gap-3.5 mb-10 w-full sm:w-auto">
+<a class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-2 group" href="/register">
+<span>Get started</span>
+<span class="material-symbols-outlined text-[17px] group-hover:translate-x-0.5 transition-transform">east</span>
+</a>
+<a class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-sm shadow-card transition-all flex items-center justify-center gap-2" href="/demo">
+<span class="material-symbols-outlined text-[18px] text-blue-600">play_circle</span>
+<span>Explore interactive demo →</span>
+</a>
+</div>
+<!-- Supported Trade Badges Row with Hover Interactions -->
+<div class="flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-slate-600 pt-2">
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 border border-slate-200/90 shadow-xs hover:border-blue-400 hover:text-blue-700 transition-all">
+<span class="material-symbols-outlined text-blue-600 text-[16px]">ac_unit</span>
+<span>HVAC &amp; Mechanical</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 border border-slate-200/90 shadow-xs hover:border-blue-400 hover:text-blue-700 transition-all">
+<span class="material-symbols-outlined text-blue-600 text-[16px]">plumbing</span>
+<span>Master Plumbers &amp; Hydronics</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 border border-slate-200/90 shadow-xs hover:border-blue-400 hover:text-blue-700 transition-all">
+<span class="material-symbols-outlined text-blue-600 text-[16px]">kitchen</span>
+<span>Commercial Refrigeration</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 border border-slate-200/90 shadow-xs hover:border-blue-400 hover:text-blue-700 transition-all">
+<span class="material-symbols-outlined text-blue-600 text-[16px]">bolt</span>
+<span>Licensed Electrical Contractors</span>
+</div>
+</div>
+</div>
+<!-- System Blueprint Card (Frosted Glass Bento Grid) -->
+<div class="max-w-6xl mx-auto mt-14 relative z-10 reveal-section is-visible">
+<div class="backdrop-blur-xl bg-white/75 border border-blue-100 shadow-xl rounded-3xl p-6 sm:p-8">
+<!-- Top blueprint bar -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 gap-4 border-b border-slate-200/80">
+<div>
+<span class="font-mono text-xs uppercase font-bold tracking-wider text-blue-600 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                System Blueprint
+              </span>
+<h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">End-to-End Pact Execution Pipeline</h2>
+</div>
+<div class="flex items-center gap-2.5">
+<span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/70 font-mono text-[11px] font-semibold">
+                CAD / Statutory Compliance
+              </span>
+<span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-mono text-[11px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> SOC2 Type II
+              </span>
+</div>
+</div>
+<!-- 4 Interconnected Pipeline Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+<!-- Card 1 -->
+<div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between group">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-mono font-bold text-sm">01</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-blue-600 transition-colors">document_scanner</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Ingestion &amp; OCR Engine</h3>
+<p class="text-xs text-slate-600 leading-relaxed">
+                  Raw Excel schedules, photos of nameplates, and PDF specs are normalized into standard mechanical records.
+                </p>
+</div>
+<div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+<span class="text-slate-500 font-medium">Model Extraction</span>
+<span class="font-mono text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">99.4% Field Match</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between group">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-mono font-bold text-sm">02</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-blue-600 transition-colors">calendar_month</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">12-Month Matrix Builder</h3>
+<p class="text-xs text-slate-600 leading-relaxed">
+                  Rules-based ASHRAE 180 task allocation assigns heating, cooling, and filter swap cadences automatically.
+                </p>
+</div>
+<div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+<span class="text-slate-500 font-medium">Seasonal Cadence</span>
+<span class="font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">Q1-Q4 Automated</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between group">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-mono font-bold text-sm">03</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-blue-600 transition-colors">draw</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">E-Sign &amp; Client Portal</h3>
+<p class="text-xs text-slate-600 leading-relaxed">
+                  Frictionless zero-login review links for facility managers with interactive scope adjustments and audit trails.
+                </p>
+</div>
+<div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+<span class="text-slate-500 font-medium">Turnaround Time</span>
+<span class="font-mono text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">&lt; 48h Avg Sign</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between group">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-mono font-bold text-sm">04</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-blue-600 transition-colors">trending_up</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Provincial CPI Indexer</h3>
+<p class="text-xs text-slate-600 leading-relaxed">
+                  StatCan CPI benchmarks trigger automated 60-day renewal notices with inflation adjustments baked in.
+                </p>
+</div>
+<div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+<span class="text-slate-500 font-medium">Retention Guard</span>
+<span class="font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">+3.8% Margin Guard</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. PILLAR 01: INTAKE INTELLIGENCE & OCR -->
+<section class="py-20 sm:py-24 bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 relative reveal-section is-visible" id="intake">
+<div class="max-w-6xl mx-auto">
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-6">
+<div class="max-w-2xl">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-semibold mb-3 border border-blue-200/70">
+              PILLAR 01: INTAKE INTELLIGENCE
+            </div>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+              Turn messy Excel spreadsheets and scanned PDFs into priceable inventory in seconds.
+            </h2>
+<p class="text-base text-slate-600 leading-relaxed">
+              Property managers send unstandardized equipment logs. Our Canadian-trained model instantly deciphers makes, models, tonnages, and mechanical schedules without manual rekeying.
+            </p>
+</div>
+<div class="bg-slate-50 border border-slate-200/90 p-5 rounded-2xl shadow-card text-right shrink-0">
+<div class="font-mono text-3xl font-extrabold text-blue-600">14,200+</div>
+<div class="text-xs text-slate-500 font-medium mt-1">Mechanical Units Extracted This Month</div>
+</div>
+</div>
+<!-- Detail Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<div class="bg-[#f8f9ff] p-6 rounded-2xl border border-slate-200/80 shadow-card interactive-hover-lift">
+<div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-2xl">upload_file</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Multi-Format Ingestion</h3>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Drop raw CSVs, multi-tab Excel files, photocopied equipment lists, or contractor handover binders directly into the browser.
+            </p>
+</div>
+<div class="bg-[#f8f9ff] p-6 rounded-2xl border border-slate-200/80 shadow-card interactive-hover-lift">
+<div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-2xl">precision_manufacturing</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Mechanical Schema Auto-Fill</h3>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Extracts Unit Tag (e.g. RTU-04), Manufacturer, Model Number, Serial, Tonnage, Refrigerant type (R-410A), and physical roof/room locations.
+            </p>
+</div>
+<div class="bg-[#f8f9ff] p-6 rounded-2xl border border-slate-200/80 shadow-card interactive-hover-lift">
+<div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-2xl">auto_fix_high</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Confidence &amp; Disambiguation</h3>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Flag ambiguous unit types (RTU vs MAU vs Chiller) with confidence scores so estimators verify exceptions in one click.
+            </p>
+</div>
+</div>
+<!-- Interactive Transformer Demonstration Widget -->
+<div class="bg-white rounded-3xl border border-slate-200 shadow-float overflow-hidden">
+<div class="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+<span class="font-mono text-xs font-bold text-slate-800 tracking-wider uppercase flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Parsing Demonstration
+            </span>
+<span class="text-slate-500 font-mono text-xs">Sample: Downtown Calgary Medical Centre</span>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+<!-- Left: Raw Snippet -->
+<div class="p-6 sm:p-8 bg-slate-50/50">
+<div class="flex items-center justify-between mb-4">
+<span class="text-xs text-rose-600 font-semibold uppercase tracking-wider flex items-center gap-1.5 font-mono">
+<span class="material-symbols-outlined text-sm">attachment</span> Raw Customer Email Attachment
+                </span>
+<span class="font-mono text-xs text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">.XLSX extract</span>
+</div>
+<div class="bg-white p-4 rounded-xl font-mono text-xs text-slate-700 space-y-3 leading-relaxed border border-slate-200 shadow-inner">
+<div class="text-slate-400"># Equip Schedule Rev 2 2021</div>
+<div class="p-2.5 bg-rose-50/60 text-slate-800 rounded-lg border border-rose-200/60">
+                  RTU 1: Carrier 48TCED12A2A5A0A0 - 10T, serial 4218C12345, North Roof
+                </div>
+<div class="p-2.5 bg-rose-50/60 text-slate-800 rounded-lg border border-rose-200/60">
+                  MUA-2: Engineered Air DJX-140, natural gas makeup, mech room B
+                </div>
+<div class="p-2.5 bg-rose-50/60 text-slate-800 rounded-lg border border-rose-200/60">
+                  PUMP-1: Bell &amp; Gossett e-1510 3HP hydronic recirc
+                </div>
+</div>
+</div>
+<!-- Right: Clean Database Records View -->
+<div class="p-6 sm:p-8 bg-white">
+<div class="flex items-center justify-between mb-4">
+<span class="text-xs text-emerald-700 font-semibold uppercase tracking-wider flex items-center gap-1.5 font-mono">
+<span class="material-symbols-outlined text-sm">check_circle</span> Normalized Database Records
+                </span>
+<span class="font-mono text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">100% Validated</span>
+</div>
+<div class="space-y-3 font-mono text-xs">
+<div class="p-3.5 bg-slate-50 hover:bg-blue-50/40 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between transition-colors">
+<div>
+<div class="font-bold text-slate-900 text-[13px]">RTU-01 • Rooftop Unit</div>
+<div class="text-slate-500 text-[11px] mt-0.5">Carrier (10.0 Ton) • R-410A • North Penthouse</div>
+</div>
+<span class="px-2.5 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200/70 font-semibold text-[11px]">99% CONF</span>
+</div>
+<div class="p-3.5 bg-slate-50 hover:bg-blue-50/40 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between transition-colors">
+<div>
+<div class="font-bold text-slate-900 text-[13px]">MUA-02 • Makeup Air Unit</div>
+<div class="text-slate-500 text-[11px] mt-0.5">EngAir DJX-140 • Gas Direct-Fired • Mech Room B</div>
+</div>
+<span class="px-2.5 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200/70 font-semibold text-[11px]">98% CONF</span>
+</div>
+<div class="p-3.5 bg-slate-50 hover:bg-blue-50/40 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between transition-colors">
+<div>
+<div class="font-bold text-slate-900 text-[13px]">P-01 • Hydronic Circulator</div>
+<div class="text-slate-500 text-[11px] mt-0.5">B&amp;G e-1510 (3.0 HP) • Closed Loop Heating</div>
+</div>
+<span class="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-semibold text-[11px]">100% CONF</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. PILLAR 02: 12-MONTH MAINTENANCE MATRIX -->
+<section class="py-20 sm:py-24 bg-[#f8f9ff] border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 relative reveal-section is-visible" id="matrix">
+<div class="max-w-6xl mx-auto">
+<div class="max-w-3xl mb-12">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-semibold mb-3 border border-blue-200/70">
+            PILLAR 02: MATRIX SCHEDULING
+          </div>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+            Visual service matrices that specify exact visit months, tasks, and billing cadences.
+          </h2>
+<p class="text-base text-slate-600 leading-relaxed">
+            Eliminate ambiguous contracts. Service Pacts organizes your annual agreement into a clear month-by-month grid mapping seasonal requirements (Spring startup, Fall prep, winter freeze-check) with transparent line-item labor calculations.
+          </p>
+</div>
+<!-- Interactive Visual 12-Month Matrix Mockup Table -->
+<div class="bg-white rounded-3xl border border-slate-200 shadow-float p-6 sm:p-8 mb-8 overflow-x-auto">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 pb-4 border-b border-slate-100 gap-3">
+<div>
+<h3 class="text-lg font-bold text-slate-900">Sample Matrix: ASHRAE 180 Commercial Tier 1</h3>
+<p class="text-xs text-slate-500">Site: 1040 West Georgia St, Vancouver BC</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="px-3 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">Labor Margin: 42%</span>
+<span class="px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold font-mono">$1,450.00 CAD / mo</span>
+</div>
+</div>
+<div class="min-w-[760px]">
+<!-- Calendar header -->
+<div class="grid grid-cols-13 gap-1.5 text-center text-xs font-mono font-bold text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+<div class="col-span-4 text-left pl-2 font-bold text-slate-900 font-sans">Service Item / Asset</div>
+<div>Jan</div><div>Feb</div><div>Mar</div><div>Apr</div><div>May</div><div>Jun</div><div>Jul</div><div>Aug</div><div>Sep</div>
+</div>
+<!-- Row 1 -->
+<div class="grid grid-cols-13 gap-1.5 items-center p-2.5 bg-white hover:bg-slate-50 rounded-xl my-1.5 text-xs border border-slate-100 transition-colors">
+<div class="col-span-4 font-semibold text-slate-900 flex items-center gap-2 pl-2">
+<span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+<span>RTU-01 (Cooling Startup)</span>
+</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="bg-blue-600 text-white font-bold rounded-lg py-1 text-center shadow-xs">Visit</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-13 gap-1.5 items-center p-2.5 bg-white hover:bg-slate-50 rounded-xl my-1.5 text-xs border border-slate-100 transition-colors">
+<div class="col-span-4 font-semibold text-slate-900 flex items-center gap-2 pl-2">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+<span>Filter Swap &amp; Belt Inspection</span>
+</div>
+<div class="bg-emerald-100 text-emerald-800 font-bold rounded-lg py-1 text-center">Q1</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="bg-emerald-100 text-emerald-800 font-bold rounded-lg py-1 text-center">Q2</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="bg-emerald-100 text-emerald-800 font-bold rounded-lg py-1 text-center">Q3</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-13 gap-1.5 items-center p-2.5 bg-white hover:bg-slate-50 rounded-xl my-1.5 text-xs border border-slate-100 transition-colors">
+<div class="col-span-4 font-semibold text-slate-900 flex items-center gap-2 pl-2">
+<span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+<span>Boiler &amp; Hydronic Heat Startup</span>
+</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="text-slate-300 text-center">-</div>
+<div class="bg-blue-600 text-white font-bold rounded-lg py-1 text-center shadow-xs">Visit</div>
+</div>
+</div>
+</div>
+<!-- Feature Bullets -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-card interactive-hover-lift">
+<h4 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-600 text-xl">rule</span>
+<span>CSA B52 &amp; ASHRAE 180 Standards Preloaded</span>
+</h4>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Standard scopes for commercial packaged units, split systems, boilers, chillers, exhaust fans, and backflow preventers. No need to write technical tasks from scratch.
+            </p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-card interactive-hover-lift">
+<h4 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-600 text-xl">calculate</span>
+<span>Dynamic Labor Rate &amp; Margin Controls</span>
+</h4>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Set regional journeyman billing rates, truck charges, and consumable margins. Update hours per asset and watch total agreement contract value recalculate instantly.
+            </p>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. PILLAR 03: ZERO-FRICTION CLIENT APPROVAL & E-SIGN -->
+<section class="py-20 sm:py-24 bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 relative reveal-section is-visible" id="portal">
+<div class="max-w-6xl mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<!-- Text Column -->
+<div class="lg:col-span-6">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-semibold mb-3 border border-blue-200/70">
+              PILLAR 03: ZERO-FRICTION PORTAL
+            </div>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+              Zero-friction review links. No login required for building owners or property managers.
+            </h2>
+<p class="text-base text-slate-600 leading-relaxed mb-6">
+              Building owners won't create a password just to review an HVAC maintenance quote. Service Pacts delivers a clean, tokenized portal with white-label contractor branding where decision-makers can inspect equipment lists, request scope adjustments, and legally sign in 30 seconds.
+            </p>
+<div class="space-y-4">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-blue-600 mt-0.5 text-xl">verified_user</span>
+<div>
+<span class="text-sm font-bold text-slate-900 block">Canadian Legal Enforceability</span>
+<span class="text-xs text-slate-600">Compliant with Canadian Uniform Electronic Commerce Act (UECA) with IP timestamps and immutable audit trails.</span>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-blue-600 mt-0.5 text-xl">receipt_long</span>
+<div>
+<span class="text-sm font-bold text-slate-900 block">Automatic GST/HST Breakdown</span>
+<span class="text-xs text-slate-600">Calculates provincial tax rules (5% GST in AB, 13% HST in ON, 15% in Atlantic Canada) accurately per branch.</span>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-blue-600 mt-0.5 text-xl">chat_bubble</span>
+<div>
+<span class="text-sm font-bold text-slate-900 block">In-Context Agreement Chat</span>
+<span class="text-xs text-slate-600">Clients can leave questions directly on specific equipment line items rather than losing context in messy email threads.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- White-label Portal Card Mockup -->
+<div class="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-float relative interactive-hover-lift">
+<div class="flex items-center justify-between pb-3.5 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+<span class="font-mono text-xs text-slate-500 ml-2">portal.servicepacts.com/pact_8842f</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-mono text-[10px] font-semibold">Secured • SSL</span>
+</div>
+<div class="mb-6">
+<div class="text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">PREPARED BY APEX MECHANICAL LTD. FOR:</div>
+<div class="text-lg font-bold text-slate-900 mt-0.5">QuadReal Property Group</div>
+<div class="text-slate-500 font-mono text-xs">Pact ID: PAC-2024-BC-092 • 3-Year Commercial Preventative</div>
+</div>
+<!-- Total summary bar -->
+<div class="bg-blue-50/60 border border-blue-100 p-4 rounded-xl mb-6 flex justify-between items-center">
+<div>
+<span class="text-slate-500 text-xs block font-medium">Annual Agreement Value</span>
+<span class="text-2xl font-extrabold text-blue-600 font-mono">$17,400.00 <span class="text-xs font-normal text-slate-500">CAD + HST</span></span>
+</div>
+<span class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-xs">Awaiting E-Sign</span>
+</div>
+<!-- Signature pad mockup -->
+<div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 mb-6 text-center">
+<div class="h-14 flex items-center justify-center text-blue-900 font-serif text-2xl italic">
+                David M. Chen (VP Asset Mgmt)
+              </div>
+<div class="text-slate-400 font-mono text-[11px] pt-1 border-t border-slate-200">
+                Signed via IP 24.114.88.19 • Nov 14, 2024 at 10:42 AM PST
+              </div>
+</div>
+<button class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-base">lock</span>
+<span>Executed Agreement Download Ready (PDF)</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. PILLAR 04: AUTOMATED LIFECYCLE & CANADIAN CPI -->
+<section class="py-20 sm:py-24 bg-[#f8f9ff] border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 relative reveal-section is-visible" id="lifecycle">
+<div class="max-w-6xl mx-auto">
+<div class="max-w-3xl mb-12">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-semibold mb-3 border border-blue-200/70">
+            PILLAR 04: RETENTION &amp; ESCALATION
+          </div>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+            Never let a profitable maintenance agreement expire or erode to inflation.
+          </h2>
+<p class="text-base text-slate-600 leading-relaxed">
+            In a rising wage market, fixed-price contracts quietly kill contractor profitability. Service Pacts protects your margins through automated Statistics Canada CPI triggers and intelligent multi-stage renewal workflows.
+          </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Lifecycle Card 1 -->
+<div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100">
+<span class="material-symbols-outlined text-2xl">trending_up</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Automated Provincial CPI</h3>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                Bind pact renewals to official Statistics Canada Consumer Price Index numbers. Contracts automatically increase by +3.4% to +4.2% annually without uncomfortable renegotiation meetings.
+              </p>
+</div>
+<span class="font-mono text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded border border-blue-100 inline-block">
+              StatCan Table 18-10-0004 API Synced
+            </span>
+</div>
+<!-- Lifecycle Card 2 -->
+<div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100">
+<span class="material-symbols-outlined text-2xl">notifications_active</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">60 &amp; 90 Day Renewal Triggers</h3>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                Automated alerts notify dispatchers and account managers before an agreement expires, queueing up renewal pacts with revised equipment logs and CPI rates for instant approval.
+              </p>
+</div>
+<span class="font-mono text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded border border-emerald-100 inline-block">
+              96.8% Renewal Rate Achieved
+            </span>
+</div>
+<!-- Lifecycle Card 3 -->
+<div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-card interactive-hover-lift flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100">
+<span class="material-symbols-outlined text-2xl">query_stats</span>
+</div>
+<h3 class="text-base font-bold text-slate-900 mb-2">Churn Prevention Analytics</h3>
+<p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                Track customer viewing activity on renewal pacts. Discover who hasn't opened their renewal proposal 30 days prior so account executives can intervene proactively.
+              </p>
+</div>
+<span class="font-mono text-xs text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block">
+              Full Event Engagement Log
+            </span>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. INTEGRATION & DATA EXPORT ECOSYSTEM -->
+<section class="py-20 sm:py-24 bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 relative reveal-section is-visible">
+<div class="max-w-6xl mx-auto text-center">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-semibold mb-3 border border-blue-200/70">
+          FIELD ECOSYSTEM
+        </div>
+<h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+          Plays seamlessly with your field service &amp; accounting stack.
+        </h2>
+<p class="text-base text-slate-600 max-w-2xl mx-auto mb-12">
+          Service Pacts focuses 100% on contract velocity and legal agreements. When signed, maintenance jobs and billing schedules push automatically to your execution tools.
+        </p>
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+<!-- Item 1 -->
+<div class="bg-[#f8f9ff] p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-card transition-all flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 text-3xl mb-2">handyman</span>
+<span class="text-sm font-bold text-slate-900">ServiceTitan</span>
+<span class="text-[11px] font-mono text-slate-500 mt-1">2-Way Sync</span>
+</div>
+<!-- Item 2 -->
+<div class="bg-[#f8f9ff] p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-card transition-all flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 text-3xl mb-2">construction</span>
+<span class="text-sm font-bold text-slate-900">BuildOps</span>
+<span class="text-[11px] font-mono text-slate-500 mt-1">Asset Import</span>
+</div>
+<!-- Item 3 -->
+<div class="bg-[#f8f9ff] p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-card transition-all flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 text-3xl mb-2">calculate</span>
+<span class="text-sm font-bold text-slate-900">QuickBooks</span>
+<span class="text-[11px] font-mono text-slate-500 mt-1">Invoice Generation</span>
+</div>
+<!-- Item 4 -->
+<div class="bg-[#f8f9ff] p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-card transition-all flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 text-3xl mb-2">receipt</span>
+<span class="text-sm font-bold text-slate-900">Xero</span>
+<span class="text-[11px] font-mono text-slate-500 mt-1">CAD Ledger Sync</span>
+</div>
+<!-- Item 5 -->
+<div class="bg-[#f8f9ff] p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-card transition-all flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 text-3xl mb-2">table_view</span>
+<span class="text-sm font-bold text-slate-900">CSV / Excel</span>
+<span class="text-[11px] font-mono text-slate-500 mt-1">Universal Export</span>
+</div>
+<!-- Item 6 -->
+<div class="bg-[#f8f9ff] p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-card transition-all flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 text-3xl mb-2">webhook</span>
+<span class="text-sm font-bold text-slate-900">Webhooks</span>
+<span class="text-[11px] font-mono text-slate-500 mt-1">REST API</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 7. FINAL CONVERSION AURORA CARD -->
+<section class="py-20 sm:py-24 bg-[#f8f9ff] px-4 sm:px-6 lg:px-8 relative reveal-section is-visible">
+<div class="max-w-4xl mx-auto">
+<div class="rounded-3xl bg-[#0f172a] text-white p-8 sm:p-14 shadow-2xl relative overflow-hidden text-center border border-slate-800">
+<!-- Background radial glow -->
+<div class="absolute -top-24 -left-20 w-80 h-80 bg-blue-600/30 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute -bottom-24 -right-20 w-80 h-80 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+<div class="relative z-10">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 font-mono text-xs font-semibold mb-4 border border-blue-400/30">
+              GET STARTED TODAY
+            </div>
+<h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
+              Ready to modernize your recurring maintenance agreements?
+            </h2>
+<p class="text-sm sm:text-base text-slate-300 max-w-xl mx-auto mb-8 leading-relaxed">
+              Join Canadian trade contractors moving from lost Excel quotes to signed agreements in 48 hours.
+            </p>
+<form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-5" onsubmit="event.preventDefault(); window.location.href='/register';">
+<input class="flex-1 px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="Enter business email..." required="" type="email"/>
+<button class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/25 transition-all whitespace-nowrap" type="submit">
+                Get started
+              </button>
+</form>
+<div class="flex flex-wrap items-center justify-center gap-5 text-slate-400 text-xs">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-emerald-400 text-sm">check</span>
+                Cancel anytime
+              </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-emerald-400 text-sm">check</span>
+                Billed in CAD
+              </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-emerald-400 text-sm">check</span>
+                Fast onboarding support
+              </span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- STANDARDIZED CANADIAN TRADE FOOTER (EXACT MATCH) -->
+<footer class="w-full bg-[#070b14] text-slate-400 py-16 px-6 lg:px-12 border-t border-slate-800">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+<!-- Brand column -->
+<div class="lg:col-span-2 space-y-4">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewbox="0 0 24 24">
+<path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-xl font-bold tracking-tight text-white">Service Pacts</span>
+</div>
+<p class="text-sm text-slate-400 max-w-sm leading-relaxed">
+          Purpose-built recurring service agreements and maintenance software for Canadian trade contractors — from equipment schedules to customer sign-off.
+        </p>
+<div class="flex items-center space-x-2 text-xs text-slate-400 pt-2">
+<span class="text-red-400">🍁</span>
+<span>Built for Canada outside Quebec. All billing and pricing in Canadian Dollars (CAD).</span>
+</div>
+</div>
+<!-- Product Column -->
+<div>
+<h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Product</h4>
+<ul class="space-y-2.5 text-sm">
+<li><a class="hover:text-white transition" href="/product">Equipment Extraction</a></li>
+<li><a class="hover:text-white transition" href="/product">6-Step Pipeline</a></li>
+<li><a class="hover:text-white transition" href="/product">12-Month Matrix</a></li>
+<li><a class="hover:text-white transition" href="/demo">Interactive Demo</a></li>
+<li><a class="hover:text-white transition" href="/trades">Trade Starter Packs</a></li>
+</ul>
+</div>
+<!-- Commercial Trades Column -->
+<div>
+<h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Commercial Trades</h4>
+<ul class="space-y-2.5 text-sm">
+<li><a class="hover:text-white transition" href="/trades">HVAC &amp; Mechanical</a></li>
+<li><a class="hover:text-white transition" href="/trades">Plumbing &amp; Hydronics</a></li>
+<li><a class="hover:text-white transition" href="/trades">Electrical Systems</a></li>
+<li><a class="hover:text-white transition" href="/trades">Refrigeration</a></li>
+<li><a class="hover:text-white transition" href="/pricing">Pricing &amp; Plans</a></li>
+</ul>
+</div>
+<!-- Trust & Security Column -->
+<div>
+<h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Trust &amp; Security</h4>
+<ul class="space-y-2.5 text-sm">
+<li><a class="hover:text-white transition" href="#privacy">Privacy Policy</a></li>
+<li><a class="hover:text-white transition" href="#terms">Terms of Service</a></li>
+<li><a class="hover:text-white transition" href="#security">Data Security &amp; Backup</a></li>
+<li><a class="hover:text-white transition" href="#faq">Contractor FAQ</a></li>
+<li><a class="hover:text-white transition" href="/sign-in">Customer Sign In</a></li>
+</ul>
+</div>
+</div>
+<!-- Sub-bar -->
+<div class="max-w-7xl mx-auto pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+<p>© 2025 Service Pacts Technologies Inc. All rights reserved.</p>
+<div class="flex items-center space-x-6">
+<span class="inline-flex items-center space-x-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+<span>SOC2 Type II Compliant</span>
+</span>
+<span>Canadian Data Residency</span>
+</div>
+</div>
+</footer>
+<!-- Scroll Reveal Script -->
+<script>
+    (function() {
+      function initScrollReveal() {
+        var reveals = document.querySelectorAll('.reveal-section');
+        if (!('IntersectionObserver' in window)) {
+          reveals.forEach(function(el) { el.classList.add('is-visible'); });
+          return;
+        }
+
+        var observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+            }
+          });
+        }, {
+          threshold: 0.1,
+          rootMargin: '0px 0px -40px 0px'
+        });
+
+        reveals.forEach(function(el) {
+          observer.observe(el);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initScrollReveal);
+      } else {
+        initScrollReveal();
+      }
+    })();
+  </script>
+</body></html>

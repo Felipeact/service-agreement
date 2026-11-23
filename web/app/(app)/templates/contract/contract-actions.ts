@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContainer } from "@/composition";
-import { canWriteTemplates, type SaveContractWordingState } from "@/components/templates/state";
+import { canWriteTemplates, type SaveContractWordingState } from "@/app/(app)/templates/_components/state";
 import { bodyFromContractForm, type ContractLayoutForm } from "@/domain/contract/layout-form";
 
 /**

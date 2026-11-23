@@ -66,6 +66,7 @@ export const RECIPES: Recipe[] = [
   plain("contract_templates"),
   plain("agreement_templates"),
   plain("block_editor"),
+  plain("template_design"),
   { name: "db_freeze", parts: ["fixture.sql", "../migrations/20261115100000_db_freeze.sql", "db_freeze.sql"] },
   plain("reports"),
   { name: "p0_launch_fixes", parts: ["fixture.sql", "p0_launch_fixes.sql"] },

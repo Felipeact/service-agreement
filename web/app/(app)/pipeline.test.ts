@@ -62,11 +62,8 @@ describe("/pipeline views", () => {
     expect(plain.props.initialFollowUpOnly).toBe(false);
   });
 
-  test("the board's title is a greeting by the member's name, or plain when the email has none", async () => {
-    const named = (await PipelineForRequest({ view: undefined, email: "jamie.walsh@x.com" })) as ReactElement<{ title: string }>;
-    // The container's clock is 20:00 in Vancouver.
-    expect(named.props.title).toBe("Good evening, Jamie");
-    const plain = (await PipelineForRequest({ view: undefined, email: "felipetiburcioviana@gmail.com" })) as ReactElement<{ title: string }>;
-    expect(plain.props.title).toBe("Good evening");
+  test("the board is titled Sales Pipeline by the view itself: the page passes no title", async () => {
+    const board = (await PipelineForRequest({ view: undefined })) as ReactElement<{ title?: string }>;
+    expect(board.props.title).toBeUndefined();
   });
 });

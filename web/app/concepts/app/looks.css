@@ -1,0 +1,34 @@
+/*
+ * What differs between the three designs inside a page, as one set of screens wears each. The screens carry the class hooks
+ * (pv-panel, pv-well, pv-card); the layout wrapper sets data-look. B, the Floating Panel, is the screens' own look: softly
+ * shadowed panels, columns tinted by stage. A and C override it here. Preview only; removed with the previews.
+ */
+
+/* A, Light Rail: framed "window" panels with the hero's lift; plain grey columns in a hairline. */
+[data-look="a"] .pv-panel {
+  border-color: #e2e8f0;
+  box-shadow: var(--shadow-float);
+}
+[data-look="a"] .pv-well {
+  background: rgb(241 245 249 / 0.8);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+[data-look="a"] .pv-card {
+  border-color: #e2e8f0;
+  border-radius: 8px;
+}
+
+/* C, Aurora Band: flat, hairline panels that sit on the glow; white columns; hairline cards. */
+[data-look="c"] .pv-panel {
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+[data-look="c"] .pv-well {
+  background: rgb(255 255 255 / 0.75);
+  border: 1px solid #e2e8f0;
+}
+[data-look="c"] .pv-card {
+  border-color: #e2e8f0;
+  box-shadow: none;
+}

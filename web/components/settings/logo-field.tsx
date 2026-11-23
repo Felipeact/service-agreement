@@ -1,5 +1,6 @@
 "use client";
 
+import { ImageIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LogoUploadAnswer } from "@/app/logo-upload";
 import { buttonClass } from "@/components/ui/button";
@@ -31,48 +32,53 @@ export function LogoFieldView({ path, src, status, error, readOnly, onPick, onRe
   const has = path !== "";
   return (
     <div className="flex flex-col gap-2">
-      <span id="logo-label" className="text-[13px] font-medium text-ink">
+      <span id="logo-label" className="sr-only">
         Logo
       </span>
-      <div className="flex flex-wrap items-center gap-4 rounded-control bg-ground p-4">
-        {has && src ? (
-          // eslint-disable-next-line @next/next/no-img-element -- a public Storage URL or a local preview of the owner's own file
-          <img src={src} alt="Your company logo" className="max-h-12 w-auto max-w-40 object-contain" />
-        ) : (
-          <span className="text-[13px] text-ink-2">{has ? "Logo saved" : "No logo yet"}</span>
-        )}
-        <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-card border border-dashed border-line-strong bg-ground text-ink-2">
+          {has && src ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a public Storage URL or a local preview of the owner's own file
+            <img src={src} alt="Your company logo" className="max-h-14 w-auto max-w-14 object-contain" />
+          ) : (
+            <>
+              <ImageIcon aria-hidden="true" className="size-6" />
+              <span className="sr-only">{has ? "Logo saved" : "No logo yet"}</span>
+            </>
+          )}
+        </span>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          {!readOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <label className={`${buttonClass("secondary", "cursor-pointer")} ${status === "uploading" ? "pointer-events-none opacity-50" : ""}`}>
+                {has ? "Replace logo" : "Choose logo"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  aria-labelledby="logo-label"
+                  className="sr-only"
+                  disabled={status === "uploading"}
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (file) onPick?.(file);
+                  }}
+                />
+              </label>
+              {has && (
+                <button type="button" className={buttonClass("secondary")} disabled={status === "uploading"} onClick={onRemove}>
+                  Remove logo
+                </button>
+              )}
+              {fieldName !== "" && <input type="hidden" name={fieldName} value={path} />}
+            </div>
+          )}
           {status === "ready" && <span className="text-[13px] font-medium text-ink">Logo ready</span>}
           {status === "uploading" && <span className="text-[13px] font-medium text-ink">Uploading logo</span>}
-          {!has && status === "idle" && <span className="text-[12px] text-ink-2">{NOTE}</span>}
           {status === "ready" && <span className="text-[12px] text-ink-2">{readyNote}</span>}
+          <p className="text-[12px] text-ink-2">{`Shown on your agreements, PDFs and emails.${!has && status === "idle" ? ` ${NOTE}.` : ""}`}</p>
         </div>
       </div>
-      {!readOnly && (
-        <div className="flex flex-wrap items-center gap-3">
-          <label className={`${buttonClass("secondary", "cursor-pointer")} ${status === "uploading" ? "pointer-events-none opacity-50" : ""}`}>
-            {has ? "Replace logo" : "Choose logo"}
-            <input
-              type="file"
-              accept="image/png,image/jpeg"
-              aria-labelledby="logo-label"
-              className="sr-only"
-              disabled={status === "uploading"}
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = "";
-                if (file) onPick?.(file);
-              }}
-            />
-          </label>
-          {has && (
-            <button type="button" className={buttonClass("secondary")} disabled={status === "uploading"} onClick={onRemove}>
-              Remove logo
-            </button>
-          )}
-          {fieldName !== "" && <input type="hidden" name={fieldName} value={path} />}
-        </div>
-      )}
       {error && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {error}

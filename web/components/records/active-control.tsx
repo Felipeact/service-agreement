@@ -1,24 +1,13 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { AssetView } from "@/application/ports";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatTermDate } from "@/domain/agreement/term";
 import { FormAlert } from "./record-form";
-import type { ActiveState } from "./state";
+import type { ActiveState, ReplacementOption } from "./state";
 
 export type ActiveKind = "customer" | "site" | "asset";
-
-/** Another active unit on the asset's site, offered as its replacement (deactivation AC 2). */
-export type ReplacementOption = { id: string; label: string };
-
-/** The units still in service on the asset's site, never the asset itself, as `<CODE> <unit>`. */
-export function replacementOptions(siteAssets: AssetView[], assetId: string): ReplacementOption[] {
-  return siteAssets
-    .filter((other) => other.active && other.id !== assetId)
-    .map((other) => ({ id: other.id, label: [other.typeCode, other.unitNo].filter(Boolean).join(" ") }));
-}
 
 const START_LABEL: Record<ActiveKind, string> = {
   customer: "Deactivate customer",

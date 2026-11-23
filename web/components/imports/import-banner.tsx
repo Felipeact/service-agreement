@@ -3,8 +3,7 @@
 import { useState, type ComponentProps, type DragEvent } from "react";
 import { NewAgreementDialog } from "@/components/agreements/new-agreement-dialog";
 import { useItemWords } from "@/components/shell/item-words";
-import { Spot } from "@/components/ui/illustrations";
-import { FILE_HINT } from "@/components/agreements/new-agreement-state";
+import { UploadIcon } from "lucide-react";
 import { IMPORT_ACCEPT } from "@/domain/imports";
 import { itemText } from "@/domain/org-settings";
 
@@ -42,16 +41,18 @@ export function ImportBanner(props: Omit<ComponentProps<typeof NewAgreementDialo
         onDragLeave={() => setOver(false)}
         onDrop={onDrop}
         data-import-banner
-        className={`relative flex flex-col items-start gap-4 rounded-panel border-2 border-dashed p-5 transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-action sm:flex-row sm:items-center ${
-          over ? "border-action bg-action-tint" : "border-field bg-surface hover:bg-ground"
+        className={`relative flex flex-col items-start gap-3 rounded-panel border p-5 shadow-card transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-action sm:flex-row sm:items-center ${
+          over ? "border-action bg-action-tint" : "border-action/20 bg-linear-to-br from-action-tint to-surface"
         }`}
       >
-        <Spot kind="sheet" className="size-14 text-ink-2" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <p className="font-display text-[17px] font-semibold tracking-tight">{itemText("Drop a customer equipment list here", words)}</p>
-          <p className="text-[13px] text-ink-2">{FILE_HINT}. We keep every row and flag what we are unsure of for review.</p>
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-action text-surface shadow-md shadow-action/25">
+          <UploadIcon aria-hidden="true" className="size-5" />
+        </span>
+        <div className="mr-auto flex min-w-0 flex-col">
+          <p className="text-[15px] font-bold">{itemText("Start from the customer's equipment list", words)}</p>
+          <p className="text-[13px] text-ink-nav">Drop an Excel, CSV, Word or PDF file and we write the service lines.</p>
         </div>
-        <span className="inline-flex h-11 shrink-0 items-center justify-center rounded-control border border-hairline bg-surface px-4 text-[13px] font-semibold text-ink shadow-card lg:h-[34px]">
+        <span className="inline-flex h-11 shrink-0 items-center justify-center rounded-control bg-action px-4 text-[13px] font-semibold text-surface shadow-md shadow-action/20 lg:h-10">
           Choose file
         </span>
         <input

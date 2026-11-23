@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { MotionRoot } from "@/components/motion/motion-root";
+import { MATERIAL_SYMBOLS_HREF } from "@/lib/material-icons";
 
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-/** The display voice: page titles, card and stage names, the product name. Money and body copy stay in Inter, which keeps figures tabular. */
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
   subsets: ["latin"],
 });
 
@@ -29,7 +24,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${bricolage.variable}`}>
+    <html lang="en" className={inter.variable}>
+      <head>
+        {/* The mockup pages' icon font, subset to the icons they use (lib/material-icons.ts). */}
+        <link rel="stylesheet" href={MATERIAL_SYMBOLS_HREF} />
+      </head>
       <body className="min-h-dvh">
         <MotionRoot>{children}</MotionRoot>
       </body>

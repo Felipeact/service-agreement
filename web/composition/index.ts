@@ -17,6 +17,8 @@ import {
   makeContractDocuments,
   makeExtractImport,
   makeSuggestImportTypes,
+  makeGenerateServiceLines,
+  makeAgreementInsight,
   makeImportProgress,
   makeNotify,
   makeReadImport,
@@ -26,7 +28,6 @@ import {
   makeReissueLink,
   makeRequestSignInLink,
   makeSendAgreement,
-  makeRecommendServiceLines,
   makeSendForSignature,
   makeStartTrial,
   makeBilling,
@@ -49,6 +50,7 @@ import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
+import { claudeAgreementInsighter } from "@/infrastructure/claude/agreement-insighter";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
@@ -67,7 +69,6 @@ import {
   supabaseAgreementTermStore,
   supabaseVersionNoteStore,
   supabaseServiceLineStore,
-  supabaseSiteEquipmentReader,
 } from "@/infrastructure/supabase/agreements";
 import { supabaseAuthGateway, supabaseMemberDirectory } from "@/infrastructure/supabase/auth";
 import { supabaseContractReader, supabaseContractStore } from "@/infrastructure/supabase/contracts";
@@ -90,7 +91,6 @@ import {
 import {
   supabaseAgreementLister,
   supabaseAssetTypeCatalog,
-  supabaseEquipmentTypeList,
   supabaseCustomerDirectory,
   supabasePipelineReader,
   supabaseRecordSearch,
@@ -241,7 +241,6 @@ export async function getContainer() {
     contactForEdit: customers.contact,
     assetForEdit: sites.asset,
     listAssetTypes: supabaseAssetTypeCatalog(supabase).list,
-    listEquipmentTypes: supabaseEquipmentTypeList(supabase),
     listTaskLibrary: supabaseTaskLibraryReader(supabase).list,
     saveTaskLibraryType: supabaseTaskLibraryStore(supabase).save,
     createLibraryType: supabaseTaskLibraryStore(supabase).createType,
@@ -263,7 +262,6 @@ export async function getContainer() {
     createSite: siteStore.create,
     updateSite: siteStore.update,
     createAsset: assetStore.create,
-    createAssets: assetStore.createMany,
     updateAsset: assetStore.update,
     setCustomerActive: customerStore.setActive,
     setSiteActive: siteStore.setActive,
@@ -320,12 +318,8 @@ export async function getContainer() {
     getContractWording: makeGetContractWording(supabaseContractWordingReader(supabase)),
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
-    // Recommended lines are read and written as the member, through the same stores the page uses (recommended-lines).
-    recommendServiceLines: makeRecommendServiceLines({
-      agreements: supabaseAgreementReader(supabase),
-      equipment: supabaseSiteEquipmentReader(supabase),
-      lines: supabaseServiceLineStore(supabase),
-    }),
+    generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
+    agreementInsight: makeAgreementInsight(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementInsighter({ apiKey: process.env.ANTHROPIC_API_KEY })),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.

@@ -1,5 +1,5 @@
 import { Font, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { MONTH_NAMES, taskLabel, type BlockItem, type DocumentScope, type PriceColumns, type VisitsFormat } from "@/domain/agreement";
+import { MONTH_NAMES, taskLabel, type BlockItem, type DocumentScope, type PriceColumns, type TableItem, type ThemeFont, type VisitsFormat } from "@/domain/agreement";
 import type { ScheduleRow } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
 import type { TenantLogo } from "@/domain/org-settings/logo";
@@ -254,32 +254,66 @@ export function EquipmentSection({
   );
 }
 
-/** "Service included" and the org item heading ("Equipment" by default), or the sentence that the version never recorded them. */
-export function ScopeSections({ scope, accent, words = DEFAULT_ITEM_WORDS }: { scope: DocumentScope; accent: string; words?: ItemWords }) {
-  return (
-    <>
-      <IncludedSection scope={scope} accent={accent} words={words} />
-      <EquipmentSection scope={scope} accent={accent} words={words} />
-    </>
-  );
-}
-
 const INDENT = 16;
 
 /** A text block of a layout: a heading of level 1 in the title style and any other heading in the section style, everything else as body text; indented by its level and starting a page when it says so. */
-export function LayoutBlock({ item, accent }: { item: BlockItem; accent: string }) {
+const FACES = {
+  sans: { regular: "Helvetica", bold: "Helvetica-Bold", italic: "Helvetica-Oblique", boldItalic: "Helvetica-BoldOblique" },
+  serif: { regular: "Times-Roman", bold: "Times-Bold", italic: "Times-Italic", boldItalic: "Times-BoldItalic" },
+} as const;
+
+/** The page's body face: the template's font, Helvetica when it names none. Headings and the letterhead stay in bold Helvetica. */
+export const pageFamily = (font: ThemeFont | undefined): string => FACES[font ?? "sans"].regular;
+
+function faceOf(font: ThemeFont | undefined, bold: boolean, italic: boolean): string {
+  const faces = FACES[font ?? "sans"];
+  return bold && italic ? faces.boldItalic : bold ? faces.bold : italic ? faces.italic : faces.regular;
+}
+
+/** A text block: a heading in the accent colour, or a paragraph or clause; its alignment, weight and slant are the block's style. */
+export function LayoutBlock({ item, accent, font }: { item: BlockItem; accent: string; font?: ThemeFont }) {
   const indent = { marginLeft: (item.indent ?? 0) * INDENT };
+  const align = item.style?.align ? [{ textAlign: item.style.align }] : [];
   if (item.type === "heading") {
     return (
-      <Text style={item.level === 1 ? [styles.title, indent] : [styles.h2, { color: accent }, indent]} minPresenceAhead={80} break={item.pageBreakBefore}>
+      <Text style={item.level === 1 ? [styles.title, indent, ...align] : [styles.h2, { color: accent }, indent, ...align]} minPresenceAhead={80} break={item.pageBreakBefore}>
         {item.text}
       </Text>
     );
   }
+  const face = item.style?.bold || item.style?.italic ? [{ fontFamily: faceOf(font, item.style.bold === true, item.style.italic === true) }] : [];
   return (
-    <Text style={[{ marginBottom: 4 }, indent]} break={item.pageBreakBefore}>
+    <Text style={[{ marginBottom: 4 }, indent, ...align, ...face]} break={item.pageBreakBefore}>
       {item.text}
     </Text>
+  );
+}
+
+/** A free-text table: the first row is the header (in the accent colour, over a rule) when the table says so. Rows never split across pages. */
+export function LayoutTable({ item, accent, font }: { item: TableItem; accent: string; font?: ThemeFont }) {
+  const head = item.header ? item.rows[0] : undefined;
+  const body = item.header ? item.rows.slice(1) : item.rows;
+  return (
+    <View style={{ marginBottom: 8 }}>
+      {head && (
+        <View style={{ flexDirection: "row", borderBottomWidth: 1.5, borderBottomColor: accent, paddingBottom: 3 }} wrap={false}>
+          {head.map((text, column) => (
+            <Text key={column} style={[cell(1), { fontFamily: faceOf(font, true, false), color: accent }]}>
+              {text}
+            </Text>
+          ))}
+        </View>
+      )}
+      {body.map((row, index) => (
+        <View key={index} style={styles.row} wrap={false}>
+          {row.map((text, column) => (
+            <Text key={column} style={cell(1)}>
+              {text}
+            </Text>
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }
 

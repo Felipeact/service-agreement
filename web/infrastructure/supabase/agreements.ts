@@ -33,12 +33,10 @@ import type {
   ServiceLineStore,
   ServiceLineView,
   ServiceLineWriteResult,
-  SiteEquipmentReader,
   VersionNoteStore,
   WriteFailure,
 } from "@/application/ports";
 import type { ServiceLineValue } from "@/domain/agreement";
-import type { SiteEquipmentType } from "@/domain/agreement/recommend";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -119,7 +117,6 @@ type LineRow = {
   visit_months: number[];
   cost_per_visit_cents: number;
   created_at: string;
-  recommended?: boolean | null;
   service_line_asset_types: { asset_types: CoveredType | null }[] | null;
 };
 
@@ -231,7 +228,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
   async function linesOf(versionId: string): Promise<ServiceLineView[]> {
     const { data: lineRows, error: lineError } = await client
       .from("service_lines")
-      .select("id, position, description, visits_per_year, visit_months, cost_per_visit_cents, recommended, created_at, service_line_asset_types(asset_types(id, code, name))")
+      .select("id, position, description, visits_per_year, visit_months, cost_per_visit_cents, created_at, service_line_asset_types(asset_types(id, code, name))")
       .eq("agreement_version_id", versionId)
       .order("position", { ascending: true })
       .order("created_at", { ascending: true });
@@ -246,7 +243,6 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
         costPerVisitCents: line.cost_per_visit_cents,
         annualCents: lineAnnualCents(line.visits_per_year, cents(line.cost_per_visit_cents)),
         visitMonths: [...(line.visit_months ?? [])],
-        recommended: line.recommended === true,
         equipment: (line.service_line_asset_types ?? [])
           .flatMap((cover) => (cover.asset_types ? [cover.asset_types] : []))
           .map((type) => ({ id: type.id, code: type.code, name: type.name }))
@@ -545,43 +541,6 @@ export function supabaseServiceLineStore(client: Client): ServiceLineStore {
       } catch (cause) {
         return unavailable("Removing a service line", cause);
       }
-    },
-
-    async setRecommended(lineId, recommended) {
-      try {
-        return await written("Marking a recommended line", client.from("service_lines").update({ recommended }).eq("id", lineId).select("id"));
-      } catch (cause) {
-        return unavailable("Marking a recommended line", cause);
-      }
-    },
-  };
-}
-
-type SiteEquipmentRow = { asset_type_id: string; asset_types: { id: string; code: string; name: string; pack: string | null; default_visit_months: number[] } | null };
-
-/** The active equipment on an agreement's site, counted by type, for recommended lines (recommended-lines). */
-export function supabaseSiteEquipmentReader(client: Client): SiteEquipmentReader {
-  return {
-    async forAgreement(agreementId) {
-      if (!isUuid(agreementId)) return null;
-      const { data: agreement, error } = await client.from("agreements").select("site_id").eq("id", agreementId).maybeSingle();
-      if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-      if (!agreement) return null;
-      const { data: assets, error: assetsError } = await client
-        .from("assets")
-        .select("asset_type_id, asset_types(id, code, name, pack, default_visit_months)")
-        .eq("site_id", agreement.site_id)
-        .is("deactivated_at", null);
-      if (assetsError) throw new Error(`Supabase error ${assetsError.code}: ${assetsError.message}`);
-      const byType = new Map<string, SiteEquipmentType>();
-      for (const row of (assets ?? []) as unknown as SiteEquipmentRow[]) {
-        const type = row.asset_types;
-        if (!type) continue;
-        const known = byType.get(type.id);
-        if (known) known.assetCount += 1;
-        else byType.set(type.id, { id: type.id, code: type.code, name: type.name, pack: type.pack, defaultVisitMonths: [...(type.default_visit_months ?? [])], assetCount: 1 });
-      }
-      return { siteId: agreement.site_id, types: [...byType.values()].sort((a, b) => a.name.localeCompare(b.name)) };
     },
   };
 }

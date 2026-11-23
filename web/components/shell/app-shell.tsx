@@ -1,13 +1,16 @@
 "use client";
 
+import { BellIcon, PanelLeftIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Icon } from "@/components/ui/icons";
 import { ProductMark } from "@/components/ui/product-mark";
 import { SearchInput } from "@/components/ui/search-input";
 import { SEARCH_MAX } from "@/domain/records";
+import { MobileMenu } from "./disclosure";
+import { PlanQuota, type PlanQuotaFigure } from "./plan-quota";
 import { SidebarAccount } from "./sidebar-account";
+import { UserMenu } from "./user-menu";
+import { WorkspaceCard } from "./workspace-card";
 import type { ItemWords } from "@/domain/org-settings";
 import { ItemWordsProvider } from "./item-words";
 import { SidebarNav } from "./sidebar-nav";
@@ -24,17 +27,23 @@ type AppShellProps = {
   signOut: () => Promise<void>;
   /** Agreements that need the estimator, for the bell; 0 shows the bell without a count. */
   followUps?: number;
-  /** Today's date as the business reads it ("Friday, November 6"), formatted on the server so the page and the browser agree. */
-  todayLabel?: string;
+  /** The New agreement button for the top bar (writers only); its dialog is built on the server. */
+  newAgreement?: ReactNode;
   /** The org's item words, for the Sites link; the default when absent. */
   words?: ItemWords;
   /** The company's plan has ended: a banner says the workspace is read-only. `canRenew` is true for an owner or admin, who gets the link to Billing. */
   frozen?: { canRenew: boolean };
   /** The member may read Reports (owner, admin or estimator): the sidebar shows the link. */
   reports?: boolean;
+  /** The member's role, shown under their email and in the top bar. */
+  role?: string;
+  /** The plan and how much of its live-agreement limit is used; absent when the org has no plan or the figure could not be read. */
+  plan?: PlanQuotaFigure | null;
+  /** A count per nav item `href`, shown as a small badge (open agreements beside Pipeline). */
+  counts?: Record<string, number>;
 };
 
-/** The bell: a link to the Pipeline filtered to the agreements that need follow-up, with their count when there are any. */
+/** The bell: a dot on the icon when agreements need follow-up, linking to the Pipeline filtered to them. */
 function FollowUpBell({ count }: { count: number }) {
   return (
     <Link
@@ -42,37 +51,25 @@ function FollowUpBell({ count }: { count: number }) {
       aria-label={count > 0 ? `${count} ${count === 1 ? "agreement needs" : "agreements need"} follow-up` : "Follow-ups: none due"}
       className="relative inline-flex size-11 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink lg:size-9"
     >
-      <Icon name="bell" />
-      {count > 0 && (
-        <span
-          aria-hidden="true"
-          className="badge-pop absolute -top-0.5 -right-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-4 font-semibold text-surface lg:top-0 lg:right-0"
-        >
-          {count > 9 ? "9+" : count}
-        </span>
-      )}
+      <BellIcon aria-hidden="true" className="size-[18px]" />
+      {count > 0 && <span aria-hidden="true" className="absolute top-2.5 right-2.5 size-2 rounded-full bg-danger ring-2 ring-surface lg:top-2 lg:right-2" />}
     </Link>
   );
 }
 
-/** The product name over the tenant's company name, beside the mark. Both sit on the Night shell. */
-function Brand({ orgName, markClass }: { orgName: string; markClass: string }) {
+/** The plan's quota card (when there is a plan to show) above the signed-in member's account row. */
+function SidebarFooter({ plan, email, role, signOut, full = false }: { plan?: PlanQuotaFigure | null; email: string; role?: string; signOut: () => Promise<void>; full?: boolean }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <ProductMark className={markClass} />
-      <div className="min-w-0">
-        <div className="font-display text-[16px] leading-tight font-semibold tracking-tight text-surface">{PRODUCT_NAME}</div>
-        <div className="pt-0.5 text-[12px] leading-snug font-medium break-words text-night-ink">{orgName}</div>
-      </div>
+    <div className="flex flex-col gap-3 pt-3">
+      {plan && <PlanQuota {...plan} />}
+      <SidebarAccount email={email} role={role} signOut={signOut} full={full} />
     </div>
   );
 }
 
-/** Fixed Night sidebar on desktop (the app's one search lives in it); a Night top bar with a navigation drawer below 1024px. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, todayLabel, words, frozen, reports }: AppShellProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+/** A white sidebar floating on the pale ground, a soft top bar with search, the New agreement button and the account menu; below 1024px a frosted bar and a menu. */
+export function AppShell({ children, orgName, email, signOut, followUps = 0, newAgreement, words, frozen, reports, role, plan, counts }: AppShellProps) {
+  const topSearchRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   // Desktop only: the sidebar slides away to give the work the full width. The choice is remembered per browser.
   const [collapsed, setCollapsed] = useState(false);
@@ -92,157 +89,99 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
     });
   }
 
-  function closeDrawer() {
-    setDrawerOpen(false);
-    menuButtonRef.current?.focus();
-  }
-
+  // "/" jumps to the sidebar search from anywhere, and Ctrl or Cmd + K to the top bar's, unless the visitor is already typing somewhere.
   useEffect(() => {
-    if (!drawerOpen) return;
-    closeButtonRef.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setDrawerOpen(false);
-        menuButtonRef.current?.focus();
+      const target = event.target as HTMLElement | null;
+      const typing = target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      if (event.key === SEARCH_SHORTCUT && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        if (typing || collapsed || !searchRef.current || searchRef.current.offsetParent === null) return;
+        event.preventDefault();
+        searchRef.current.focus();
+      } else if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "b" && window.matchMedia("(min-width: 1024px)").matches) {
+        event.preventDefault();
+        toggleSidebar();
+      } else if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "k") {
+        const field = [topSearchRef.current, searchRef.current].find((node) => node && node.offsetParent !== null);
+        if (!field) return;
+        event.preventDefault();
+        field.focus();
+        field.select();
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [drawerOpen]);
-
-  // "/" jumps to the search from anywhere, unless the visitor is already typing somewhere.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== SEARCH_SHORTCUT || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
-      if (!searchRef.current || searchRef.current.offsetParent === null || collapsed) return;
-      event.preventDefault();
-      searchRef.current.focus();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [collapsed]);
+  });
 
   return (
     <div
+      data-app-shell=""
       className={`min-h-dvh lg:grid lg:transition-[grid-template-columns] lg:duration-300 lg:ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
-        collapsed ? "lg:grid-cols-[0px_minmax(0,1fr)]" : "lg:grid-cols-[240px_minmax(0,1fr)]"
+        collapsed ? "lg:grid-cols-[0px_minmax(0,1fr)]" : "lg:grid-cols-[280px_minmax(0,1fr)]"
       }`}
     >
-      <aside id="app-sidebar" inert={collapsed} className="sticky top-0 hidden h-dvh min-w-0 overflow-hidden bg-night lg:block">
-        {/* Fixed width inside the shrinking column, so the content slides and fades rather than reflowing. */}
+      <aside id="app-sidebar" inert={collapsed} className="sticky top-0 z-20 hidden h-dvh min-w-0 overflow-hidden lg:block">
         <div
-          className={`flex h-full w-[240px] flex-col px-3 pt-5 pb-4 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
+          className={`h-full w-[280px] p-3 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-opacity ${
             collapsed ? "-translate-x-6 opacity-0 duration-150" : "translate-x-0 opacity-100 duration-300"
           }`}
         >
-          <div className="px-2.5 pb-6">
-            <Brand orgName={orgName} markClass="size-8" />
-          </div>
-          <form method="get" action="/search" role="search" className="px-0.5 pb-3">
-            <SearchInput
-              ref={searchRef}
-              label="Search"
-              name="q"
-              placeholder="Search"
-              maxLength={SEARCH_MAX}
-              tone="night"
-              shortcut={SEARCH_SHORTCUT}
-            />
+        <div className="flex h-full flex-col gap-3 rounded-panel border border-hairline bg-surface p-3 shadow-card">
+          <WorkspaceCard orgName={orgName} planName={plan?.planName} />
+          <form method="get" action="/search" role="search">
+            <SearchInput ref={searchRef} label="Search" name="q" placeholder="Search" maxLength={SEARCH_MAX} />
           </form>
-          <SidebarNav words={words} reports={reports} footer={<SidebarAccount email={email} signOut={signOut} />} />
+          <SidebarNav words={words} reports={reports} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} />} />
+        </div>
         </div>
       </aside>
 
-      <div className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-night px-2 lg:hidden">
-        <button
-          ref={menuButtonRef}
-          type="button"
-          aria-label="Open navigation"
-          aria-expanded={drawerOpen}
-          onClick={() => setDrawerOpen(true)}
-          className="inline-flex size-11 items-center justify-center rounded-control text-surface transition-colors duration-150 hover:bg-surface/10"
-        >
-          <Icon name="menu" />
-        </button>
-        <ProductMark className="size-6" />
-        <span className="font-display text-[16px] font-semibold tracking-tight text-surface">{PRODUCT_NAME}</span>
-        <Link
-          href="/pipeline?followups=1"
-          aria-label={followUps > 0 ? `${followUps} need follow-up` : "Follow-ups: none due"}
-          className="relative ml-auto inline-flex size-11 items-center justify-center rounded-control text-surface transition-colors duration-150 hover:bg-surface/10"
-        >
-          <Icon name="bell" className="size-[18px]" />
-          {followUps > 0 && <span aria-hidden="true" className="badge-pop absolute top-2 right-2 size-2 rounded-full bg-danger" />}
-        </Link>
-        <Link
-          href="/search"
-          aria-label="Search"
-          className="inline-flex size-11 items-center justify-center rounded-control text-surface transition-colors duration-150 hover:bg-surface/10"
-        >
-          <Icon name="search" className="size-[18px]" />
-        </Link>
-      </div>
+      <div className="relative isolate min-w-0">
+        {/* The public hero's soft blue and cyan wash and faint grid, behind the top of every page. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] overflow-hidden">
+          <div className="absolute -top-40 left-[6%] size-[440px] rounded-full bg-action/10 blur-[100px]" />
+          <div className="absolute -top-32 right-[8%] size-[400px] rounded-full bg-cyan-400/10 blur-[110px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.03)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_35%,transparent_100%)]" />
+        </div>
 
-      <AnimatePresence>
-        {drawerOpen && (
-          <motion.div
-            key="drawer"
-            className="fixed inset-0 z-20 lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: 0.2 } }}
-            exit={{ opacity: 0, transition: { duration: 0.15 } }}
-          >
-            <div data-backdrop className="absolute inset-0 bg-ink/50" onClick={closeDrawer} />
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Navigation"
-              className="absolute inset-y-0 left-0 flex w-[272px] flex-col bg-night px-3 pt-2 pb-4 shadow-panel"
-              initial={{ x: -272 }}
-              animate={{ x: 0, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } }}
-              exit={{ x: -272, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
-            >
-              <div className="flex items-center justify-between pb-3 pl-2.5">
-                <Brand orgName={orgName} markClass="size-8" />
-                <button
-                  ref={closeButtonRef}
-                  type="button"
-                  aria-label="Close navigation"
-                  onClick={closeDrawer}
-                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-night-ink transition-colors duration-150 hover:bg-surface/10 hover:text-surface"
-                >
-                  <Icon name="close" />
-                </button>
-              </div>
-              <SidebarNav words={words} reports={reports} onNavigate={closeDrawer} footer={<SidebarAccount email={email} signOut={signOut} />} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-        <header className="sticky top-0 z-10 hidden h-14 items-center gap-3 border-b border-hairline bg-ground/90 px-8 backdrop-blur lg:flex">
+        <div className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-hairline bg-surface/80 px-3 backdrop-blur-md sm:px-6 lg:border-0 lg:bg-ground/70 lg:px-8">
+          <Link href="/pipeline" aria-label="Service Pacts, Pipeline" className="flex min-h-11 items-center gap-2 lg:hidden">
+            <ProductMark className="size-8 rounded-lg shadow-md shadow-action/20" />
+            <span className="text-[17px] font-bold tracking-tight">{PRODUCT_NAME}</span>
+          </Link>
           <button
             type="button"
             aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
             aria-expanded={!collapsed}
             aria-controls="app-sidebar"
             onClick={toggleSidebar}
-            className="-ml-2 inline-flex size-9 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink"
+            className="-ml-2 hidden size-9 shrink-0 items-center justify-center rounded-control text-ink-2 transition-colors duration-150 hover:bg-board hover:text-ink lg:inline-flex"
           >
-            <Icon name="sidebar" />
+            <PanelLeftIcon aria-hidden="true" className="size-[18px]" />
           </button>
-          {todayLabel && <span className="text-[13px] text-ink-2">{todayLabel}</span>}
-          <div className="ml-auto flex items-center gap-4">
+          <form method="get" action="/search" role="search" className="relative hidden w-full max-w-md flex-1 lg:block">
+            <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-ink-2" />
+            <input ref={topSearchRef} type="search" name="q" maxLength={SEARCH_MAX} aria-label="Search" aria-keyshortcuts="Control+K Meta+K" placeholder="Search customers, sites, agreements" className="h-10 w-full rounded-control border border-field bg-surface pr-12 pl-8 text-[13px] text-ink" />
+            <kbd aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-[4px] border border-hairline bg-ground px-1.5 text-[11px] text-ink-2">⌘K</kbd>
+          </form>
+          <div className="ml-auto flex items-center gap-1">
+            <span title="Coming soon" className="mr-1 hidden rounded-full border border-violet-200 bg-violet-50 px-3.5 py-1.5 text-[12px] font-semibold text-violet-700 xl:inline-block">Ask AI</span>
+            <Link href="/search" aria-label="Search" className="inline-flex size-11 items-center justify-center rounded-control text-ink hover:bg-board lg:hidden">
+              <SearchIcon aria-hidden="true" className="size-[18px]" />
+            </Link>
             <FollowUpBell count={followUps} />
-            <div className="flex flex-col items-end leading-tight">
-              <span className="text-[13px] font-semibold text-ink">{orgName}</span>
-              <span className="text-[12px] text-ink-2">Workspace</span>
-            </div>
+            {newAgreement && <span className="hidden sm:block">{newAgreement}</span>}
+            <span className="max-lg:hidden">
+              <UserMenu email={email} role={role} orgName={orgName} canManageBilling={Boolean(plan?.canManage)} signOut={signOut} />
+            </span>
+            <MobileMenu>
+              <div className="menu-pop absolute right-0 z-40 mt-2 flex max-h-[calc(100dvh-5rem)] w-72 flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-panel border border-hairline bg-surface p-2 shadow-float">
+                <SidebarNav words={words} reports={reports} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} full />} />
+              </div>
+            </MobileMenu>
           </div>
-        </header>
+        </div>
+
         {frozen && (
           <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-hairline bg-board px-4 py-3 text-[13px] text-ink md:px-6 lg:px-8">
             <p className="font-medium">
@@ -256,7 +195,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, tod
             )}
           </div>
         )}
-        <main className="px-4 py-6 md:px-6 lg:px-8 lg:py-7">{words ? <ItemWordsProvider words={words}>{children}</ItemWordsProvider> : children}</main>
+        <main className="flex flex-col gap-6 px-4 pt-5 pb-16 md:px-6 lg:px-8 lg:pt-3">{words ? <ItemWordsProvider words={words}>{children}</ItemWordsProvider> : children}</main>
       </div>
     </div>
   );

@@ -23,8 +23,11 @@ describe("the success page", () => {
     // The suffix comes from the root layout's title template, so the rendered title is "Thanks · Service Pacts".
     const layout = readFileSync(path.join(__dirname, "..", "..", "layout.tsx"), "utf8");
     expect(layout).toContain('template: "%s · Service Pacts"');
+    // The page's own message claims nothing; the site header and footer are the owner's mockup chrome, which has its own copy.
+    const main = textOf(html().match(/<main[\s\S]*<\/main>/)?.[0] ?? "");
+    expect(main).toContain("You are subscribed.");
     for (const banned of ["equipment", "trusted by", "most popular", "best value", "testimonial", "save"]) {
-      expect(text.toLowerCase(), banned).not.toContain(banned);
+      expect(main.toLowerCase(), banned).not.toContain(banned);
     }
   });
 

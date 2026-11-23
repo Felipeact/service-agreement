@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Reveal } from "@/components/motion/reveal";
+import { ShaderCanvas } from "@/components/motion/shader-canvas";
 import { LinkButton } from "@/components/ui/link-button";
+import { PLANS, formatPlanPrice } from "@/domain/billing";
 import { SITE } from "./content";
 import { AgreementMock, BoardMock, PortalMock, ScheduleMock, ScopeMock, YearBand } from "./mock-ui";
 import { CtaBand, PlansTeaser, SectionHead, StepsGrid, TradeCards, Wrap } from "./sections";
@@ -21,6 +24,7 @@ function Actions({ onDark = false }: { onDark?: boolean }) {
     <div className="flex flex-col gap-2 sm:flex-row">
       <LinkButton href="/register" variant="primary" className={`h-12 px-5 text-[14px] lg:h-11 ${onDark ? "bg-surface text-ink hover:bg-surface/90" : ""}`}>
         Get started
+        <ArrowRightIcon data-icon="inline-end" />
       </LinkButton>
       <LinkButton
         href="/demo"
@@ -33,7 +37,7 @@ function Actions({ onDark = false }: { onDark?: boolean }) {
   );
 }
 
-const trialNote = "Monthly plans from $79. Built for Canadian trade contractors.";
+const trialNote = `Monthly plans from ${formatPlanPrice(PLANS.reduce((lowest, plan) => (plan.monthlyCents < lowest ? plan.monthlyCents : lowest), PLANS[0].monthlyCents))}. Built for Canadian trade contractors.`;
 
 function Portal({ flip = false }: { flip?: boolean }) {
   return (
@@ -59,10 +63,11 @@ function Portal({ flip = false }: { flip?: boolean }) {
 function Tail({ showPortal = true, flip = false }: { showPortal?: boolean; flip?: boolean }) {
   return (
     <>
-      <section className="bg-surface">
-        <Wrap className="flex flex-col gap-8 py-14 lg:py-20">
-          <SectionHead title="Six steps, one job." text="From the list the customer sent to a contract that renews itself. Nothing slips between a spreadsheet and an inbox." />
-          <StepsGrid />
+      <section className="relative overflow-hidden bg-night text-surface ring-on-dark">
+        <ShaderCanvas variant="night" className="opacity-60" />
+        <Wrap className="relative flex flex-col gap-8 py-14 lg:py-20">
+          <SectionHead onDark title="Six steps, one job." text="From the list the customer sent to a contract that renews itself. Nothing slips between a spreadsheet and an inbox." />
+          <StepsGrid onDark />
         </Wrap>
       </section>
       {showPortal && <Portal flip={flip} />}
@@ -104,13 +109,24 @@ function Tail({ showPortal = true, flip = false }: { showPortal?: boolean; flip?
 
 /** Concept A, "The Board": the pipeline is the proof. A light ground, the headline, then the whole board beneath it. */
 export function HomeA() {
+  const accentAt = SITE.tagline.indexOf("signed agreement.");
   return (
     <SiteShell tone="light">
-      <section className="bg-ground">
-        <Wrap className="flex flex-col gap-8 pt-8 pb-12 lg:gap-12 lg:pt-16 lg:pb-20">
+      <section className="relative overflow-hidden bg-ground">
+        <ShaderCanvas variant="light" />
+        <Wrap className="relative flex flex-col gap-8 pt-8 pb-12 lg:gap-12 lg:pt-16 lg:pb-20">
           <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
           <div className="flex flex-col gap-5">
-            <h1 style={step(0)} className="hero-in max-w-[16ch] font-display text-[42px] leading-[1.02] font-semibold tracking-tight text-balance lg:text-[68px]">{SITE.tagline}</h1>
+            <h1 style={step(0)} className="hero-in max-w-[16ch] text-[42px] leading-[1.02] font-bold tracking-[-0.03em] text-balance lg:text-[68px]">
+              {accentAt > 0 ? (
+                <>
+                  {SITE.tagline.slice(0, accentAt)}
+                  <span className="text-action">{SITE.tagline.slice(accentAt)}</span>
+                </>
+              ) : (
+                SITE.tagline
+              )}
+            </h1>
             <p style={step(1)} className="hero-in max-w-[56ch] text-[16px] leading-relaxed text-ink-2 lg:text-[18px]">
               Import the customer&apos;s list, send a priced agreement under your own brand, and follow it to a signed contract. Every deal sits in one stage with its age, so nothing goes quiet.
             </p>

@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { canWriteTemplates } from "@/components/templates/state";
-import { TemplateEditor } from "@/components/templates/template-editor";
-import { LogoActionsProvider } from "@/components/templates/logo-actions";
+import { TemplateEditor } from "@/app/(app)/templates/_components/template-editor";
+import { LogoActionsProvider } from "@/app/(app)/templates/_components/logo-actions";
 import { currentLogoPath, saveLogoPath } from "@/app/logo-actions";
 import { prepareLogoUpload } from "@/app/logo-upload";
 import { PageHeader } from "@/components/shell/page-header";
-import { getContainer } from "@/composition";
 import { layoutFormFromBody } from "@/domain/agreement/template-form";
-import { isUuid } from "@/domain/imports";
+import { loadTemplateToEdit } from "../_data-access/templates";
 import { saveAgreementTemplateAction } from "../template-actions";
 
 export const metadata: Metadata = { title: "Edit template" };
@@ -18,16 +15,7 @@ export const metadata: Metadata = { title: "Edit template" };
  * one, another org's, an archived one and the system template (which no member edits) are 404 (agreement-templates AC 21, Surface).
  */
 export async function EditTemplateForRequest({ templateId }: { templateId: string }) {
-  const { currentMember, listAgreementTemplates, listAssetTypes } = await getContainer();
-  const member = await currentMember();
-  if (member.status !== "member") redirect("/login");
-  if (!canWriteTemplates(member.role)) redirect("/templates");
-  if (!isUuid(templateId)) notFound();
-
-  const [list, types] = await Promise.all([listAgreementTemplates(), listAssetTypes()]);
-  if (!list.ok) throw new Error("The template list could not be read");
-  const template = list.templates.find((candidate) => candidate.id === templateId && !candidate.system);
-  if (!template) notFound();
+  const { orgName, template, types } = await loadTemplateToEdit(templateId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -38,7 +26,7 @@ export async function EditTemplateForRequest({ templateId }: { templateId: strin
         initial={layoutFormFromBody(template.body)}
         types={types.map(({ code, name }) => ({ code, name }))}
         save={saveAgreementTemplateAction}
-        orgName={member.orgName}
+        orgName={orgName}
       />
       </LogoActionsProvider>
     </div>

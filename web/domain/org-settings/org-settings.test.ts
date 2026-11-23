@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { DEFAULT_ITEM_WORDS, PROVINCES, countItems, formatSettingNumber, itemText, itemWords, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
+import { DEFAULT_ITEM_WORDS, PROVINCES, formatSettingNumber, itemText, itemWords, validateOrgSettings, type OrgSettingsField, type OrgSettingsInput } from "./index";
 
 const valid: OrgSettingsInput = {
   legalName: "Service Pacts",
@@ -211,8 +211,6 @@ describe("item words", () => {
     expect([hyphen.Singular, hyphen.Plural]).toEqual(["Walk-in", "Walk-ins"]);
     const mass = itemWords("equipment", "equipment");
     expect([mass.Singular, mass.Plural]).toEqual(["Equipment", "Equipment"]);
-    const words = itemWords("station", "stations");
-    expect([countItems(1, words), countItems(0, words), countItems(2, words)]).toEqual(["1 station", "0 stations", "2 stations"]);
   });
 });
 

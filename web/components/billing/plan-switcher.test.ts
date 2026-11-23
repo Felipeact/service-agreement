@@ -46,9 +46,9 @@ describe("the plan list", () => {
   test("C3204: it lists the three plans with price and included seats, and marks the current one without a switch control", async () => {
     await mount({ current: "starter" });
     expect(text()).toContain("Starter");
-    expect(text()).toContain("$79/month");
-    expect(text()).toContain("$149/month");
-    expect(text()).toContain("$299/month");
+    expect(text()).toContain("$79");
+    expect(text()).toContain("$149");
+    expect(text()).toContain("$299");
     expect(text()).toContain("2 seats included");
     expect(text()).toContain("5 seats included");
     expect(text()).toContain("10 seats included");

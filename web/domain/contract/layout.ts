@@ -6,6 +6,7 @@ import { withLogo, type TenantLogo } from "../org-settings/logo";
 import { buildContractDocument, type ContractDocument } from "./document";
 import type { ContractParties } from "./parties";
 import { validateBlocks, type BlockType, type TemplateBody } from "./template";
+import { isRecord } from "../guards";
 
 /** Schema 2 of the contract wording (block-editor door 1): the document options and the layout, with the signatures section in it. */
 export type ContractLayoutBody = { schema: 2; doc: DocOptions; layout: LayoutItem[] };
@@ -42,7 +43,6 @@ export function contractLayoutOf(body: ContractWordingBody): LayoutBody {
 export type ContractWordingError = { field: string; message: string };
 export type ContractWordingValidation = { ok: true; body: ContractWordingBody } | { ok: false; reason: string; errors: ContractWordingError[] };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * Whether `input` is contract wording this product can store and draw: schema 1 as `validateBlocks` reads it, or schema 2 with the

@@ -1,24 +1,19 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
 import { ContactForm } from "@/components/records/contact-form";
 import { DeleteControl } from "@/components/records/delete-control";
 import { RecordPage } from "@/components/records/record-form";
 import { cancelHrefFor, canWriteRecords } from "@/components/records/state";
-import { getContainer } from "@/composition";
+import { loadContactToEdit } from "../_data-access/contact";
 import { deleteContactAction, updateContactAction } from "../../../record-actions";
 
 export const metadata: Metadata = { title: "Edit contact" };
 
 export default async function EditContactPage({ params }: PageProps<"/contacts/[contactId]/edit">) {
   const { contactId } = await params;
-  const { currentMember, contactForEdit } = await getContainer();
-  const member = await currentMember();
-  if (member.status !== "member") redirect("/login");
-  const contact = await contactForEdit(contactId);
-  if (!contact) notFound();
+  const { role, contact } = await loadContactToEdit(contactId);
 
   return (
-    <RecordPage title="Edit contact" canWrite={canWriteRecords(member.role)}>
+    <RecordPage title="Edit contact" canWrite={canWriteRecords(role)}>
       <ContactForm
         initial={{ name: contact.name, email: contact.email ?? "", phone: contact.phone ?? "" }}
         submitLabel="Save changes"

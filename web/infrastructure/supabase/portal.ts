@@ -11,6 +11,7 @@ import type {
   PortalWriteFailure,
 } from "@/application/ports";
 import type { Database } from "./database.types";
+import { isRecord } from "@/domain/guards";
 
 type Client = SupabaseClient<Database>;
 
@@ -63,7 +64,6 @@ export function supabasePortalLinkStore(client: Client): PortalLinkStore {
   };
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const orNull = (value: unknown): Date | null => (typeof value === "string" ? new Date(value) : null);
 const dateOrNull = (value: unknown): string | null => (typeof value === "string" ? value : null);
 

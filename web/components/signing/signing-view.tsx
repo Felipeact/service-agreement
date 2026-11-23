@@ -18,7 +18,7 @@ type SigningViewProps = {
 
 function Message({ children }: { children: ReactNode }) {
   return (
-    <div role="status" className="flex flex-col gap-1 rounded-panel border border-hairline bg-surface px-4 py-3 text-[14px] font-medium text-ink">
+    <div role="status" className="flex flex-col gap-1 rounded-panel border border-hairline bg-surface shadow-card px-4 py-3 text-[14px] font-medium text-ink">
       {children}
     </div>
   );
