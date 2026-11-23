@@ -218,6 +218,72 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 - **Variables (door 3):** sixteen names; `term.start` (`November 13, 2026`), `tenant.address`, `tenant.phone`, `signer.name`, `terms.taxNote` join the eleven. `templateValues(terms, months, parties, termStart?)` and `agreementTemplateValues(..., names)` serve both documents; a missing value is no value. The contract reader ([contracts.ts](web/infrastructure/supabase/contracts.ts)) validates with `validateContractWording` (schema 1 or 2, an invalid one throws).
 - **SQL (doors 1, 2):** [20261113100000_block_editor.sql](supabase/migrations/20261113100000_block_editor.sql) (not applied to the hosted project) extends `private.agreement_template_problem` to schema 2 and adds `private.layout_problem`, `private.contract_wording_problem` and `public.save_contract_template(p_body)` (owner or admin of the caller's org, `42501` / `22023`, creates the org's contract template on the first call, advisory-locked versions). Recipe `block_editor` replays the migration; [block_editor.sql](supabase/tests/block_editor.sql).
 
+**What it is (Word-style editor, schema 3, 2026-11-23):** a template is a page the tenant designs freely, as in Word. It holds:
+- styled text: paragraph style, font, size, bold, italic, underline, strikethrough, colour, highlight, alignment, lists, indent, https links
+- tables: size picker, rows and columns, header row, cell colour
+- uploaded pictures, the company logo, lines and page breaks
+- fields, from the fixed merge list
+- **live sections** that fill from each agreement: price lines table, visit schedule, service included, equipment list, terms, and signatures for a contract
+
+The editor has Edit and Preview: the preview is the real PDF of the unsaved page, on sample data or on one of the org's agreements. Decisions (owner, 2026-11-23): TipTap; a live preview plus a preview page for the saved version; both agreement templates and the contract wording; an agreement page without a price table warns but saves, and a contract page must keep its signatures. PRD [docs/prd/word-style-template-editor.md](docs/prd/word-style-template-editor.md); ROADMAP decision 12 amended.
+
+**What we built:**
+- **Body:** schema 3.
+  - An agreement is `{schema: 3, name, description, doc, content, preset}` (`AgreementTemplateBodyV3` in [template.ts](web/domain/agreement/template.ts)); the contract wording is `{schema: 3, doc, content}` (`ContractRichBody` in [contract/layout.ts](web/domain/contract/layout.ts)).
+  - `doc` is the same `DocOptions` (letterhead, title, page header and footer, theme); `content` is a strict subset of TipTap / ProseMirror JSON ([rich-document/types.ts](web/domain/rich-document/types.ts)).
+  - Schemas 1 and 2, and everything already sent, print exactly as before; their tests are unchanged.
+- **Domain** ([web/domain/rich-document/](web/domain/rich-document/)):
+  - `validateRichDoc` accepts only the listed nodes, marks and attributes. Limits: 5,000 parts, 80,000 characters, 30 pictures, tables of 1-40 rows by 1-8 columns with no merged cells. Tables, sections and page breaks sit on the page only; each section appears once and the contract's signatures are required. Fields come from the whitelist, and typed `{{...}}` is refused because DocuSeal reads those as its signing fields. A picture must be a `<org id>/<uuid>.png|jpg` key of the caller's org.
+  - `richWarnings` flags a page with no price table.
+  - `normalizeRichDoc` drops editor nulls and defaults, turns `rgb()` into `#rrggbb`, snaps pasted sizes to 8-32, maps fonts to sans-serif, serif or monospace, strips the link from non-https links, turns typed `{{known.field}}` into a field chip, and drops trailing empty lines.
+  - `renderRichDoc` fills fields as text in their formatting, leaves out a paragraph marked `omitIfMissing` when one of its fields is empty, and splits the page into the existing section items and `rich` runs.
+  - `richFromLayout` turns a schema 1/2 layout into a page; a clause becomes a hide-when-empty paragraph. There are also image key helpers.
+  - `LayoutItem` gains the rendered-only kind `rich`; `validateLayout` still refuses it in a stored layout.
+  - Forms: [agreement/rich-form.ts](web/domain/agreement/rich-form.ts), [contract/rich-form.ts](web/domain/contract/rich-form.ts).
+- **PDF:**
+  - [rich-pdf.tsx](web/infrastructure/documents/rich-pdf.tsx) draws a `rich` run with the built-in Helvetica, Times and Courier faces; headings 1 and 2 keep the old title and section styles.
+  - The renderer loads pictures through an injected loader ([rich-images.ts](web/infrastructure/documents/rich-images.ts); `reactPdfRenderers(loadImage)` in [index.ts](web/infrastructure/documents/index.ts), wired once in [composition](web/composition/index.ts)), so every PDF route gets them.
+  - A picture that cannot be read or drawn is left out and the PDF still goes out. The signing tags are unchanged.
+- **Customer page:** [rich-content.tsx](web/app/review/[token]/_components/rich-content.tsx) draws the same runs as React elements, with no HTML injection; inline styles are used only for the tenant's own colours, sizes and widths. [review.ts](web/app/review/[token]/_data-access/review.ts) gives it each picture's public address.
+- **Pictures:**
+  - Public bucket `template-images`: 3 MB, PNG and JPEG, key `<org id>/<uuid>.<ext>`, written by an owner or admin of that org.
+  - Port `TemplateImages` and adapter [template-images.ts](web/infrastructure/supabase/template-images.ts); action [_actions/image.ts](web/app/(app)/templates/_actions/image.ts) (Zod, owner or admin).
+  - The browser re-encodes any picked picture to PNG or JPEG at most 2,000 px ([image-upload.ts](web/app/(app)/templates/_components/rich-editor/image-upload.ts)). That covers phone photos, and HEIC or WebP where the browser decodes them.
+  - Pictures are never deleted, because sent versions draw them.
+- **Editor** ([_components/rich-editor/](web/app/(app)/templates/_components/rich-editor/)):
+  - [extensions.ts](web/app/(app)/templates/_components/rich-editor/extensions.ts): the schema mirrors the validator. A `top` node group keeps tables, sections and page breaks out of lists and cells, and an insert never replaces a selected part.
+  - [keep-section.ts](web/app/(app)/templates/_components/rich-editor/keep-section.ts) refuses any edit that removes a contract's signatures.
+  - [toolbar.tsx](web/app/(app)/templates/_components/rich-editor/toolbar.tsx).
+  - [insert-panel.tsx](web/app/(app)/templates/_components/rich-editor/insert-panel.tsx): the options of the selected section, picture or logo, then Live sections and Fields; below `xl` it opens as a bottom sheet.
+  - Node views for sections, pictures and the logo.
+  - [rich-page.css](web/app/(app)/templates/_components/rich-editor/rich-page.css): sizes are in page points through `--pt`, so the desktop page matches the PDF.
+  - [rich-document-editor.tsx](web/app/(app)/templates/_components/rich-editor/rich-document-editor.tsx): the header, Edit and Preview, and the Before you save list.
+  - [template-editor.tsx](web/app/(app)/templates/_components/template-editor.tsx) and [contract-wording-editor.tsx](web/app/(app)/templates/_components/contract-wording-editor.tsx) load it with `next/dynamic` (`ssr: false`).
+  - An older template opens converted and saves as schema 3. A contract import replaces the page in one undoable step. New templates start blank, with no title and no number lines.
+  - Packages: `@tiptap/*` 3.35.0, installed with `--force` because of an existing `@hookform/resolvers` peer conflict.
+- **Preview:**
+  - In the editor, [preview-pane.tsx](web/app/(app)/templates/_components/rich-editor/preview-pane.tsx) posts the unsaved form to `POST /templates/preview` or `POST /templates/contract/render` (moved from `/templates/contract/preview`). `?agreement=<id>` draws it on a real agreement, read under RLS; another org's is 404.
+  - Saved versions have pages `/templates/[templateId]/preview` and `/templates/contract/preview`, for every member, with `?agreement=` in the address, over `GET .../preview/pdf`. Rendering is shared in [preview-pdf.ts](web/app/(app)/templates/_data-access/preview-pdf.ts).
+  - A designed page with no preset lines previews on two sample lines and sample equipment.
+  - Template cards and the contract wording card have a Preview button.
+- **SQL:** [20261123100000_rich_templates.sql](supabase/migrations/20261123100000_rich_templates.sql), applied to the hosted project by the owner on 2026-11-23 (after `20261122100000_template_design`); the recipes `rich_templates` and `template_design` pass against the hosted objects.
+  - It adds the bucket and its policies, and `private.rich_content_problem`.
+  - It adds schema 3 to `private.agreement_template_problem` and `private.contract_wording_problem`; the old checks are renamed `_v2` and reused for name, description, doc and preset. A body may be up to 512 KB.
+  - It adds the trigger `document_template_versions_pictures_own`.
+  - Recipe `rich_templates` ([rich_templates.sql](supabase/tests/rich_templates.sql)) is a plain recipe that tests the applied objects.
+- **Removed:** the block editor's screen (`document-editor`, `editor-page`, `add-element-dock`, `table-editor`, `preview-dialog`, `first-error-row`, the old `editor-test-kit`) and its tests (`add-element-dock`, `editor-drag`, `editor-page`, `preview-dialog`, `block-options`, the old `template-editor`).
+  - Their behaviour is re-tested in [template-editor.test.tsx](web/app/(app)/templates/_components/template-editor.test.tsx), [contract-import.test.tsx](web/app/(app)/templates/_components/contract-import.test.tsx) and [extensions.test.ts](web/app/(app)/templates/_components/rich-editor/extensions.test.ts).
+  - `block-options.tsx` stays: section options, letterhead, colour and font, page settings, details and preset lines.
+  - The schema 2 form code in the domain stays for the setup page's starter preview.
+- **Design round (2026-11-23):** three designs of the editor at `/concepts/template-editor/a|b|c` on invented data, over the same engine (`useRichEditor` in [use-rich-editor.ts](web/app/(app)/templates/_components/rich-editor/use-rich-editor.ts)) and the same pieces (the toolbar and the panel are now exported in groups; [letterhead.tsx](web/app/(app)/templates/_components/rich-editor/letterhead.tsx); fields are a React view, [variable-view.tsx](web/app/(app)/templates/_components/rich-editor/variable-view.tsx), that can show an agreement's values). A, Ribbon: Home, Insert and Page tabs with labelled tiles, an inspector that slides in for the selected part, a status bar. B, Canvas: no toolbar; a bubble over selected text, `/` and a + for every insert, an options bar over a selected part, a phone strip. C, Data studio: an outline to jump to and reorder parts, "Show data from" that fills the fields with an agreement's values on the page, the customer's view beside it with a check of the empty fields. Code in [web/app/concepts/template-editor/](web/app/concepts/template-editor/); it saves nothing and is removed once one is chosen and built into the real editor.
+- **Final preview (2026-11-23):** the owner chose A, Ribbon, with one change: the header is edited on the page, as in Word. `/concepts/template-editor/final` ([design-final.tsx](web/app/concepts/template-editor/_components/design-final.tsx)) has a second editor for the header, starting from the old letterhead as content (logo, company name, address and phone as fields, a line). The ribbon acts on the part the cursor is in, and the header's Insert tab offers no live sections or page breaks. Page settings keep first page or every page, and Preview draws the header with the agreement's values. Second round (owner, 2026-11-23):
+  - The header is optional: it can be removed (the × on its label, or No header in the Page tab), and Add a header brings it back as it was.
+  - Its outline is slimmer, and the logo placeholder is a small Logo chip (shared with the real editor).
+  - The Page tab is designed as picture tiles in captioned groups ([page-tab.tsx](web/app/concepts/template-editor/_components/page-tab.tsx)): Header (on or off, first page or every page, Standard), Colour, Type, Under the title and Footer.
+
+  To build it, the header needs a place in the stored body (optional) and in the PDF.
+- **Not yet:** the final design built into the real editor (a stored header and its PDF drawing); a live browser pass of the real editor (it needs a sign-in); columns, page background, free headers and footers, merged cells; removing unused pictures.
+
 ### Pipeline / status engine (M11)
 **What it is:** a pure state machine for agreements and contracts. Every transition writes an event and an outbox row. Each deal is shown at one stage: **In progress → Sent to customer → Accepted (awaiting signature) → Completed**, with **Refused** as the exit. The dashboard shows deals by stage and age.
 **What we built:**
@@ -463,7 +529,20 @@ Statuses: `pending_signature` → `client_signed` → `completed`. `pending_sign
 - **Tests:** the suite passes from PowerShell (348 files, 5,705 tests, 2026-11-22). From Git Bash vitest fails on every file because of the lowercase drive path, so run it from PowerShell.
 
 ## Build log
+- **2026-11-23:** Last preview of the template editor (`/concepts/template-editor/final`): an optional header (remove and add back), a slimmer header outline and logo chip, and a Page tab of picture tiles. Validated live at 375, 768 and 1440 px with touch: header on and off, every page, colour, type, footer, preview with and without the header; no overflow, no tap target under 44 px, console clean; the template tests pass.
+- **2026-11-23:** Final preview of the template editor at `/concepts/template-editor/final`: design A's ribbon with a header edited on the page (its own editor; the ribbon follows the part being edited; no live sections in the header). Validated live in headless Chromium at 375, 768 and 1440 px with touch: header and body editing, inserts, header on every page, preview with an agreement's values; no overflow, no tap target under 44 px, console clean.
+- **2026-11-23:** Three designs of the template editor at `/concepts/template-editor/a|b|c` (A Ribbon, B Canvas, C Data studio), over the real editor's engine; the owner applied `20261122100000_template_design` and `20261123100000_rich_templates`, and the recipes pass against the hosted objects.
+  - Validated live in headless Chromium at 375, 768 and 1440 px with touch on phone and tablet: no overflow, no tap target under 44 px, console clean.
+  - Interactions checked: A's tabs, inserts, inspector and preview; B's `/` menu, part options and phone strip; C's live data, data check, outline reorder and phone tabs.
+  - Found and fixed: TipTap menus re-registering on every render (an update loop) and two bubble menus sharing one plugin key; a part on the page not selected by a tap after typing (every part now selects itself on tap, also in the real editor); C's panes wider than a phone; the outline empty until the first edit.
 
+- **2026-11-23:** Word-style template editor and preview page (Phase 5.5, `docs/prd/word-style-template-editor.md`).
+  - Agreement templates and the contract wording are now a blank Letter page: styled text, colours, sizes, fonts, lists, tables, pictures, the company logo, fields and live sections (price lines, visit schedule, service included, equipment, terms, signatures).
+  - Stored as schema 3, drawn by our own PDF renderer and on the customer page.
+  - Edit and Preview work on sample or real agreement data, and saved versions have preview pages.
+  - Migration `20261123100000_rich_templates` is written and passes in a rolled-back recipe; it is not applied.
+  - Full Vitest suite: 5,658 of 5,658 (`proxy.test.ts` still cannot load here). `tsc` and ESLint are clean in the changed code.
+  - The live browser pass has not been run (it needs a sign-in).
 - **2026-11-23:** The real agreement page is rebuilt as an exact copy of the approved preview: guided sections with the readiness card, equipment edited by count, the preview's line editor, term saved in place, templates as cards over the real PDF, and Goes to edited in place; generated line descriptions drop their counts; dead components deleted; the preview folder deleted. Full Vitest suite 5,710 of 5,710; not yet run in a browser (needs a sign-in).
 - **2026-11-23:** Agreement page final preview at `/concepts/agreement`: round-2 B's header and facts strip over round-2 A's guided sections with the approved "Before you send" card; equipment, service lines, term and contact editable in place, and a last section showing what the customer gets in the chosen template (colour, font, opening text, sections, signatures). Validated live at 375, 768 and 1440 px with touch, every edit path tapped; console clean.
 - **2026-11-23:** Agreement page designs, round 2 at `/concepts/agreement`: A Guided sections, B Overview and tabs, C Line editor, all keeping the approved "Before you send" card. Validated live in headless Chromium at 375, 768 and 1440 px with touch (customer link, phone tabs and tablet month toggles fixed to 44 px); no overflow, console clean.

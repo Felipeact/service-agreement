@@ -49,7 +49,7 @@ const { POST, maxDuration } = await import("./route");
 
 const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 1, 2, 3]);
 const post = (body: unknown = FORM, raw?: string) =>
-  POST(new NextRequest("http://localhost:3000/templates/contract/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: raw ?? JSON.stringify(body) }));
+  POST(new NextRequest("http://localhost:3000/templates/contract/render", { method: "POST", headers: { "Content-Type": "application/json" }, body: raw ?? JSON.stringify(body) }));
 const noWrites = () => {
   expect(writes.saveContractWording).not.toHaveBeenCalled();
   expect(writes.saveAgreementTemplate).not.toHaveBeenCalled();
@@ -69,7 +69,7 @@ beforeEach(() => {
   writes.contractStore.create.mockReset();
 });
 
-describe("POST /templates/contract/preview, the document", () => {
+describe("POST /templates/contract/render, the document", () => {
   test.each<MemberRole>(["owner", "admin"])("C5555: a %s gets 200 application/pdf, private and not stored, with the renderer's bytes untouched", async (role) => {
     currentMember.mockResolvedValue(member(role));
     const response = await post();
@@ -114,7 +114,7 @@ describe("POST /templates/contract/preview, the document", () => {
   });
 });
 
-describe("POST /templates/contract/preview, who may call and what is refused", () => {
+describe("POST /templates/contract/render, who may call and what is refused", () => {
   test("C5556: signed out answers 401 with no body and renders nothing", async () => {
     currentMember.mockResolvedValue({ status: "signed_out" });
     const response = await post();

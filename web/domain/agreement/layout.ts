@@ -1,6 +1,8 @@
 import { BLOCK_TYPES, fillVariables, MAX_TEXT, unknownVariable, type BlockType, type TemplateValues } from "../contract/template";
 import type { AgreementTemplateBody } from "./template";
 import { isRecord, isWhole, unknownKeys } from "../guards";
+import type { RichBlock } from "../rich-document/types";
+import { renderRichDoc } from "../rich-document/render";
 
 /**
  * The layout of a document (block-editor door 1): the ordered list of items drawn between the title block and the page footer,
@@ -104,7 +106,12 @@ export type SectionItem =
   | { kind: "section"; key: "schedule" | "equipment"; options?: TitleOptions }
   | { kind: "section"; key: "terms" }
   | { kind: "section"; key: "signatures"; options?: SignatureOptions };
-export type LayoutItem = BlockItem | SectionItem | TableItem;
+/**
+ * A run of a designed page (schema 3, rich-templates) between two live sections, variables already filled. Only a rendered layout
+ * holds one: `validateLayout` refuses it in a stored schema 2 layout, and no schema 1 or 2 body ever produces one.
+ */
+export type RichItem = { kind: "rich"; nodes: RichBlock[] };
+export type LayoutItem = BlockItem | SectionItem | TableItem | RichItem;
 export type SectionKey = SectionItem["key"];
 
 /** What a version of a template with schema 2 holds for the part both documents share. */
@@ -137,6 +144,8 @@ export function legacyLayout(
 /** An agreement body's layout and document options: schema 1 as the code drew it before, schema 2 as stored. */
 export function layoutOf(body: AgreementTemplateBody): LayoutBody {
   if (body.schema === 2) return { doc: body.doc, layout: body.layout };
+  // A designed page as items with its fields left as fields: what a thumbnail or an outline reads.
+  if (body.schema === 3) return { doc: body.doc, layout: renderRichDoc(body.content, null) };
   return { doc: { ...DEFAULT_AGREEMENT_DOC }, layout: legacyLayout(body.intro, body.footer, body.sections) };
 }
 
@@ -172,7 +181,8 @@ export const sectionFlags = (layout: readonly LayoutItem[]) => ({
 
 const fillText = (text: string, values: TemplateValues) => fillVariables(text, values).text;
 
-function fillOptions<T extends SectionItem>(item: T, values: TemplateValues): T {
+/** A section with the variables of its option texts filled; a label that fills to nothing is dropped so the default stands. */
+export function fillOptions<T extends SectionItem>(item: T, values: TemplateValues): T {
   if (!("options" in item) || item.options === undefined) return item;
   const filled: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(item.options as Record<string, unknown>)) {
@@ -198,6 +208,7 @@ export function renderLayout(layout: readonly LayoutItem[], values: TemplateValu
   const filled = layout.map((item): LayoutItem | null => {
     if (item.kind === "section") return fillOptions(item, values);
     if (item.kind === "table") return { ...item, rows: item.rows.map((row) => row.map((cell) => fillText(cell, values))) };
+    if (item.kind === "rich") return item;
     const { text, missing } = fillVariables(item.text, values);
     return item.type === "clause" && missing ? null : { ...item, text };
   });
@@ -244,7 +255,8 @@ function checkText(field: string, label: string, value: unknown, max: number, er
   }
 }
 
-function checkOptions(key: SectionKey, value: unknown, at: string, n: number, errors: LayoutError[]): void {
+/** Adds a message for every problem with the options of a section (shared by the layout and the designed page). */
+export function checkSectionOptions(key: SectionKey, value: unknown, at: string, n: number, errors: LayoutError[]): void {
   const field = `${at}.options`;
   const label = `The ${key} section of item ${n}`;
   if (!isRecord(value)) {
@@ -418,7 +430,7 @@ export function validateLayout(input: { doc: unknown; layout: unknown }, spec: L
         });
       } else {
         seen.add(key);
-        if ("options" in item) checkOptions(key as SectionKey, item.options, at, n, errors);
+        if ("options" in item) checkSectionOptions(key as SectionKey, item.options, at, n, errors);
       }
     } else {
       errors.push({ field: `${at}.kind`, message: `Item ${n} has an unknown kind: ${String(item.kind)}.` });

@@ -1,0 +1,164 @@
+/*
+ * The designed page in the editor (rich-templates). ProseMirror writes its own elements, so they are styled here rather than with
+ * classes. Every size is in page points through --pt, so the page keeps the PDF's proportions: at the desktop width a point is
+ * 1.333px (the Letter page at 816px wide); on a phone the page reflows and a point is 1.4px, so 10pt body text stays readable.
+ */
+.rich-page {
+  --pt: 1.4px;
+  --rich-accent: var(--color-action);
+  font-size: calc(10 * var(--pt));
+  line-height: 1.4;
+  color: #111827;
+}
+
+@media (min-width: 1024px) {
+  .rich-page {
+    --pt: 1.3333px;
+  }
+}
+
+.rich-page .ProseMirror {
+  outline: none;
+  min-height: calc(420 * var(--pt));
+  overflow-wrap: anywhere;
+}
+
+.rich-page .ProseMirror p {
+  margin: 0 0 calc(4 * var(--pt));
+  min-height: 1.4em;
+}
+
+.rich-page .ProseMirror [data-indent="1"] { margin-left: calc(16 * var(--pt)); }
+.rich-page .ProseMirror [data-indent="2"] { margin-left: calc(32 * var(--pt)); }
+.rich-page .ProseMirror [data-indent="3"] { margin-left: calc(48 * var(--pt)); }
+
+/* A paragraph left out when one of its fields is empty: a dotted rule in the margin says so. */
+.rich-page .ProseMirror p[data-omit-if-missing] {
+  box-shadow: calc(-6 * var(--pt)) 0 0 -4px #d97706;
+}
+
+.rich-page .ProseMirror h1,
+.rich-page .ProseMirror h2,
+.rich-page .ProseMirror h3 {
+  font-weight: 700;
+  line-height: 1.25;
+}
+.rich-page .ProseMirror h1 { font-size: calc(13 * var(--pt)); margin: calc(18 * var(--pt)) 0 calc(4 * var(--pt)); }
+.rich-page .ProseMirror h2 { font-size: calc(11 * var(--pt)); margin: calc(18 * var(--pt)) 0 calc(6 * var(--pt)); color: var(--rich-accent); }
+.rich-page .ProseMirror h3 { font-size: calc(10 * var(--pt)); margin: calc(10 * var(--pt)) 0 calc(4 * var(--pt)); }
+.rich-page .ProseMirror > :first-child { margin-top: 0; }
+
+.rich-page .ProseMirror ul,
+.rich-page .ProseMirror ol {
+  margin: 0 0 calc(4 * var(--pt));
+  padding-left: calc(16 * var(--pt));
+}
+.rich-page .ProseMirror ul { list-style: disc; }
+.rich-page .ProseMirror ol { list-style: decimal; }
+.rich-page .ProseMirror li > p { margin: 0; }
+
+.rich-page .ProseMirror a { color: var(--color-action); text-decoration: underline; }
+.rich-page .ProseMirror mark { border-radius: 2px; padding: 0 1px; color: inherit; }
+
+.rich-page .ProseMirror hr {
+  border: 0;
+  border-top: 1px solid #d1d5db;
+  margin: calc(8 * var(--pt)) 0;
+}
+.rich-page .ProseMirror hr.ProseMirror-selectednode { border-top-color: var(--color-action); }
+
+/* Tables: a hairline grid like the PDF's; the first row may be a header. */
+.rich-page .ProseMirror .tableWrapper { overflow-x: auto; margin: 0 0 calc(8 * var(--pt)); }
+.rich-page .ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+.rich-page .ProseMirror td,
+.rich-page .ProseMirror th {
+  position: relative;
+  border: 1px solid #d1d5db;
+  padding: calc(4 * var(--pt));
+  vertical-align: top;
+  min-width: 2.5em;
+}
+.rich-page .ProseMirror th { font-weight: 700; text-align: left; }
+.rich-page .ProseMirror td > *:last-child,
+.rich-page .ProseMirror th > *:last-child { margin-bottom: 0; }
+.rich-page .ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(37 99 235 / 0.12);
+  pointer-events: none;
+}
+.rich-page .ProseMirror .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: var(--color-action);
+  pointer-events: none;
+}
+.rich-page .ProseMirror.resize-cursor { cursor: col-resize; }
+
+/* A merge field: a chip that prints the agreement's own value. */
+.rich-page .rich-field {
+  display: inline;
+  border-radius: 999px;
+  background: var(--color-action-tint);
+  color: var(--color-action);
+  padding: 0 0.45em;
+  font-size: 0.92em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.rich-page .rich-field.ProseMirror-selectednode { outline: 2px solid var(--color-action); }
+/* Showing an agreement's data: the value reads as text, marked as filled in. */
+.rich-page .rich-field-filled {
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 rgb(37 99 235 / 0.35);
+  white-space: normal;
+}
+.rich-page .rich-field-empty { color: #b45309; box-shadow: inset 0 -2px 0 rgb(217 119 6 / 0.5); font-style: italic; }
+
+.rich-page .rich-page-break {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  margin: calc(10 * var(--pt)) 0;
+  color: #646b78;
+  font-size: 11px;
+  font-weight: 600;
+  user-select: none;
+}
+.rich-page .rich-page-break::before,
+.rich-page .rich-page-break::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed #b8bfcc;
+}
+.rich-page .rich-page-break.ProseMirror-selectednode { color: var(--color-action); }
+
+.rich-page .rich-live { font-size: calc(9 * var(--pt)); }
+.rich-page .rich-section-title {
+  font-size: calc(11 * var(--pt));
+  font-weight: 700;
+  margin-bottom: calc(4 * var(--pt));
+}
+
+.rich-page .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #8a909c;
+  pointer-events: none;
+}
+
+.rich-page .ProseMirror-gapcursor::after { border-top-color: var(--color-action); }

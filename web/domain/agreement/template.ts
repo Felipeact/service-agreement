@@ -21,6 +21,10 @@ import {
   type LayoutItem,
 } from "./layout";
 import { isRecord, isWhole, unknownKeys } from "../guards";
+import { renderRichDoc } from "../rich-document/render";
+import { HEADER_SPEC, validateRichDoc } from "../rich-document/validate";
+import { renderRichHeader } from "../rich-document/header";
+import type { RichBlock, RichDoc } from "../rich-document/types";
 
 /** A preset service line: copied into version 1 of a new agreement (agreement-templates door 2). */
 export type AgreementTemplateLine = {
@@ -58,7 +62,34 @@ export type AgreementTemplateBodyV2 = {
 };
 
 /** What a stored agreement template version holds. Equal in shape to the `document_template_versions.body` of kind `agreement`. */
-export type AgreementTemplateBody = AgreementTemplateBodyV1 | AgreementTemplateBodyV2;
+export type AgreementTemplateBody = AgreementTemplateBodyV1 | AgreementTemplateBodyV2 | AgreementTemplateBodyV3;
+
+/**
+ * Schema 3 (rich-templates): a designed page. The document options stay (letterhead, title, page header and footer, colour and
+ * font); `content` is the Word-style page, with its live sections where the tenant put them.
+ */
+export type AgreementTemplateBodyV3 = {
+  schema: 3;
+  name: string;
+  description: string;
+  doc: DocOptions;
+  content: RichDoc;
+  /**
+   * The page's header, edited as the page is: `null` for none. Absent (a body saved before headers were designed) prints the letterhead
+   * the document options describe, as before.
+   */
+  header?: RichDoc | null;
+  preset: { termMonths: number | null; lines: AgreementTemplateLine[] };
+};
+
+/** The problems of a designed page's header, by the field `header.<path>`; none for no header or none set. */
+export function headerProblems(input: Record<string, unknown>, noun: "agreement" | "contract", orgId?: string): AgreementTemplateError[] {
+  if (!("header" in input) || input.header === null) return [];
+  return validateRichDoc(input.header, HEADER_SPEC(noun, orgId)).map((error) => ({
+    field: error.field.replace(/^content/, "header"),
+    message: error.message.startsWith("The page") ? error.message.replace("The page", "The header") : `In the header: ${error.message[0].toLowerCase()}${error.message.slice(1)}`,
+  }));
+}
 
 export const MAX_NAME = 80;
 export const MAX_DESCRIPTION = 300;
@@ -70,6 +101,8 @@ export const MAX_CODE_LENGTH = 80;
 export const MAX_PRICE_CENTS = 1_000_000_000_000;
 /** The database caps a body at 64 KB of jsonb text, which spells `: ` and `, ` with a space; a body this long as plain JSON is certainly over. */
 export const MAX_BODY_JSON_LENGTH = 60_000;
+/** A designed page holds far more (tables, styled runs); the database caps a schema 3 body at 512 KB of jsonb text. */
+export const MAX_RICH_BODY_JSON_LENGTH = 400_000;
 
 /** The system agreement template's version 1: no text, every optional section shown, no preset. Equal to the stored row (parity test). */
 export const SYSTEM_AGREEMENT_BODY: AgreementTemplateBodyV1 = {
@@ -161,14 +194,19 @@ function checkLine(line: unknown, index: number, errors: AgreementTemplateError[
  * text limits and the variable whitelist of the contract template) or schema 2 (the document options and the layout of
  * block-editor door 1), and the preset's bounds. Every problem is returned with the field it belongs to; `reason` is the first.
  */
-export function validateAgreementTemplate(input: unknown): AgreementTemplateValidation {
+export function validateAgreementTemplate(input: unknown, options: { orgId?: string } = {}): AgreementTemplateValidation {
   const errors: AgreementTemplateError[] = [];
   if (!isRecord(input)) return { ok: false, reason: "The template is not an object.", errors: [{ field: "body", message: "The template is not an object." }] };
 
   const schema2 = input.schema === 2;
-  if (input.schema !== 1 && !schema2) errors.push({ field: "body", message: `Unknown schema ${String(input.schema)}; this product reads schemas 1 and 2.` });
+  const schema3 = input.schema === 3;
+  if (input.schema !== 1 && !schema2 && !schema3) errors.push({ field: "body", message: `Unknown schema ${String(input.schema)}; this product reads schemas 1, 2 and 3.` });
   const keys2 = ["schema", "name", "description", "doc", "layout", "preset"];
-  if (schema2) {
+  const keys3 = ["schema", "name", "description", "doc", "content", "preset"];
+  if (schema3) {
+    const off = [...unknownKeys(input, [...keys3, "header"]), ...keys3.filter((key) => !(key in input))];
+    if (off.length > 0) errors.push({ field: "body", message: `A schema 3 template has the keys ${keys3.join(", ")} and may have a header; check ${off[0]}.` });
+  } else if (schema2) {
     const off = [...unknownKeys(input, keys2), ...keys2.filter((key) => !(key in input))];
     if (off.length > 0) {
       errors.push({ field: "body", message: `A schema 2 template has exactly the keys ${keys2.join(", ")}; check ${off[0]}.` });
@@ -186,7 +224,12 @@ export function validateAgreementTemplate(input: unknown): AgreementTemplateVali
     errors.push({ field: "description", message: `Description is too long (${input.description.length} characters, at most ${MAX_DESCRIPTION}).` });
   }
 
-  if (schema2) {
+  if (schema3) {
+    // The document options are checked as a layout with no items; the page has its own rules.
+    errors.push(...validateLayout({ doc: input.doc, layout: [] }, { sections: AGREEMENT_SECTION_KEYS, required: [], noun: "agreement" }));
+    errors.push(...validateRichDoc(input.content, { sections: AGREEMENT_SECTION_KEYS, required: [], noun: "agreement", orgId: options.orgId }));
+    errors.push(...headerProblems(input, "agreement", options.orgId));
+  } else if (schema2) {
     errors.push(...validateLayout({ doc: input.doc, layout: input.layout }, { sections: AGREEMENT_SECTION_KEYS, required: ["price"], noun: "agreement" }));
   } else {
     checkBlocks("intro", "intro", input.intro, errors);
@@ -217,7 +260,7 @@ export function validateAgreementTemplate(input: unknown): AgreementTemplateVali
     }
   }
 
-  if (errors.length === 0 && JSON.stringify(input).length > MAX_BODY_JSON_LENGTH) {
+  if (errors.length === 0 && JSON.stringify(input).length > (schema3 ? MAX_RICH_BODY_JSON_LENGTH : MAX_BODY_JSON_LENGTH)) {
     errors.push({ field: "body", message: "The template is too long to save. Shorten the texts or remove preset lines." });
   }
 
@@ -319,7 +362,8 @@ export function copyName(name: string, taken: readonly string[]): string {
   }
 }
 
-export type RenderedAgreementLayout = RenderedAgreementTemplate & { doc: DocOptions; layout: LayoutItem[] };
+/** `header`: the designed header filled, `null` for none, absent for the letterhead the document options describe. */
+export type RenderedAgreementLayout = RenderedAgreementTemplate & { doc: DocOptions; layout: LayoutItem[]; header?: RichBlock[] | null };
 
 /**
  * What a body's document draws, variables filled: the options and the layout items in order. A schema 1 body goes through
@@ -331,6 +375,7 @@ export function renderAgreementLayout(body: AgreementTemplateBody, values: Templ
     const rendered = renderAgreementTemplate(body, values);
     return { ...rendered, doc: { ...DEFAULT_AGREEMENT_DOC }, layout: legacyLayout(rendered.intro, rendered.footer, rendered.sections) };
   }
-  const layout = renderLayout(body.layout, values);
-  return { ...introAndFooter(layout), sections: sectionFlags(layout), doc: { ...body.doc, title: fillVariables(body.doc.title, values).text }, layout };
+  const layout = body.schema === 3 ? renderRichDoc(body.content, values) : renderLayout(body.layout, values);
+  const header = body.schema === 3 && "header" in body && body.header !== undefined ? { header: body.header === null ? null : renderRichHeader(body.header, values) } : {};
+  return { ...introAndFooter(layout), sections: sectionFlags(layout), doc: { ...body.doc, title: fillVariables(body.doc.title, values).text }, layout, ...header };
 }

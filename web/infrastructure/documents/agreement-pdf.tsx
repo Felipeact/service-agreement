@@ -12,6 +12,8 @@ import {
   type TitleOptions,
 } from "@/domain/agreement";
 import { renderWithoutLogoOnFailure } from "./logo-fallback";
+import { PageHeaderBlock, RichContent } from "./rich-pdf";
+import { loadRichImages, renderWithoutImagesOnFailure, type ImageLoader } from "./rich-images";
 import { EquipmentSection, IncludedSection, LayoutBlock, LayoutTable, LetterHead, LetterheadFooter, PageFooter, PriceSection, ScheduleSection, pageFamily, styles } from "./pdf-sections";
 
 /** The agreement as a Letter-size document. Built-in Helvetica only, so no font file travels with it. */
@@ -31,6 +33,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
   const draw = (item: LayoutItem, index: number) => {
     if (item.kind === "block") return <LayoutBlock key={index} item={item} accent={color} font={font} />;
     if (item.kind === "table") return <LayoutTable key={index} item={item} accent={color} font={font} />;
+    if (item.kind === "rich") return <RichContent key={index} nodes={item.nodes} accent={color} font={font} images={document.images} logo={tenant.logo} />;
     switch (item.key) {
       case "price": {
         const options: PriceOptions = item.options ?? {};
@@ -91,7 +94,7 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
           </Text>
         )}
 
-        {doc.pageHeader === "every" ? <View fixed>{letterhead}</View> : letterhead}
+        <PageHeaderBlock header={document.header} fallback={letterhead} every={doc.pageHeader === "every"} accent={color} font={font} images={document.images} logo={tenant.logo} />
 
         {doc.title.trim() !== "" && <Text style={styles.title}>{doc.title}</Text>}
         {doc.showMeta && (
@@ -119,6 +122,10 @@ export function AgreementPdf({ document }: { document: AgreementDocument }) {
   );
 }
 
-export async function renderAgreementPdf(document: AgreementDocument): Promise<Uint8Array> {
-  return renderWithoutLogoOnFailure(document, document.tenant.logo, (without) => renderToBuffer(<AgreementPdf document={without} />));
+/** `loadImage` reads a designed page's uploaded pictures; without it (or for a document with none) nothing is fetched. */
+export async function renderAgreementPdf(document: AgreementDocument, loadImage?: ImageLoader): Promise<Uint8Array> {
+  // A document with no designed page is passed on as it came, so it prints exactly as before.
+  const images = await loadRichImages(document.layout, loadImage, document.header);
+  const withImages = images ? { ...document, images } : document;
+  return renderWithoutLogoOnFailure(withImages, document.tenant.logo, (without) => renderWithoutImagesOnFailure(without, (drawn) => renderToBuffer(<AgreementPdf document={drawn} />)));
 }

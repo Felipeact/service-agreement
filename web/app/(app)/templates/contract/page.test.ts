@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { CurrentMember, MemberRole } from "@/application/ports";
 import { SYSTEM_CONTRACT_BODY, type ContractLayoutBody } from "@/domain/contract";
+import type { ContractRichForm } from "@/domain/contract/rich-form";
 
 const currentMember = vi.fn<() => Promise<CurrentMember>>();
 const getContractWording = vi.fn();
@@ -19,6 +20,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { default: ContractWordingPage } = await import("./page");
+const { ContractWordingEditor } = await import("../_components/contract-wording-editor");
 
 const member = (role: MemberRole): CurrentMember => ({ status: "member", userId: "u1", email: "u@x.test", orgId: "o1", orgName: "Org", role });
 const OWN: ContractLayoutBody = {
@@ -39,31 +41,51 @@ beforeEach(() => {
 
 const render = async () => renderToStaticMarkup((await ContractWordingPage()) as ReactElement);
 
+/** The props the page gives the editor, which loads in the browser only (so the server markup holds its loading placeholder). */
+async function editorProps(): Promise<{ initial: ContractRichForm; importAction?: unknown; env: { orgName: string } }> {
+  const find = (node: unknown): Record<string, unknown> | null => {
+    const element = node as ReactElement<Record<string, unknown>> | null;
+    if (!element || typeof element !== "object") return null;
+    if (element.type === ContractWordingEditor) return element.props;
+    const children = element.props?.children;
+    for (const child of Array.isArray(children) ? children : [children]) {
+      const found = find(child);
+      if (found) return found;
+    }
+    return null;
+  };
+  const props = find(await ContractWordingPage());
+  if (!props) throw new Error("no editor on the page");
+  return props as never;
+}
+
 describe("/templates/contract", () => {
   test.each(["owner", "admin"] as const)("C5552: a %s sees the system wording's rows while the org has none, with the contract preview beside the form", async (role) => {
     currentMember.mockResolvedValue(member(role));
     const html = await render();
     expect(html).toContain("Contract wording");
     expect(html).toContain("This is the standard wording.");
-    expect(html).toContain('id="document-title"');
-    expect(html).toContain('value="Service Contract"');
-    expect(html).toContain("Invoices are payable within");
-    expect(html).toContain('data-variable="terms.paymentDays"');
-    expect(html).toContain("Signatures");
-    // The page and the Preview PDF button replace the form and the live pane.
-    expect(html).toContain('aria-label="Document page"');
-    expect(html).toContain("Preview PDF");
-    expect(html).not.toContain('aria-label="Preview"');
+    // The Word-style editor loads in the browser; the server sends its placeholder.
+    expect(html).toContain('aria-label="Loading the editor"');
+    const { initial, env } = await editorProps();
+    expect(initial.doc.title).toBe("Service Contract");
+    const page = JSON.stringify(initial.content);
+    expect(page).toContain("Invoices are payable within ");
+    expect(page).toContain('{"type":"variable","attrs":{"name":"terms.paymentDays"}}');
+    expect(page).toContain('"key":"signatures"');
+    expect(env.orgName).toBe("Org");
   });
 
   test("C5552: the org's own wording opens with its own options and rows, and says saving writes a new version", async () => {
     getContractWording.mockResolvedValue({ ok: true, body: OWN, own: true });
     const html = await render();
     expect(html).toContain("Saving writes a new version.");
-    expect(html).toContain('value="PREVENTIVE MAINTENANCE SERVICE AGREEMENT"');
-    expect(html).toContain("1. Service provided");
-    expect(html).toContain("Client");
-    expect(html).not.toContain("Invoices are payable within {{terms.paymentDays}}.");
+    const { initial } = await editorProps();
+    expect(initial.doc.title).toBe("PREVENTIVE MAINTENANCE SERVICE AGREEMENT");
+    const page = JSON.stringify(initial.content);
+    expect(page).toContain("1. Service provided");
+    expect(page).toContain('"customerLabel":"Client"');
+    expect(page).not.toContain("Invoices are payable within");
   });
 
   test("C5552: wording that cannot be read is an error page, not other wording", async () => {
@@ -72,9 +94,8 @@ describe("/templates/contract", () => {
   });
 
   test("[C33] C5821: the page gives the editor the import action, so the Import control and its notice are on the page", async () => {
-    const html = await render();
-    // The control lives in the header's Import contract popover, closed until the owner opens it.
-    expect(html).toContain("Import contract");
+    // The control lives in the editor's header popover (the editor loads in the browser); the page hands it the action.
+    expect(typeof (await editorProps()).importAction).toBe("function");
   });
 
   test("C5558: signed out goes to /login and nothing is read", async () => {

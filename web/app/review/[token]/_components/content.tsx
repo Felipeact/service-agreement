@@ -13,6 +13,7 @@ import { formatCadExact } from "@/lib/money";
 import { DecisionControls } from "./decision-controls";
 import type { DecideState } from "./state";
 import { ViewRecorder } from "./view-recorder";
+import { RichContent } from "./rich-content";
 
 export type ReviewActions = {
   decide: (decision: PortalDecision, reason: string) => Promise<DecideState>;
@@ -27,6 +28,8 @@ type ReviewViewProps = {
   actions: ReviewActions;
   /** The public address of the contractor's logo, `null` when it has none. */
   logoUrl?: string | null;
+  /** The public address of each picture the version's designed page draws, by upload key. */
+  imageUrls?: Record<string, string>;
 };
 
 const date = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Vancouver" });
@@ -124,7 +127,7 @@ function TemplateText({ label, blocks }: { label: string; blocks: BlockItem[] })
 const DEFAULT_COLUMNS = { description: "Description", visits: "Visits per year", perVisit: "Per visit", perYear: "Per year", total: "Total per year" };
 
 /** What the customer reads: the version's layout in its order (text, service lines, schedule, scope, terms). Every state with content shows this. */
-function Content({ view }: { view: PortalView }) {
+function Content({ view, accent, logoUrl, imageUrls }: { view: PortalView; accent: string; logoUrl: string | null; imageUrls: Record<string, string> }) {
   const terms = view.terms ? termsOf(view.terms, view.term.months) : [];
   const scope = portalScope(view);
   const types = scope.source === "not_recorded" ? [] : scope.types;
@@ -233,6 +236,10 @@ function Content({ view }: { view: PortalView }) {
       return;
     }
     flush();
+    if (item.kind === "rich") {
+      out.push(<RichContent key={`rich-${index}`} nodes={item.nodes} accent={accent} imageUrls={imageUrls} logoUrl={logoUrl} tenantName={view.tenant?.name ?? ""} />);
+      return;
+    }
     out.push(item.kind === "table" ? <TemplateTable key={`table-${index}`} item={item} /> : drawSection(item, index));
   });
   flush();
@@ -243,6 +250,15 @@ function Content({ view }: { view: PortalView }) {
  * The customer's page for one link, branded as the contractor and naming no one else (customer-portal AC 8 to 17).
  * A state with no content shows only its message.
  */
+/** The version's designed header (schema 3), `null` for none; `undefined` for a version that draws the letterhead, or cannot be read. */
+function designedHeader(view: PortalView) {
+  try {
+    return portalLayout(view).header;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The letterhead the version's template asks for; a version whose template cannot be read keeps the default header. */
 function headerOf(view: PortalView): LetterheadOptions {
   try {
@@ -252,7 +268,7 @@ function headerOf(view: PortalView): LetterheadOptions {
   }
 }
 
-export function ReviewView({ token, view, state, actions, logoUrl = null }: ReviewViewProps) {
+export function ReviewView({ token, view, state, actions, logoUrl = null, imageUrls = {} }: ReviewViewProps) {
   const tenantName = view.tenant?.name ?? "the company";
   const accent = view.tenant?.accent && isAccent(view.tenant.accent) ? view.tenant.accent : NEUTRAL_ACCENT;
   const primary = { backgroundColor: accent, color: contrastText(accent) };
@@ -260,6 +276,7 @@ export function ReviewView({ token, view, state, actions, logoUrl = null }: Revi
   const decision = view.decision;
   const showsContent = state === "open" || state === "decided" || state === "superseded";
   const header = headerOf(view);
+  const designed = designedHeader(view);
 
   let message: ReactNode = null;
   if (state === "replaced") {
@@ -290,12 +307,19 @@ export function ReviewView({ token, view, state, actions, logoUrl = null }: Revi
   return (
     <div className="min-h-dvh bg-ground">
       <header className="border-b border-hairline bg-surface">
+        {designed !== undefined ? (
+          <div data-designed-header className="mx-auto max-w-[760px] px-4 py-4">
+            {/* The tenant designed this header, or chose none: then the page still says who sent it. */}
+            {designed === null ? <p className="text-[18px] font-bold break-words">{tenantName}</p> : <RichContent nodes={designed} accent={accent} imageUrls={imageUrls} logoUrl={logoUrl} tenantName={tenantName} bare />}
+          </div>
+        ) : (
         <div className={`mx-auto flex max-w-[760px] flex-col gap-0.5 px-4 py-4 ${header.align === "center" ? "items-center text-center" : ""}`}>
           {logoUrl && header.logo && <TenantLogoImage src={logoUrl} name={tenantName} size={header.logoSize} centered={header.align === "center"} />}
           {header.name && <p className="text-[18px] font-bold break-words">{tenantName}</p>}
           {header.address && view.tenant?.address && <p className="text-[13px] text-ink-2">{view.tenant.address}</p>}
           {header.phone && view.tenant?.phone && <p className="text-[13px] text-ink-2">{view.tenant.phone}</p>}
         </div>
+        )}
       </header>
       <main className="mx-auto flex max-w-[760px] flex-col gap-4 px-4 py-6">
         {showsContent ? (
@@ -315,7 +339,7 @@ export function ReviewView({ token, view, state, actions, logoUrl = null }: Revi
           <h1 className="sr-only">Agreement</h1>
         )}
         {message}
-        {showsContent && <Content view={view} />}
+        {showsContent && <Content view={view} accent={accent} logoUrl={logoUrl} imageUrls={imageUrls} />}
         {state === "open" && (
           <section aria-label="Your answer" className={`${panel} flex flex-col gap-3 px-4 py-4`}>
             <h2 className="text-[15px] font-semibold">Your answer</h2>

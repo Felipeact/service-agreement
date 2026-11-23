@@ -1,54 +1,60 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
-import { bodyFromContractForm, type ContractLayoutForm } from "@/domain/contract/layout-form";
+import { layoutFromRows } from "@/domain/agreement/layout-form";
+import { bodyFromContractRichForm, contractRichWarnings, type ContractRichForm } from "@/domain/contract/rich-form";
+import { richFromLayout, type RichDoc } from "@/domain/rich-document";
 import { ContractImportControl } from "./contract-import-control";
 import { HeaderPopover } from "./block-options";
-import { DocumentEditor } from "./document-editor";
-import { firstErrorRow } from "./first-error-row";
+import type { EditorPageEnv } from "./rich-editor/env";
 import { WORDING_MESSAGES, type ImportContractWordingState, type SaveContractWordingState } from "./state";
 
+/** The Word-style editor is large (ProseMirror and its extensions): it loads in the browser only, after the page. */
+const RichDocumentEditor = dynamic(() => import("./rich-editor/rich-document-editor").then((module) => module.RichDocumentEditor), {
+  ssr: false,
+  loading: () => <div aria-busy="true" aria-label="Loading the editor" className="h-[70dvh] animate-pulse rounded-panel border border-hairline bg-surface shadow-card motion-reduce:animate-none" />,
+}) as typeof import("./rich-editor/rich-document-editor").RichDocumentEditor;
+
 type Props = {
-  initial: ContractLayoutForm;
-  save: (input: ContractLayoutForm) => Promise<SaveContractWordingState>;
-  /** Reads an uploaded contract into rows; without it the editor shows no Import control. */
+  initial: ContractRichForm;
+  save: (input: ContractRichForm) => Promise<SaveContractWordingState>;
+  /** Reads an uploaded contract into the page; without it the editor shows no Import control. */
   importAction?: (formData: FormData) => Promise<ImportContractWordingState>;
-  /** The company's name, for the page's letterhead. */
-  orgName?: string;
+  env: EditorPageEnv;
 };
 
-const canDrawWording = (values: ContractLayoutForm) => bodyFromContractForm(values).ok;
-
 /**
- * The contract wording in the shared document editor (template-editor-v2 S5): the same page, panel and rows as an agreement template, with
- * the signatures part among them. Saving writes the next version; what was typed stays on a refusal.
+ * The contract wording on the Word-style page, with the signatures section the signing service needs (it cannot be removed). Saving
+ * writes the next version; what was typed stays on a refusal. An imported contract replaces the page in one step that Undo reverses.
  */
-export function ContractWordingEditor({ initial, save, importAction, orgName = "Your company" }: Props) {
+export function ContractWordingEditor({ initial, save, importAction, env }: Props) {
   const [values, setValues] = useState(initial);
-  // The rows as last saved (or as loaded), so an import knows whether it would overwrite edits (contract-import AC 15).
+  // The page as last saved (or as loaded), so an import knows whether it would overwrite edits (contract-import AC 15).
   const [baseline, setBaseline] = useState(initial);
   const [importedFrom, setImportedFrom] = useState<string | null>(null);
+  const [replace, setReplace] = useState<{ content: RichDoc; token: number } | null>(null);
   const [state, setState] = useState<SaveContractWordingState>({ status: "idle" });
-  const [jump, setJump] = useState<{ row: number; token: number } | null>(null);
   const [pending, start] = useTransition();
 
   const saveErrors = state.status === "invalid" ? state.errors : {};
-  const live = bodyFromContractForm(values);
+  const live = bodyFromContractRichForm(values);
   const errors = { ...(live.ok ? {} : live.errors), ...saveErrors };
   const failed = state.status === "forbidden" || state.status === "not_found" || state.status === "unavailable";
   const dirty = JSON.stringify(values) !== JSON.stringify(baseline);
 
   return (
-    <DocumentEditor
+    <RichDocumentEditor
       document="contract"
-      orgName={orgName}
+      env={env}
       values={values}
       onChange={(next) => {
-        // A row added or removed shifts the numbers a save's messages were written for.
-        if (state.status === "invalid" && next.layout.length !== values.layout.length) setState({ status: "idle" });
+        if (state.status === "invalid" || state.status === "saved") setState({ status: "idle" });
         setValues(next);
       }}
       errors={errors}
+      warnings={contractRichWarnings(values)}
+      heading={<h2 className="px-2 text-[15px] font-semibold tracking-tight">Contract wording</h2>}
       extra={
         importAction && (
           <HeaderPopover label="Import contract">
@@ -56,7 +62,9 @@ export function ContractWordingEditor({ initial, save, importAction, orgName = "
               importAction={importAction}
               dirty={dirty}
               onImported={(form, fileName) => {
-                setValues(form);
+                const content = richFromLayout(layoutFromRows(form.layout));
+                setValues((was) => ({ doc: form.doc, content, header: was.header }));
+                setReplace((was) => ({ content, token: (was?.token ?? 0) + 1 }));
                 setImportedFrom(fileName);
                 setState({ status: "idle" });
               }}
@@ -65,10 +73,10 @@ export function ContractWordingEditor({ initial, save, importAction, orgName = "
         )
       }
       dirty={dirty}
-      preview={{ endpoint: "/templates/contract/preview", canDraw: canDrawWording, frameTitle: "Contract PDF preview" }}
+      preview={{ endpoint: "/templates/contract/render", fileName: "contract preview.pdf", frameTitle: "Contract PDF preview", note: "Drawn on sample data or the agreement you choose. Nothing is saved or sent from here." }}
       saveLabel="Save wording"
       pending={pending}
-      jumpTo={jump}
+      replaceContent={replace}
       notices={
         <>
           {importedFrom && (
@@ -78,7 +86,7 @@ export function ContractWordingEditor({ initial, save, importAction, orgName = "
           )}
           {Object.keys(saveErrors).length > 0 && (
             <p role="alert" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
-              Fix the highlighted fields, then save again. Nothing you typed is lost.
+              Fix what is listed under Before you save, then save again. Nothing you typed is lost.
             </p>
           )}
           {failed && (
@@ -93,18 +101,15 @@ export function ContractWordingEditor({ initial, save, importAction, orgName = "
           )}
         </>
       }
-      onSubmit={() =>
+      onSubmit={(latest) =>
         start(async () => {
-          const answer = await save(values);
+          setValues(latest);
+          const answer = await save(latest);
           if (answer.status === "saved") {
-            setBaseline(values);
+            setBaseline(latest);
             setImportedFrom(null);
           }
           setState(answer);
-          if (answer.status === "invalid") {
-            const row = firstErrorRow(answer.errors);
-            if (row !== null) setJump((was) => ({ row, token: (was?.token ?? 0) + 1 }));
-          }
         })
       }
       cancelHref="/templates"

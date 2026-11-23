@@ -195,7 +195,7 @@ describe("validateAgreementTemplate, schema 2", () => {
   test("C5512: schema 1 is still accepted, and a schema 2 body that carries the schema 1 keys is refused", () => {
     expect(validateAgreementTemplate(SYSTEM_AGREEMENT_BODY).ok).toBe(true);
     expect(reasonOf({ ...body(), intro: [] })).toContain("schema 2");
-    expect(reasonOf({ schema: 3 })).toContain("schemas 1 and 2");
+    expect(reasonOf({ schema: 4 })).toContain("schemas 1, 2 and 3");
   });
 
   test("C5512: the section options are checked: an unknown option, a bad column set, a bad visits format and an unknown variable", () => {

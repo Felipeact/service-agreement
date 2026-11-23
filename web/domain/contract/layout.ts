@@ -1,4 +1,4 @@
-import { SAMPLE } from "../agreement/template-preview";
+import { SAMPLE, SAMPLE_SCOPE } from "../agreement/template-preview";
 import { CONTRACT_SECTION_KEYS, validateLayout, type BlockItem, type DocOptions, type LayoutBody, type LayoutItem } from "../agreement/layout";
 import type { AgreementTerms, DocumentSource, DocumentSourceLine } from "../agreement";
 import { DEFAULT_ITEM_WORDS, type ItemWords, type OrgSettingsValue } from "../org-settings";
@@ -7,12 +7,22 @@ import { buildContractDocument, type ContractDocument } from "./document";
 import type { ContractParties } from "./parties";
 import { validateBlocks, type BlockType, type TemplateBody } from "./template";
 import { isRecord } from "../guards";
+import { headerProblems } from "../agreement/template";
+import { renderRichDoc } from "../rich-document/render";
+import { validateRichDoc } from "../rich-document/validate";
+import type { RichDoc } from "../rich-document/types";
 
 /** Schema 2 of the contract wording (block-editor door 1): the document options and the layout, with the signatures section in it. */
 export type ContractLayoutBody = { schema: 2; doc: DocOptions; layout: LayoutItem[] };
 
-/** What a stored contract template version holds: schema 1 blocks or schema 2 layout. */
-export type ContractWordingBody = TemplateBody | ContractLayoutBody;
+/** Schema 3 (rich-templates): the document options and a designed page, which must hold the signatures section once. */
+export type ContractRichBody = { schema: 3; doc: DocOptions; content: RichDoc; header?: RichDoc | null };
+
+/** What a stored contract template version holds: schema 1 blocks, a schema 2 layout or a schema 3 designed page. */
+export type ContractWordingBody = TemplateBody | ContractLayoutBody | ContractRichBody;
+
+/** A designed page may hold far more than a layout; the database caps a schema 3 body at 512 KB of jsonb text. */
+export const MAX_RICH_WORDING_JSON_LENGTH = 400_000;
 
 export const DEFAULT_CONTRACT_DOC: DocOptions = { title: "Service Contract", showMeta: true, pageHeader: "first", pageFooter: "number" };
 
@@ -37,6 +47,7 @@ export function legacyContractLayout(blocks: readonly { type: BlockType; text: s
 /** A contract wording's layout and options: schema 1 as the code drew it before, schema 2 as stored. */
 export function contractLayoutOf(body: ContractWordingBody): LayoutBody {
   if (body.schema === 2) return { doc: body.doc, layout: body.layout };
+  if (body.schema === 3) return { doc: body.doc, layout: renderRichDoc(body.content, null) };
   return { doc: { ...DEFAULT_CONTRACT_DOC }, layout: legacyContractLayout(body.blocks) };
 }
 
@@ -48,9 +59,25 @@ export type ContractWordingValidation = { ok: true; body: ContractWordingBody } 
  * Whether `input` is contract wording this product can store and draw: schema 1 as `validateBlocks` reads it, or schema 2 with the
  * document options and a layout that holds the price table and the signatures section once each, and no `terms` section.
  */
-export function validateContractWording(input: unknown): ContractWordingValidation {
+export function validateContractWording(input: unknown, options: { orgId?: string } = {}): ContractWordingValidation {
   const fail = (errors: ContractWordingError[]): ContractWordingValidation => ({ ok: false, reason: errors[0].message, errors });
   if (!isRecord(input)) return fail([{ field: "body", message: "The wording is not an object." }]);
+
+  if (input.schema === 3) {
+    const keys = ["schema", "doc", "content"];
+    const off = [...Object.keys(input).filter((key) => ![...keys, "header"].includes(key)), ...keys.filter((key) => !(key in input))];
+    if (off.length > 0) return fail([{ field: "body", message: `A schema 3 wording has the keys ${keys.join(", ")} and may have a header; check ${off[0]}.` }]);
+    // The signatures section carries the signing tags DocuSeal reads, so a contract page must hold it once; the price table is optional.
+    const errors = [
+      ...validateLayout({ doc: input.doc, layout: [] }, { sections: CONTRACT_SECTION_KEYS, required: [], noun: "contract" }),
+      ...validateRichDoc(input.content, { sections: CONTRACT_SECTION_KEYS, required: ["signatures"], noun: "contract", orgId: options.orgId }),
+      ...headerProblems(input, "contract", options.orgId),
+    ];
+    if (errors.length === 0 && JSON.stringify(input).length > MAX_RICH_WORDING_JSON_LENGTH) {
+      return fail([{ field: "body", message: "The wording is too long to save. Shorten the texts or remove some tables." }]);
+    }
+    return errors.length > 0 ? fail(errors) : { ok: true, body: input as ContractRichBody };
+  }
 
   if (input.schema === 2) {
     const keys = ["schema", "doc", "layout"];
@@ -115,7 +142,8 @@ export function buildContractPreviewDocument(
     site: { name: CONTRACT_SAMPLE.site },
     editable: false,
     shown: { versionNo: 1, lines: [SAMPLE_LINE], annualCents: SAMPLE_LINE.annualCents },
-    serviceScope: { source: "live", takenAt: null, types: [] },
+    // A designed page is previewed on sample equipment, so its service included and equipment sections show what they look like.
+    serviceScope: { source: "live", takenAt: null, types: body.schema === 3 ? SAMPLE_SCOPE : [] },
     terms,
     term: { start: today, months: settings.defaultTermMonths, end: termEnd(today, settings.defaultTermMonths) },
     validUntil: null,

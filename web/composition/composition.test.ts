@@ -69,7 +69,8 @@ describe("composition root", () => {
     const source = readFileSync(path.join(__dirname, "index.ts"), "utf8");
     expect(source).toContain("contractReader: supabaseContractReader(supabase)");
     expect(source).toContain("contractStore: supabaseContractStore(supabase)");
-    expect(source).toContain("contractRenderer: reactPdfContractRenderer");
+    expect(source).toContain("contractRenderer: renderers.contractRenderer");
+    expect(source).toContain("const renderers = reactPdfRenderers(templateImages.load);");
     expect(Object.keys(container).filter((key) => /^generateContract|^createContract/.test(key))).toEqual([]);
 
     // The action that generates a contract reaches the container for the member and for the contract store only.
@@ -334,7 +335,7 @@ describe("composition root", () => {
     const { getContainer } = await import("./index");
     const container = await getContainer();
     expect(typeof container.documentRenderer.renderAgreement).toBe("function");
-    expect(readFileSync(path.join(__dirname, "index.ts"), "utf8")).toMatch(/documentRenderer: reactPdfDocumentRenderer,/);
+    expect(readFileSync(path.join(__dirname, "index.ts"), "utf8")).toMatch(/documentRenderer: renderers\.documentRenderer,/);
   });
 
   test("C745: the agreement adapters are built from the request's one member client", () => {

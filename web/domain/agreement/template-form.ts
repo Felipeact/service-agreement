@@ -30,8 +30,8 @@ const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 /** The editor's starting values for a stored body. */
 export function templateFormFromBody(body: AgreementTemplateBody): TemplateFormInput {
   // A schema 2 body is read as a schema 1 form until the block editor replaces this form (block-editor S4).
-  const { intro, footer } = body.schema === 2 ? introAndFooter(body.layout) : body;
-  const { schedule, scope } = body.schema === 2 ? sectionFlags(body.layout) : body.sections;
+  const { intro, footer } = body.schema === 1 ? body : introAndFooter(layoutOf(body).layout);
+  const { schedule, scope } = body.schema === 1 ? body.sections : sectionFlags(layoutOf(body).layout);
   return {
     name: body.name,
     description: body.description,
@@ -50,7 +50,7 @@ export function templateFormFromBody(body: AgreementTemplateBody): TemplateFormI
 }
 
 /** The preset of a form: the term and each line's price as typed, with a message in `errors` for one that is not a number. */
-function presetFromForm(input: { termMonths: string; lines: TemplateFormLine[] }, errors: TemplateFormErrors): AgreementTemplateBody["preset"] {
+export function presetFromForm(input: { termMonths: string; lines: TemplateFormLine[] }, errors: TemplateFormErrors): AgreementTemplateBody["preset"] {
   const termText = input.termMonths.trim();
   let termMonths: number | null = null;
   if (termText !== "") {
@@ -106,7 +106,7 @@ const isStrings = (value: unknown): value is string[] => Array.isArray(value) &&
 const isMonths = (value: unknown): value is number[] => Array.isArray(value) && value.every((item) => Number.isInteger(item));
 
 /** The preset lines of a posted value: a list of at most 20, each with the editor's own field types. */
-function readPresetLines(value: unknown): { ok: true; lines: TemplateFormLine[] } | { ok: false; errors: FieldError[] } {
+export function readPresetLines(value: unknown): { ok: true; lines: TemplateFormLine[] } | { ok: false; errors: FieldError[] } {
   const bad = (field: string, message: string) => ({ ok: false as const, errors: [{ field, message }] });
   if (!Array.isArray(value)) return bad("preset.lines", "The preset lines must be a list.");
   if (value.length > MAX_PRESET_LINES) return bad("preset.lines", `A template can have at most ${MAX_PRESET_LINES} lines.`);
@@ -185,7 +185,7 @@ export function layoutFormFromBody(body: AgreementTemplateBody): AgreementLayout
 }
 
 /** The preset fields of a stored body in the editor's typed shape, shared by both forms. */
-function templateFormFromBodyFields(body: AgreementTemplateBody) {
+export function templateFormFromBodyFields(body: AgreementTemplateBody) {
   return {
     name: body.name,
     description: body.description,

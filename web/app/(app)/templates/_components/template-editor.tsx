@@ -1,55 +1,59 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
-import { previewBodyFromLayoutForm, type AgreementLayoutForm } from "@/domain/agreement/template-form";
+import { agreementRichWarnings, previewBodyFromRichForm, type AgreementRichForm } from "@/domain/agreement/rich-form";
 import { DetailsFields, PresetLines } from "./block-options";
-import { DocumentEditor } from "./document-editor";
-import { firstErrorRow } from "./first-error-row";
+import type { EditorPageEnv } from "./rich-editor/env";
 import { SAVE_MESSAGES, type SaveTemplateState } from "./state";
+
+/** The Word-style editor is large (ProseMirror and its extensions): it loads in the browser only, after the page. */
+const RichDocumentEditor = dynamic(() => import("./rich-editor/rich-document-editor").then((module) => module.RichDocumentEditor), {
+  ssr: false,
+  loading: () => <div aria-busy="true" aria-label="Loading the editor" className="h-[70dvh] animate-pulse rounded-panel border border-hairline bg-surface shadow-card motion-reduce:animate-none" />,
+}) as typeof import("./rich-editor/rich-document-editor").RichDocumentEditor;
 
 export type TemplateTypeOption = { code: string; name: string };
 
-type SaveAction = (templateId: string | null, input: AgreementLayoutForm) => Promise<SaveTemplateState>;
+type SaveAction = (templateId: string | null, input: AgreementRichForm) => Promise<SaveTemplateState>;
 
 type EditorProps = {
   /** `null` for a new template. */
   templateId: string | null;
-  initial: AgreementLayoutForm;
+  initial: AgreementRichForm;
   types: TemplateTypeOption[];
   save: SaveAction;
-  /** The company's name, for the page's letterhead. */
-  orgName?: string;
+  env: EditorPageEnv;
+  /** Shown above the page: an older template opened in this editor is saved as a designed page. */
+  converted?: boolean;
 };
 
-const canDrawLayout = (values: AgreementLayoutForm) => previewBodyFromLayoutForm(values).ok;
-
 /**
- * The agreement template editor: the shared document editor with the template's name, description, term length and preset lines. It holds
+ * The agreement template editor: the Word-style page with the template's name, description, term length and preset lines. It holds
  * what is typed, sends it to the save action, and keeps it on the page when the answer is a refusal.
  */
-export function TemplateEditor({ templateId, initial, types, save, orgName = "Your company" }: EditorProps) {
+export function TemplateEditor({ templateId, initial, types, save, env, converted = false }: EditorProps) {
   const [values, setValues] = useState(initial);
   const [state, setState] = useState<SaveTemplateState>({ status: "idle" });
-  const [jump, setJump] = useState<{ row: number; token: number } | null>(null);
   const [pending, start] = useTransition();
 
   const saveErrors = state.status === "invalid" ? state.errors : {};
-  // The fields the preview cannot draw are highlighted as they are typed; the name is only required to save, so it waits for a save.
-  const live = previewBodyFromLayoutForm(values);
+  // What the page cannot be saved as shows while designing; the name is only required to save, so it waits for a save.
+  const live = previewBodyFromRichForm(values);
   const errors = { ...(live.ok ? {} : live.errors), ...saveErrors };
   const message = state.status === "idle" || state.status === "invalid" ? null : SAVE_MESSAGES[state.status];
 
   return (
-    <DocumentEditor
+    <RichDocumentEditor
       document="agreement"
-      orgName={orgName}
+      env={env}
       values={values}
       onChange={(next) => {
-        // A row added, removed or moved shifts the numbers a save's messages were written for.
-        if (state.status === "invalid" && next.layout.length !== values.layout.length) setState({ status: "idle" });
-        setValues(next as AgreementLayoutForm);
+        if (state.status === "invalid") setState({ status: "idle" });
+        setValues(next);
       }}
       errors={errors}
+      warnings={agreementRichWarnings(values)}
       heading={
         <div className="flex flex-col gap-0.5">
           <label htmlFor="template-name" className="sr-only">
@@ -69,17 +73,21 @@ export function TemplateEditor({ templateId, initial, types, save, orgName = "Yo
       }
       details={<DetailsFields description={values.description} termMonths={values.termMonths} errors={errors} onChange={(change) => setValues({ ...values, ...change })} />}
       presetLines={values.lines}
-      partExtras={(key) => (key === "price" ? <PresetLines lines={values.lines} types={types} errors={errors} onChange={(lines) => setValues({ ...values, lines })} /> : null)}
+      partExtras={(key) => (key === "price" ? <PresetLines lines={values.lines} types={types} errors={errors} onChange={(lines) => setValues((was) => ({ ...was, lines }))} /> : null)}
       dirty={JSON.stringify(values) !== JSON.stringify(initial)}
-      preview={{ endpoint: "/templates/preview", canDraw: canDrawLayout, frameTitle: "Agreement PDF preview" }}
+      preview={{ endpoint: "/templates/preview", fileName: `${values.name.trim() || "template"} preview.pdf`, frameTitle: "Agreement PDF preview", note: "Marked TEMPLATE PREVIEW on every page. Nothing is saved or sent from here." }}
       saveLabel="Save template"
       pending={pending}
-      jumpTo={jump}
       notices={
         <>
+          {converted && (
+            <p role="status" className="rounded-control bg-ground px-3 py-2 text-[13px] font-medium text-ink">
+              This template opens in the new page editor. Saving updates it; agreements already sent keep the version they used.
+            </p>
+          )}
           {Object.keys(saveErrors).length > 0 && (
             <p role="alert" className="rounded-control bg-attention-bg px-3 py-2 text-[13px] font-medium text-attention-fg">
-              Fix the highlighted fields, then save again. Nothing you typed is lost.
+              Fix what is listed under Before you save, then save again. Nothing you typed is lost.
             </p>
           )}
           {message && (
@@ -89,14 +97,10 @@ export function TemplateEditor({ templateId, initial, types, save, orgName = "Yo
           )}
         </>
       }
-      onSubmit={() =>
+      onSubmit={(latest) =>
         start(async () => {
-          const answer = await save(templateId, values);
-          setState(answer);
-          if (answer.status === "invalid") {
-            const row = firstErrorRow(answer.errors);
-            if (row !== null) setJump((was) => ({ row, token: (was?.token ?? 0) + 1 }));
-          }
+          setValues(latest);
+          setState(await save(templateId, latest));
         })
       }
       cancelHref="/templates"

@@ -71,13 +71,16 @@ describe("/templates/[templateId]", () => {
 
   test.each(["owner", "admin"] as const)("C5547: a %s gets the block editor filled with the latest version's rows and told which version saving writes", async (role) => {
     currentMember.mockResolvedValue(member(role));
-    const html = renderToStaticMarkup((await EditTemplateForRequest({ templateId: OWN })) as ReactElement);
+    const node = (await EditTemplateForRequest({ templateId: OWN })) as ReactElement;
+    const html = renderToStaticMarkup(node);
     expect(html).toContain("Edit template");
     expect(html).toContain("Saving writes version 5.");
-    expect(html).toMatch(/id="template-name"[^>]*value="Quarterly HVAC"/);
-    // A schema 1 body opens as its layoutOf rows: the closing clause is the last block on the page, after the terms.
-    expect(html.indexOf("Thank you.")).toBeGreaterThan(html.indexOf("Select Terms"));
-    expect(html).toContain('id="document-title"');
-    expect(html).toContain("Preventive maintenance service agreement");
+    // The Word-style editor loads in the browser; the page hands it the template opened as a page.
+    const props = JSON.stringify(node, (_key, value) => (typeof value === "function" ? undefined : value));
+    expect(props).toContain('"name":"Quarterly HVAC"');
+    expect(props).toContain("Preventive maintenance service agreement");
+    // A schema 1 body opens as its layout did: the closing clause comes after the terms, and is left out when a field is empty.
+    expect(props.indexOf("Thank you.")).toBeGreaterThan(props.indexOf('"key":"terms"'));
+    expect(props).toContain('"converted":true');
   });
 });

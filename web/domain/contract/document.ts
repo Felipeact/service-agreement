@@ -3,13 +3,15 @@ import { contractLayoutOf, legacyContractLayout, type ContractWordingBody } from
 import { DEFAULT_ITEM_WORDS, type ItemWords } from "../org-settings";
 import type { TenantLogo } from "../org-settings/logo";
 import type { ContractParties } from "./parties";
+import { renderRichDoc } from "../rich-document/render";
+import { renderRichHeader } from "../rich-document/header";
 import { fillVariables, renderBlocks, SYSTEM_CONTRACT_BODY, templateValues, type RenderedBlock } from "./template";
 
 /**
  * Everything one rendered contract says, decided and ordered, with no layout in it. The agreement's lines, schedule,
  * scope and term come from the accepted version; who is bound comes from the contract's own parties.
  */
-export type ContractDocument = Pick<AgreementDocument, "number" | "versionNo" | "lines" | "totalCents" | "schedule" | "scope" | "term" | "layout" | "doc" | "frequencies"> & {
+export type ContractDocument = Pick<AgreementDocument, "number" | "versionNo" | "lines" | "totalCents" | "schedule" | "scope" | "term" | "layout" | "doc" | "frequencies" | "images" | "header"> & {
   contractor: { name: string; address: string | null; phone: string | null; accent: string; logo?: TenantLogo };
   /** The org's item words, for the covered-items section (item-vocabulary AC 9). */
   words?: ItemWords;
@@ -50,7 +52,10 @@ export function buildContractDocument(
   const { doc, layout } =
     template.schema === 1
       ? { doc: contractLayoutOf(template).doc, layout: legacyContractLayout(wording ?? [], true) }
-      : { doc: { ...template.doc, title: fillVariables(template.doc.title, values).text }, layout: renderLayout(template.layout, values) };
+      : {
+          doc: { ...template.doc, title: fillVariables(template.doc.title, values).text },
+          layout: template.schema === 3 ? renderRichDoc(template.content, values) : renderLayout(template.layout, values),
+        };
   const included = sectionOptions(layout, "included") as IncludedOptions | undefined;
   return {
     number: source.number,
@@ -70,6 +75,7 @@ export function buildContractDocument(
     mark: null,
     layout,
     doc,
+    ...(template.schema === 3 && template.header !== undefined ? { header: template.header === null ? null : renderRichHeader(template.header, values) } : {}),
     ...(included?.showFrequency ? { frequencies: typeFrequencies(source.shown.lines, body.scope.kind === "listed" ? body.scope.types : []) } : {}),
   };
 }
