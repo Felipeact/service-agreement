@@ -5,6 +5,13 @@ import { SiteShell } from "@/components/site/site-shell";
 
 export const metadata: Metadata = { title: "Contact" };
 
+/** The three public mailboxes and what each is for. */
+const MAILBOXES = [
+  { address: SITE.salesEmail, purpose: "Pricing, plans and whether it fits your business." },
+  { address: SITE.supportEmail, purpose: "Help for members: sign-in, imports, agreements, billing." },
+  { address: SITE.contactEmail, purpose: "Anything else, including legal and press." },
+] as const;
+
 export default function ContactPage() {
   return (
     <SiteShell>
@@ -13,9 +20,14 @@ export default function ContactPage() {
         <Wrap className="grid gap-6 py-14 md:grid-cols-2 lg:py-20">
           <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-ground p-6">
             <h2 className="font-display text-[20px] font-semibold tracking-tight">Email</h2>
-            <a href={`mailto:${SITE.contactEmail}`} className="inline-flex min-h-11 w-fit items-center text-[16px] font-semibold text-action hover:underline">
-              {SITE.contactEmail}
-            </a>
+            {MAILBOXES.map((mailbox) => (
+              <div key={mailbox.address} className="flex flex-col">
+                <a href={`mailto:${mailbox.address}`} className="inline-flex min-h-11 w-fit items-center text-[16px] font-semibold text-action hover:underline">
+                  {mailbox.address}
+                </a>
+                <p className="text-ink-2">{mailbox.purpose}</p>
+              </div>
+            ))}
             <p className="text-ink-2">Tell us your trade, roughly how many agreements you run, and what you quote from today.</p>
           </div>
           <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-ground p-6">
