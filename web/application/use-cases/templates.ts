@@ -5,15 +5,16 @@ import type { AgreementTemplateReader, AgreementTemplateStore, AgreementTemplate
 export type TemplateListResult = { ok: true; templates: AgreementTemplateSummary[] } | { ok: false; code: "unavailable" };
 
 /**
- * What the Templates screen lists: the org's own non-archived agreement templates, or, while it has none, the system template as
- * the one choice (agreement-templates AC 17). The reader returns both because RLS shows both.
+ * What the Templates screen lists: the org's own non-archived agreement templates, then the built-in system template (owner's
+ * decision 2026-11-24, replacing agreement-templates AC 17, which listed it only while the org had none). The reader returns both because RLS shows both.
  */
 export function makeListAgreementTemplates(reader: AgreementTemplateReader) {
   return async function listAgreementTemplates(): Promise<TemplateListResult> {
     const read = await reader.list();
     if (!read.ok) return read;
     const own = read.templates.filter((template) => !template.system);
-    return { ok: true, templates: own.length > 0 ? own : read.templates.filter((template) => template.system) };
+    // The built-in "Standard agreement" is always listed, after the org's own, so it can be previewed and customized into the org's own.
+    return { ok: true, templates: [...own, ...read.templates.filter((template) => template.system)] };
   };
 }
 

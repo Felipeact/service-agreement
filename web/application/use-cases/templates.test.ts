@@ -18,9 +18,9 @@ const summary = (id: string, name: string, system = false): AgreementTemplateSum
 const reader = (templates: AgreementTemplateSummary[]): AgreementTemplateReader => ({ list: async () => ({ ok: true, templates }) });
 
 describe("the list the Templates screen shows", () => {
-  test("C5425: when the org has its own templates the list holds only those, and the system template is not a card", async () => {
+  test("C5425: the org's own templates come first and the built-in system template is the last card", async () => {
     const listed = await makeListAgreementTemplates(reader([summary("a", "Annual plan"), summary("s", "Standard agreement", true), summary("q", "Quarterly HVAC")]))();
-    expect(listed.ok && listed.templates.map((template) => template.body.name)).toEqual(["Annual plan", "Quarterly HVAC"]);
+    expect(listed.ok && listed.templates.map((template) => template.body.name)).toEqual(["Annual plan", "Quarterly HVAC", "Standard agreement"]);
   });
 
   test("C5425: with none of its own the org sees the system template as the one card", async () => {
@@ -88,7 +88,7 @@ describe("the starter templates", () => {
     const ensure = makeEnsureStarterTemplates(live, store);
 
     const first = await ensure();
-    expect(first.ok && first.templates.map((template) => template.body.name)).toEqual(STARTER_TEMPLATES.map((body) => body.name));
+    expect(first.ok && first.templates.map((template) => template.body.name)).toEqual([...STARTER_TEMPLATES.map((body) => body.name), "Standard agreement"]);
     expect(store.save).toHaveBeenCalledTimes(STARTER_TEMPLATES.length);
 
     await ensure();
