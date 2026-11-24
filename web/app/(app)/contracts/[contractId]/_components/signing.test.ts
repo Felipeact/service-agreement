@@ -126,6 +126,9 @@ describe("the countersignature", () => {
     const markup = html({ role, contractStatus: "client_signed", request: request("open"), contractorSrc: EMBED });
     expect(markup).toContain(`data-docuseal-form="${EMBED}"`);
     expect(markup).toContain('data-email="dana@example.com"');
+    // The same fallback the customer's page has, for a form that does not render.
+    expect(markup).toContain("Open signing page");
+    expect(markup).toContain(`href="${EMBED}"`);
   });
 
   test("C1710: a pending contract with an open request says it waits for the customer and shows no contractor form", () => {

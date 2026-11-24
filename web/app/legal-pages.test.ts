@@ -3,7 +3,7 @@ import path from "node:path";
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
-import { FOOTER_LINKS } from "@/components/site/content";
+import { FOOTER_LINKS, HOSTING_APP, HOSTING_DATABASE, HOSTING_PROVIDERS } from "@/components/site/content";
 import { RegisterFields } from "@/app/register/register-fields";
 import { INITIAL_PRICING_STATE } from "@/app/register/state";
 
@@ -38,13 +38,23 @@ describe("public legal pages", () => {
     expect(html.indexOf("Continue to secure checkout")).toBeLessThan(html.indexOf('href="/terms"'));
   });
 
-  test("C6026: /security names no hosting region while the region is unverified", () => {
+  test("C6026: /security states the verified database region, says the app server region is unconfirmed, and names no other", () => {
     // The page body only: the shared footer says "Built for Canada outside Quebec", which is not a hosting claim.
-    const shown = text(render(pages[2][1]).split("<main>")[1].split("</main>")[0]).toLowerCase();
-    for (const region of ["canada", "us-east", "us-west", "ca-central", "eu-", "ireland", "frankfurt", "virginia", "oregon", "toronto", "montreal"]) {
-      expect(shown, region).not.toContain(region);
+    const shown = text(render(pages[2][1]).split("<main>")[1].split("</main>")[0]);
+    expect(shown).toContain(HOSTING_DATABASE);
+    expect(shown).toContain(HOSTING_APP);
+    expect(shown).toContain(HOSTING_PROVIDERS);
+    // Railway's region is not verified, so no region other than the database's may appear.
+    const rest = shown.replace(HOSTING_DATABASE, "").toLowerCase();
+    for (const region of ["us-east", "us-west", "eu-", "ireland", "frankfurt", "virginia", "oregon", "toronto", "montreal", "calgary"]) {
+      expect(rest, region).not.toContain(region);
     }
-    expect(shown).toContain("we have not yet confirmed");
+  });
+
+  test("C6027: /terms carries a marked placeholder for the limitation of liability, governing law and e-signature wording", () => {
+    const shown = text(render(pages[0][1]));
+    expect(shown).toContain("Limitation of liability, governing law and electronic signatures (placeholder)");
+    expect(shown).toContain("waiting for a lawyer");
   });
 
   test("C6026: every factual claim on /security has its source in the repo", () => {

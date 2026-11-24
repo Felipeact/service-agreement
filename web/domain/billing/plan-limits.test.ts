@@ -60,9 +60,9 @@ describe("what is left and the tokens line", () => {
 
 describe("importsLeftLine", () => {
   test.each([
-    [{ used: 6, limit: 120 }, "114 AI imports left this month"],
-    [{ used: 119, limit: 120 }, "1 AI import left this month"],
-    [{ used: 130, limit: 120 }, "No AI imports left this month"],
+    [{ used: 6, limit: 120 }, "6 of 120 AI imports used this month, 114 left"],
+    [{ used: 119, limit: 120 }, "119 of 120 AI imports used this month, 1 left"],
+    [{ used: 130, limit: 120 }, "130 of 120 AI imports used this month. None left"],
     [{ used: 5, limit: null }, null],
   ])("%j", (figure, line) => {
     expect(importsLeftLine(figure)).toBe(line);

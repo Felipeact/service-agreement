@@ -189,9 +189,9 @@ describe("the contract PDF, rendered", () => {
 describe("the DocuSeal tags in the signature blocks", () => {
   const TAGS = [
     "{{Sig;role=Customer;type=signature}}",
-    "{{Date;role=Customer;type=date}}",
+    "{{Date;role=Customer;type=date;format=YYYY-MM-DD}}",
     "{{Sig;role=Contractor;type=signature}}",
-    "{{Date;role=Contractor;type=date}}",
+    "{{Date;role=Contractor;type=date;format=YYYY-MM-DD}}",
   ];
   const compact = (all: string[]) => unwrapped(all).replace(/\s+/g, "");
 
@@ -404,7 +404,7 @@ describe("the contract PDF, layout and options (block-editor)", () => {
     expect(joined.split("Signature\n").length - 1).toBe(2);
     expect(joined.split("Date\n").length - 1).toBe(2);
     const squeezed = flat(all);
-    for (const tag of ["{{Sig;role=Customer;type=signature}}", "{{Date;role=Customer;type=date}}", "{{Sig;role=Contractor;type=signature}}", "{{Date;role=Contractor;type=date}}"]) {
+    for (const tag of ["{{Sig;role=Customer;type=signature}}", "{{Date;role=Customer;type=date;format=YYYY-MM-DD}}", "{{Sig;role=Contractor;type=signature}}", "{{Date;role=Contractor;type=date;format=YYYY-MM-DD}}"]) {
       expect(squeezed.split(tag).length - 1, tag).toBe(1);
     }
     expect(joined).not.toContain("Name & title");
@@ -445,12 +445,12 @@ describe("the contract PDF, layout and options (block-editor)", () => {
     expect(squeezed.indexOf(tag)).toBeGreaterThan(customer);
     expect(squeezed.indexOf(tag)).toBeLessThan(contractor);
     // The existing four tags are still there.
-    for (const kept of ["{{Sig;role=Customer;type=signature}}", "{{Date;role=Customer;type=date}}", "{{Sig;role=Contractor;type=signature}}", "{{Date;role=Contractor;type=date}}"]) expect(squeezed).toContain(kept);
+    for (const kept of ["{{Sig;role=Customer;type=signature}}", "{{Date;role=Customer;type=date;format=YYYY-MM-DD}}", "{{Sig;role=Contractor;type=signature}}", "{{Date;role=Contractor;type=date;format=YYYY-MM-DD}}"]) expect(squeezed).toContain(kept);
   });
 
   test("C5524: the signature tags are exported with the new Name tag text", () => {
     expect(customerNameTag).toBe("{{Name;role=Customer;type=text}}");
-    expect(signerTags("Customer")).toEqual({ signature: "{{Sig;role=Customer;type=signature}}", date: "{{Date;role=Customer;type=date}}" });
+    expect(signerTags("Customer")).toEqual({ signature: "{{Sig;role=Customer;type=signature}}", date: "{{Date;role=Customer;type=date;format=YYYY-MM-DD}}" });
   });
 
   test("C5526: a contract built from a schema 1 body or the system wording prints the same text as the document without a layout", async () => {

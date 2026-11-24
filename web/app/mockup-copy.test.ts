@@ -108,13 +108,22 @@ const CASES: Record<string, Case> = {
   },
 };
 
-describe.skipIf(!existsSync(DOCS))("pages match the owner's mockups, text for text", () => {
+/**
+ * Decided 2026-11-23 (claims review): the mockups carried claims the product cannot back (a SOC 2 badge, invented customers,
+ * statistics, testimonials, integrations that do not exist), so the pages now differ from them on purpose. What differs is
+ * recorded, run by run, in the snapshot beside this file. A page may not drift from the mockup in any other way: a new
+ * difference fails here until someone reads it and updates the snapshot with `vitest -u`. That update is the review step.
+ * The banned claims themselves are checked by public-claims.test.ts, which does not depend on the mockups.
+ */
+describe.skipIf(!existsSync(DOCS))("pages match the owner's mockups, except where the claims review changed them", () => {
   test.each(Object.entries(CASES))("%s", async (_route, { mockup, render, conditional = [], extra: allowedExtra = [] }) => {
     const expected = textRuns(readFileSync(path.join(DOCS, mockup, "code.html"), "utf8"));
     const actual = textRuns(renderToStaticMarkup(await render()));
     const { missing, extra } = difference(expected, actual);
-    expect(missing.filter((run) => !conditional.includes(run)), "text in the mockup but not on the page").toEqual([]);
-    expect(extra.filter((run) => !allowedExtra.includes(run)), "text on the page but not in the mockup").toEqual([]);
+    expect({
+      "text in the mockup but not on the page": missing.filter((run) => !conditional.includes(run)),
+      "text on the page but not in the mockup": extra.filter((run) => !allowedExtra.includes(run)).map((run) => run.replace(/© \d{4}/, "© <year>")),
+    }).toMatchSnapshot();
     expect(actual.length).toBeGreaterThan(30);
   });
 });

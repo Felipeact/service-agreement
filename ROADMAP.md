@@ -371,7 +371,14 @@ Decision 24. The Cursor rules (`cursor/rules/page-rules.mdc`, `rules.mdc`) and `
 Things only the owner can do. Each one is drawn from an open item above.
 - [x] Set the Supabase Auth SMTP sender to the verified Resend domain (decision 11; launch blocker)
 - [x] Apply migration `20261116120000_p0_launch_fixes.sql` to the hosted project, then run the live Scope, Send and Settings checks (code and tests done, `.specs/features/p0-launch-fixes/`)
-- [ ] Verify the hosting region and put it on `/security`; have a lawyer review `/terms`, `/privacy` and `/security`
+- [x] Claims review of the public site (2026-11-23): unverifiable claims removed, one plan catalog, banned-phrase test, database region stated on /security (`ca-central-1`)
+- [ ] Confirm the Railway web service's region and add it to `HOSTING_APP` in `web/components/site/content.ts`
+- [ ] Lawyer to draft limitation of liability, governing law (BC) and e-signature wording for /terms (placeholder section is live); then review /terms, /privacy and /security
+- [ ] Sender identity: product domain, SPF, DKIM, DMARC, sender name "Service Pacts"; then change the contact address
+- [ ] DocuSeal production plan; then verify the embedded form, the date format and a full signing
+- [ ] Apply migrations `20261117100000`, `20261117300000` and `20261117400000` to the hosted project (import duplicate detection, shared type aliases)
+- [ ] Starter templates (commercial HVAC quarterly, boiler annual, backflow annual); hide empty "Agreement" templates
+- [ ] Stripe test-card run (sign-up, upgrade, downgrade, cancel, failed card) and a renewal run
 - [x] Apply migration `20261115100000_db_freeze.sql` to the hosted project, then run the freeze check live
 - [x] ~~Find a lawyer to review the starter agreement and contract wording per province~~ Dropped 2026-11-16 by the owner: each tenant customizes its wording and checks it with its own lawyer (decision 14). No longer a launch blocker
 - [ ] Find one or two plumbing or electrical pilot contractors, and revisit the price points with them (decision 2)
