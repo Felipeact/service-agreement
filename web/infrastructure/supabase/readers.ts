@@ -1,6 +1,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { LIVE_STATUSES, matchesStage, type AgreementStatus } from "@/domain/agreement";
 import type { ContractStatus } from "@/domain/contract";
+import { matchingForm } from "@/domain/imports";
 import { cents, lineAnnualCents, sumCents } from "@/domain/money";
 import { addDays, EXPIRING_WINDOW_DAYS, pipelineStage, type ExpiringAgreement } from "@/domain/pipeline";
 import type {
@@ -464,13 +465,40 @@ async function sharedAliases(client: Client): Promise<Map<string, string[]>> {
   return byCode;
 }
 
+/**
+ * The org's own earlier choices: the wording of every row of a committed import, by the type id it was added as. The same wording
+ * on a later list is read as that type, so a spelling someone mapped once ("DHW tank", a French boiler) is never asked about again.
+ * A wording that was added as two different types is left out (no guess). Without them, matching has the org's spellings only.
+ */
+async function ownChoices(client: Client): Promise<Map<string, string[]>> {
+  const byType = new Map<string, string[]>();
+  try {
+    const { data, error } = await client.from("import_rows").select("asset_type_raw, asset_type_id").not("asset_id", "is", null).not("asset_type_id", "is", null).not("asset_type_raw", "is", null).limit(5000);
+    if (error || !Array.isArray(data)) return byType;
+    const typeOf = new Map<string, string | null>();
+    for (const { asset_type_raw, asset_type_id } of data) {
+      if (!asset_type_raw || !asset_type_id) continue;
+      const wording = matchingForm(asset_type_raw);
+      if (!wording) continue;
+      typeOf.set(wording, typeOf.has(wording) && typeOf.get(wording) !== asset_type_id ? null : asset_type_id);
+    }
+    for (const [wording, id] of typeOf) if (id) byType.set(id, [...(byType.get(id) ?? []), wording]);
+  } catch {
+    // Remembering is a help, not a need.
+  }
+  return byType;
+}
+
 export function supabaseAssetTypeCatalog(client: Client): AssetTypeCatalog {
   return {
     async list() {
       const { data, error } = await client.from("asset_types").select("id, code, name, synonyms").order("name").limit(ROW_CAP);
       if (error) throw unexpected(error);
-      const shared = await sharedAliases(client);
-      return data.map(({ id, code, name, synonyms }) => ({ id, code, name, synonyms: [...synonyms, ...(shared.get(code) ?? []).filter((alias) => !synonyms.includes(alias))] }));
+      const [shared, own] = await Promise.all([sharedAliases(client), ownChoices(client)]);
+      return data.map(({ id, code, name, synonyms }) => {
+        const extra = [...(shared.get(code) ?? []), ...(own.get(id) ?? [])];
+        return { id, code, name, synonyms: [...synonyms, ...extra.filter((alias, at) => !synonyms.includes(alias) && extra.indexOf(alias) === at)] };
+      });
     },
     async tradeContext() {
       // RLS leaves the member's own org; the app has no org switcher (decision 9), so there is one row.

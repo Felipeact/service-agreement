@@ -58,6 +58,8 @@ export const isFull = (figure: UsageFigure): boolean => figure.limit !== null &&
 export type OrgUsage = {
   plan: string | null;
   liveAgreements: UsageFigure;
+  /** Every agreement the company has made, whatever its status; the sidebar meter shows it. Absent when it could not be counted. */
+  totalAgreements?: number;
   aiImports: UsageFigure;
   /** The tokens this month's imports used; absent when the database does not report them. Shown, never limited. */
   aiTokens?: { input: number; output: number };

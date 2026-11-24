@@ -21,50 +21,56 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 
 type CardProps = { plan: Plan; interval: BillingInterval };
 
-/** One plan: name, price, the three limits that differ, and the button into /register. */
+/** The middle plan is drawn as the highlighted card: dark, blue-ringed and lifted, as in the owner's pricing mockup. */
+const FEATURED: PlanKey = "team";
+
+const ICON: Record<PlanKey, string> = { starter: "bolt", team: "electric_bolt", business: "domain" };
+
+/** One plan: name, price, the three limits that differ, and the button into /register. The featured plan is dark. */
 function PlanCard({ plan, interval }: CardProps) {
+  const isFeatured = plan.key === FEATURED;
+  const tone = isFeatured
+    ? { card: "bg-[#0f172a] border-2 border-blue-500 shadow-2xl shadow-blue-500/20 text-white md:-translate-y-2", icon: "bg-blue-500/20 text-blue-300 border-blue-400/30", name: "text-white", blurb: "text-slate-300", price: "text-white", unit: "text-blue-200", note: "text-slate-400", rule: "border-slate-800", list: "text-slate-200", strong: "text-white", check: "text-emerald-400", button: "bg-blue-600 hover:bg-blue-500 text-white" }
+    : { card: "bg-white border border-slate-200/90 shadow-xs hover:shadow-xl hover:border-blue-300", icon: "bg-blue-50 text-blue-600 border-blue-100", name: "text-slate-900", blurb: "text-slate-500", price: "text-slate-900", unit: "text-slate-500", note: "text-slate-500", rule: "border-slate-100", list: "text-slate-700", strong: "text-slate-900", check: "text-blue-600", button: "bg-slate-900 hover:bg-slate-800 text-white" };
+  const features = [
+    <><strong className={tone.strong}>{plan.liveAgreements}</strong> live agreements at a time</>,
+    <><strong className={tone.strong}>{plan.aiImports}</strong> AI imports a month</>,
+    <><strong className={tone.strong}>{plural(plan.includedSeats, "seat", "seats")}</strong> included</>,
+    <>Every feature, template and report, the same on every plan</>,
+  ];
   return (
-    <motion.div
-      className="bg-white rounded-3xl p-7 border border-slate-200/90 shadow-xs hover:shadow-xl hover:border-blue-300 transition-all duration-300 flex flex-col justify-between"
-      variants={ITEM}
-      data-plan={plan.key}
-    >
+    <motion.div className={`relative rounded-3xl p-7 transition-all duration-300 flex flex-col justify-between ${tone.card}`} variants={ITEM} data-plan={plan.key} data-featured={isFeatured || undefined}>
+      {isFeatured && (
+        <div className="absolute -top-3.5 right-6 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest px-3.5 py-1 rounded-full shadow-lg shadow-blue-500/40 flex items-center gap-1">
+          <span className="material-symbols-outlined text-[13px]" aria-hidden="true">verified</span> Recommended
+        </div>
+      )}
       <div className="space-y-5">
         <div>
-          <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">{plan.name}</h3>
-          <p className="text-xs text-slate-500 mt-2 leading-relaxed">{BLURB[plan.key]}</p>
-        </div>
-        <div className="pb-5 border-b border-slate-100">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-extrabold text-slate-900 font-mono">{priceOf(plan.key, interval)}</span>
-            <span className="text-xs text-slate-500 font-mono uppercase tracking-wider font-semibold ml-1">CAD / mo</span>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 border ${tone.icon}`}>
+            <span className="material-symbols-outlined text-lg" aria-hidden="true">{ICON[plan.key]}</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1 font-mono">{billedNote(plan.key, interval)}</p>
+          <h3 className={`text-xl font-extrabold tracking-tight ${tone.name}`}>{plan.name}</h3>
+          <p className={`text-xs mt-2 leading-relaxed ${tone.blurb}`}>{BLURB[plan.key]}</p>
         </div>
-        <ul className="space-y-3 text-xs text-slate-700">
-          <li className="flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-blue-600 text-[16px] mt-0.5" aria-hidden="true">check_circle</span>
-            <span><strong>{plan.liveAgreements}</strong> live agreements at a time</span>
-          </li>
-          <li className="flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-blue-600 text-[16px] mt-0.5" aria-hidden="true">check_circle</span>
-            <span><strong>{plan.aiImports}</strong> AI imports a month</span>
-          </li>
-          <li className="flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-blue-600 text-[16px] mt-0.5" aria-hidden="true">check_circle</span>
-            <span><strong>{plural(plan.includedSeats, "seat", "seats")}</strong> included</span>
-          </li>
-          <li className="flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-blue-600 text-[16px] mt-0.5" aria-hidden="true">check_circle</span>
-            <span>Every feature, template and report, the same on every plan</span>
-          </li>
+        <div className={`pb-5 border-b ${tone.rule}`}>
+          <div className="flex items-baseline gap-1">
+            <span className={`text-4xl font-extrabold font-mono ${tone.price}`}>{priceOf(plan.key, interval)}</span>
+            <span className={`text-xs font-mono uppercase tracking-wider font-semibold ml-1 ${tone.unit}`}>CAD / mo</span>
+          </div>
+          <p className={`text-[11px] mt-1 font-mono ${tone.note}`}>{billedNote(plan.key, interval)}</p>
+        </div>
+        <ul className={`space-y-3 text-xs ${tone.list}`}>
+          {features.map((feature, index) => (
+            <li key={index} className="flex items-start gap-2.5">
+              <span className={`material-symbols-outlined text-[16px] mt-0.5 ${tone.check}`} aria-hidden="true">check_circle</span>
+              <span>{feature}</span>
+            </li>
+          ))}
         </ul>
       </div>
       <div className="mt-8 pt-4">
-        <Link
-          className="w-full min-h-11 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2"
-          href={registerHref(plan.key, interval)}
-        >
+        <Link className={`w-full min-h-11 py-3 px-4 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 ${tone.button}`} href={registerHref(plan.key, interval)}>
           <span>Get started</span>
           <span className="material-symbols-outlined text-[15px]" aria-hidden="true">arrow_forward</span>
         </Link>

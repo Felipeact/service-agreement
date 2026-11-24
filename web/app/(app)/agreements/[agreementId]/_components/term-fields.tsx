@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { formatTermDate } from "@/domain/agreement/term";
 import { messageFor, type TermState } from "@/components/agreements/state";
+import { StaleStartNotice } from "./stale-start-notice";
 import { field } from "./styles";
 
 /**
@@ -64,6 +65,7 @@ export function TermFields({ term, action }: { term: { start: string | null; mon
           {isPending ? "Saving…" : sentence}
         </p>
       </div>
+      <StaleStartNotice start={start} />
       {message && (
         <p role="alert" className="text-[13px] font-medium text-danger">
           {message}

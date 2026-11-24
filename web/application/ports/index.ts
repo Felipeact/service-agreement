@@ -144,6 +144,28 @@ export interface AgreementLister {
   list(filter: AgreementFilter, today: string): Promise<AgreementListRow[]>;
 }
 
+/** What Ask AI shows the model: the day, the page the member is on, the org's agreements and active sites, and the conversation so far. */
+export type AssistantFacts = {
+  today: string;
+  page: string;
+  canAct: boolean;
+  agreements: { id: string; number: string | null; status: string; customer: string; site: string; annualCents: number | null; termEnd: string | null }[];
+  sites: { id: string; name: string; customer: string; liveAgreementNumber: string | null }[];
+  history: { role: "user" | "assistant"; text: string }[];
+  question: string;
+};
+
+/** Answers a question from the facts as the model's raw JSON text; `null` when it could not. Reads nothing and changes nothing. */
+export interface AssistantModel {
+  ask(facts: AssistantFacts): Promise<string | null>;
+}
+
+/** The member's own record of questions asked, for the daily limit. */
+export interface AssistantUsage {
+  countSince(sinceIso: string): Promise<number>;
+  record(orgId: string): Promise<void>;
+}
+
 /** An active site the New agreement form offers, with the agreement already live on it (agreements-page door 2). */
 export type SiteOption = {
   id: string;

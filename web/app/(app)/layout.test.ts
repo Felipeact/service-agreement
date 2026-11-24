@@ -14,7 +14,7 @@ const workspaceState = vi.fn<() => Promise<"none" | "pending" | "refused">>();
 const getItemWords = vi.fn(async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }));
 const loadBillingUsage = vi.fn(async (_member: { orgId: string; role: string }) => null as unknown);
 vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, workspaceState, signOut, pipelineBoard, getItemWords, loadBillingUsage, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
-vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline" }));
+vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline", useRouter: () => ({ push: () => {}, refresh: () => {} }) }));
 
 const { MemberGate } = await import("./member-gate");
 const { signOutAction } = await import("./actions");
@@ -153,7 +153,7 @@ describe("(app) layout, plan card and counts", () => {
     const html = await renderLayout();
 
     expect(loadBillingUsage).toHaveBeenCalledWith({ orgId: "o1", role: "owner" });
-    expect(html).toContain("Active agreements");
+    expect(html).toContain("Agreements made");
     expect(html).toContain("4 / 50");
     expect(html).toMatch(/<a[^>]*href="\/settings\/billing"[^>]*>Manage<\/a>/);
   });
@@ -162,13 +162,13 @@ describe("(app) layout, plan card and counts", () => {
     currentMember.mockResolvedValue(owner);
     loadBillingUsage.mockResolvedValue(null);
 
-    expect(await renderLayout()).not.toContain("Active agreements");
+    expect(await renderLayout()).not.toContain("Agreements made");
   });
 
   test("a plan with no live-agreement limit shows no card, and a failed read leaves the shell up", async () => {
     currentMember.mockResolvedValue(owner);
     loadBillingUsage.mockResolvedValue({ plan: "pro", liveAgreements: { used: 4, limit: null }, aiImports: { used: 0, limit: null }, resetsOn: "2027-12-01" });
-    expect(await renderLayout()).not.toContain("Active agreements");
+    expect(await renderLayout()).not.toContain("Agreements made");
 
     loadBillingUsage.mockRejectedValue(new Error("down"));
     expect(await renderLayout()).toContain("page body");
@@ -187,5 +187,12 @@ describe("(app) layout, plan card and counts", () => {
 
     expect(html).toContain("Owner");
     expect(html).toContain(">OW<");
+  });
+});
+
+describe("(app) layout, Ask AI", () => {
+  test("the top bar carries the Ask AI button for every member", async () => {
+    currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "v@example.com", orgId: "o1", orgName: "Acme", role: "viewer" });
+    expect(await renderLayout()).toContain("Ask AI");
   });
 });

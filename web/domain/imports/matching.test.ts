@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { matchAssetType, splitQuantity, type AssetTypeRef } from "./index";
+import { matchAssetType, matchingForm, splitQuantity, type AssetTypeRef } from "./index";
 
 const type = (id: string, code: string, name: string, synonyms: string[] = []): AssetTypeRef => ({ id, code, name, synonyms });
 const TYPES = [
@@ -152,5 +152,15 @@ describe("splitQuantity: a plural with a bare count", () => {
 
   test.each(["Boiler 2", "Chassis 4", "Fire dampers 1", "Fire dampers 80", "RTU-3"])("%s is one row", (raw) => {
     expect(splitQuantity(raw)).toBeNull();
+  });
+});
+
+describe("wording an org chose before", () => {
+  test("the stored form of a wording finds its type again, accents and French included", () => {
+    const boiler = { id: "boiler", code: "BOILER", name: "Boiler", synonyms: [matchingForm("Chaudière à condensation 2")] };
+    const tank = { id: "tank", code: "STORAGE_TANK", name: "Storage tank", synonyms: [matchingForm("DHW tank")] };
+    expect(matchAssetType("DHW tank", [boiler, tank])).toBe("tank");
+    expect(matchAssetType("dhw  Tank.", [boiler, tank])).toBe("tank");
+    expect(matchAssetType("Chaudière à condensation", [{ ...boiler, synonyms: [] }, tank])).toBe("boiler");
   });
 });
