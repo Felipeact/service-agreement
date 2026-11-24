@@ -291,6 +291,7 @@ exports[`pages match the owner's mockups, except where the claims review changed
     "Pricing",
     "Get started",
     "Step through a sample deal, from a customer list to a signed agreement and its renewal.",
+    "Maximize",
     "Reads the unit number, type, model and location of each row.",
     "Maps each row to your own item types.",
     "Flags possible duplicates and rows that need a type.",
