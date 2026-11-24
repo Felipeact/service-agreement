@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import nextConfig from "./next.config";
+import nextConfig, { CONTENT_SECURITY_POLICY } from "./next.config";
 
 describe("next.config headers", () => {
   test("C938: /review/:path* sets Cache-Control, Referrer-Policy and X-Robots-Tag", async () => {
@@ -42,11 +42,28 @@ describe("next.config site-wide security headers", () => {
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+      "Permissions-Policy": 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")',
     });
     for (const secret of ["/review/:path*", "/sign/:path*"]) {
       const rule = rules.find((entry) => entry.source === secret);
       expect(rule?.headers.find((header) => header.key === "Referrer-Policy")?.value).toBe("no-referrer");
       expect(rules.indexOf(rule!)).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("next.config Content-Security-Policy", () => {
+  test("forbids framing, plugins, base-tag and cross-origin form posts, and falls back to self", () => {
+    for (const directive of ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'"]) {
+      expect(CONTENT_SECURITY_POLICY).toContain(directive);
+    }
+  });
+
+  test("names the third parties the app uses, and no wildcard source", () => {
+    for (const origin of ["https://js.stripe.com", "docuseal.com", "https://app.supademo.com", "https://fonts.googleapis.com"]) {
+      expect(CONTENT_SECURITY_POLICY).toContain(origin);
+    }
+    expect(CONTENT_SECURITY_POLICY).not.toMatch(/(^|[ ;])\*([ ;]|$)/);
   });
 });

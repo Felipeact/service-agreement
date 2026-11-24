@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env*
+!.env.example
+coverage
+*.test.ts
+*.test.tsx
+.playwright-mcp
+.agents
+.claude
+tsconfig.tsbuildinfo
+Dockerfile

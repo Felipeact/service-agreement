@@ -1,0 +1,10 @@
+# Non-secret settings. The public Supabase values are also baked into the image at build time (web/Dockerfile).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+  namespace: service-pacts
+data:
+  APP_BASE_URL: "https://app.example.com"
+  EMAIL_FROM: "agreements@example.com"
+  DOCUSEAL_API_URL: "https://api.docuseal.com"

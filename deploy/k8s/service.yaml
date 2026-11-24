@@ -1,0 +1,14 @@
+# Internal address of the app. The load balancer (the ingress controller's Service of type LoadBalancer) sends traffic here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: service-pacts
+  labels: { app: web }
+spec:
+  type: ClusterIP
+  selector: { app: web }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

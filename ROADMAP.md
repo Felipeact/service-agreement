@@ -405,7 +405,9 @@ From the live QA report (2026-11-16). Each one needs the owner: an account, DNS,
 - [ ] Delete the test data in the production workspace: the ZZ TEST customer, site, 18 assets, imports and AG-1002 (the agreements are never deleted by the app, so this is a database cleanup you approve)
 - [ ] Test the renewal flow on a staging copy with a backdated term (the first real term starts in 2027)
 - [ ] Look into the two early logouts: check the Supabase session and JWT expiry settings, and whether a redeploy invalidates sessions
-- [ ] Decide a Content-Security-Policy (it must allow Stripe, the signature provider frame and the Supabase origin); the other security headers are set in code. Also check what the host (Railway) adds
+- [x] Content-Security-Policy set in code (2026-11-24, static policy in `web/next.config.ts` with Stripe, DocuSeal, Supabase, Supademo and Google Fonts allowed; no nonce, so `'unsafe-inline'` stays for scripts). Still to do: open the signing page, a Checkout card form and /demo in a real browser and read the console for blocked requests, and check what the host (Railway) adds
+- [x] Rate limits on sign-in, sign-up, email confirmation and the secret-link pages (2026-11-24, in `web/proxy.ts`, per client address and per server process; the Kubernetes ingress adds a cluster-wide limit)
+- [x] Dockerfile, health probe and Kubernetes manifests with a load balancer (2026-11-24, `web/Dockerfile`, `deploy/`). Not yet built or applied: no Docker or kubectl on the dev machine. Railway stays the live host until a cluster exists
 - [ ] Choose starter templates: the first-use template is empty. Pick two or three (for example commercial HVAC quarterly, boiler annual, backflow annual) and their lines, then it is a build item
 
 Code items from the same report that are not built yet (no owner action needed, they need a plan each):
