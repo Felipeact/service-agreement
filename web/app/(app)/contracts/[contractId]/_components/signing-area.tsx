@@ -210,7 +210,15 @@ export function SigningArea(props: SigningAreaProps) {
       )}
       {kind === "countersign" &&
         (contractorSrc ? (
-          <SigningForm src={contractorSrc} email={memberEmail} />
+          <>
+            <SigningForm src={contractorSrc} email={memberEmail} />
+            <p className="text-[13px] text-ink-2">
+              {"Form not showing? "}
+              <a href={contractorSrc} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-medium text-action underline underline-offset-2">
+                Open signing page
+              </a>
+            </p>
+          </>
         ) : (
           <p role="alert" className="text-[13px] font-medium text-danger">
             The countersignature form could not be opened. Reload the page to try again.

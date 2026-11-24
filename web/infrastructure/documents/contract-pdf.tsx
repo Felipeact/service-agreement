@@ -13,7 +13,7 @@ import { EquipmentSection, IncludedSection, LayoutBlock, LayoutTable, LetterHead
  */
 export const signerTags = (role: "Customer" | "Contractor") => ({
   signature: `{{Sig;role=${role};type=signature}}`,
-  date: `{{Date;role=${role};type=date}}`,
+  date: `{{Date;role=${role};type=date;format=YYYY-MM-DD}}`,
 });
 
 /** The customer's printed name and title, a text field the customer fills when the signature block has a Name line (block-editor door 4). */
