@@ -13,20 +13,17 @@ const textOf = (html: string) => decode(html.replace(/<[^>]+>/g, " ")).replace(/
 const renderPage = () => renderToStaticMarkup(createElement(PricingContent));
 
 /**
- * The page is the owner's pricing mockup (docs/service_pacts_pricing), whose copy is shown verbatim. It names the plans
- * Starter, Pro and Max and quotes the prices as text, so these tests keep the mockup's figures and links honest against
- * the billing catalog the checkout and the plan limits read.
+ * The plan cards and the comparison table are drawn from PLANS (components/site/plan-cards.tsx), the catalog the checkout, the
+ * plan limits and the in-app Billing page read. The mockup's own plan names (Pro, Max) and limits were retired 2026-11-23.
  */
-const MOCKUP_PLAN_NAMES = { starter: "Starter", team: "Pro", business: "Max" } as const;
 
 describe("the plans in the mockup match the billing catalog", () => {
-  test.each(PLANS)("$key: the page quotes its monthly price and, for Starter and Pro, links to /register with that plan", (plan) => {
+  test.each(PLANS)("$key: the page names the plan, quotes its monthly price and links to /register with that plan", (plan) => {
     const html = renderPage();
     const text = textOf(html);
-    expect(text).toContain(MOCKUP_PLAN_NAMES[plan.key]);
+    expect(text).toContain(plan.name);
     expect(text).toContain(formatPlanPrice(plan.monthlyCents));
-    // The mockup's Max card says "Schedule call" and has no sign-up link; Starter and Pro (Team) do.
-    if (plan.key !== "business") expect(html).toContain(`href="/register?plan=${plan.key}"`);
+    expect(html).toContain(`href="/register?plan=${plan.key}"`);
   });
 
   test("the plans are quoted in order, cheapest first", () => {

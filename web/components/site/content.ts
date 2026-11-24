@@ -1,4 +1,4 @@
-import { EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
+import { ANNUAL_DISCOUNT_PERCENT, EXTRA_SEAT_CENTS, PLANS, formatPlanPrice } from "@/domain/billing";
 /**
  * Everything the public site says, in one place so every page and every home-page concept reads the same facts.
  * Rule (PRODUCT.md, Evidence on Hand): there are no customers, testimonials or measured results yet, so none appear here.
@@ -12,6 +12,19 @@ export const SITE = {
   /** The public contact mailbox. Confirm it exists before launch. */
   contactEmail: "hello@felipeviana.com",
 } as const;
+
+/** The copyright line: the product name and the current year. No company name is shown until the owner confirms which company operates the service. */
+export const COPYRIGHT = `© ${new Date().getFullYear()} Service Pacts. All rights reserved.`;
+
+/**
+ * Where the data is kept, stated once so every page says the same thing. Verified 2026-11-23: the Supabase project (the database
+ * and the uploaded files) is in region ca-central-1, AWS Canada (Central). The region of the Railway web service is NOT verified,
+ * so no page may name one (hosting-claims.test.ts).
+ */
+export const HOSTING_SHORT = "Database hosted in Canada";
+export const HOSTING_DATABASE = "The database and uploaded files are hosted on Supabase in Canada (AWS Canada Central, ca-central-1).";
+export const HOSTING_APP = "We have not yet confirmed the region of the web application server, so we make no claim about it.";
+export const HOSTING_PROVIDERS = "Some providers we use, such as the AI, e-signature, email and payment providers, handle the data they receive under their own terms and may do so outside Canada.";
 
 export type NavLink = { href: string; label: string };
 
@@ -145,15 +158,16 @@ export type Faq = { q: string; a: string };
 export const FAQS: readonly Faq[] = [
   { q: "Who is it for?", a: "Owners, estimators and office managers at trade contractors that service things on a recurring schedule: heating, cooling and mechanical first, then plumbing, electrical and others." },
   { q: "Is it a field-service suite?", a: "No. It has no dispatch, GPS or payroll. It does one job, from the customer's list to a signed recurring contract, and later will feed a suite." },
-  { q: "Does my customer need an account?", a: "No. They get a link by email, review the agreement, decide, and sign. Their email approval counts as written approval." },
+  { q: "Does my customer need an account?", a: "No. They get a link by email, review the agreement, decide, and sign. They sign on a page run by our signature provider." },
   { q: "What file types can I import?", a: "Excel, CSV, Word and PDF. AI reads the rows, maps them to your types and shows a review grid for anything it is unsure of." },
-  { q: "Will my customer see your brand?", a: "On the review page, the PDFs and the emails, your company name, logo and accent colour. The signing page is run by our signature provider, so it and the signed audit log show its name." },
-  { q: "Are e-signatures legally valid?", a: "At launch the product targets Canada outside Quebec, where e-signature law follows the UECA model. You own your contract wording and confirm its validity under your province. Starter wording is reviewed by a lawyer before launch." },
+  { q: "Will my customer see your brand?", a: "On the review page, the PDFs and the emails, your company name, logo and accent colour. The signing page is run by our signature provider, DocuSeal, so it and the signed audit log show the name DocuSeal." },
+  { q: "Are e-signatures legally valid?", a: "At launch the product targets Canada outside Quebec, where e-signature law follows the UECA model. You own your contract wording and confirm its validity under your province. The starter wording is pending review by a lawyer, so have your own lawyer confirm it before you rely on it." },
   { q: "What about Quebec?", a: "Quebec has its own e-signature framework and language rules. It is a later, separate item." },
-  { q: "How does billing work?", a: "Pick a plan and pay by card at checkout. Billing is monthly and you can cancel any time. Stripe handles payment." },
+  { q: "How does billing work?", a: `Pick a plan and pay by card at checkout. Billing is monthly or annual (annual saves ${ANNUAL_DISCOUNT_PERCENT}%), and you can cancel any time. Stripe handles payment.` },
   { q: "What is a live agreement?", a: "One that is in progress, or sent and waiting for the customer. Plans limit volume only: features, templates and reports are the same on every plan." },
   { q: "Do you charge per seat?", a: `Each plan includes some seats (${PLANS.map((plan) => `${plan.name} ${plan.includedSeats}`).join(", ")}). Every extra seat is ${formatPlanPrice(EXTRA_SEAT_CENTS)} a month.` },
   { q: "What does it not do?", a: "Dispatch, GPS, payroll, construction or project contracts, and a Word-style document editor." },
+  { q: "Where is my data hosted?", a: `${HOSTING_DATABASE} ${HOSTING_APP}` },
   { q: "Can I use more than one trade?", a: "Yes. Pick every trade you work in when you register, and your workspace is set up for all of them." },
 ];
 
