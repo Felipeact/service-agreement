@@ -24,7 +24,7 @@ let revoked: string[];
 let container: HTMLDivElement;
 let root: Root;
 
-const pdfResponse = (status = 200, type = "application/pdf") => new Response(new Blob(["%PDF-1.4"]), { status, headers: { "Content-Type": type } });
+const pdfResponse = (status = 200, type = "application/pdf") => new Response("%PDF-1.4", { status, headers: { "Content-Type": type } });
 
 beforeEach(() => {
   vi.useFakeTimers();

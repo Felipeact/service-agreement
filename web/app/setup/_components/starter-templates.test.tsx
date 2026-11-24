@@ -42,7 +42,7 @@ let calls: Call[];
 let container: HTMLDivElement;
 let root: Root;
 
-const pdf = () => new Response(new Blob(["%PDF-1.4"]), { status: 200, headers: { "Content-Type": "application/pdf" } });
+const pdf = () => new Response("%PDF-1.4", { status: 200, headers: { "Content-Type": "application/pdf" } });
 
 beforeEach(() => {
   calls = [];
