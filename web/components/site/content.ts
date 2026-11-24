@@ -9,8 +9,10 @@ export const SITE = {
   name: "Service Pacts",
   tagline: "From service list to signed agreement.",
   description: "Recurring service agreements for trade contractors, from the customer's list to signature.",
-  /** The public contact mailbox. Confirm it exists before launch. */
-  contactEmail: "hello@felipeviana.com",
+  /** The public mailboxes on servicepacts.com (confirmed by the owner 2026-11-24): general, support for members, sales for buyers. */
+  contactEmail: "hello@servicepacts.com",
+  supportEmail: "support@servicepacts.com",
+  salesEmail: "sales@servicepacts.com",
 } as const;
 
 /** The copyright line: the product name and the current year. No company name is shown until the owner confirms which company operates the service. */
