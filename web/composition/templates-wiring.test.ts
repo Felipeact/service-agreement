@@ -30,12 +30,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("the container's agreement templates", () => {
-  test("C5359: listAgreementTemplates reads through the member's client and shows the system template only when the org has none", async () => {
+  test("C5359: listAgreementTemplates reads through the member's client and lists the system template after the org's own", async () => {
     const { getContainer } = await import("./index");
     const container = await getContainer();
     templatesAre([SYSTEM, OWN]);
     const own = await container.listAgreementTemplates();
-    expect(own.ok && own.templates.map((template) => template.id)).toEqual(["t-1"]);
+    expect(own.ok && own.templates.map((template) => template.id)).toEqual(["t-1", "t-0"]);
     expect(from).toHaveBeenCalledWith("document_templates");
     templatesAre([SYSTEM]);
     const none = await container.listAgreementTemplates();
