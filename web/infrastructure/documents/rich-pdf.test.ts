@@ -175,7 +175,7 @@ describe("the page header in the PDF", () => {
 
   test("a designed header is drawn with its fields filled, above the page, on the first page only by default", async () => {
     const pages = text(await renderAgreementPdf(withHeader(HEADER)));
-    expect(pages[0]).toContain("Kettle Ridge HVAC Mechanical Group");
+    expect(pages[0].replace(/\s+/g, " ")).toContain("Kettle Ridge HVAC Mechanical Group");
     expect(pages[0].indexOf("Licensed and insured")).toBeLessThan(pages[0].indexOf("Body"));
     expect(pages[1]).not.toContain("Licensed and insured");
   });

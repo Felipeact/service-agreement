@@ -145,7 +145,9 @@ export function RichDocumentEditor<V extends RichValues>(props: Props<V>) {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit(current());
+    // ProseMirror's JSON shares its attribute objects with the editor; a server action would send them as placeholders ($T) and the
+    // server would see nodes without attributes. A plain copy sends the values themselves.
+    onSubmit(JSON.parse(JSON.stringify(current())) as V);
   };
 
   const addPicture = async (file: File) => {
@@ -193,7 +195,7 @@ export function RichDocumentEditor<V extends RichValues>(props: Props<V>) {
                       if (each === "preview") setPreviewValues(current());
                       setMode(each);
                     }}
-                    className="inline-flex min-h-10 items-center rounded-[6px] px-3 text-[13px] font-semibold text-ink-2 aria-pressed:bg-ink aria-pressed:text-surface lg:min-h-8"
+                    className="inline-flex min-h-11 items-center rounded-[6px] px-3 text-[13px] font-semibold text-ink-2 aria-pressed:bg-ink aria-pressed:text-surface lg:min-h-8"
                   >
                     {each === "edit" ? "Edit" : "Preview"}
                   </button>
@@ -278,7 +280,8 @@ export function RichDocumentEditor<V extends RichValues>(props: Props<V>) {
                 onClick={() => head?.commands.focus()}
                 className={`group relative -mx-[6pt] rounded-[3px] px-[6pt] py-[3pt] outline-1 -outline-offset-1 transition-colors ${part === "header" ? "bg-action-tint/20 outline-action/60" : "outline-transparent hover:outline-hairline"}`}
               >
-                <span className={`absolute -top-2 right-1 flex items-center gap-1 text-[10px] font-semibold ${part === "header" ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}`}>
+                {/* In the flow on phones and tablets (no hover there); floating over the corner on large screens. */}
+                <span className={`mb-1 flex items-center justify-end gap-1 text-[10px] font-semibold lg:absolute lg:-top-2 lg:right-1 lg:mb-0 ${part === "header" ? "opacity-100" : "lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"}`}>
                   <span className="rounded-full bg-action px-1.5 py-0.5 text-surface">Header, {every ? "every page" : "first page"}</span>
                   <button
                     type="button"

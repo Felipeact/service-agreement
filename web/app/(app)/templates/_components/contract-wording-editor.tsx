@@ -49,6 +49,8 @@ export function ContractWordingEditor({ initial, save, importAction, env }: Prop
       env={env}
       values={values}
       onChange={(next) => {
+        // The editor may echo the saved page back unchanged; only a real edit clears the message.
+        if (JSON.stringify(next) === JSON.stringify(values)) return;
         if (state.status === "invalid" || state.status === "saved") setState({ status: "idle" });
         setValues(next);
       }}
