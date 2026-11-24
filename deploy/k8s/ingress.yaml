@@ -1,0 +1,29 @@
+# Public entry: the cloud load balancer in front of ingress-nginx terminates TLS and routes to the web Service.
+# Install the controller once (it creates the LoadBalancer Service and its public IP), see deploy/README.md.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  namespace: service-pacts
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "6m"          # the app accepts uploads up to 5 MB
+    nginx.ingress.kubernetes.io/limit-rps: "20"                # per client address, cluster-wide, on top of the app's own limits
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/limit-connections: "30"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: ["app.example.com"]
+      secretName: web-tls
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port: { name: http }
