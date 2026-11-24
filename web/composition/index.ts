@@ -18,6 +18,7 @@ import {
   makeExtractImport,
   makeSuggestImportTypes,
   makeGenerateServiceLines,
+  makeAskAssistant,
   makeReviewAgreement,
   makeApplyServiceLines,
   makeSetSiteTypeCount,
@@ -54,6 +55,9 @@ import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
 import { claudeAgreementReviewer } from "@/infrastructure/claude/agreement-reviewer";
+import { claudeAssistant } from "@/infrastructure/claude/assistant";
+import { supabaseAssistantUsage } from "@/infrastructure/supabase/assistant-usage";
+import { today as businessDay } from "@/lib/business-day";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
@@ -326,6 +330,7 @@ export async function getContainer() {
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
+    askAssistant: makeAskAssistant({ agreements: agreementLister, sites: siteLister, model: claudeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }), usage: supabaseAssistantUsage(supabase), now: () => systemClock.now(), today: businessDay }),
     reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
     applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
     // The agreement page edits a site's equipment by type (count and location) and who the agreement goes to.

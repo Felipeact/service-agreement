@@ -372,6 +372,7 @@ Things only the owner can do. Each one is drawn from an open item above.
 - [x] Set the Supabase Auth SMTP sender to the verified Resend domain (decision 11; launch blocker)
 - [x] Apply migration `20261116120000_p0_launch_fixes.sql` to the hosted project, then run the live Scope, Send and Settings checks (code and tests done, `.specs/features/p0-launch-fixes/`)
 - [x] Claims review of the public site (2026-11-23): unverifiable claims removed, one plan catalog, banned-phrase test, database region stated on /security (`ca-central-1`)
+- [x] Live-review fixes (2026-11-24): shared public header and footer, pricing cards with the dark middle plan, past-start-date notice, import re-import repeats and remembered type choices, starter templates created, favicon from the logo.
 - [ ] Confirm the Railway web service's region and add it to `HOSTING_APP` in `web/components/site/content.ts`
 - [ ] Lawyer to draft limitation of liability, governing law (BC) and e-signature wording for /terms (placeholder section is live); then review /terms, /privacy and /security
 - [ ] Sender identity: product domain, SPF, DKIM, DMARC, sender name "Service Pacts"; then change the contact address

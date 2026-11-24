@@ -34,7 +34,10 @@ export function supabaseOrgUsage(client: Client): OrgUsageReader {
         }
         const imports = row.ai_imports as Record<string, unknown>;
         const aiTokens = typeof imports.input_tokens === "number" && typeof imports.output_tokens === "number" ? { input: imports.input_tokens, output: imports.output_tokens } : undefined;
-        return { plan: typeof row.plan === "string" ? row.plan : null, liveAgreements, aiImports, ...(aiTokens && { aiTokens }), resetsOn: row.resets_on };
+        // The sidebar shows every agreement made; RLS leaves the member's own org. A failed count leaves the live figure.
+        const total = await client.from("agreements").select("id", { count: "exact", head: true });
+        const totalAgreements = total.error || total.count === null ? undefined : total.count;
+        return { plan: typeof row.plan === "string" ? row.plan : null, liveAgreements, ...(totalAgreements !== undefined && { totalAgreements }), aiImports, ...(aiTokens && { aiTokens }), resetsOn: row.resets_on };
       } catch (cause) {
         console.error(`Reading the usage failed: ${cause instanceof Error ? cause.name : "a non-error"}`);
         return null;

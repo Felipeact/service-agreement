@@ -6,6 +6,7 @@ import { isReadyToSend, type ReadinessItem } from "@/domain/agreement/readiness"
 import { DEFAULT_ITEM_WORDS, itemText, type ItemWords } from "@/domain/org-settings";
 import { messageFor, type LinkState, type TermState } from "@/components/agreements/state";
 import { LinkControls } from "./link-controls";
+import { StaleStartNotice } from "./stale-start-notice";
 
 type Props = {
   number: string;
@@ -69,6 +70,7 @@ export function BeforeYouSend({ number, items, term, recipient, words = DEFAULT_
           className="min-h-11 rounded-control border border-hairline bg-surface px-3 text-[14px] focus:border-action focus:outline-none lg:min-h-9"
         />
       </label>
+      <StaleStartNotice start={start} />
       {isSaving && (
         <p role="status" className="text-[12px] text-ink-2">
           Saving the start date…

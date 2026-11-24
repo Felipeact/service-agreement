@@ -124,11 +124,13 @@ describe("flagger", () => {
     expect(flags(bare)).toEqual([]);
   });
 
-  test("C614: a row with no unit # is never a duplicate", () => {
+  test("C614: rows with no unit # are never one unit of each other, and match a bare unit on the site only by count", () => {
     const a = row({ unitNo: null });
     const b = row({ unitNo: null });
+    expect(flagsOf([a, b])(a)).toEqual([]);
+    expect(flagsOf([a, b])(b)).toEqual([]);
     const flags = flagsOf([a, b], [{ assetTypeId: RTU, unitNo: null }]);
-    expect(flags(a)).toEqual([]);
+    expect(flags(a)).toEqual([{ kind: "on_site" }]);
     expect(flags(b)).toEqual([]);
   });
 
@@ -170,5 +172,27 @@ describe("reviewSummary", () => {
     expect(reviewSummary({ included: 5, ready: 4, needType: 1, onSite: 0, unmatchedGroups: 1 }).next).toContain("1 needs a type. Start with the group below");
     expect(reviewSummary({ included: 5, ready: 3, needType: 0, onSite: 2, unmatchedGroups: 0 }).next).toContain("2 rows are already on this site and will not be added again");
     expect(reviewSummary({ included: 0, ready: 0, needType: 0, onSite: 0, unmatchedGroups: 0 }).headline).toBe("No rows are included yet.");
+  });
+});
+
+describe("bare rows (a type and nothing else) on a re-import", () => {
+  const bare = (over: Partial<ReviewRow> = {}) => row({ unitNo: null, typeModel: null, location: null, ...over });
+
+  test("a bare row is a repeat when the site already has a bare unit of its type", () => {
+    const first = bare({ assetTypeId: MUA });
+    expect(flagsOf([first], [{ assetTypeId: MUA, unitNo: null, typeModel: null, location: null }])(first)).toContainEqual({ kind: "on_site" });
+  });
+
+  test("the site's count is not exceeded: two bare rows against one bare unit add one", () => {
+    const [a, b] = [bare({ assetTypeId: MUA }), bare({ assetTypeId: MUA })];
+    const flags = flagsOf([a, b], [{ assetTypeId: MUA, unitNo: null, typeModel: null, location: null }]);
+    expect(flags(a)).toContainEqual({ kind: "on_site" });
+    expect(flags(b)).not.toContainEqual({ kind: "on_site" });
+  });
+
+  test("a bare row of a type the site has none of, or only tagged units of, is new", () => {
+    const only = bare({ assetTypeId: MUA });
+    expect(flagsOf([only], [{ assetTypeId: MUA, unitNo: "M-1" }])(only)).toEqual([]);
+    expect(flagsOf([only])(only)).toEqual([]);
   });
 });

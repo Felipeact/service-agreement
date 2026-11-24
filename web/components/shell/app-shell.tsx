@@ -29,6 +29,8 @@ type AppShellProps = {
   followUps?: number;
   /** The New agreement button for the top bar (writers only); its dialog is built on the server. */
   newAgreement?: ReactNode;
+  /** The Ask AI button and its panel (the server wires its actions). */
+  askAi?: ReactNode;
   /** The org's item words, for the Sites link; the default when absent. */
   words?: ItemWords;
   /** The company's plan has ended: a banner says the workspace is read-only. `canRenew` is true for an owner or admin, who gets the link to Billing. */
@@ -68,7 +70,7 @@ function SidebarFooter({ plan, email, role, signOut, full = false }: { plan?: Pl
 }
 
 /** A white sidebar floating on the pale ground, a soft top bar with search, the New agreement button and the account menu; below 1024px a frosted bar and a menu. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, newAgreement, words, frozen, reports, role, plan, counts }: AppShellProps) {
+export function AppShell({ children, orgName, email, signOut, followUps = 0, newAgreement, askAi, words, frozen, reports, role, plan, counts }: AppShellProps) {
   const topSearchRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   // Desktop only: the sidebar slides away to give the work the full width. The choice is remembered per browser.
@@ -165,7 +167,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, new
             <kbd aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-[4px] border border-hairline bg-ground px-1.5 text-[11px] text-ink-2">⌘K</kbd>
           </form>
           <div className="ml-auto flex items-center gap-1">
-            <span title="Coming soon" className="mr-1 hidden rounded-full border border-violet-200 bg-violet-50 px-3.5 py-1.5 text-[12px] font-semibold text-violet-700 xl:inline-block">Ask AI</span>
+            {askAi}
             <Link href="/search" aria-label="Search" className="inline-flex size-11 items-center justify-center rounded-control text-ink hover:bg-board lg:hidden">
               <SearchIcon aria-hidden="true" className="size-[18px]" />
             </Link>

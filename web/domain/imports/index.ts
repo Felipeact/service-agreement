@@ -188,6 +188,7 @@ const FRENCH: [string, string][] = [
   ["unite de traitement d air", "air handling unit"],
   ["thermopompe eau", "water source heat pump"],
   ["refroidisseur", "chiller"],
+  ["chaudiere a condensation", "condensing boiler"],
   ["chaudiere", "boiler"],
   ["fournaise", "furnace"],
   ["pompe", "pump"],
@@ -208,6 +209,14 @@ function englishOf(raw: string): string {
   let flat = stripAccents(raw).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/(^| )in line( |$)/g, "$1inline$2");
   for (const [french, english] of FRENCH) flat = (" " + flat + " ").replace(" " + french + " ", " " + english + " ").trim();
   return flat;
+}
+
+/**
+ * A list's wording as matching reads it (accents, punctuation, French phrases and case taken out). An org's own earlier choices are
+ * stored in this form, so the same wording on another list finds its type again.
+ */
+export function matchingForm(raw: string): string {
+  return normalized(inEnglish(raw));
 }
 
 /** A list's token is a type word when it is that word, its start ("exh" for exhaust), or its consonant skeleton ("chlr" for chiller). */
@@ -359,12 +368,18 @@ function duplicateKey(assetTypeId: string | null, unitNo: string | null): string
 
 /**
  * An untagged unit (no unit #) is told apart by what else the list says about it: same type, same type/model and same location.
- * No key when it says nothing but its type, so two bare "Pump" rows are never judged one unit.
+ * No key when it says nothing but its type: such a "bare" row is matched by count instead (`isBare`), so two bare "Pump" rows are
+ * never judged one unit, yet a re-import of the same list adds no more of them than the site already has.
  */
 function untaggedKey(assetTypeId: string | null, typeModel: string | null | undefined, location: string | null | undefined): string | null {
   const model = normalized(typeModel ?? "");
   const place = normalized(location ?? "");
   return assetTypeId && (model || place) ? `${assetTypeId} | ${model} | ${place}` : null;
+}
+
+/** A unit the list says nothing about but its type: no unit #, no type/model, no location. */
+function isBare(assetTypeId: string | null, unitNo: string | null | undefined, typeModel: string | null | undefined, location: string | null | undefined): assetTypeId is string {
+  return assetTypeId !== null && !normalized(unitNo ?? "") && !normalized(typeModel ?? "") && !normalized(location ?? "");
 }
 
 export type SiteAssetRef = { assetTypeId: string; unitNo: string | null; typeModel?: string | null; location?: string | null };
@@ -375,6 +390,9 @@ export function flagRows(rows: ReviewRow[], siteAssets: SiteAssetRef[]): Map<str
   const untaggedOnSite = new Set(
     siteAssets.filter((asset) => !normalized(asset.unitNo ?? "")).map((asset) => untaggedKey(asset.assetTypeId, asset.typeModel, asset.location)).filter((key) => key !== null),
   );
+  // Bare units on the site, by type: each bare row of the file that finds one left is a repeat, so the site's count is never exceeded.
+  const bareOnSite = new Map<string, number>();
+  for (const asset of siteAssets) if (isBare(asset.assetTypeId, asset.unitNo, asset.typeModel, asset.location)) bareOnSite.set(asset.assetTypeId, (bareOnSite.get(asset.assetTypeId) ?? 0) + 1);
   const firstOf = new Map<string, number>();
   const flags = new Map<string, ReviewFlag[]>();
   for (const row of [...rows].sort((a, b) => a.position - b.position)) {
@@ -393,6 +411,10 @@ export function flagRows(rows: ReviewRow[], siteAssets: SiteAssetRef[]): Map<str
     } else if (!normalized(row.unitNo ?? "")) {
       const loose = untaggedKey(row.assetTypeId, row.typeModel, row.location);
       if (loose !== null && untaggedOnSite.has(loose)) found.push({ kind: "on_site" });
+      else if (isBare(row.assetTypeId, row.unitNo, row.typeModel, row.location) && (bareOnSite.get(row.assetTypeId) ?? 0) > 0) {
+        bareOnSite.set(row.assetTypeId, (bareOnSite.get(row.assetTypeId) ?? 0) - 1);
+        found.push({ kind: "on_site" });
+      }
     }
   }
   return flags;
