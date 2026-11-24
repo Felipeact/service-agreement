@@ -388,7 +388,9 @@ export function HeaderPopover({ label, children }: { label: string; children: Re
       <Button onClick={() => setOpen((was) => !was)} aria-expanded={open}>
         {label}
       </Button>
-      {open && <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))]">{<OptionsCard label={label}>{children}</OptionsCard>}</div>}
+      {open && <div className="fixed inset-x-4 z-20 mt-2 sm:absolute sm:inset-x-auto sm:right-0 sm:w-[22rem]">
+          <OptionsCard label={label}>{children}</OptionsCard>
+        </div>}
     </div>
   );
 }
