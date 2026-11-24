@@ -69,7 +69,9 @@ const PAGES: [string, () => Promise<ComponentType>][] = [
     async () => {
       const { Content } = await import("./login/_components/content");
       const { LoginFields } = await import("./login/login-fields");
-      return () => createElement(Content, { form: createElement(LoginFields, { state: { status: "idle" }, pending: false, linkInvalid: false }) });
+      return function LoginPage() {
+        return createElement(Content, { form: createElement(LoginFields, { state: { status: "idle" }, pending: false, linkInvalid: false }) });
+      };
     },
   ],
   [
@@ -77,7 +79,9 @@ const PAGES: [string, () => Promise<ComponentType>][] = [
     async () => {
       const { Content } = await import("./register/_components/content");
       const { RegisterFields } = await import("./register/register-fields");
-      return () => createElement(Content, { form: createElement(RegisterFields, { state: { status: "idle" }, pending: false }) });
+      return function RegisterPage() {
+        return createElement(Content, { form: createElement(RegisterFields, { state: { status: "idle" }, pending: false }) });
+      };
     },
   ],
 ];
