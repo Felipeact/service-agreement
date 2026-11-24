@@ -4,6 +4,8 @@ import { describe, expect, test, vi } from "vitest";
 import type { AgreementDetail, ServiceLineView } from "@/application/ports";
 import type { EquipmentChoice, ServiceLineInput } from "@/domain/agreement";
 import { AgreementView, type AgreementActions } from "./content";
+import { visitSchedule } from "@/domain/agreement";
+import { VisitScheduleSection } from "@/components/agreements/visit-schedule";
 import { LineForm } from "@/components/agreements/line-form";
 import { LineRow } from "@/components/agreements/line-row";
 import type { LineState } from "@/components/agreements/state";
@@ -135,11 +137,10 @@ describe("the line form's equipment", () => {
     for (const box of checks) expect(box).toContain('type="checkbox"');
   });
 
-  test("C1074: a site with no equipment gets the link to the site and no line form", () => {
+  test("C1074: a site with no equipment offers no Add a line and no line form", () => {
     const html = view(agreement({ equipmentChoices: [] }));
-    expect(html).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Add equipment to this site before adding a service line<\/a>/);
-    expect(html).not.toContain('id="new-line-description"');
-    expect(html).not.toContain(">Add line</button>");
+    expect(html).not.toMatch(/Add a line<\/button>/);
+    expect(html).not.toContain("Save line");
   });
 });
 
@@ -159,20 +160,18 @@ describe("the line row", () => {
   });
 });
 
-describe("the agreement view's visit schedule", () => {
-  test("C1084: Visit schedule comes after the lines and before Service included, with its month rows", () => {
-    const out = text(view(agreement()));
-    const at = (needle: string) => out.indexOf(needle);
-    expect(at("Visit schedule")).toBeGreaterThan(at("Total per year"));
-    expect(at("Visit schedule")).toBeLessThan(at("Service included"));
-    const section = out.slice(at("Visit schedule"), at("Service included"));
-    expect(section).toContain("March AHU, RTU");
-    expect(section).toContain("October Boiler");
+describe("the visit schedule of an agreement's lines", () => {
+  /** The schedule as the customer page, the contract page and the PDFs draw it from the agreement's lines. */
+  const schedule = (a: AgreementDetail) =>
+    text(renderToStaticMarkup(createElement(VisitScheduleSection, { schedule: visitSchedule(a.shown.lines, a.serviceScope.source === "not_recorded" ? [] : a.serviceScope.types) })));
+
+  test("C1084: the schedule has a row per visited month with its equipment", () => {
+    const out = schedule(agreement());
+    expect(out).toContain("March AHU, RTU");
+    expect(out).toContain("October Boiler");
   });
 
-  test("C1085: with no lines the section says No visits scheduled yet", () => {
-    const out = text(view(agreement({ shown: { versionNo: 1, current: true, lines: [], annualCents: 0 } })));
-    const section = out.slice(out.indexOf("Visit schedule"), out.indexOf("Service included"));
-    expect(section).toContain("No visits scheduled yet");
+  test("C1085: with no lines the schedule says No visits scheduled yet", () => {
+    expect(schedule(agreement({ shown: { versionNo: 1, current: true, lines: [], annualCents: 0 } }))).toContain("No visits scheduled yet");
   });
 });

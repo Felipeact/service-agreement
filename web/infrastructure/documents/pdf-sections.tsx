@@ -1,4 +1,5 @@
 import { Font, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { detailText, unitCount, unitDetails } from "@/domain/agreement/unit-details";
 import { MONTH_NAMES, taskLabel, type BlockItem, type DocumentScope, type PriceColumns, type TableItem, type ThemeFont, type VisitsFormat } from "@/domain/agreement";
 import type { ScheduleRow } from "@/domain/agreement";
 import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
@@ -215,7 +216,10 @@ export function IncludedSection({
   );
 }
 
-/** The org item heading ("Equipment" by default, or the layout title) with one row per asset under its type. */
+/**
+ * The org item heading ("Equipment" by default, or the layout title): one row per type with its unit count, then only what a
+ * customer can read about the units (tags, models, locations, grouped). Bare unit numbers are counted, never listed.
+ */
 export function EquipmentSection({
   scope,
   accent,
@@ -238,15 +242,14 @@ export function EquipmentSection({
       </Text>
       {scope.types.map((type) => (
         <View key={type.code}>
-          <Text style={styles.type} minPresenceAhead={40}>
-            {type.name}
-          </Text>
-          {type.assets.map((asset, index) => (
-            <View key={index} style={styles.row} wrap={false}>
-              <Text style={cell(1.4)}>{asset.unitNo ?? ""}</Text>
-              <Text style={cell(2.6)}>{asset.typeModel ?? ""}</Text>
-              <Text style={cell(3)}>{asset.location ?? ""}</Text>
-            </View>
+          <View style={styles.row} wrap={false} minPresenceAhead={20}>
+            <Text style={[cell(6), { fontFamily: "Helvetica-Bold" }]}>{type.name}</Text>
+            <Text style={[cell(1.4), { textAlign: "right" }]}>{unitCount(type.assets.length)}</Text>
+          </View>
+          {unitDetails(type.assets).map((detail) => (
+            <Text key={detail.label} style={styles.task}>
+              {`- ${detailText(detail)}`}
+            </Text>
           ))}
         </View>
       ))}

@@ -1,4 +1,5 @@
 import { layoutOf, type AgreementTemplateBody, type LayoutItem, type ThemeAccent } from "@/domain/agreement";
+import { inlineText, type RichBlock } from "@/domain/rich-document";
 
 /** The template's own colour as classes, so the thumbnail wears it without an inline style. The company's colour stands in as blue. */
 const ACCENT_BAR: Record<ThemeAccent | "company", string> = {
@@ -26,7 +27,46 @@ function Lines({ text, align }: { text: string; align?: "left" | "center" | "rig
   );
 }
 
+/** The marks a designed page's run leaves: a bar per heading, lines per paragraph or list, a grid per table, a tile per picture. */
+function RichMarks({ nodes, accent }: { nodes: readonly RichBlock[]; accent: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {nodes.slice(0, MAX_ITEMS).map((node, at) => {
+        switch (node.type) {
+          case "heading":
+            return <span key={at} className={`h-[5px] rounded-full ${accent} ${node.attrs.level === 1 ? "w-3/5" : "w-2/5"} ${node.attrs.textAlign === "center" ? "self-center" : node.attrs.textAlign === "right" ? "self-end" : ""}`} />;
+          case "paragraph":
+            return inlineText(node.content).trim() === "" ? null : <Lines key={at} text={inlineText(node.content)} align={node.attrs?.textAlign === "justify" ? undefined : node.attrs?.textAlign} />;
+          case "bulletList":
+          case "orderedList":
+            return <Lines key={at} text={"x".repeat(80 * Math.min(node.content.length, 3))} />;
+          case "table": {
+            const columns = node.content[0]?.content.length ?? 1;
+            return (
+              <div key={at} className="flex flex-col gap-[2px]">
+                {node.content.slice(0, 3).map((row, r) => (
+                  <div key={r} className="flex gap-[2px]">
+                    {Array.from({ length: columns }, (_, column) => (
+                      <span key={column} className={`h-[5px] flex-1 rounded-[1px] ${row.content[0]?.type === "tableHeader" ? accent : "bg-board"}`} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          case "image":
+          case "companyLogo":
+            return <span key={at} className={`h-5 w-1/3 rounded-[2px] bg-board ${node.attrs.align === "center" ? "self-center" : node.attrs.align === "right" ? "self-end" : ""}`} />;
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
+}
+
 function Item({ item, accent }: { item: LayoutItem; accent: string }) {
+  if (item.kind === "rich") return <RichMarks nodes={item.nodes} accent={accent} />;
   if (item.kind === "table") {
     const columns = item.rows[0]?.length ?? 1;
     return (

@@ -59,9 +59,9 @@ describe("agreement reader, cadence", () => {
     });
     const detail = await supabaseAgreementReader(stub.typed).get(AGR);
     expect(detail?.equipmentChoices).toEqual([
-      { id: AHU, code: "AHU", name: "Air handling unit", defaultVisitMonths: [3, 6, 9, 12] },
-      { id: BOILER, code: "BOILER", name: "Boiler", defaultVisitMonths: [10] },
-      { id: RTU, code: "RTU", name: "Rooftop unit", defaultVisitMonths: [3, 6, 9, 12] },
+      { id: AHU, code: "AHU", name: "Air handling unit", defaultVisitMonths: [3, 6, 9, 12], units: 0 },
+      { id: BOILER, code: "BOILER", name: "Boiler", defaultVisitMonths: [10], units: 1 },
+      { id: RTU, code: "RTU", name: "Rooftop unit", defaultVisitMonths: [3, 6, 9, 12], units: 2 },
     ]);
     expect(stub.calls).toContainEqual({ table: "assets", method: "eq", args: ["site_id", "s1"] });
     const asked = stub.calls.find((call) => call.table === "asset_types" && call.method === "in")?.args[1] as string[];

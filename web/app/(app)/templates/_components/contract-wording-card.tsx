@@ -17,11 +17,16 @@ export function ContractWordingCard({ own, canWrite }: { own: boolean; canWrite:
       </div>
       <hr className="border-hairline" />
       <span className="text-[12px] font-semibold text-ink">{own ? "Your contract wording" : "Standard contract wording"}</span>
-      {canWrite && (
-        <LinkButton href="/templates/contract" className="mt-auto w-full">
-          {own ? "Edit" : "Customize"}
+      <div className="mt-auto flex flex-wrap gap-2">
+        <LinkButton href="/templates/contract/preview" aria-label="Preview contract wording" className="flex-1">
+          Preview
         </LinkButton>
-      )}
+        {canWrite && (
+          <LinkButton href="/templates/contract" className="flex-1">
+            {own ? "Edit" : "Customize"}
+          </LinkButton>
+        )}
+      </div>
     </article>
   );
 }

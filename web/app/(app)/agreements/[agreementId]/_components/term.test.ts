@@ -44,29 +44,29 @@ const actions: AgreementActions = {
 };
 
 const view = (a: AgreementDetail, role: MemberRole = "estimator") => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role, actions }));
-const termSection = (html: string) => html.match(/<section aria-label="Term"[\s\S]*?<\/section>/)?.[0] ?? "";
+const termSection = (html: string) => html.match(/<section[^>]*aria-label="Term"[\s\S]*?<\/section>/)?.[0] ?? "";
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 const NO_START: AgreementTerm = { start: null, months: 12, end: null };
 const SET: AgreementTerm = { start: "2027-01-01", months: 12, end: "2027-12-31" };
 
 describe("the Term section", () => {
-  test("C1146: a draft with no start shows Start date not set and 12 months, with inputs for a writer", () => {
+  test("C1146: a draft with no start says the start date is missing, with the start and 12 months as inputs for a writer", () => {
     const section = termSection(view(agreement(NO_START)));
-    expect(text(section)).toContain("Start date not set");
-    expect(text(section)).toContain("12 months");
+    expect(text(section)).toContain("Start date missing");
+    expect(section).toMatch(/<input[^>]*name="termMonths"[^>]*value="12"/);
     expect(section).toMatch(/<input[^>]*name="termStart"[^>]*type="date"|<input[^>]*type="date"[^>]*name="termStart"/);
     expect(section).toMatch(/<input[^>]*name="termMonths"/);
   });
 
   test("C1146: a draft with a start shows the dates and months", () => {
-    expect(text(termSection(view(agreement(SET))))).toContain("Term: Jan 1, 2027 – Dec 31, 2027 · 12 months");
+    expect(text(termSection(view(agreement(SET))))).toContain("Runs 12 months from Jan 1, 2027.");
   });
 
   test("C1146: a viewer, and a version that is not editable, get no term inputs", () => {
     for (const html of [view(agreement(SET), "viewer"), view(agreement(SET, false))]) {
       const section = termSection(html);
-      expect(text(section)).toContain("Term: Jan 1, 2027 – Dec 31, 2027 · 12 months");
+      expect(text(section)).toContain("Runs 12 months from Jan 1, 2027.");
       expect(section).not.toContain("<input");
     }
   });

@@ -12,6 +12,7 @@ import { DEFAULT_ITEM_WORDS, type ItemWords } from "@/domain/org-settings";
 import { Button } from "@/components/ui/button";
 import { MonthGrid, monthBox as box, monthChoice as choice } from "@/components/ui/month-grid";
 import { TextInput } from "@/components/ui/text-input";
+import { DEFAULT_RATES, recipeFor, suggestedCostPerVisit } from "@/domain/agreement/service-plan";
 import { messageFor, type LineState } from "./state";
 
 type LineFormProps = {
@@ -38,6 +39,19 @@ type LineFormProps = {
 };
 
 const legend = "text-[13px] font-medium text-ink";
+
+/**
+ * The suggested price a visit for the checked equipment: the labour of all its units at the shop rate, as the standard plan
+ * prices it. `null` when no checked type knows its unit count.
+ */
+export function suggestedVisitPrice(choices: readonly EquipmentChoice[], checked: readonly string[]): { cents: number; minutes: number } | null {
+  const picked = choices.filter((choice) => checked.includes(choice.id) && (choice.units ?? 0) > 0);
+  if (picked.length === 0) return null;
+  const minutes = picked.reduce((sum, choice) => sum + (choice.units ?? 0) * recipeFor(choice).minutesPerUnit, 0);
+  return { cents: suggestedCostPerVisit(minutes, DEFAULT_RATES), minutes };
+}
+
+const dollars = (cents: number) => `$${(cents / 100).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 /** Description, visit months, equipment covered and cost per visit; each field's message sits under it. */
 export function LineForm({
   idPrefix,
@@ -81,6 +95,7 @@ export function LineForm({
           error={errors.costPerVisit}
         />
       </div>
+      <SuggestedPrice idPrefix={idPrefix} suggestion={suggestedVisitPrice(choices, types)} />
 
       <fieldset className="flex flex-col gap-1.5" aria-describedby={errors.assetTypeIds ? typesError : undefined}>
         <legend className={`${legend} mb-1.5`}>{`${words.Plural} covered`}</legend>
@@ -136,6 +151,24 @@ type ControlProps = Omit<LineFormProps, "state" | "pending" | "action" | "checke
   /** Called after a successful save, e.g. to close an inline editor. */
   onSaved?: () => void;
 };
+
+/** "Suggested $3,690.00 a visit: 27.3 h on site at $135.00 an hour. Use it", which fills the cost field. */
+function SuggestedPrice({ idPrefix, suggestion }: { idPrefix: string; suggestion: { cents: number; minutes: number } | null }) {
+  if (!suggestion) return null;
+  const { cents, minutes } = suggestion;
+  function handleUse() {
+    const input = document.getElementById(`${idPrefix}-costPerVisit`);
+    if (input instanceof HTMLInputElement) input.value = (cents / 100).toFixed(2);
+  }
+  return (
+    <p data-suggested-price className="-mt-1 flex flex-wrap items-center gap-x-2 text-[12px] text-ink-2">
+      {`Suggested ${dollars(cents)} a visit: ${Math.round(minutes / 6) / 10} h on site at ${dollars(DEFAULT_RATES.hourlyRateCents)} an hour.`}
+      <button type="button" onClick={handleUse} className="inline-flex min-h-11 items-center font-semibold text-action hover:underline lg:min-h-0">
+        Use it
+      </button>
+    </p>
+  );
+}
 
 type Picked = { months: number[]; types: string[]; edited: boolean };
 

@@ -8,7 +8,7 @@ export type ContractLayoutForm = LayoutFormState;
 export function contractFormFromBody(body: ContractWordingBody): ContractLayoutForm {
   const { doc, layout } = contractLayoutOf(body);
   // A schema 1 contract prints a "Signatures" title above the blocks; as schema 2 it is the heading row it always looked like.
-  return { doc: { ...doc }, layout: rowsFromLayout(body.schema === 2 ? layout : legacyContractLayout(body.blocks, true)) };
+  return { doc: { ...doc }, layout: rowsFromLayout(body.schema === 1 ? legacyContractLayout(body.blocks, true) : layout) };
 }
 
 /** The editor's fields to schema 2 wording, or a message for each field that cannot be one, keyed `layout.<row>...` as the validator names them. */

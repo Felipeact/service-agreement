@@ -7,7 +7,8 @@ import type { ContractStatus } from "@/domain/contract";
 import { itemWords } from "@/domain/org-settings";
 import { pipelineStage } from "@/domain/pipeline";
 import { AgreementView, type AgreementActions } from "./content";
-import { AgreementPdfPreview } from "./agreement-pdf-preview";
+import { CustomerPreview } from "./customer-preview";
+import { ServiceScopeSections } from "@/components/agreements/service-scope";
 import { LineForm } from "@/components/agreements/line-form";
 import { RemovePrompt } from "@/components/agreements/line-row";
 import { GenerateContractControl, GenerateContractPrompt } from "./contract-controls";
@@ -86,36 +87,30 @@ describe("the agreement view", () => {
     const html = view(agreement());
     const out = text(html);
     expect(html).toContain(">AG-1052</h1>");
-    expect(html).toMatch(/data-stage-dot="in_progress"[^>]*><\/span>In progress/);
+    expect(html).toMatch(/<span class="rounded-full[^"]*">In progress<\/span>/);
     expect(html).toMatch(/<a[^>]*href="\/customers\/c1"[^>]*>Harbourview Strata<\/a>/);
-    expect(html).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Harbourview Towers<\/a>/);
-    expect(out).toContain("Version 2");
-    for (const piece of ["Preventive maintenance visit", "Filter changes", "$892.50", "$150.00", "$3,570.00", "$300.00"]) expect(out, piece).toContain(piece);
-    expect(out).toMatch(/Visits per year: 4 /);
-    expect(out).toMatch(/Visits per year: 2 /);
-    expect(out).toContain("Total per year $3,870.00");
+    expect(out).toContain("Harbourview Towers");
+    for (const piece of ["Preventive maintenance visit", "Filter changes", "$892.50", "$150", "$3,570", "$300"]) expect(out, piece).toContain(piece);
+    expect(out).toMatch(/4 a year/);
+    expect(out).toMatch(/2 a year/);
+    expect(out).toContain("Total a year $3,870");
     expect(out).toContain("Before tax");
   });
 
   test("the line columns are headed from md up, where the per-line labels are hidden", () => {
     const html = view(agreement());
-    const head = /<div[^>]*data-line-head[^>]*>.*?<\/div>/.exec(html)?.[0] ?? "";
-    expect(head).toMatch(/class="[^"]*\bhidden\b[^"]*\bmd:grid\b/);
-    expect(text(head).trim()).toBe("Description Visits per year Per visit Per year");
-    expect(view(agreement({ lines: [] }))).not.toContain("data-line-head");
+    const head = /<div class="hidden grid-cols-[^"]*md:grid">.*?<\/div>/.exec(html)?.[0] ?? "";
+    expect(text(head).trim()).toBe("Service line Visits A visit A year Actions");
   });
 
   test("C715: an empty editable version says so; writers get the add form pre-filled, viewers no form", () => {
     const empty = agreement({ lines: [] });
     const writer = view(empty);
     expect(text(writer)).toContain("No service lines yet.");
-    expect(writer).toMatch(/id="new-line-description"[^>]*value="Preventive maintenance visit"/);
-    const months = writer.match(/<input[^>]*name="visitMonths"[^>]*>/g) ?? [];
-    expect(months).toHaveLength(12);
-    for (const box of months) expect(box).not.toContain("checked");
-    expect(writer).toMatch(/id="new-line-costPerVisit"[^>]*value=""/);
+    expect(writer).toMatch(/<button[^>]*>.*?Add a line<\/button>/);
     const viewer = view(empty, "viewer");
     expect(text(viewer)).toContain("No service lines yet.");
+    expect(viewer).not.toMatch(/Add a line<\/button>/);
     expect(viewer).not.toContain("<form");
   });
 
@@ -126,7 +121,8 @@ describe("the agreement view", () => {
   test.each(cases)("C716: %s, %s, %s version", (role, status, version) => {
     const html = view(agreement({ status, shownNo: version === "current" ? 2 : 1 }), role);
     const shown = role === "estimator" && status === "draft" && version === "current";
-    for (const label of ["Add line", "Edit", "Remove"]) expect(has(html, label), label).toBe(shown);
+    for (const label of ["Edit", "Remove"]) expect(has(html, label), label).toBe(shown);
+    expect(/<button[^>]*>.*?Add a line<\/button>/.test(html), "Add a line").toBe(shown);
   });
 
   test("C726: versions newest first with their dates, Current on the latest, each linking to ?version=<n>", () => {
@@ -177,7 +173,7 @@ describe("the agreement view", () => {
 });
 
 describe("the agreement view's PDF link", () => {
-  const pdfLink = (html: string) => html.match(/<a href="([^"]*\/pdf[^"]*)"[^>]*>Download PDF<\/a>/)?.[1];
+  const pdfLink = (html: string) => html.match(/<a href="([^"]*\/pdf\?version=\d+)"/)?.[1];
 
   test.each<[string, Parameters<typeof agreement>[0], MemberRole, string]>([
     ["a draft's current version", { status: "draft" }, "estimator", "/agreements/g1/pdf?version=2"],
@@ -277,8 +273,12 @@ describe("the agreement view: service included and equipment", () => {
     return match ? match[1] : "";
   };
 
-  test("C805: types in order with unit counts and their tasks; equipment in closed groups per type", () => {
-    const html = view(agreement({ serviceScope: live([BOILER, RTU]) }));
+  /** Service included and the equipment list as ServiceScopeSections draws them (the customer page and both PDFs use them). */
+  const scopeView = (scope: AgreementServiceScope, role: MemberRole = "estimator") =>
+    renderToStaticMarkup(createElement(ServiceScopeSections, { scope, siteId: "s1", canAddEquipment: role !== "viewer" }));
+
+  test("C805: types in order with unit counts and their tasks; equipment as one row per type with readable unit details", () => {
+    const html = scopeView(live([BOILER, RTU]));
     const included = section(html, "Service included");
     const includedText = text(included);
     expect(includedText.indexOf("Boiler, 1 unit")).toBeGreaterThanOrEqual(0);
@@ -287,46 +287,45 @@ describe("the agreement view: service included and equipment", () => {
     expect(included).not.toContain("<details");
 
     const equipment = section(html, "Equipment");
-    expect(equipment.match(/<details/g)).toHaveLength(2);
-    expect(equipment).not.toMatch(/<details[^>]*\sopen/);
-    expect(equipment).toMatch(/<summary[^>]*>[\s\S]*?Boiler · 1[\s\S]*?<\/summary>/);
-    expect(equipment).toMatch(/<summary[^>]*>[\s\S]*?Rooftop unit · 2[\s\S]*?<\/summary>/);
+    expect(equipment).not.toContain("<details");
     const equipmentText = text(equipment);
+    expect(equipmentText).toContain("Boiler 1 unit");
+    expect(equipmentText).toContain("Rooftop unit 2 units");
     for (const value of ["RTU-1", "Carrier 48TC", "Roof", "RTU-2", "B-1", "Condensing", "P1"]) expect(equipmentText).toContain(value);
-    expect(equipmentText).toMatch(/RTU-2 — —/);
+    expect(equipmentText).not.toContain("—");
   });
 
   test("C806: a type with no checklist says so", () => {
-    const included = text(section(view(agreement({ serviceScope: live([{ ...BOILER, tasks: [] }]) })), "Service included"));
+    const included = text(section(scopeView(live([{ ...BOILER, tasks: [] }])), "Service included"));
     expect(included).toContain("Boiler, 1 unit No checklist for this type yet.");
   });
 
   test("C807: no equipment on the site: both sections say so, and writers get a link to the site", () => {
-    const writer = view(agreement({ serviceScope: live([]) }));
+    const writer = scopeView(live([]));
     for (const label of ["Service included", "Equipment"]) expect(text(section(writer, label))).toContain("No equipment on this site yet.");
     expect(writer).toMatch(/<a[^>]*href="\/sites\/s1"[^>]*>Add equipment<\/a>/);
-    const viewer = view(agreement({ serviceScope: live([]) }), "viewer");
+    const viewer = scopeView(live([]), "viewer");
     for (const label of ["Service included", "Equipment"]) expect(text(section(viewer, label))).toContain("No equipment on this site yet.");
     expect(viewer).not.toContain("Add equipment");
   });
 
   test("C815: a frozen version shows what it recorded, and when", () => {
-    const html = view(agreement({ status: "sent", serviceScope: frozen([RTU]) }));
+    const html = scopeView(frozen([RTU]));
     for (const label of ["Service included", "Equipment"]) expect(text(section(html, label))).toContain(recorded);
     expect(text(section(html, "Service included"))).toContain("Rooftop unit, 2 units");
-    expect(section(html, "Equipment")).toMatch(/<summary[^>]*>[\s\S]*?Rooftop unit · 2/);
+    expect(text(section(html, "Equipment"))).toContain("Rooftop unit 2 units");
     expect(html).not.toContain("Add equipment");
   });
 
   test("C816: a version that recorded nothing says so", () => {
-    const html = view(agreement({ status: "sent", serviceScope: { source: "not_recorded" } }));
+    const html = scopeView({ source: "not_recorded" });
     for (const label of ["Service included", "Equipment"]) expect(text(section(html, label))).toContain("Not recorded for this version.");
     expect(html).not.toContain("As recorded on");
     expect(html).not.toContain("Add equipment");
   });
 
   test("C818: a frozen version with no equipment says so", () => {
-    const html = view(agreement({ status: "sent", serviceScope: frozen([]) }));
+    const html = scopeView(frozen([]));
     for (const label of ["Service included", "Equipment"]) {
       expect(text(section(html, label))).toContain("No equipment was recorded for this version.");
     }
@@ -347,10 +346,21 @@ describe("sending an agreement and its customer link", () => {
     expect(html).toMatch(/<button type="button"[^>]*>Cancel<\/button>/);
   });
 
-  test("C901: Send to customer is offered to a writer on the current version of a draft only", () => {
-    expect(has(view(agreement({ status: "draft" })), "Send to customer")).toBe(true);
-    expect(has(view(agreement({ status: "draft", shownNo: 1, versions: 2 })), "Send to customer")).toBe(false);
-    expect(has(view(agreement({ status: "sent" })), "Send to customer")).toBe(false);
+  test("C901: Send to customer is offered to a writer on the current version of a draft only, once Before you send is all done", () => {
+    // A draft with its scope read, a start date and a confirmed company: every item of the card is done.
+    const complete = (over: Parameters<typeof agreement>[0] = {}) => {
+      const base = agreement({ equipmentChoices: CHOICES.map((choice) => ({ ...choice, units: 2 })), ...over });
+      return { ...base, term: { start: "2027-01-01", months: 12, end: "2027-12-31" }, scopeDraft: { controls: [], uncovered: [] } };
+    };
+    const ready = (a: AgreementDetail) => renderToStaticMarkup(createElement(AgreementView, { agreement: a, role: "estimator", actions, company: { name: "Blue Heron Mechanical", address: "1 Main St", phone: "604 555 0142", ready: true } }));
+    expect(has(ready(complete({ status: "draft" })), "Send to customer")).toBe(true);
+    expect(has(ready(complete({ status: "draft", shownNo: 1, versions: 2 })), "Send to customer")).toBe(false);
+    expect(has(ready(complete({ status: "sent" })), "Send to customer")).toBe(false);
+    // Not ready: the card is there with its open items, and the button says what is missing instead of sending.
+    const open = ready({ ...complete({ status: "draft" }), term: { start: null, months: 12, end: null } });
+    expect(has(open, "Send to customer")).toBe(false);
+    expect(text(open)).toContain("Before you send");
+    expect(text(open)).toContain("Set the start date to send");
   });
 
   test("C902: a draft with no lines says to add one before sending", () => {
@@ -389,7 +399,7 @@ describe("sending an agreement and its customer link", () => {
 
   test("C1235: an expired agreement says it expired, and offers neither Withdraw nor Get a new link", () => {
     const out = view(agreement({ status: "expired", validUntil: "2026-12-02" }));
-    expect(text(out)).toContain("Expired · was valid until Dec 2, 2026");
+    expect(text(out)).toContain("Expired, was valid until Dec 2, 2026");
     expect(has(out, "Withdraw")).toBe(false);
     expect(has(out, "Get a new link")).toBe(false);
   });
@@ -709,18 +719,20 @@ describe("the agreement builder, item words", () => {
     expect(form).toContain("Choose at least one station type");
     noEquipment(form);
     const none = render(agreement({ equipmentChoices: [] }));
-    expect(none).toContain("Add stations to this site before adding a service line");
     noEquipment(none);
   });
 
   test("C2016: the panel heading and its empty lines use the org's words", () => {
-    const live = render(agreement({ status: "sent", serviceScope: { source: "live", takenAt: null, types: [] } }));
-    expect(live).toContain("<h2");
+    const page = render(agreement({ status: "sent", serviceScope: { source: "live", takenAt: null, types: [] } }));
+    expect(page).toMatch(/<h2[^>]*>Stations<\/h2>/);
+    noEquipment(page);
+    const scope = (value: AgreementServiceScope) => renderToStaticMarkup(createElement(ServiceScopeSections, { scope: value, siteId: "s1", canAddEquipment: true, words: stations }));
+    const live = scope({ source: "live", takenAt: null, types: [] });
     expect(live).toMatch(/<h2[^>]*>Stations<\/h2>/);
     expect(live).toContain("No stations on this site yet.");
     expect(live).toContain("Add stations");
     noEquipment(live);
-    const frozen = render(agreement({ status: "sent", serviceScope: { source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [] } }));
+    const frozen = scope({ source: "frozen", takenAt: new Date("2026-10-20T15:00:00Z"), types: [] });
     expect(frozen).toContain("No stations were recorded for this version.");
     noEquipment(frozen);
   });
@@ -760,17 +772,19 @@ describe("the skipped equipment codes of a template", () => {
 });
 
 describe("the PDF preview on the agreement page", () => {
-  test("it starts closed: a Preview PDF button, no frame and no request until it is asked for", () => {
-    const html = renderToStaticMarkup(createElement(AgreementPdfPreview, { agreementId: "a1", versionNo: 2, revision: "x" }));
-    expect(text(html)).toContain("Preview PDF");
+  test("What the customer gets starts without a frame: nothing is drawn until the section is in view", () => {
+    const html = renderToStaticMarkup(createElement(CustomerPreview, { agreementId: "a1", versionNo: 2, revision: "x", reader: "Priya Raman", templateName: "Standard agreement" }));
+    expect(html).toContain('aria-label="What the customer gets"');
+    expect(text(html)).toContain("The agreement as Priya Raman will see it, in the Standard agreement template, with every change above.");
+    expect(html).toMatch(/<a[^>]*href="\/agreements\/a1\/pdf\?version=2&amp;inline=1"[^>]*>Open as PDF<\/a>/);
     expect(html).not.toContain("<iframe");
-    expect(html).not.toContain("<dialog");
   });
 
-  test("every agreement page carries it, beside the existing Download PDF link", () => {
+  test("every agreement page carries it, with Preview going to it and the PDF download in the header", () => {
     const html = view(agreement({ status: "draft" }));
-    expect(text(html)).toContain("Preview PDF");
-    expect(html).toContain("Download PDF");
+    expect(html).toMatch(/<a href="#preview"[^>]*>.*?Preview<\/a>/);
+    expect(html).toMatch(/<a href="\/agreements\/g1\/pdf\?version=2"[^>]*>.*?PDF<\/a>/);
+    expect(html).toContain('id="preview"');
   });
 });
 
@@ -821,7 +835,7 @@ describe("the template on the page", () => {
       if (Array.isArray(node)) return node.forEach(walk);
       if (typeof node !== "object" || node === null || !("props" in node)) return;
       const element = node as { type: unknown; props: { children?: unknown; action?: unknown; revision?: string } };
-      if (element.type === AgreementPdfPreview && typeof element.props.revision === "string") found.push(element.props.revision);
+      if (element.type === CustomerPreview && typeof element.props.revision === "string") found.push(element.props.revision);
       walk(element.props.children);
       walk(element.props.action);
     };
@@ -842,15 +856,17 @@ describe("the template on the page", () => {
     const templateChoices = { choices: [{ versionId: "v-std", name: "Standard agreement" }, { versionId: "v-own", name: "Quarterly HVAC" }], selected: "v-own" };
     const render = (a: AgreementDetail, role: MemberRole = "estimator") =>
       renderToStaticMarkup(createElement(AgreementView, { agreement: { ...a, template: body, templateVersionId: "v-own" }, role, actions: { ...actions, setTemplate: async () => ({ status: "saved" as const }) }, templateChoices }));
-    expect(render(agreement({ status: "draft" }))).toContain("Change template");
-    expect(render(agreement({ status: "sent" }))).not.toContain("Change template");
-    expect(render(agreement({ status: "draft", shownNo: 1, versions: 2 }))).not.toContain("Change template");
-    expect(render(agreement({ status: "draft" }), "viewer")).not.toContain("Change template");
+    const cards = (html: string) => (html.match(/<input type="radio"[^>]*name="template"/g) ?? []).length;
+    expect(cards(render(agreement({ status: "draft" })))).toBe(2);
+    expect(render(agreement({ status: "draft" }))).toMatch(/<a[^>]*href="\/templates"[^>]*>Make or edit templates<\/a>/);
+    expect(cards(render(agreement({ status: "sent" })))).toBe(0);
+    expect(cards(render(agreement({ status: "draft", shownNo: 1, versions: 2 })))).toBe(0);
+    expect(cards(render(agreement({ status: "draft" }), "viewer"))).toBe(0);
   });
 
   test("C7109: the page names the template of a draft and of a sent agreement", () => {
     const body = { ...SYSTEM_AGREEMENT_BODY, name: "Quarterly HVAC" } as AgreementDetail["template"];
-    expect(text(view({ ...agreement({ status: "draft" }), template: body }))).toContain("Template: Quarterly HVAC");
-    expect(text(view({ ...agreement({ status: "sent" }), template: body }))).toContain("Template: Quarterly HVAC");
+    expect(text(view({ ...agreement({ status: "draft" }), template: body }))).toContain("in the Quarterly HVAC template");
+    expect(text(view({ ...agreement({ status: "sent" }), template: body }))).toContain("in the Quarterly HVAC template");
   });
 });

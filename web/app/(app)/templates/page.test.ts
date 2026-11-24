@@ -182,9 +182,13 @@ describe("the editor routes", () => {
 
   test.each(["owner", "admin"] as const)("C5349: a %s gets the empty editor on /templates/new", async (role) => {
     currentMember.mockResolvedValue(member(role));
-    const html = renderToStaticMarkup((await NewTemplatePage()) as ReactElement);
+    const node = (await NewTemplatePage()) as ReactElement;
+    const html = renderToStaticMarkup(node);
     expect(html).toContain("New template");
-    expect(html).toContain('id="template-name"');
-    expect(html).toContain("Save template");
+    // The Word-style editor loads in the browser on a blank page with no name.
+    expect(html).toContain('aria-label="Loading the editor"');
+    const props = JSON.stringify(node, (_key, value) => (typeof value === "function" ? undefined : value));
+    expect(props).toContain('"initial":{"name":"","description":"","termMonths":"","lines":[],"doc":{"title":"","showMeta":false');
+    expect(props).toContain('"content":{"type":"doc","content":[{"type":"paragraph"}]}');
   });
 });

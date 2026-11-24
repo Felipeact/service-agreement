@@ -320,9 +320,11 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
    * cover, by name (cadence AC 8).
    */
   async function equipmentChoices(siteId: string, covered: string[]): Promise<EquipmentChoice[]> {
-    const { data: assets, error } = await client.from("assets").select("asset_type_id").eq("site_id", siteId);
+    const { data: assets, error } = await client.from("assets").select("asset_type_id").eq("site_id", siteId).is("deactivated_at", null);
     if (error) throw new Error(`Supabase error ${error.code}: ${error.message}`);
-    const ids = [...new Set([...(assets ?? []).map((asset) => asset.asset_type_id), ...covered])];
+    const units = new Map<string, number>();
+    for (const asset of assets ?? []) units.set(asset.asset_type_id, (units.get(asset.asset_type_id) ?? 0) + 1);
+    const ids = [...new Set([...units.keys(), ...covered])];
     if (ids.length === 0) return [];
     const { data: types, error: typesError } = await client
       .from("asset_types")
@@ -331,7 +333,7 @@ export function supabaseAgreementReader(client: Client): AgreementReader {
       .order("name", { ascending: true });
     if (typesError) throw new Error(`Supabase error ${typesError.code}: ${typesError.message}`);
     return (types ?? [])
-      .map((type) => ({ id: type.id, code: type.code, name: type.name, defaultVisitMonths: [...type.default_visit_months] }))
+      .map((type) => ({ id: type.id, code: type.code, name: type.name, defaultVisitMonths: [...type.default_visit_months], units: units.get(type.id) ?? 0 }))
       .sort(byName);
   }
 

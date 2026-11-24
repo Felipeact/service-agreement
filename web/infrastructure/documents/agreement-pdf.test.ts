@@ -111,11 +111,11 @@ describe("the agreement PDF, rendered", () => {
     expect(section).not.toContain("Boiler, 1 unit\n-");
   });
 
-  test("C863: Equipment has one row per asset under its type, and a missing field is an empty cell", async () => {
+  test("C863: Equipment lists each type with its units' details in order, and a missing field prints nothing", async () => {
     const types = [type("AHU", [], [asset("A-1", "Model 7", "Roof"), asset("A-2")]), type("Boiler", [], [asset(null, null, "Basement")])];
     const all = text(await render({ scope: { kind: "listed", recordedOn: null, types } }));
     const section = all.slice(all.lastIndexOf("Equipment"), all.indexOf("Terms"));
-    expect(inOrder(indexOfIn(section, "AHU", "A-1", "Model 7", "Roof", "A-2", "Boiler", "Basement"))).toBe(true);
+    expect(inOrder(indexOfIn(section, "AHU", "A-1 · Model 7 · Roof", "A-2", "Boiler", "Basement"))).toBe(true);
     expect(all).not.toMatch(/null|undefined/);
   });
 
@@ -180,7 +180,7 @@ describe("the agreement PDF, rendered", () => {
     const started = performance.now();
     const pages = await render({ scope: { kind: "listed", recordedOn: null, types } });
     const seconds = (performance.now() - started) / 1000;
-    const found = new Set(text(pages).match(/^T\d+-\d+$/gm));
+    const found = new Set(text(pages).match(/^- T\d+-\d+$/gm));
     expect(found.size).toBe(2000);
     expect(pages.length).toBeGreaterThan(20);
     process.stderr.write(`C870 measured: 2,000 assets, ${pages.length} pages, ${seconds.toFixed(1)} s\n`);
@@ -231,12 +231,18 @@ describe("the agreement PDF, rendered", () => {
     expect(rows.slice(at("Monthly check"), at("Monthly check") + 4)).toEqual(["Monthly check", "12", "$100.00", "$1,200.00"]);
   });
 
-  test("C863: exactly one row per asset, three for three assets, in two types", async () => {
-    const types = [type("AHU", [], [asset("A-1", "Model 7", "Roof"), asset("A-2", "Model 8", "Roof")]), type("Boiler", [], [asset("B-1", "Cast iron", "Basement")])];
+  test("C863: one row per distinct unit description, with the type's count; bare unit numbers are counted, not printed", async () => {
+    const types = [
+      type("AHU", [], [asset("A-1", "Model 7", "Roof"), asset("A-2", "Model 8", "Roof")]),
+      type("Boiler", [], [asset("B-1", "Cast iron", "Basement")]),
+      type("Fire damper", [], [asset("27"), asset("34"), asset("35")]),
+      type("Fan coil", [], [asset("1", null, "floors 2-3"), asset("2", null, "floors 2-3")]),
+    ];
     const all = text(await render({ scope: { kind: "listed", recordedOn: null, types } }));
     const section = all.slice(all.lastIndexOf("Equipment"), all.indexOf("Terms")).split("\n");
-    expect(section.filter((row) => /^[AB]-\d$/.test(row))).toEqual(["A-1", "A-2", "B-1"]);
-    expect(section.filter((row) => /^(Model 7|Model 8|Cast iron)$/.test(row))).toHaveLength(3);
+    expect(section.filter((row) => row.startsWith("- "))).toEqual(["- A-1 · Model 7 · Roof", "- A-2 · Model 8 · Roof", "- B-1 · Cast iron · Basement", "- floors 2-3 · 2 units"]);
+    expect(section).toContain("3 units");
+    expect(section.filter((row) => /^(27|34|35)$/.test(row))).toEqual([]);
   });
 
   test("C871: a 200-character word changes the page count by no more than the lines it adds", async () => {

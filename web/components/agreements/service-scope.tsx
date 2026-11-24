@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { AgreementServiceScope } from "@/application/ports";
 import { DEFAULT_ITEM_WORDS, itemWas, type ItemWords } from "@/domain/org-settings";
 import { isUnreached, taskLabel, type ScheduleLine, type ScopeType } from "@/domain/agreement";
+import { detailText, unitCount, unitDetails } from "@/domain/agreement/unit-details";
 
 type ServiceScopeSectionsProps = {
   scope: AgreementServiceScope;
@@ -96,7 +97,10 @@ export function ServiceIncludedSection(props: ServiceScopeSectionsProps & Sectio
   );
 }
 
-/** The item panel ("Equipment" by default, or the layout's title): one entry per type with its units. */
+/**
+ * The item panel ("Equipment" by default, or the layout's title): one row per type with its unit count, and under it only what a
+ * customer can read about the units (tags, models, locations, grouped). Bare unit numbers are counted, never listed.
+ */
 export function ServiceEquipmentSection(props: ServiceScopeSectionsProps & Pick<SectionLook, "title">) {
   const { types, empty, recordedNote, words } = scopeParts(props);
   const title = props.title ?? words.Plural;
@@ -105,35 +109,28 @@ export function ServiceEquipmentSection(props: ServiceScopeSectionsProps & Pick<
       <h2 className={heading}>{title}</h2>
       {recordedNote}
       {empty ?? (
-        <div className="divide-y divide-hairline">
-          {types.map((type) => (
-            <details key={type.code} className="group">
-              <summary className="flex min-h-11 cursor-pointer items-center px-4 text-[14px] font-medium">
-                {`${type.name} · ${type.assets.length}`}
-              </summary>
-              <div
-                data-equipment-head
-                className="hidden gap-x-3 border-t border-hairline px-4 py-2 text-[12px] font-medium text-ink-2 md:grid md:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)]"
-              >
-                <span>Unit #</span>
-                <span>Type/model</span>
-                <span>Location</span>
-              </div>
-              <ul className="divide-y divide-hairline border-t border-hairline">
-                {type.assets.map((asset, index) => (
-                  <li
-                    key={index}
-                    className="grid gap-x-3 gap-y-0.5 px-4 py-2 text-[13px] md:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)]"
-                  >
-                    <span className="font-medium">{asset.unitNo ?? "—"}</span>
-                    <span className="break-words text-ink-2 md:text-ink">{asset.typeModel ?? "—"}</span>
-                    <span className="break-words text-ink-2 md:text-ink">{asset.location ?? "—"}</span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ))}
-        </div>
+        <ul className="divide-y divide-hairline">
+          {types.map((type) => {
+            const details = unitDetails(type.assets);
+            return (
+              <li key={type.code} className="flex flex-col gap-1 px-4 py-3">
+                <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-[14px]">
+                  <span className="font-medium">{type.name}</span>
+                  <span className="tabular-nums text-ink-2">{unitCount(type.assets.length)}</span>
+                </p>
+                {details.length > 0 && (
+                  <ul className="flex flex-col gap-0.5 text-[13px] text-ink-2">
+                    {details.map((detail) => (
+                      <li key={detail.label} className="break-words">
+                        {detailText(detail)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

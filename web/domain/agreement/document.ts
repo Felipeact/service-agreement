@@ -7,6 +7,7 @@ import { sectionOptions, type DocOptions, type IncludedOptions, type LayoutItem 
 import { agreementTemplateValues, renderAgreementLayout, SYSTEM_AGREEMENT_BODY, type AgreementTemplateBody } from "./template";
 import { formatTermDate, termLine, termMonthsLabel, type AgreementTerm } from "./term";
 import { days, type RenderedBlock } from "../contract/template";
+import type { RichBlock } from "../rich-document/types";
 
 /** The accent a tenant without one gets on its paper: the product's neutral ink, never a brand colour. */
 export const NEUTRAL_ACCENT = "#374151";
@@ -64,6 +65,10 @@ export type AgreementDocument = {
   doc?: DocOptions;
   /** The frequency of each equipment type by code (`QUARTERLY`), only for a document whose `included` section shows it (AC 15). */
   frequencies?: Record<string, string>;
+  /** The pictures a designed page (schema 3) draws, by upload key; the PDF renderer loads them, so a builder leaves this empty. */
+  images?: Record<string, TenantLogo>;
+  /** A designed header (schema 3), fields filled; `null` for none; absent for the letterhead the document options describe. */
+  header?: RichBlock[] | null;
 };
 
 /** The parts of an agreement page's view the document reads. */
@@ -161,7 +166,7 @@ export function buildAgreementDocument(
     tenantPhone: settings.phone,
     termStart: source.term.start,
   });
-  const { intro, footer, sections, doc, layout } = renderAgreementLayout(template, values);
+  const { intro, footer, sections, doc, layout, header } = renderAgreementLayout(template, values);
   const included = sectionOptions(layout, "included") as IncludedOptions | undefined;
   return {
     tenant: { name: settings.legalName, address: settings.address, phone: settings.phone, accent: settings.accentColor ?? NEUTRAL_ACCENT },
@@ -184,5 +189,6 @@ export function buildAgreementDocument(
     layout,
     doc,
     ...(included?.showFrequency ? { frequencies: typeFrequencies(source.shown.lines, body.scope.kind === "listed" ? body.scope.types : []) } : {}),
+    ...(header !== undefined ? { header } : {}),
   };
 }

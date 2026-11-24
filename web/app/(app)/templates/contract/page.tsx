@@ -4,7 +4,7 @@ import { LogoActionsProvider } from "@/app/(app)/templates/_components/logo-acti
 import { currentLogoPath, saveLogoPath } from "@/app/logo-actions";
 import { prepareLogoUpload } from "@/app/logo-upload";
 import { PageHeader } from "@/components/shell/page-header";
-import { contractFormFromBody } from "@/domain/contract/layout-form";
+import { contractRichFormFromBody } from "@/domain/contract/rich-form";
 import { loadContractWording } from "../_data-access/templates";
 import { saveContractWordingAction } from "./contract-actions";
 import { importContractWordingAction } from "./import-actions";
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Contract wording" };
  * Owners and admins only: an estimator or viewer goes back to the templates, a signed-out visitor to sign in (block-editor AC 41, AC 47).
  */
 export default async function ContractWordingPage() {
-  const { orgName, wording } = await loadContractWording();
+  const { wording, env } = await loadContractWording();
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -24,7 +24,7 @@ export default async function ContractWordingPage() {
         subtitle={wording.own ? "Saving writes a new version. Contracts already made keep the wording they were made with." : "This is the standard wording. Saving makes it your own; contracts already made keep theirs."}
       />
       <LogoActionsProvider actions={{ current: currentLogoPath, save: saveLogoPath, prepare: prepareLogoUpload }}>
-      <ContractWordingEditor initial={contractFormFromBody(wording.body)} save={saveContractWordingAction} importAction={importContractWordingAction} orgName={orgName} />
+      <ContractWordingEditor initial={contractRichFormFromBody(wording.body)} save={saveContractWordingAction} importAction={importContractWordingAction} env={env} />
       </LogoActionsProvider>
     </div>
   );

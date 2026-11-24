@@ -96,8 +96,11 @@ export function isUnreached(task: ScopeTask, typeCode: string, lines: readonly S
   return isSeasonal(task) && !task.visitMonths.some((month) => visitsIn(lines, typeCode, month));
 }
 
-/** An equipment type a line can cover, with the months a new line prefills from it (cadence door 3). */
-export type EquipmentChoice = { id: string; code: string; name: string; defaultVisitMonths: number[] };
+/**
+ * An equipment type a line can cover, with the months a new line prefills from it (cadence door 3). `units` is how many assets
+ * of it the site has; absent in older fixtures, the reader always sets it.
+ */
+export type EquipmentChoice = { id: string; code: string; name: string; defaultVisitMonths: number[]; units?: number };
 
 /**
  * The months the grid shows after the checked types change: the union of their defaults, or nothing when none is

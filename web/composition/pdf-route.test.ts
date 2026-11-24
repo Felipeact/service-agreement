@@ -91,7 +91,7 @@ describe("the PDF route with the real renderer", () => {
     try {
       const response = await GET(new NextRequest(`http://localhost:3000/agreements/${AGR}/pdf`), { params: Promise.resolve({ agreementId: AGR }) });
       expect(response.status).toBe(200);
-      const found = new Set(pdfPages(Buffer.from(await response.arrayBuffer())).join("\n").match(/^T\d+-\d+$/gm));
+      const found = new Set(pdfPages(Buffer.from(await response.arrayBuffer())).join("\n").match(/^- T\d+-\d+$/gm));
       expect(found.size).toBe(2000);
     } finally {
       container.agreementReader.get = original;

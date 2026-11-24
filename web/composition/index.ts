@@ -18,7 +18,10 @@ import {
   makeExtractImport,
   makeSuggestImportTypes,
   makeGenerateServiceLines,
-  makeAgreementInsight,
+  makeReviewAgreement,
+  makeApplyServiceLines,
+  makeSetSiteTypeCount,
+  makeSetAgreementContact,
   makeImportProgress,
   makeNotify,
   makeReadImport,
@@ -50,13 +53,13 @@ import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
-import { claudeAgreementInsighter } from "@/infrastructure/claude/agreement-insighter";
+import { claudeAgreementReviewer } from "@/infrastructure/claude/agreement-reviewer";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
 import { makeAcceptCatalogDraft, makeDraftCatalog } from "@/application/use-cases/draft-catalog";
 import { docusealSignatureProvider } from "@/infrastructure/docuseal";
 import { docusealSignedDocuments } from "@/infrastructure/docuseal/signed-documents";
-import { reactPdfContractRenderer, reactPdfDocumentRenderer } from "@/infrastructure/documents";
+import { reactPdfRenderers } from "@/infrastructure/documents";
 import { importParser } from "@/infrastructure/import-parsers";
 import { makePortalTokens } from "@/infrastructure/portal-tokens";
 import { resendEmailSender } from "@/infrastructure/email";
@@ -105,6 +108,7 @@ import { supabaseOrgSettingsStore } from "@/infrastructure/supabase/settings";
 import { supabaseAgreementScopeStore } from "@/infrastructure/supabase/agreement-scope";
 import { makeTenantLogo } from "@/application/use-cases/tenant-logo";
 import { supabaseOrgLogo } from "@/infrastructure/supabase/org-logo";
+import { supabaseTemplateImages } from "@/infrastructure/supabase/template-images";
 import { supabaseOrgSetup } from "@/infrastructure/supabase/setup";
 import { supabaseMemberWorkspace, supabaseWorkspaceStatus } from "@/infrastructure/supabase/workspace-state";
 import { supabaseWorkspaceEmailCheck } from "@/infrastructure/supabase/workspace-email";
@@ -159,6 +163,9 @@ export async function getContainer() {
   // The org's logo: the stored path, a signed upload, and the bytes a document draws (tenant-logo). The bucket is public, so reading needs no session.
   const logo = supabaseOrgLogo(supabase, { baseUrl: url });
   const tenantLogo = makeTenantLogo(logo);
+  // Pictures on designed template pages (rich-templates): signed uploads for the member's org, and the bytes every PDF draws.
+  const templateImages = supabaseTemplateImages(supabase, { baseUrl: url });
+  const renderers = reactPdfRenderers(templateImages.load);
   // The billing page needs both values (billing-page AC 8); `STRIPE_SECRET_KEY` is read only in this file. Without them the page
   // says billing is not available and every action answers `not_configured` with no request. The publishable key is safe for the
   // browser: it is read here at request time and handed to the card field as a prop, so no rebuild is needed per environment.
@@ -319,7 +326,22 @@ export async function getContainer() {
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
-    agreementInsight: makeAgreementInsight(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementInsighter({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
+    // The agreement page edits a site's equipment by type (count and location) and who the agreement goes to.
+    setSiteTypeCount: makeSetSiteTypeCount({ get: sites.get }, supabaseAssetTypeCatalog(supabase), assetStore),
+    setAgreementContact: makeSetAgreementContact({ get: sites.get }, { contact: customers.contact }, contactStore, {
+      async get(agreementId: string) {
+        const { data, error } = await supabase.rpc("agreement_recipient", { p_agreement_id: agreementId });
+        if (error) throw new Error(`agreement_recipient failed: ${error.code}`);
+        return data;
+      },
+      async set(agreementId: string, email: string) {
+        const { data, error } = await supabase.rpc("set_agreement_recipient", { p_agreement_id: agreementId, p_email: email });
+        if (error) throw new Error(`set_agreement_recipient failed: ${error.code}`);
+        return data === true;
+      },
+    }),
     agreementTermStore: supabaseAgreementTermStore(supabase),
     versionNoteStore: supabaseVersionNoteStore(supabase),
     // Sending and re-linking run as the member too: the token is made here and only its hash reaches the database.
@@ -330,8 +352,9 @@ export async function getContainer() {
     viewPortal: makeViewPortal(portalReader, portalTokens),
     decidePortal: makeDecidePortal(portalReader, supabasePortalDecider(supabase), portalTokens),
     recordPortalView: makeRecordPortalView(supabasePortalViewRecorder(supabase), portalTokens),
-    documentRenderer: reactPdfDocumentRenderer,
-    contractRenderer: reactPdfContractRenderer,
+    documentRenderer: renderers.documentRenderer,
+    contractRenderer: renderers.contractRenderer,
+    templateImages,
     contractReader: supabaseContractReader(supabase),
     contractStore: supabaseContractStore(supabase),
     // Sending a contract for signature (signature-provider): the member's client claims and stores, the provider gets the PDF.
@@ -339,7 +362,7 @@ export async function getContainer() {
       // The same stateless readers, built over the same member client.
       documents: makeContractDocuments(supabaseContractReader(supabase), supabaseAgreementReader(supabase), settings.get, tenantLogo),
       store: supabaseSignatureStore(supabase),
-      renderer: reactPdfContractRenderer,
+      renderer: renderers.contractRenderer,
       provider: docusealSignatureProvider({ apiKey: process.env.DOCUSEAL_API_KEY, apiUrl: process.env.DOCUSEAL_API_URL }),
       tokens: signingTokens,
     }),

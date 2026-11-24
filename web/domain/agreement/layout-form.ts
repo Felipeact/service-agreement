@@ -83,6 +83,8 @@ export function newSectionRow(key: SectionKey): SectionRow {
 }
 
 function rowFromItem(item: LayoutItem): LayoutRow[] {
+  // A designed page's run has no row in the block editor; a schema 3 body opens in the Word-style editor instead.
+  if (item.kind === "rich") return [];
   if (item.kind === "table") return [{ kind: "table", header: item.header, rows: item.rows.map((row) => [...row]) }];
   if (item.kind === "block") {
     return [{ kind: "block", type: item.type, text: item.text, level: item.level ?? 2, indent: item.indent ?? 0, pageBreakBefore: item.pageBreakBefore === true, ...(item.style && { style: { ...item.style } }) }];

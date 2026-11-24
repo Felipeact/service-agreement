@@ -56,6 +56,9 @@ export function TemplateCard({ template, canWrite, canUse, now, actions, onUse }
             Use template
           </Button>
         )}
+        <LinkButton href={`/templates/${id}/preview`} variant="secondary" aria-label={`Preview ${body.name}`} className={small}>
+          Preview
+        </LinkButton>
         {canWrite && !system && (
           <LinkButton href={`/templates/${id}`} variant="secondary" aria-label={`Edit ${body.name}`} className={small}>
             Edit

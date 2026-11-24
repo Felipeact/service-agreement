@@ -4,7 +4,7 @@ import { LogoActionsProvider } from "@/app/(app)/templates/_components/logo-acti
 import { currentLogoPath, saveLogoPath } from "@/app/logo-actions";
 import { prepareLogoUpload } from "@/app/logo-upload";
 import { PageHeader } from "@/components/shell/page-header";
-import { layoutFormFromBody } from "@/domain/agreement/template-form";
+import { richFormFromBody } from "@/domain/agreement/rich-form";
 import { loadTemplateToEdit } from "../_data-access/templates";
 import { saveAgreementTemplateAction } from "../template-actions";
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Edit template" };
  * one, another org's, an archived one and the system template (which no member edits) are 404 (agreement-templates AC 21, Surface).
  */
 export async function EditTemplateForRequest({ templateId }: { templateId: string }) {
-  const { orgName, template, types } = await loadTemplateToEdit(templateId);
+  const { template, types, env } = await loadTemplateToEdit(templateId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -23,10 +23,11 @@ export async function EditTemplateForRequest({ templateId }: { templateId: strin
       <LogoActionsProvider actions={{ current: currentLogoPath, save: saveLogoPath, prepare: prepareLogoUpload }}>
       <TemplateEditor
         templateId={template.id}
-        initial={layoutFormFromBody(template.body)}
+        initial={richFormFromBody(template.body)}
         types={types.map(({ code, name }) => ({ code, name }))}
         save={saveAgreementTemplateAction}
-        orgName={orgName}
+        env={env}
+        converted={template.body.schema !== 3}
       />
       </LogoActionsProvider>
     </div>

@@ -51,7 +51,10 @@ vi.mock("@/infrastructure/supabase/org-logo", async (importOriginal) => ({
 }));
 vi.mock("@/infrastructure/documents", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/infrastructure/documents")>()),
-  reactPdfContractRenderer: { renderContract: (...args: unknown[]) => renderContract(...args) },
+  reactPdfRenderers: () => ({
+    documentRenderer: { renderAgreement: async () => new Uint8Array() },
+    contractRenderer: { renderContract: (...args: unknown[]) => renderContract(...args) },
+  }),
 }));
 vi.mock("@/domain/contract", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/domain/contract")>()),

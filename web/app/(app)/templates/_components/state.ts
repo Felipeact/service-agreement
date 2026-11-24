@@ -1,18 +1,20 @@
 import type { MemberRole } from "@/application/ports";
 import type { AgreementLayoutForm, TemplateFormErrors, TemplateFormInput } from "@/domain/agreement/template-form";
 import type { ContractLayoutForm } from "@/domain/contract/layout-form";
+import type { AgreementRichForm } from "@/domain/agreement/rich-form";
+import type { ContractRichForm } from "@/domain/contract/rich-form";
 
 type Failure = "forbidden" | "not_found" | "unavailable";
 
 /** What `saveAgreementTemplateAction` answers when it does not redirect; `invalid` keeps what was typed (agreement-templates AC 18). */
 export type SaveTemplateState =
   | { status: "idle" | Failure }
-  | { status: "invalid"; errors: TemplateFormErrors; values: TemplateFormInput | AgreementLayoutForm };
+  | { status: "invalid"; errors: TemplateFormErrors; values: TemplateFormInput | AgreementLayoutForm | AgreementRichForm };
 
 /** What `saveContractWordingAction` answers (block-editor AC 42, AC 43): `saved` keeps the editor open on the saved wording, `invalid` keeps what was typed. */
 export type SaveContractWordingState =
   | { status: "idle" | "saved" | Failure }
-  | { status: "invalid"; errors: TemplateFormErrors; values: ContractLayoutForm };
+  | { status: "invalid"; errors: TemplateFormErrors; values: ContractLayoutForm | ContractRichForm };
 
 /** What `importContractWordingAction` answers (contract-import): the form to review, or why there is none. */
 export type ImportContractWordingState =
