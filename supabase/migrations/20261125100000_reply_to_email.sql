@@ -1,6 +1,6 @@
 -- Reply-to address (workspace setting): customer emails (agreement link and reminders) reply to the address the org sets, so
 -- replies reach a company mailbox instead of the sender's personal login. Empty keeps the old behavior (the sender's login email).
--- NOT applied to the hosted project: applying it needs the owner's go-ahead.
+-- Applied to the hosted project on 2026-11-25 with the owner's go-ahead.
 alter table public.org_settings
   add column reply_to_email text check (reply_to_email is null or (length(reply_to_email) <= 254 and reply_to_email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'));
 
