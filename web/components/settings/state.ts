@@ -14,6 +14,7 @@ export function toInput(settings: OrgSettings): OrgSettingsInput {
     legalName: settings.legalName,
     address: settings.address ?? "",
     phone: settings.phone ?? "",
+    replyToEmail: settings.replyToEmail ?? "",
     accentColor: settings.accentColor ?? "",
     repairDiscountPct: formatSettingNumber(settings.repairDiscountPct),
     cpiCapPct: formatSettingNumber(settings.cpiCapPct),

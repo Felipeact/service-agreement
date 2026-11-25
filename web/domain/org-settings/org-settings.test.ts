@@ -53,6 +53,14 @@ describe("validateOrgSettings", () => {
     expect(accepts("taxNote", a(500))?.taxNote).toHaveLength(500);
   });
 
+  test("reply-to email: empty is none, otherwise one address, trimmed and lowercase, at most 254 characters", () => {
+    expect(accepts("replyToEmail", "")?.replyToEmail).toBeNull();
+    expect(accepts("replyToEmail", "  Service@NorthWind.ca ")?.replyToEmail).toBe("service@northwind.ca");
+    for (const bad of ["service", "service@", "@northwind.ca", "service@northwind", "a b@northwind.ca", "a@b@northwind.ca", `${a(250)}@x.ca`]) rejects("replyToEmail", bad);
+    // A form that does not carry the field leaves none.
+    expect(validateOrgSettings(valid).ok && validateOrgSettings(valid)).toMatchObject({ value: { replyToEmail: null } });
+  });
+
   test("C147: accent colour is empty or #rrggbb, stored lowercase", () => {
     rejects("accentColor", "1f6f8b");
     rejects("accentColor", "#12345");

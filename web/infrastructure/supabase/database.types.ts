@@ -1058,6 +1058,7 @@ export type Database = {
           org_id: string
           payment_days: number | null
           phone: string | null
+          reply_to_email: string | null
           proposal_validity_days: number
           item_plural: string
           item_singular: string
@@ -1084,6 +1085,7 @@ export type Database = {
           org_id: string
           payment_days?: number | null
           phone?: string | null
+          reply_to_email?: string | null
           proposal_validity_days?: number
           item_plural?: string
           item_singular?: string
@@ -1110,6 +1112,7 @@ export type Database = {
           org_id?: string
           payment_days?: number | null
           phone?: string | null
+          reply_to_email?: string | null
           proposal_validity_days?: number
           item_plural?: string
           item_singular?: string

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE } from "@/components/site/content";
 import { LegalPage } from "@/components/site/legal-page";
 
 export const metadata: Metadata = { title: "Privacy policy" };
@@ -22,8 +23,8 @@ export default function PrivacyPage() {
         { heading: "Who else handles it", body: ["We use service providers to run the product: a database and sign-in provider, a hosting provider, a payment provider (Stripe), an e-signature provider (DocuSeal), an email delivery provider, and an AI provider that reads the lists of units you upload when you use the import. They handle data only to provide those services."] },
         { heading: "Where it is stored", body: ["See the security page for what we can state about where data is kept."] },
         { heading: "How long we keep it", body: ["We keep your records while your workspace exists so your agreements and signed contracts stay available. Ask us to delete your workspace and we will. Signed contracts and their audit logs are records of an agreement between you and your customer."] },
-        { heading: "Your choices", body: ["You can ask to see, correct or delete the personal information we hold about you through the contact page. Your customers can ask you, and you can pass the request to us."] },
-        { heading: "Changes and contact", body: ["We will change the date at the top when this policy changes. Questions go through the contact page."] },
+        { heading: "Your choices", body: [`You can ask to see, correct or delete the personal information we hold about you by writing to ${SITE.privacyEmail}. Your customers can ask you, and you can pass the request to us.`] },
+        { heading: "Changes and contact", body: [`We will change the date at the top when this policy changes. Questions and privacy requests go to ${SITE.privacyEmail}.`] },
       ]}
     />
   );
