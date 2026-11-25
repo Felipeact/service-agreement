@@ -13,6 +13,8 @@ export const SITE = {
   contactEmail: "hello@servicepacts.com",
   supportEmail: "support@servicepacts.com",
   salesEmail: "sales@servicepacts.com",
+  /** Privacy requests (access, correction, deletion). The mailbox must exist on servicepacts.com before this ships. */
+  privacyEmail: "privacy@servicepacts.com",
 } as const;
 
 /** The copyright line: the product name and the current year. No company name is shown until the owner confirms which company operates the service. */
