@@ -26,6 +26,8 @@ export type OrgSettingsInput = {
   legalName: string;
   address: string;
   phone: string;
+  /** Where customers' replies to the agreement emails go; empty means the sender's own login email. */
+  replyToEmail?: string;
   accentColor: string;
   repairDiscountPct: string;
   cpiCapPct: string;
@@ -52,6 +54,8 @@ export type OrgSettingsValue = {
   legalName: string;
   address: string | null;
   phone: string | null;
+  /** The workspace's reply-to address, `null` when the sender's login email is used. */
+  replyToEmail?: string | null;
   accentColor: string | null;
   repairDiscountPct: number;
   cpiCapPct: number;
@@ -121,6 +125,10 @@ function wholeNumber(raw: string, min: number, max: number, message: string, err
   return Number(text);
 }
 
+/** The same shape the `org_settings.reply_to_email` check enforces: one address, no spaces. */
+const REPLY_TO_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const REPLY_TO_EMAIL_ERROR = "Reply-to email must look like service@yourcompany.com";
+
 /** The same shape the `org_settings` check constraints enforce (item-vocabulary door 1), applied to the trimmed, lowercased word. */
 const ITEM_WORD = /^[a-z][a-z' -]{0,29}$/;
 
@@ -139,6 +147,8 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
 
   const address = optionalText(input.address, 300, "Address", errors, "address");
   const phone = optionalText(input.phone, 40, "Phone", errors, "phone");
+  const replyToEmail = optionalText(input.replyToEmail ?? "", 254, "Reply-to email", errors, "replyToEmail");
+  if (replyToEmail !== null && !REPLY_TO_EMAIL.test(replyToEmail)) errors.replyToEmail = REPLY_TO_EMAIL_ERROR;
   const taxNote = optionalText(input.taxNote, 500, "Tax note", errors, "taxNote");
 
   const accentRaw = input.accentColor.trim();
@@ -189,6 +199,7 @@ export function validateOrgSettings(input: OrgSettingsInput): OrgSettingsValidat
       legalName,
       address,
       phone,
+      replyToEmail: replyToEmail === null ? null : replyToEmail.toLowerCase(),
       accentColor: accentRaw === "" ? null : accentRaw.toLowerCase(),
       repairDiscountPct,
       cpiCapPct,

@@ -9,7 +9,7 @@ import { readFields, readPostedFields } from "@/lib/forms/server-input";
 
 /** Every settings field is text; only these names are read (Zod, `readFields`). */
 const SETTINGS_FIELDS = [
-  "legalName", "address", "phone", "accentColor", "repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "governingProvince", "taxNote",
+  "legalName", "address", "phone", "replyToEmail", "accentColor", "repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "governingProvince", "taxNote",
   "defaultTermMonths", "renewalNoticeDays", "cpiRenegotiationThresholdPct", "renewalCpiPct", "renewalCpiAsOf", "proposalValidityDays", "itemSingular", "itemPlural",
 ] as const;
 

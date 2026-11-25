@@ -533,6 +533,16 @@ begin
   perform tests.ok('C1025 no actor', m is not null and not m ? 'replyTo', 'replyTo present without an actor: ' || coalesce(m::text, 'no message'));
 end $$;
 
+-- Reply-to setting: when the org sets one it wins over the sender's login email; cleared, the sender's email is back.
+select tests.od_sent('f25r');
+update public.org_settings set reply_to_email = 'service@northwind.ca' where org_id = tests.id('orgA');
+do $$
+declare m jsonb := tests.od_msg(tests.od_claim(tests.od_w1('f25r', 'link')));
+begin
+  perform tests.ok('reply-to setting wins', m ->> 'replyTo' = 'service@northwind.ca', 'replyTo is ' || coalesce(m ->> 'replyTo', 'missing'));
+end $$;
+update public.org_settings set reply_to_email = null where org_id = tests.id('orgA');
+
 -- C1020: day3 and day7 carry the same facts; after a reissue the reminder carries the new link.
 select tests.od_sent('f20');
 do $$

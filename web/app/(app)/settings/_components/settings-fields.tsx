@@ -56,7 +56,7 @@ function menuClass(active: boolean): string {
 
 /** The fields each section holds, so a tab can say it has something to fix. */
 const SECTION_FIELDS: Record<(typeof SECTIONS)[number]["id"], readonly (keyof OrgSettingsInput)[]> = {
-  company: ["legalName", "phone", "address", "itemSingular", "itemPlural", "accentColor", "logoPath"],
+  company: ["legalName", "phone", "replyToEmail", "address", "itemSingular", "itemPlural", "accentColor", "logoPath"],
   terms: ["repairDiscountPct", "cpiCapPct", "cancellationNoticeDays", "paymentDays", "proposalValidityDays", "governingProvince", "taxNote"],
   renewal: ["defaultTermMonths", "renewalNoticeDays", "cpiRenegotiationThresholdPct", "renewalCpiPct", "renewalCpiAsOf"],
 };
@@ -103,7 +103,7 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
     setBrand({ name: read("legalName"), accent: read("accentColor"), address: read("address"), phone: read("phone") });
   }
 
-  const text = (name: keyof OrgSettingsInput, label: string, extra: { inputMode?: "decimal" | "numeric" | "tel" } = {}) => (
+  const text = (name: keyof OrgSettingsInput, label: string, extra: { inputMode?: "decimal" | "email" | "numeric" | "tel" } = {}) => (
     <TextInput id={name} label={label} defaultValue={values[name]} error={errors[name]} readOnly={readOnly} {...extra} {...field(name)} />
   );
 
@@ -140,6 +140,10 @@ export function SettingsFields({ values, state, pending, readOnly, action, onSub
           <div className="grid gap-4 sm:grid-cols-2">
             {text("legalName", "Legal name")}
             {text("phone", "Phone", { inputMode: "tel" })}
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              {text("replyToEmail", "Reply-to email", { inputMode: "email" })}
+              <p className="text-[12px] text-ink-2">Where customers&apos; replies to your agreement emails go, such as service@yourcompany.com. Left empty, replies go to the person who sent the agreement.</p>
+            </div>
             <div className="sm:col-span-2">{text("address", "Address")}</div>
             <div className="flex flex-col gap-1.5">
               {text("itemSingular", "Item, singular")}
