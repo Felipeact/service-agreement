@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { AI_TOOLS } from "@/domain/ai-tools";
-import { handleMcpMessage, type McpTools } from "./protocol";
+import { handleMcpMessage, serverIcons, type McpTools } from "./protocol";
 
 const tools = (): McpTools => ({ list: () => [...AI_TOOLS], call: vi.fn(async () => ({ ok: true, data: { hello: "world" } }) as const) });
 
@@ -33,5 +33,24 @@ describe("handleMcpMessage", () => {
     expect(await handleMcpMessage([], tools())).toMatchObject({ error: { code: -32600 } });
     expect(await handleMcpMessage({ jsonrpc: "2.0", id: 6, method: "tools/call", params: {} }, tools())).toMatchObject({ error: { code: -32602 } });
     expect(await handleMcpMessage({ jsonrpc: "2.0", id: 7, method: "resources/list" }, tools())).toMatchObject({ error: { code: -32601 } });
+  });
+});
+
+describe("the server's icon", () => {
+  const tools = { list: () => [], call: async () => ({ ok: true as const, data: {} }) };
+
+  test("initialize carries the icons and the website when the endpoint provides them", async () => {
+    const answer = (await handleMcpMessage({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }, { ...tools, icons: serverIcons("https://servicepacts.com/"), websiteUrl: "https://servicepacts.com" })) as { result: { serverInfo: Record<string, unknown> } };
+    expect(answer.result.serverInfo).toMatchObject({ name: "service-pacts", title: "Service Pacts", websiteUrl: "https://servicepacts.com" });
+    expect(answer.result.serverInfo.icons).toEqual([
+      { src: "https://servicepacts.com/brand/mcp-icon-512.png", mimeType: "image/png", sizes: ["512x512"] },
+      { src: "https://servicepacts.com/brand/mcp-icon-192.png", mimeType: "image/png", sizes: ["192x192"] },
+      { src: "https://servicepacts.com/brand/mark.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+    ]);
+  });
+
+  test("without icons the server info is what it was", async () => {
+    const answer = (await handleMcpMessage({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }, tools)) as { result: { serverInfo: Record<string, unknown> } };
+    expect(answer.result.serverInfo).toEqual({ name: "service-pacts", title: "Service Pacts", version: "1.0.0" });
   });
 });

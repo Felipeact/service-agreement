@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
-import { checkMcpRate, getMcpContainer, handleMcp, planAccessMessage, planAllows } from "@/composition";
+import { checkMcpRate, getMcpContainer, handleMcp, planAccessMessage, planAllows, serverIcons } from "@/composition";
+import { publicOrigin } from "@/lib/public-origin";
 
 const MAX_BODY_BYTES = 32_000;
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -34,7 +35,10 @@ export async function POST(request: NextRequest) {
     if (!planAllows(container.caller.plan, "mcp", "read")) return json(403, { error: "plan_required", message: planAccessMessage("mcp", "read", container.caller.plan) });
     const decision = checkMcpRate(container.caller.userId);
     if (!decision.allowed) return json(429, { error: "rate_limited" }, { "Retry-After": String(decision.retryAfterSeconds) });
+    const origin = publicOrigin(request.nextUrl, request.headers, process.env.APP_BASE_URL);
     const answer = await handleMcp(message, {
+      icons: serverIcons(origin),
+      websiteUrl: origin,
       list: () => container.toolsFor(container.caller),
       call: (name, args) => container.runTool(name, args, container.caller),
     });

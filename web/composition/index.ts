@@ -587,6 +587,7 @@ export function getSiteAgentContainer() {
 
 /** The MCP protocol handler and a per-member ceiling (a model can loop), kept here so the route imports no adapter. */
 export const handleMcp = handleMcpMessage;
+export { serverIcons } from "@/infrastructure/mcp/protocol";
 const mcpPerMember = createRateLimiter({ limit: 60, windowMs: 60_000 });
 export const checkMcpRate = (userId: string) => mcpPerMember(userId);
 const apiLimiters = new Map<number, ReturnType<typeof createRateLimiter>>();
