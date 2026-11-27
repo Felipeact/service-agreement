@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { MotionRoot } from "@/components/motion/motion-root";
+import { SiteAgent } from "@/components/site/agent/site-agent";
 import { MATERIAL_SYMBOLS_HREF } from "@/lib/material-icons";
 
 const inter = Inter({
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh">
         <MotionRoot>{children}</MotionRoot>
+        <SiteAgent />
       </body>
     </html>
   );

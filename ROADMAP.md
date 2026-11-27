@@ -417,6 +417,19 @@ Code items from the same report that are not built yet (no owner action needed, 
 - [ ] A real 404 for unknown URLs (today a signed-out visitor is sent to the login page)
 - [ ] Record the signer's IP and email on the signed PDF itself (the audit log already has them)
 
+### Phase 5.7: AI assistant, site agent and MCP (plan of 2026-11-27)
+One secure backend, three doors: the in-app assistant, the public site agent and the MCP endpoint. Built on Next.js and the existing ports, not Supabase Edge Functions (decided 2026-11-27); the tool layer runs as the member, so RLS still decides.
+- [x] Shared tool layer: catalogue and strict argument checks ([domain/ai-tools](web/domain/ai-tools/index.ts)), one dispatcher ([run-ai-tool.ts](web/application/use-cases/run-ai-tool.ts)): 8 reads, 2 draft writes, role check, audit row per call (2026-11-27)
+- [x] MCP endpoint `POST /api/mcp` with the protected-resource document and the consent page `/oauth/consent` (2026-11-27). Tested with fakes and by 401 checks; not yet run with a live OAuth sign-in
+- [ ] Owner: apply migration `20261127100000_ai_tool_calls.sql`, switch on Authentication > OAuth Server in the Supabase dashboard (dynamic client registration on, authorization path `/oauth/consent`), then connect one MCP client end to end
+- [x] Public site agent: floating launcher with Home, Messages and Help tabs on the public pages, answers only from the site's own text, per-address limits (2026-11-27). The model call was not verified live: the local `ANTHROPIC_API_KEY` is rejected
+- [x] In-app Ask AI restyled as a docked side panel with suggested questions, Stop, New chat and a chat kept in the tab (2026-11-27)
+- [ ] Move the in-app assistant onto the shared tool layer (tool-use loop) instead of the 80-row facts prompt
+- [ ] Saved conversations per member and usage metering in the database
+- [ ] Approval flow (one-time, expiring, payload-bound) before any MCP write that is customer-visible: send, cancel, reprice
+- [ ] Lead capture in the site agent with consent, once the owner chooses where leads go
+- [ ] Prompt-injection and cross-org test pass against a staging project with two orgs
+
 ### Phase 6: Post-contract operations (M16)
 No visit scheduling and no per-visit invoicing (decision 23). Nothing here is started or planned in detail; each item waits for a pilot customer who needs it.
 - [ ] Annual CPI adjustment on the contract anniversary, capped by the contract (n8n W6)

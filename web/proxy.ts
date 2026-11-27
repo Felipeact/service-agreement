@@ -9,13 +9,17 @@ const tokenPages = createRateLimiter({ limit: 60, windowMs: 60_000 });
 /** Sign-in, sign-up and the email confirmation link. */
 const authPages = createRateLimiter({ limit: 20, windowMs: 60_000 });
 
+/** The public chat agent: each answer costs a model call, so a burst and a whole day are both capped per address. */
+const siteAgentBurst = createRateLimiter({ limit: 10, windowMs: 60_000 });
+const siteAgentDaily = createRateLimiter({ limit: 80, windowMs: 86_400_000 });
+
 /** A 429 when this client has used up its allowance for the path, else null. A request with no client address is not limited. */
 function tooManyRequests(request: NextRequest): NextResponse | null {
   const path = request.nextUrl.pathname;
-  const limiter = /^\/(review|sign)\//.test(path) ? tokenPages : /^\/(login|register|auth)(\/|$)/.test(path) ? authPages : null;
+  const limiters = /^\/(review|sign)\//.test(path) ? [tokenPages] : /^\/(login|register|auth)(\/|$)/.test(path) ? [authPages] : path === "/api/site-agent" ? [siteAgentBurst, siteAgentDaily] : [];
   const address = clientAddress(request.headers);
-  if (!limiter || !address) return null;
-  const decision = limiter(address);
+  if (limiters.length === 0 || !address) return null;
+  const decision = limiters.map((limiter) => limiter(address)).find((each) => !each.allowed) ?? { allowed: true as const };
   if (decision.allowed) return null;
   return new NextResponse("Too many requests. Try again shortly.", {
     status: 429,

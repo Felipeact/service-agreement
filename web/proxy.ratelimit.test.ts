@@ -30,4 +30,12 @@ describe("the proxy rate limit", () => {
   test("ordinary pages are not limited", async () => {
     for (let i = 0; i < 70; i += 1) expect((await call("/pricing", "203.0.113.52")).status).toBe(200);
   });
+
+  test("the public chat agent allows 10 questions a minute per address, then 429, and another address is unaffected", async () => {
+    for (let i = 0; i < 10; i += 1) expect((await call("/api/site-agent", "203.0.113.60")).status).toBe(200);
+    const refused = await call("/api/site-agent", "203.0.113.60");
+    expect(refused.status).toBe(429);
+    expect(Number(refused.headers.get("Retry-After"))).toBeGreaterThan(0);
+    expect((await call("/api/site-agent", "203.0.113.61")).status).toBe(200);
+  });
 });
