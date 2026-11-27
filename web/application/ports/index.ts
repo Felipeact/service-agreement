@@ -166,6 +166,29 @@ export interface AssistantUsage {
   record(orgId: string): Promise<void>;
 }
 
+/** What the public site agent shows the model: the last turns and the question. The site's knowledge text belongs to the model adapter. */
+export type SiteAgentFacts = { history: { role: "user" | "assistant"; text: string }[]; question: string };
+
+/** Answers a visitor's question from the public site's knowledge as the model's raw JSON text; `null` when it could not. Reads and changes nothing. */
+export interface SiteAgentModel {
+  ask(facts: SiteAgentFacts): Promise<string | null>;
+}
+
+/** A pending sign-in request from an AI client (MCP), as the consent screen shows it. */
+export type OAuthConsentRequest = { kind: "redirect"; url: string } | { kind: "consent"; clientName: string; scopes: string[]; email: string };
+
+/** The member's consent to an AI client using the MCP endpoint as them. `null` when the request is unknown or expired. */
+export interface OAuthConsent {
+  details(authorizationId: string): Promise<OAuthConsentRequest | null>;
+  /** Approve or deny; answers the address to send the member back to, or `null` when it failed. */
+  decide(authorizationId: string, approve: boolean): Promise<string | null>;
+}
+
+/** The audit trail of AI tool calls: the tool, the door and whether it worked. Never the arguments or the answer. */
+export interface ToolAudit {
+  record(entry: { tool: string; source: "mcp" | "api" | "app"; ok: boolean }): Promise<void>;
+}
+
 /** An active site the New agreement form offers, with the agreement already live on it (agreements-page door 2). */
 export type SiteOption = {
   id: string;

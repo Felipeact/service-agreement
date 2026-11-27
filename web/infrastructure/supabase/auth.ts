@@ -41,11 +41,12 @@ export function supabaseAuthGateway(client: Client): AuthGateway {
   };
 }
 
-export function supabaseMemberDirectory(client: Client): MemberDirectory {
+/** `accessToken` is for a caller with no cookie session (the MCP endpoint): the same verified-claims check, on the bearer token. */
+export function supabaseMemberDirectory(client: Client, accessToken?: string): MemberDirectory {
   return {
     async currentMember() {
       // getClaims verifies the token; getSession would trust the cookie as sent (door 5).
-      const { data } = await client.auth.getClaims();
+      const { data } = await client.auth.getClaims(accessToken);
       const claims = data?.claims;
       if (!claims) return { status: "signed_out" };
 

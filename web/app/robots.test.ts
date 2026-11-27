@@ -4,7 +4,7 @@ import sitemap from "./sitemap";
 
 afterEach(() => vi.unstubAllEnvs());
 
-const PUBLIC_PAGES = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/contact", "/register", "/terms", "/privacy", "/security"];
+const PUBLIC_PAGES = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/developers", "/contact", "/register", "/terms", "/privacy", "/security"];
 const BLOCKED = ["/review/", "/sign/", "/api/", "/auth/", "/login", "/pipeline", "/agreements", "/contracts", "/customers", "/sites", "/assets", "/contacts", "/imports", "/members", "/reports", "/search", "/settings", "/templates", "/setup", "/billing"];
 
 describe("robots.txt and sitemap.xml", () => {

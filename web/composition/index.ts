@@ -19,6 +19,8 @@ import {
   makeSuggestImportTypes,
   makeGenerateServiceLines,
   makeAskAssistant,
+  makeRunAiTool,
+  makeAskSiteAgent,
   makeReviewAgreement,
   makeApplyServiceLines,
   makeSetSiteTypeCount,
@@ -56,7 +58,14 @@ import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitte
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
 import { claudeAgreementReviewer } from "@/infrastructure/claude/agreement-reviewer";
 import { claudeAssistant } from "@/infrastructure/claude/assistant";
+import { createRateLimiter } from "@/infrastructure/rate-limit/limiter";
+import { handleMcpMessage } from "@/infrastructure/mcp/protocol";
+import { claudeSiteAgent } from "@/infrastructure/claude/site-agent";
+import { siteKnowledge } from "@/components/site/agent/knowledge";
 import { supabaseAssistantUsage } from "@/infrastructure/supabase/assistant-usage";
+import { supabaseOAuthConsent } from "@/infrastructure/supabase/oauth-consent";
+import { readMemberPlan } from "@/infrastructure/supabase/member-plan";
+import { supabaseToolAudit } from "@/infrastructure/supabase/tool-audit";
 import { today as businessDay } from "@/lib/business-day";
 import { makeImportContractWording } from "@/application/use-cases/import-contract-wording";
 import { supabaseCatalogWriter } from "@/infrastructure/supabase/catalog-writer";
@@ -210,6 +219,8 @@ export async function getContainer() {
     verifyEmailLink: auth.verifyEmailLink,
     signOut: auth.signOut,
     currentMember: members.currentMember,
+    // Consent for an AI client that asks to use the MCP endpoint as this member (Supabase Auth's OAuth server).
+    oauthConsent: supabaseOAuthConsent(supabase),
     // What a signed-in person with no membership is told about their own paid checkout (workspace-pending-state door 3).
     workspaceState: supabaseMemberWorkspace(supabase).mine,
     transitionAgreement: makeTransitionAgreement(agreementRepository),
@@ -476,3 +487,64 @@ export async function getBillingContainer() {
 }
 
 export type BillingContainer = Awaited<ReturnType<typeof getBillingContainer>>;
+
+/**
+ * Wires the MCP endpoint (MCP door 2). No cookie: the caller sends a Supabase access token (the member's own, issued by Supabase Auth's
+ * OAuth server), and the client carries it as `Authorization`, so row-level security sees that member exactly as in the app. There is no
+ * service-role key. `null` when the token is not a valid member's, so the endpoint answers 401 and runs nothing.
+ */
+async function getToolContainer(accessToken: string, source: "mcp" | "api") {
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const supabase = createClient<Database>(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+  const member = await supabaseMemberDirectory(supabase, accessToken).currentMember();
+  if (member.status !== "member") return null;
+  const agreementReader = supabaseAgreementReader(supabase);
+  const tools = makeRunAiTool({
+    agreements: supabaseAgreementLister(supabase),
+    agreementReader,
+    agreementStore: supabaseAgreementStore(supabase),
+    customers: supabaseCustomerDirectory(supabase),
+    records: supabaseRecordSearch(supabase),
+    reports: supabaseReportReader(supabase),
+    generateServiceLines: makeGenerateServiceLines(agreementReader, supabaseServiceLineStore(supabase)),
+    audit: supabaseToolAudit(supabase, member.orgId),
+    today: () => businessDay(systemClock.now()),
+    writesEnabled: process.env.MCP_WRITE_TOOLS?.trim().toLowerCase() !== "off",
+    source,
+  });
+  const plan = await readMemberPlan(supabase);
+  const caller = { userId: member.userId, email: member.email, orgName: member.orgName, role: member.role, canWrite: member.role === "owner" || member.role === "admin" || member.role === "estimator", plan };
+  return { caller, ...tools };
+}
+/** The MCP door: tools run as the member who holds the bearer token, gated by their company's plan. */
+export const getMcpContainer = (accessToken: string) => getToolContainer(accessToken, "mcp");
+/** The REST API door: the same tool layer and the same checks, reached over plain HTTP. */
+export const getApiContainer = (accessToken: string) => getToolContainer(accessToken, "api");
+
+/** Wires the public site agent (site agent door 3). No cookie and no database: only the Claude key, read here, and the site's own text. */
+export function getSiteAgentContainer() {
+  return { askSiteAgent: makeAskSiteAgent(claudeSiteAgent({ apiKey: process.env.ANTHROPIC_API_KEY, knowledge: siteKnowledge() })) };
+}
+
+/** The MCP protocol handler and a per-member ceiling (a model can loop), kept here so the route imports no adapter. */
+export const handleMcp = handleMcpMessage;
+const mcpPerMember = createRateLimiter({ limit: 60, windowMs: 60_000 });
+export const checkMcpRate = (userId: string) => mcpPerMember(userId);
+const apiLimiters = new Map<number, ReturnType<typeof createRateLimiter>>();
+/** Per-member API limit, set by the plan's calls a minute (one limiter per distinct limit). */
+export function checkApiRate(userId: string, callsPerMinute: number) {
+  let limiter = apiLimiters.get(callsPerMinute);
+  if (!limiter) {
+    limiter = createRateLimiter({ limit: callsPerMinute, windowMs: 60_000 });
+    apiLimiters.set(callsPerMinute, limiter);
+  }
+  return limiter(userId);
+}
+export { accessOf, planAllows, planAccessMessage } from "@/domain/billing/plan-access";
+export { resolveRoute, statusForFailure, openApiDocument } from "@/domain/public-api";
+
+export type McpContainer = NonNullable<Awaited<ReturnType<typeof getMcpContainer>>>;

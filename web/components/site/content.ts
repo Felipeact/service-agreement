@@ -48,6 +48,7 @@ export const FOOTER_GROUPS: readonly { title: string; links: readonly NavLink[] 
     links: [
       { href: "/about", label: "About" },
       { href: "/faq", label: "FAQ" },
+      { href: "/developers", label: "API and AI" },
       { href: "/contact", label: "Contact" },
     ],
   },
@@ -64,7 +65,7 @@ export const FOOTER_GROUPS: readonly { title: string; links: readonly NavLink[] 
 export const FOOTER_LINKS: readonly NavLink[] = FOOTER_GROUPS.flatMap((group) => group.links);
 
 /** The public pages a search engine may list, in sitemap order (qa-p1-p2 C7009). */
-export const SITEMAP_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/contact", "/register", "/terms", "/privacy", "/security"];
+export const SITEMAP_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/developers", "/contact", "/register", "/terms", "/privacy", "/security"];
 
 export type Step = { n: number; title: string; summary: string; detail: string; who: string };
 

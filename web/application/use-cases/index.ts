@@ -58,6 +58,8 @@ export { makeRequestSignInLink, type SignInLinkResult } from "./sign-in";
 export { makeReadImport, outcomeOf, type ReadImportResult } from "./read-import";
 export { makeGenerateServiceLines, type GenerateServiceLinesResult } from "./generate-service-lines";
 export { makeAskAssistant, type AskAssistantResult } from "./ask-assistant";
+export { makeAskSiteAgent } from "./ask-site-agent";
+export { makeRunAiTool, type ToolCaller, type ToolResult } from "./run-ai-tool";
 export { makeReviewAgreement, planTypesOf, type AgreementReviewOutcome } from "./review-agreement";
 export { makeApplyServiceLines, type ApplyServiceLinesResult } from "./apply-service-lines";
 export { makeSetSiteTypeCount, type SiteTypeCountResult } from "./site-type-count";
