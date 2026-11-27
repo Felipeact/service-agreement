@@ -7,10 +7,25 @@ export const SERVER_INFO = { name: "service-pacts", title: "Service Pacts", vers
 const INSTRUCTIONS =
   "Service Pacts tools for the signed-in member's own company. Call who_am_i first. Reads cover customers, sites, equipment, agreements, expiring agreements and revenue. The write tools add records and start drafts only: nothing is ever sent to a customer from here. To make an agreement from an equipment list: (1) search_customers and search_sites_and_equipment to see what already exists; (2) if the customer or the site is new, ASK the user for anything you do not have (the customer's company name, what to call the site, its street address) and wait for the answer before creating; (3) create_customer, then create_site, then add_equipment with the units from the list (a new equipment type is created automatically when none fits, so never stop for a missing type); (4) create_agreement_draft, then generate_service_lines. Never put equipment on a different customer's site to get around a missing one.";
 
-/** What the protocol needs of the tool layer, so it knows nothing of the database. */
+/** An icon a client may show beside the server (MCP `Icon`): an absolute address, its type and its sizes. */
+export type McpIcon = { src: string; mimeType: string; sizes: string[] };
+
+/** The Service Pacts mark as the icons a client can choose from, on the given origin (`/brand/mcp-icon-*.png` and `/brand/mark.svg` in `web/public`). */
+export function serverIcons(origin: string): McpIcon[] {
+  const base = origin.replace(/\/$/, "");
+  return [
+    { src: `${base}/brand/mcp-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
+    { src: `${base}/brand/mcp-icon-192.png`, mimeType: "image/png", sizes: ["192x192"] },
+    { src: `${base}/brand/mark.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
+  ];
+}
+
+/** What the protocol needs of the tool layer, so it knows nothing of the database. `icons` and `websiteUrl` describe the server to the client's connector list. */
 export type McpTools = {
   list(): ToolDefinition[];
   call(name: string, args: unknown): Promise<ToolResult>;
+  icons?: McpIcon[];
+  websiteUrl?: string;
 };
 
 type Id = string | number | null;
@@ -33,7 +48,7 @@ export async function handleMcpMessage(message: unknown, tools: McpTools): Promi
     case "initialize": {
       const asked = typeof input.protocolVersion === "string" ? input.protocolVersion : "";
       const protocolVersion = (SUPPORTED_PROTOCOLS as readonly string[]).includes(asked) ? asked : SUPPORTED_PROTOCOLS[0];
-      return reply(id as Id, { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo: SERVER_INFO, instructions: INSTRUCTIONS });
+      return reply(id as Id, { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo: { ...SERVER_INFO, ...(tools.websiteUrl && { websiteUrl: tools.websiteUrl }), ...(tools.icons && tools.icons.length > 0 && { icons: tools.icons }) }, instructions: INSTRUCTIONS });
     }
     case "ping":
       return reply(id as Id, {});
