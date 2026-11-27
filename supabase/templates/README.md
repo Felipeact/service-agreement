@@ -1,9 +1,9 @@
 # Sign-in email templates
 
-The emails Supabase Auth sends, in the Service Pacts look ([docs/DESIGN.md](../../docs/DESIGN.md), "Field Protocol"): the blue mark,
+The emails Supabase Auth sends, in the Service Pacts look ([docs/DESIGN.md](../../docs/DESIGN.md), "Field Protocol"): the logo lockup,
 a white card on the pale ground, one big blue button, the link written out for clients that block buttons, and a plain "ignore this
 if it was not you" line. Tables, inline styles and system fonts only, because email clients drop most CSS; the logo is
-`web/public/brand/email-mark.png` (PNG, since Gmail and Outlook do not show SVG), loaded from `{{ .SiteURL }}/brand/email-mark.png`.
+a transparent PNG of the lockup hosted on Cloudinary (`LOGO` in `build.mjs`; PNG because Gmail and Outlook do not show SVG). To change it, replace that URL and rebuild.
 
 Edit `build.mjs` (one shared layout, then each message) and run `node supabase/templates/build.mjs` to rewrite the `.html` files.
 The `.html` files are what you paste into the dashboard: **Authentication > Emails > Templates**, one per tab, with the subject below.
@@ -24,7 +24,7 @@ widen it first if you start using them.
 
 ## Check before pasting
 
-- **Site URL** (Authentication > URL Configuration) is `https://servicepacts.com`. The link and the logo are built from it.
+- **Site URL** (Authentication > URL Configuration) is `https://servicepacts.com`. The sign-in link is built from it.
 - **Variables used:** `{{ .SiteURL }}`, `{{ .TokenHash }}`, `{{ .Token }}`, `{{ .Email }}`, `{{ .NewEmail }}`, `{{ .ConfirmationURL }}`.
 - After pasting, send yourself a sign-in link and open it on your phone: the button should be full width of the card and the logo visible.
 - Sender: with custom SMTP (Resend, `servicepacts.com` is verified) set the sender name to "Service Pacts" so the inbox shows it, not the address.
