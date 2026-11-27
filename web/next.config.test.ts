@@ -54,10 +54,16 @@ describe("next.config site-wide security headers", () => {
 });
 
 describe("next.config Content-Security-Policy", () => {
-  test("forbids framing, plugins, base-tag and cross-origin form posts, and falls back to self", () => {
-    for (const directive of ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'"]) {
+  test("forbids framing by others, base-tag and cross-origin form posts, and falls back to self", () => {
+    for (const directive of ["default-src 'self'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'"]) {
       expect(CONTENT_SECURITY_POLICY).toContain(directive);
     }
+  });
+
+  test("lets the PDF preview show: a blob: PDF may be framed, and the browser's PDF viewer may load from self and blob only", () => {
+    expect(CONTENT_SECURITY_POLICY).toMatch(/(^|; )frame-src 'self' blob: /);
+    expect(CONTENT_SECURITY_POLICY).toContain("object-src 'self' blob:");
+    expect(CONTENT_SECURITY_POLICY).not.toMatch(/object-src [^;]*(https?:|\*)/);
   });
 
   test("names the third parties the app uses, and no wildcard source", () => {

@@ -18,8 +18,9 @@ export const CONTENT_SECURITY_POLICY = [
   `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com https://*.docuseal.com https://*.docuseal.eu`.replace(/\s+/g, " "),
   "font-src 'self' data: https://fonts.gstatic.com",
   `connect-src 'self' ${supabaseOrigin} ${supabaseSocket} https://api.stripe.com https://*.stripe.com https://*.docuseal.com https://*.docuseal.eu${isDev ? " ws://localhost:* http://localhost:*" : ""}`.replace(/\s+/g, " "),
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://*.docuseal.com https://*.docuseal.eu https://app.supademo.com",
-  "object-src 'none'",
+  "frame-src 'self' blob: https://js.stripe.com https://hooks.stripe.com https://*.docuseal.com https://*.docuseal.eu https://app.supademo.com",
+  // The PDF preview is a blob: PDF in a frame, and the browser's own PDF viewer needs 'self' and blob: here; no other plugin content is allowed.
+  "object-src 'self' blob:",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
