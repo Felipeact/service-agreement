@@ -33,8 +33,8 @@ type Deps = {
   today: () => string;
   /** Switch for the write tools (`MCP_WRITE_TOOLS=off` turns them off). */
   writesEnabled: boolean;
-  /** Which door the call came through, written to the audit row. */
-  source: "mcp" | "api";
+  /** Which door the call came through, written to the audit row. The in-app door (`app`) is every plan's: only MCP and the API are gated by plan. */
+  source: "mcp" | "api" | "app";
 };
 
 const dollars = (cents: number | null | undefined): number | null => (typeof cents === "number" ? Math.round(cents) / 100 : null);
@@ -53,16 +53,19 @@ const UNAVAILABLE = { ok: false, error: "That could not be read right now. Try a
 export function makeRunAiTool(deps: Deps) {
   const { agreements, agreementReader, agreementStore, customers, records, reports, audit } = deps;
 
+  /** Whether the caller's plan lets this door run a tool of this kind: always, for the app's own assistant. */
+  const planOpen = (caller: ToolCaller, access: "read" | "write") => deps.source === "app" || planAllows(caller.plan, deps.source, access);
+
   /** The tools this caller may see: every read, and the writes only when their role and the switch allow. */
   function toolsFor(caller: ToolCaller): ToolDefinition[] {
-    return AI_TOOLS.filter((tool) => mayRunTool(tool.access, caller.canWrite, deps.writesEnabled) && planAllows(caller.plan, deps.source, tool.access));
+    return AI_TOOLS.filter((tool) => mayRunTool(tool.access, caller.canWrite, deps.writesEnabled) && planOpen(caller, tool.access));
   }
 
   async function execute(call: ToolCall, caller: ToolCaller): Promise<ToolResult> {
     const day = deps.today();
     switch (call.tool) {
       case "who_am_i":
-        return { ok: true, data: { email: caller.email, company: caller.orgName, role: caller.role, canCreateDrafts: caller.canWrite && deps.writesEnabled && planAllows(caller.plan, deps.source, "write") } };
+        return { ok: true, data: { email: caller.email, company: caller.orgName, role: caller.role, canCreateDrafts: caller.canWrite && deps.writesEnabled && planOpen(caller, "write") } };
       case "search_customers": {
         const rows = await customers.list();
         const found = rows.filter((row) => row.active && matches(call.query, row.name, row.primaryContact, ...row.agreementNumbers)).slice(0, call.limit);
@@ -236,7 +239,7 @@ export function makeRunAiTool(deps: Deps) {
     const outcome = await (async (): Promise<ToolResult> => {
       if (!definition || !parsed.ok) return { ok: false, error: parsed.ok ? "Unknown tool." : parsed.error };
       if (!mayRunTool(definition.access, caller.canWrite, deps.writesEnabled)) return { ok: false, error: "Your role, or this server, does not allow that tool." };
-      if (!planAllows(caller.plan, deps.source, definition.access)) return { ok: false, error: planAccessMessage(deps.source, definition.access, caller.plan) };
+      if (!planOpen(caller, definition.access)) return { ok: false, error: planAccessMessage(deps.source === "app" ? "api" : deps.source, definition.access, caller.plan) };
       try {
         return await execute(parsed.call, caller);
       } catch (cause) {

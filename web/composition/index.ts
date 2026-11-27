@@ -1,5 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ToolAudit } from "@/application/ports";
 import { authCookieOptions } from "@/infrastructure/supabase/cookie-domain";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
@@ -61,7 +63,7 @@ import { supabaseEquipmentTypeCreator } from "@/infrastructure/supabase/equipmen
 import { makeResolveEquipmentTypes } from "@/application/use-cases/resolve-equipment-types";
 import { makeFixImportRows } from "@/application/use-cases/fix-import-rows";
 import { claudeAgreementReviewer } from "@/infrastructure/claude/agreement-reviewer";
-import { claudeAssistant } from "@/infrastructure/claude/assistant";
+import { claudeAssistantChat } from "@/infrastructure/claude/assistant";
 import { createRateLimiter } from "@/infrastructure/rate-limit/limiter";
 import { handleMcpMessage } from "@/infrastructure/mcp/protocol";
 import { claudeSiteAgent } from "@/infrastructure/claude/site-agent";
@@ -362,7 +364,25 @@ export async function getContainer() {
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
-    askAssistant: makeAskAssistant({ agreements: agreementLister, sites: siteLister, model: claudeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }), usage: supabaseAssistantUsage(supabase), plan: () => readMemberPlan(supabase), now: () => systemClock.now(), today: businessDay }),
+    askAssistant: makeAskAssistant({
+      model: claudeAssistantChat({ apiKey: process.env.ANTHROPIC_API_KEY }),
+      // The app's own door: the member's cookie session, every plan, the same tools and audit as MCP. The org is read when a call is audited.
+      tools: aiToolRunner(
+        supabase,
+        "app",
+        supabaseToolAudit(supabase, async () => {
+          const member = await members.currentMember();
+          if (member.status !== "member") throw new Error("not a member");
+          return member.orgId;
+        }),
+        true,
+      ),
+      usage: supabaseAssistantUsage(supabase),
+      plan: () => readMemberPlan(supabase),
+      parser: importParser,
+      now: () => systemClock.now(),
+      today: businessDay,
+    }),
     reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
     applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
     // The agreement page edits a site's equipment by type (count and location) and who the agreement goes to.
@@ -514,17 +534,13 @@ export type BillingContainer = Awaited<ReturnType<typeof getBillingContainer>>;
  * OAuth server), and the client carries it as `Authorization`, so row-level security sees that member exactly as in the app. There is no
  * service-role key. `null` when the token is not a valid member's, so the endpoint answers 401 and runs nothing.
  */
-async function getToolContainer(accessToken: string, source: "mcp" | "api") {
-  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
-  const supabase = createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-  });
-  const member = await supabaseMemberDirectory(supabase, accessToken).currentMember();
-  if (member.status !== "member") return null;
+/**
+ * The shared tool layer on one Supabase client (the member's own: a bearer token for MCP and the API, the session cookie for the app's
+ * Ask AI), so every door runs the same readers, stores, checks and audit as the member, and row-level security decides.
+ */
+function aiToolRunner(supabase: SupabaseClient<Database>, source: "mcp" | "api" | "app", audit: ToolAudit, writesEnabled: boolean) {
   const agreementReader = supabaseAgreementReader(supabase);
-  const tools = makeRunAiTool({
+  return makeRunAiTool({
     agreements: supabaseAgreementLister(supabase),
     agreementReader,
     agreementStore: supabaseAgreementStore(supabase),
@@ -538,11 +554,23 @@ async function getToolContainer(accessToken: string, source: "mcp" | "api") {
     records: supabaseRecordSearch(supabase),
     reports: supabaseReportReader(supabase),
     generateServiceLines: makeGenerateServiceLines(agreementReader, supabaseServiceLineStore(supabase)),
-    audit: supabaseToolAudit(supabase, member.orgId),
+    audit,
     today: () => businessDay(systemClock.now()),
-    writesEnabled: process.env.MCP_WRITE_TOOLS?.trim().toLowerCase() !== "off",
+    writesEnabled,
     source,
   });
+}
+
+async function getToolContainer(accessToken: string, source: "mcp" | "api") {
+  const url = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const supabase = createClient<Database>(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+  const member = await supabaseMemberDirectory(supabase, accessToken).currentMember();
+  if (member.status !== "member") return null;
+  const tools = aiToolRunner(supabase, source, supabaseToolAudit(supabase, member.orgId), process.env.MCP_WRITE_TOOLS?.trim().toLowerCase() !== "off");
   const plan = await readMemberPlan(supabase);
   const caller = { userId: member.userId, orgId: member.orgId, email: member.email, orgName: member.orgName, role: member.role, canWrite: member.role === "owner" || member.role === "admin" || member.role === "estimator", plan };
   return { caller, ...tools };

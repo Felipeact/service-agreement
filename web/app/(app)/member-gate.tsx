@@ -11,7 +11,6 @@ import { signOutAction } from "./actions";
 import { NewAgreementLauncher } from "./new-agreement-launcher";
 import { AskAi } from "@/components/shell/ask-ai";
 import { askAiAction } from "./ask-ai-actions";
-import { createAgreementAction, generateServiceLinesAction } from "./agreement-actions";
 
 /** Checks the session again behind the proxy, which a matcher change could bypass. Render it inside Suspense (door 6). */
 export async function MemberGate({ children }: { children: ReactNode }) {
@@ -43,7 +42,7 @@ export async function MemberGate({ children }: { children: ReactNode }) {
       : null;
 
   return (
-    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} askAi={<AskAi canAct={canWriteRecords(member.role)} actions={{ ask: askAiAction, createAgreement: createAgreementAction, generateLines: generateServiceLinesAction }} />} newAgreement={canWriteRecords(member.role) ? <NewAgreementLauncher /> : undefined} words={words} role={member.billingRole ?? member.role} plan={plan} counts={{ "/pipeline": openCount }} reports={reportAccess(member.billingRole ?? member.role) !== "none"} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
+    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} askAi={<AskAi actions={{ ask: askAiAction }} />} newAgreement={canWriteRecords(member.role) ? <NewAgreementLauncher /> : undefined} words={words} role={member.billingRole ?? member.role} plan={plan} counts={{ "/pipeline": openCount }} reports={reportAccess(member.billingRole ?? member.role) !== "none"} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
       {children}
     </AppShell>
   );

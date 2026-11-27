@@ -144,20 +144,25 @@ export interface AgreementLister {
   list(filter: AgreementFilter, today: string): Promise<AgreementListRow[]>;
 }
 
-/** What Ask AI shows the model: the day, the page the member is on, the org's agreements and active sites, and the conversation so far. */
-export type AssistantFacts = {
-  today: string;
-  page: string;
-  canAct: boolean;
-  agreements: { id: string; number: string | null; status: string; customer: string; site: string; annualCents: number | null; termEnd: string | null }[];
-  sites: { id: string; name: string; customer: string; liveAgreementNumber: string | null }[];
-  history: { role: "user" | "assistant"; text: string }[];
-  question: string;
-};
+/** One block of a chat message: text, a tool the model wants run, a tool's answer, or a PDF the member attached. */
+export type ChatBlock =
+  | { type: "text"; text: string }
+  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "tool_result"; toolUseId: string; content: string; isError?: boolean }
+  | { type: "pdf"; base64: string };
 
-/** Answers a question from the facts as the model's raw JSON text; `null` when it could not. Reads nothing and changes nothing. */
-export interface AssistantModel {
-  ask(facts: AssistantFacts): Promise<string | null>;
+export type ChatMessage = { role: "user" | "assistant"; content: string | ChatBlock[] };
+export type ChatTool = { name: string; description: string; inputSchema: Record<string, unknown> };
+
+/** What the model is told about the moment: the business day, the page the member is on, their company, and whether they may write records. */
+export type ChatContext = { today: string; page: string; orgName: string; canWrite: boolean };
+
+/** One model turn: the blocks it wrote and why it stopped (`tool_use`: it wants the tools run and the answers sent back). `null` when it could not answer. */
+export type ChatStep = { blocks: ChatBlock[]; stop: "end" | "tool_use" } | null;
+
+/** The model behind Ask AI: one step of a tool-using conversation. It reads and changes nothing itself; the caller runs the tools it asks for. */
+export interface AssistantChatModel {
+  step(input: { context: ChatContext; messages: ChatMessage[]; tools: ChatTool[] }): Promise<ChatStep>;
 }
 
 /** The member's own record of questions asked, for the daily limit. */
