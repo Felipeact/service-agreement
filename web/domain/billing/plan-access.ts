@@ -6,7 +6,7 @@ export type AccessDoor = "mcp" | "api";
 /** What a plan lets a door do: nothing, read, or read plus the draft writes. */
 export type AccessLevel = "none" | "read" | "write";
 
-export type PlanAccess = { mcp: AccessLevel; api: AccessLevel; callsPerMinute: number };
+export type PlanAccess = { mcp: AccessLevel; api: AccessLevel; callsPerMinute: number; /** Ask AI questions the whole company may ask in a calendar month. */ assistantQuestionsPerMonth: number };
 
 /**
  * What each plan includes beyond agreements and imports (decision of 2026-11-27, prices still the owner's call): Starter has the
@@ -14,12 +14,13 @@ export type PlanAccess = { mcp: AccessLevel; api: AccessLevel; callsPerMinute: n
  * Reads cost us no model fees (the caller's own client pays), so they are the cheap way to make Team worth its price.
  */
 export const PLAN_ACCESS: Readonly<Record<PlanKey, PlanAccess>> = {
-  starter: { mcp: "none", api: "none", callsPerMinute: 0 },
-  team: { mcp: "read", api: "read", callsPerMinute: 120 },
-  business: { mcp: "write", api: "write", callsPerMinute: 600 },
+  starter: { mcp: "none", api: "none", callsPerMinute: 0, assistantQuestionsPerMonth: 100 },
+  team: { mcp: "read", api: "read", callsPerMinute: 120, assistantQuestionsPerMonth: 300 },
+  business: { mcp: "write", api: "write", callsPerMinute: 600, assistantQuestionsPerMonth: 1000 },
 };
 
-const NO_ACCESS: PlanAccess = { mcp: "none", api: "none", callsPerMinute: 0 };
+/** No plan (no billing row, or the read failed): no API, and the smallest assistant allowance, so cost stays bounded. */
+const NO_ACCESS: PlanAccess = { mcp: "none", api: "none", callsPerMinute: 0, assistantQuestionsPerMonth: 100 };
 
 /** The access of a plan key; an unknown or missing plan (no billing row) gets none. */
 export function accessOf(plan: string | null | undefined): PlanAccess {

@@ -12,6 +12,12 @@ export function supabaseAssistantUsage(client: SupabaseClient<Database>): Assist
       if (error || count === null) throw new Error(`Counting questions failed: ${error?.code ?? "no count"}`);
       return count;
     },
+    async monthUsage() {
+      const { data, error } = await (client as unknown as SupabaseClient).rpc("assistant_month_usage");
+      const row = typeof data === "object" && data !== null ? (data as Record<string, unknown>) : null;
+      if (error || !row || typeof row.used !== "number" || typeof row.resets_on !== "string") throw new Error(`Reading the month's questions failed: ${error?.code ?? "no row"}`);
+      return { used: row.used, resetsOn: row.resets_on };
+    },
     async record(orgId) {
       const { error } = await table().insert({ org_id: orgId });
       if (error) throw new Error(`Recording a question failed: ${error.code}`);

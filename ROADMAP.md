@@ -433,6 +433,8 @@ One secure backend, three doors: the in-app assistant, the public site agent and
 - [ ] Owner: apply migration `20261127110000_api_access.sql` (plan gating reads `org_plan()`)
 - [x] Private Swagger API reference `/api-docs` gated by plan and role, sidebar link, public OpenAPI document removed (2026-11-27)
 - [x] Ask AI panel layout fix and blue controls (2026-11-27)
+- [x] Ask AI monthly allowance scaled by plan, 100/300/1,000 per company (2026-11-27)
+- [ ] Owner: apply migration `20261127120000_assistant_month_usage.sql`
 - [ ] Long-lived API keys (needs a signing-secret decision) and webhooks (signed, retried, per-plan)
 - [ ] Show the AI and API access in the pricing cards and the site agent's knowledge once the plan prices are confirmed
 - [ ] Prompt-injection and cross-org test pass against a staging project with two orgs

@@ -21,6 +21,11 @@ describe("plan access", () => {
     expect(planAllows("gold", "mcp", "read")).toBe(false);
     expect(accessOf(undefined).callsPerMinute).toBe(0);
   });
+  it("scales the Ask AI allowance with the plan and never leaves it unbounded", () => {
+    expect(["starter", "team", "business"].map((plan) => accessOf(plan).assistantQuestionsPerMonth)).toEqual([100, 300, 1000]);
+    expect(accessOf(null).assistantQuestionsPerMonth).toBe(100);
+    expect(accessOf("gold").assistantQuestionsPerMonth).toBe(100);
+  });
   it("names the cheapest plan that reaches a level", () => {
     expect(cheapestPlanFor("api", "read")).toBe("Team");
     expect(cheapestPlanFor("mcp", "write")).toBe("Business");

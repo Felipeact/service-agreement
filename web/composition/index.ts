@@ -343,7 +343,7 @@ export async function getContainer() {
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
-    askAssistant: makeAskAssistant({ agreements: agreementLister, sites: siteLister, model: claudeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }), usage: supabaseAssistantUsage(supabase), now: () => systemClock.now(), today: businessDay }),
+    askAssistant: makeAskAssistant({ agreements: agreementLister, sites: siteLister, model: claudeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }), usage: supabaseAssistantUsage(supabase), plan: () => readMemberPlan(supabase), now: () => systemClock.now(), today: businessDay }),
     reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
     applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
     // The agreement page edits a site's equipment by type (count and location) and who the agreement goes to.
