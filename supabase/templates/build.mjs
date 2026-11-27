@@ -33,6 +33,9 @@ const note = (text) => `
                 </tr>
               </table>`;
 
+/** The Service Pacts lockup (mark and name, ink, transparent PNG) hosted on Cloudinary; PNG because Gmail and Outlook do not show SVG. 1256 x 256 pixels, shown at 177 x 36. */
+const LOGO = "https://res.cloudinary.com/ddilbzpki/image/upload/v1795633958/lockup-ink-transparent_hgb2hd.png";
+
 /** The shared frame. `body` is the card's content; `preheader` is the grey preview line an inbox shows beside the subject. */
 const layout = ({ title, preheader, body }) => `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -51,12 +54,7 @@ const layout = ({ title, preheader, body }) => `<!DOCTYPE html>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
             <tr>
               <td style="padding:0 4px 20px;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td style="vertical-align:middle;"><img src="{{ .SiteURL }}/brand/email-mark.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;" /></td>
-                    <td style="vertical-align:middle;padding-left:10px;font-family:${FONT};font-size:18px;line-height:24px;font-weight:700;letter-spacing:-0.01em;color:#0f172a;">Service Pacts</td>
-                  </tr>
-                </table>
+                <img src="${LOGO}" width="177" height="36" alt="Service Pacts" style="display:block;border:0;outline:none;height:36px;width:177px;" />
               </td>
             </tr>
             <tr>
@@ -159,7 +157,7 @@ const TEMPLATES = [
                   <td bgcolor="#eff6ff" style="border:1px solid #bfdbfe;border-radius:12px;padding:16px 28px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:32px;line-height:36px;font-weight:700;letter-spacing:0.28em;color:#1e40af;">{{ .Token }}</td>
                 </tr>
               </table>`,
-      note("The code works once and expires soon. Never share it with anyone. " + IGNORE),
+      note("The code works once and expires soon. Never share it with anyone. If you did not ask for it, you can ignore this email and nothing will change."),
     ],
   },
 ];
