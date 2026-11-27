@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { checkMcpRate, getMcpContainer, handleMcp } from "@/composition";
+import { checkMcpRate, getMcpContainer, handleMcp, planAccessMessage, planAllows } from "@/composition";
 
 const MAX_BODY_BYTES = 32_000;
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     }
     const container = await getMcpContainer(token);
     if (!container) return unauthorized(request);
+    if (!planAllows(container.caller.plan, "mcp", "read")) return json(403, { error: "plan_required", message: planAccessMessage("mcp", "read", container.caller.plan) });
     const decision = checkMcpRate(container.caller.userId);
     if (!decision.allowed) return json(429, { error: "rate_limited" }, { "Retry-After": String(decision.retryAfterSeconds) });
     const answer = await handleMcp(message, {

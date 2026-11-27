@@ -3,10 +3,10 @@ import type { AgreementStore, ToolAudit } from "@/application/ports";
 import { makeRunAiTool, type ToolCaller } from "./run-ai-tool";
 
 const SITE = "3f2b8a52-6c1e-4d52-9a1c-0b7d6e4f1a10";
-const reader: ToolCaller = { userId: "u1", email: "a@b.ca", orgName: "Acme HVAC", role: "viewer", canWrite: false };
+const reader: ToolCaller = { userId: "u1", email: "a@b.ca", orgName: "Acme HVAC", role: "viewer", canWrite: false, plan: "business" };
 const estimator: ToolCaller = { ...reader, role: "estimator", canWrite: true };
 
-function setup({ writesEnabled = true, create = vi.fn(async () => ({ ok: true, id: "ag-1" }) as const) } = {}) {
+function setup({ writesEnabled = true, source = "mcp" as "mcp" | "api", create = vi.fn(async () => ({ ok: true, id: "ag-1" }) as const) } = {}) {
   const audit: ToolAudit = { record: vi.fn(async () => undefined) };
   const customers = { list: vi.fn(async () => [{ id: "c1", name: "Northside School", primaryContact: "Pat", primaryEmail: null, primaryPhone: null, agreementNumbers: ["AG-1001"], agreementCount: 1, active: true, siteCount: 1, assetCount: 2, annualCents: 123456, primaryContactId: null }]), detail: vi.fn(async () => null), contact: vi.fn(async () => null) };
   const agreementStore = { create, setTemplate: vi.fn() } as unknown as AgreementStore;
@@ -21,7 +21,7 @@ function setup({ writesEnabled = true, create = vi.fn(async () => ({ ok: true, i
     audit,
     today: () => "2026-11-27",
     writesEnabled,
-    source: "mcp",
+    source,
   });
   return { tools, audit, create };
 }
@@ -88,5 +88,33 @@ describe("runTool", () => {
     const { tools } = setup();
     expect(tools.toolsFor(reader).some((tool) => tool.access === "write")).toBe(false);
     expect(tools.toolsFor(estimator).filter((tool) => tool.access === "write")).toHaveLength(2);
+  });
+});
+
+describe("plan gating", () => {
+  test("Starter gets no tools and every call is refused with the plan to choose", async () => {
+    const { tools, create } = setup();
+    const starter: ToolCaller = { ...estimator, plan: "starter" };
+    expect(tools.toolsFor(starter)).toHaveLength(0);
+    expect(await tools.runTool("search_customers", {}, starter)).toMatchObject({ ok: false, error: expect.stringContaining("Team plan and above") });
+    expect((await tools.runTool("create_agreement_draft", { site_id: SITE }, starter)).ok).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  test("Team reads but cannot write, even as an estimator", async () => {
+    const { tools, create } = setup();
+    const team: ToolCaller = { ...estimator, plan: "team" };
+    expect(tools.toolsFor(team).every((tool) => tool.access === "read")).toBe(true);
+    expect((await tools.runTool("search_customers", { query: "north" }, team)).ok).toBe(true);
+    expect(await tools.runTool("create_agreement_draft", { site_id: SITE }, team)).toMatchObject({ ok: false, error: expect.stringContaining("Business") });
+    expect(create).not.toHaveBeenCalled();
+    expect(await tools.runTool("who_am_i", {}, team)).toMatchObject({ data: { canCreateDrafts: false } });
+  });
+
+  test("a company with no plan gets nothing, and the API door follows the same rules", async () => {
+    const api = setup({ source: "api" });
+    expect(api.tools.toolsFor({ ...estimator, plan: null })).toHaveLength(0);
+    expect((await api.tools.runTool("create_agreement_draft", { site_id: SITE }, estimator)).ok).toBe(true);
+    expect(api.audit.record).toHaveBeenCalledWith({ tool: "create_agreement_draft", source: "api", ok: true });
   });
 });

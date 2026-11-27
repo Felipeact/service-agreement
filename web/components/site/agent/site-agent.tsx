@@ -9,7 +9,7 @@ import { useCallback, useState } from "react";
 const SiteAgentPanel = dynamic(() => import("./site-agent-panel"), { ssr: false });
 
 /** The public pages that carry the chat. The sign-in, sign-up, customer review and signing pages never do. */
-export const SITE_AGENT_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/contact", "/security", "/terms", "/privacy"];
+export const SITE_AGENT_PATHS: readonly string[] = ["/", "/product", "/demo", "/trades", "/pricing", "/about", "/faq", "/developers", "/contact", "/security", "/terms", "/privacy"];
 
 export const showsSiteAgent = (pathname: string | null): boolean => pathname !== null && SITE_AGENT_PATHS.includes(pathname);
 

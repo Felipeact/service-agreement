@@ -186,7 +186,7 @@ export interface OAuthConsent {
 
 /** The audit trail of AI tool calls: the tool, the door and whether it worked. Never the arguments or the answer. */
 export interface ToolAudit {
-  record(entry: { tool: string; source: "mcp" | "app"; ok: boolean }): Promise<void>;
+  record(entry: { tool: string; source: "mcp" | "api" | "app"; ok: boolean }): Promise<void>;
 }
 
 /** An active site the New agreement form offers, with the agreement already live on it (agreements-page door 2). */

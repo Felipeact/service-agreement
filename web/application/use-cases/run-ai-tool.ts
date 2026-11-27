@@ -1,10 +1,11 @@
 import type { AgreementLister, AgreementReader, AgreementStore, CustomerDirectory, RecordSearch, ReportReader, ToolAudit } from "@/application/ports";
+import { planAccessMessage, planAllows } from "@/domain/billing/plan-access";
 import { AI_TOOLS, mayRunTool, parseToolCall, toolByName, type ToolCall, type ToolDefinition } from "@/domain/ai-tools";
 import type { ReportRange } from "@/domain/reports";
 import type { GenerateServiceLinesResult } from "./generate-service-lines";
 
 /** Who is calling. Always built from the verified session, never from anything the model sent. */
-export type ToolCaller = { userId: string; email: string; orgName: string; role: string; canWrite: boolean };
+export type ToolCaller = { userId: string; email: string; orgName: string; role: string; canWrite: boolean; plan: string | null };
 
 export type ToolResult = { ok: true; data: unknown } | { ok: false; error: string };
 
@@ -22,7 +23,7 @@ type Deps = {
   /** Switch for the write tools (`MCP_WRITE_TOOLS=off` turns them off). */
   writesEnabled: boolean;
   /** Which door the call came through, written to the audit row. */
-  source: "mcp";
+  source: "mcp" | "api";
 };
 
 const dollars = (cents: number | null | undefined): number | null => (typeof cents === "number" ? Math.round(cents) / 100 : null);
@@ -43,14 +44,14 @@ export function makeRunAiTool(deps: Deps) {
 
   /** The tools this caller may see: every read, and the writes only when their role and the switch allow. */
   function toolsFor(caller: ToolCaller): ToolDefinition[] {
-    return AI_TOOLS.filter((tool) => mayRunTool(tool.access, caller.canWrite, deps.writesEnabled));
+    return AI_TOOLS.filter((tool) => mayRunTool(tool.access, caller.canWrite, deps.writesEnabled) && planAllows(caller.plan, deps.source, tool.access));
   }
 
   async function execute(call: ToolCall, caller: ToolCaller): Promise<ToolResult> {
     const day = deps.today();
     switch (call.tool) {
       case "who_am_i":
-        return { ok: true, data: { email: caller.email, company: caller.orgName, role: caller.role, canCreateDrafts: caller.canWrite && deps.writesEnabled } };
+        return { ok: true, data: { email: caller.email, company: caller.orgName, role: caller.role, canCreateDrafts: caller.canWrite && deps.writesEnabled && planAllows(caller.plan, deps.source, "write") } };
       case "search_customers": {
         const rows = await customers.list();
         const found = rows.filter((row) => row.active && matches(call.query, row.name, row.primaryContact, ...row.agreementNumbers)).slice(0, call.limit);
@@ -144,6 +145,7 @@ export function makeRunAiTool(deps: Deps) {
     const outcome = await (async (): Promise<ToolResult> => {
       if (!definition || !parsed.ok) return { ok: false, error: parsed.ok ? "Unknown tool." : parsed.error };
       if (!mayRunTool(definition.access, caller.canWrite, deps.writesEnabled)) return { ok: false, error: "Your role, or this server, does not allow that tool." };
+      if (!planAllows(caller.plan, deps.source, definition.access)) return { ok: false, error: planAccessMessage(deps.source, definition.access, caller.plan) };
       try {
         return await execute(parsed.call, caller);
       } catch (cause) {
