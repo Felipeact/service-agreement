@@ -58,11 +58,8 @@ export function Content() {
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <Link href="/login" className="inline-flex min-h-11 items-center rounded-control bg-action px-5 text-[15px] font-semibold text-white hover:bg-action-hover">
-              Sign in to connect
+              Sign in to open the API reference
             </Link>
-            <a href={`${API_BASE_PATH}/openapi.json`} className="inline-flex min-h-11 items-center rounded-control border border-hairline bg-surface px-5 text-[15px] font-semibold text-ink hover:bg-board">
-              OpenAPI document
-            </a>
           </div>
         </Wrap>
       </section>
@@ -99,7 +96,7 @@ export function Content() {
         <p className="max-w-[70ch] text-[15px] leading-relaxed text-ink-2">
           Base address <code className="rounded bg-board px-1.5 py-0.5 font-mono text-[13px]">{`${ORIGIN}${API_BASE_PATH}`}</code>. Send a member&apos;s access token as <code className="rounded bg-board px-1.5 py-0.5 font-mono text-[13px]">Authorization: Bearer</code>. Tokens come from the sign-in
           (OAuth 2.1) of the authorization server named at <code className="rounded bg-board px-1.5 py-0.5 font-mono text-[13px]">/.well-known/oauth-protected-resource{API_BASE_PATH}</code>; the member signs in with their email link, exactly as in the app.
-          Answers are JSON, money is in dollars, and a failed call is <code className="rounded bg-board px-1.5 py-0.5 font-mono text-[13px]">{`{ "error": { "message": "…" } }`}</code>.
+          The interactive reference (Swagger, with Try it out) is inside the app under <strong className="text-ink">API</strong> in the sidebar, for owners and admins on a plan that includes the API. Answers are JSON, money is in dollars, and a failed call is <code className="rounded bg-board px-1.5 py-0.5 font-mono text-[13px]">{`{ "error": { "message": "…" } }`}</code>.
         </p>
         <ul className="flex flex-col divide-y divide-hairline rounded-card border border-hairline bg-surface">
           {API_ROUTES.map((route) => (

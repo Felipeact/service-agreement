@@ -4,6 +4,7 @@ import { ArrowRightIcon, ArrowUpIcon, RotateCcwIcon, SparklesIcon, SquareIcon, X
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { MAX_QUESTION_LENGTH, type AssistantAction, type AssistantTurn } from "@/domain/assistant";
 
 type Result = { ok: true; reply: { answer: string; action: AssistantAction | null }; left: number } | { ok: false; error: string };
@@ -156,7 +157,9 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
         <span className="max-sm:sr-only">Ask AI</span>
       </button>
 
-      {isOpen && (
+      {isOpen &&
+        // A portal to <body>: the top bar's backdrop blur would otherwise become the containing block of this fixed panel and squash it into the bar.
+        createPortal(
         <aside
           ref={panelRef}
           id="ask-ai-panel"
@@ -186,7 +189,7 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
           </header>
 
           {entries.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center gap-4 overflow-y-auto bg-linear-to-b from-violet-50 to-surface px-5 py-8 text-center">
+            <div className="flex flex-1 flex-col items-center gap-4 overflow-y-auto bg-linear-to-b from-action-tint to-surface px-5 py-8 text-center">
               <span aria-hidden="true" className="flex size-24 items-center justify-center rounded-full bg-linear-to-br from-violet-100 via-action-tint to-surface ring-1 ring-violet-200">
                 <SparklesIcon className="size-9 text-violet-600" />
               </span>
@@ -200,10 +203,10 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
                     key={suggestion}
                     type="button"
                     onClick={() => handleAsk(suggestion)}
-                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-full border border-violet-300 bg-surface px-4 text-left text-[13px] font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-full border border-hairline bg-surface px-4 text-left text-[13px] font-medium text-ink transition-colors hover:border-action hover:bg-action-tint"
                   >
                     {suggestion}
-                    <ArrowRightIcon aria-hidden="true" className="size-4 shrink-0" />
+                    <ArrowRightIcon aria-hidden="true" className="size-4 shrink-0 text-action" />
                   </button>
                 ))}
               </div>
@@ -213,7 +216,7 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
               {entries.map((entry, index) => (
                 <li
                   key={index}
-                  className={entry.role === "user" ? "max-w-[88%] self-end rounded-card rounded-br-sm bg-violet-600 px-3.5 py-2 text-[13px] text-white" : `flex max-w-[94%] flex-col items-start gap-2 self-start rounded-card rounded-tl-sm px-3.5 py-2 text-[13px] whitespace-pre-wrap ${entry.error ? "bg-danger-tint text-danger" : "bg-surface text-ink ring-1 ring-hairline"}`}
+                  className={entry.role === "user" ? "max-w-[88%] self-end rounded-card rounded-br-sm bg-action px-3.5 py-2 text-[13px] text-white" : `flex max-w-[94%] flex-col items-start gap-2 self-start rounded-card rounded-tl-sm px-3.5 py-2 text-[13px] whitespace-pre-wrap ${entry.error ? "bg-danger-tint text-danger" : "bg-surface text-ink ring-1 ring-hairline"}`}
                 >
                   {entry.text}
                   {entry.action && (canAct || entry.action.kind === "open") && (
@@ -221,7 +224,7 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
                       type="button"
                       disabled={isPending}
                       onClick={() => handleAction(entry.action as AssistantAction)}
-                      className="inline-flex min-h-11 items-center rounded-full bg-violet-600 px-4 text-[13px] font-semibold text-white hover:bg-violet-700 disabled:opacity-60 lg:min-h-9"
+                      className="inline-flex min-h-11 items-center rounded-full bg-action px-4 text-[13px] font-semibold text-white hover:bg-action-hover disabled:opacity-60 lg:min-h-9"
                     >
                       {entry.action.label}
                     </button>
@@ -254,14 +257,14 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
               autoComplete="off"
               onKeyDown={handleInputKeyDown}
               placeholder="Describe your task or ask a question…"
-              className="max-h-32 min-h-[52px] min-w-0 flex-1 resize-none rounded-card border border-field bg-surface px-3 py-2 text-[14px] text-ink placeholder:text-ink-2 focus:border-violet-500 focus:ring-3 focus:ring-violet-500/15 focus:outline-none"
+              className="max-h-32 min-h-[52px] min-w-0 flex-1 resize-none rounded-card border border-field bg-surface px-3 py-2 text-[14px] text-ink placeholder:text-ink-2 focus:border-action focus:ring-3 focus:ring-action/15 focus:outline-none"
             />
             {isPending ? (
               <button type="button" onClick={handleStop} aria-label="Stop" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ink text-white hover:bg-ink-nav">
                 <SquareIcon aria-hidden="true" className="size-3.5 fill-current" />
               </button>
             ) : (
-              <button type="submit" aria-label="Send" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white hover:bg-violet-700">
+              <button type="submit" aria-label="Send" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-action text-white hover:bg-action-hover">
                 <ArrowUpIcon aria-hidden="true" className="size-5" />
               </button>
             )}
@@ -273,8 +276,9 @@ export function AskAi({ actions, canAct }: { actions: AskAiActions; canAct: bool
               Security
             </Link>
           </p>
-        </aside>
-      )}
+        </aside>,
+        document.body,
+        )}
     </>
   );
 }

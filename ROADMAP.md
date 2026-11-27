@@ -431,6 +431,8 @@ One secure backend, three doors: the in-app assistant, the public site agent and
 - [x] Plan access for MCP and the API: Starter none, Team read, Business read plus draft writes, per-plan rate limits (2026-11-27)
 - [x] REST API `/api/v1` over the shared tool layer, OpenAPI document and the public `/developers` page (2026-11-27)
 - [ ] Owner: apply migration `20261127110000_api_access.sql` (plan gating reads `org_plan()`)
+- [x] Private Swagger API reference `/api-docs` gated by plan and role, sidebar link, public OpenAPI document removed (2026-11-27)
+- [x] Ask AI panel layout fix and blue controls (2026-11-27)
 - [ ] Long-lived API keys (needs a signing-secret decision) and webhooks (signed, retried, per-plan)
 - [ ] Show the AI and API access in the pricing cards and the site agent's knowledge once the plan prices are confirmed
 - [ ] Prompt-injection and cross-org test pass against a staging project with two orgs

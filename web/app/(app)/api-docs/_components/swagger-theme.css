@@ -1,0 +1,35 @@
+/* Swagger UI in the Field Protocol palette: our fonts, blue actions, hairline borders, no second page title. */
+[data-slot="swagger"] .swagger-ui { font-family: inherit; color: var(--color-ink); }
+[data-slot="swagger"] .swagger-ui .info { margin: 8px 0 20px; }
+[data-slot="swagger"] .swagger-ui .info .title { font-family: inherit; color: var(--color-ink); font-size: 22px; }
+[data-slot="swagger"] .swagger-ui .info .title small { background: var(--color-action); }
+[data-slot="swagger"] .swagger-ui .info p,
+[data-slot="swagger"] .swagger-ui .opblock-description-wrapper p,
+[data-slot="swagger"] .swagger-ui .opblock .opblock-summary-description { font-family: inherit; color: var(--color-ink-nav); }
+[data-slot="swagger"] .swagger-ui .scheme-container { box-shadow: none; border: 1px solid var(--color-hairline); border-radius: 12px; padding: 12px; background: var(--color-board); }
+[data-slot="swagger"] .swagger-ui .opblock { border-radius: 12px; box-shadow: none; }
+[data-slot="swagger"] .swagger-ui .opblock-tag { font-family: inherit; border-bottom: 1px solid var(--color-hairline); }
+[data-slot="swagger"] .swagger-ui .opblock .opblock-summary-path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+[data-slot="swagger"] .swagger-ui .btn { font-family: inherit; border-radius: 10px; min-height: 44px; }
+[data-slot="swagger"] .swagger-ui .btn.authorize { color: var(--color-action); border-color: var(--color-action); }
+[data-slot="swagger"] .swagger-ui .btn.authorize svg { fill: var(--color-action); }
+[data-slot="swagger"] .swagger-ui .btn.execute { background: var(--color-action); border-color: var(--color-action); }
+[data-slot="swagger"] .swagger-ui .opblock .opblock-summary { min-height: 44px; }
+[data-slot="swagger"] .swagger-ui input[type="text"],
+[data-slot="swagger"] .swagger-ui select,
+[data-slot="swagger"] .swagger-ui textarea { font-family: inherit; border-radius: 10px; min-height: 44px; }
+[data-slot="swagger"] .swagger-ui .opblock-summary-control { min-height: 44px; }
+@media (max-width: 640px) {
+  [data-slot="swagger"] .swagger-ui .wrapper { padding: 0 4px; }
+  [data-slot="swagger"] .swagger-ui .opblock .opblock-summary { flex-wrap: wrap; row-gap: 4px; padding: 6px; }
+}
+/* Touch: every control Swagger draws small is at least 44px square. */
+[data-slot="swagger"] .swagger-ui .authorization__btn,
+[data-slot="swagger"] .swagger-ui .opblock-control-arrow,
+[data-slot="swagger"] .swagger-ui .opblock-summary-control > button,
+[data-slot="swagger"] .swagger-ui button.model-box-control,
+[data-slot="swagger"] .swagger-ui .tab li button.tablinks { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+[data-slot="swagger"] .swagger-ui .opblock-summary-control { display: flex; align-items: center; }
+[data-slot="swagger"] .swagger-ui .copy-to-clipboard { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+[data-slot="swagger"] .swagger-ui .copy-to-clipboard button,
+[data-slot="swagger"] .swagger-ui button.expand-operation { min-width: 44px; min-height: 44px; }

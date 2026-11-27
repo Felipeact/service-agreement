@@ -6,6 +6,8 @@ import type { ReactNode } from "react";
  */
 const PATHS = {
   /** A board of columns: the Pipeline. */
+  /** Angle brackets: the API reference. */
+  code: <path d="m7.25 6-4 4 4 4M12.75 6l4 4-4 4M11.25 4.5l-2.5 11" />,
   pipeline: (
     <>
       <rect x="3" y="3.5" width="5" height="13" rx="1.5" />
