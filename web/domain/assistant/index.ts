@@ -4,7 +4,9 @@
  * on the page would call. Nothing here reads a clock, the database or the network.
  */
 
-/** Questions one member may ask in any 24 hours. */
+import { formatResetDate } from "../billing/plan-limits";
+
+/** Questions one member may ask in any 24 hours (a burst guard; the plan sets the company's monthly total). */
 export const DAILY_QUESTION_LIMIT = 30;
 export const MAX_QUESTION_LENGTH = 500;
 /** Earlier turns sent along so a follow-up makes sense. */
@@ -71,4 +73,8 @@ export function readReply(text: string, known: KnownIds, canAct: boolean): Assis
 }
 
 export const LIMIT_MESSAGE = `You have used your ${DAILY_QUESTION_LIMIT} questions for the last 24 hours. Try again later.`;
+/** The refusal when the company has used the Ask AI questions its plan includes for the month. */
+export function monthlyLimitMessage(planName: string, limit: number, resetsOn: string): string {
+  return `Your company has used the ${limit} Ask AI questions the ${planName} plan includes this month. The count resets on ${formatResetDate(resetsOn)}. An owner can change the plan in Settings → Billing.`;
+}
 export const UNAVAILABLE_MESSAGE = "Ask AI could not answer right now. Try again in a moment.";

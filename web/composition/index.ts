@@ -219,6 +219,8 @@ export async function getContainer() {
     verifyEmailLink: auth.verifyEmailLink,
     signOut: auth.signOut,
     currentMember: members.currentMember,
+    /** The plan key of the signed-in member's company, or null. */
+    memberPlan: () => readMemberPlan(supabase),
     // Consent for an AI client that asks to use the MCP endpoint as this member (Supabase Auth's OAuth server).
     oauthConsent: supabaseOAuthConsent(supabase),
     // What a signed-in person with no membership is told about their own paid checkout (workspace-pending-state door 3).
@@ -341,7 +343,7 @@ export async function getContainer() {
     saveContractWording: makeSaveContractWording(supabaseContractWordingStore(supabase)),
     serviceLineStore: supabaseServiceLineStore(supabase),
     generateServiceLines: makeGenerateServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
-    askAssistant: makeAskAssistant({ agreements: agreementLister, sites: siteLister, model: claudeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }), usage: supabaseAssistantUsage(supabase), now: () => systemClock.now(), today: businessDay }),
+    askAssistant: makeAskAssistant({ agreements: agreementLister, sites: siteLister, model: claudeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }), usage: supabaseAssistantUsage(supabase), plan: () => readMemberPlan(supabase), now: () => systemClock.now(), today: businessDay }),
     reviewAgreement: makeReviewAgreement(supabaseAgreementReader(supabase), supabaseAssetTypeCatalog(supabase), claudeAgreementReviewer({ apiKey: process.env.ANTHROPIC_API_KEY })),
     applyServiceLines: makeApplyServiceLines(supabaseAgreementReader(supabase), supabaseServiceLineStore(supabase)),
     // The agreement page edits a site's equipment by type (count and location) and who the agreement goes to.

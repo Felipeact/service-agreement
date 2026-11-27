@@ -10,6 +10,7 @@ vi.mock("@/composition", () => ({
     clock: { now: () => new Date("2027-06-15T20:00:00Z") },
     getItemWords: async () => ({ singular: "equipment", plural: "equipment" }),
     loadBillingUsage: async () => null,
+    memberPlan: async () => null,
     workspaceState: async () => "none",
   }),
 }));

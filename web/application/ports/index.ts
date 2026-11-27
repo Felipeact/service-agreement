@@ -163,6 +163,8 @@ export interface AssistantModel {
 /** The member's own record of questions asked, for the daily limit. */
 export interface AssistantUsage {
   countSince(sinceIso: string): Promise<number>;
+  /** What the whole company has asked this calendar month, and the date the count resets (`YYYY-MM-DD`). */
+  monthUsage(): Promise<{ used: number; resetsOn: string }>;
   record(orgId: string): Promise<void>;
 }
 
