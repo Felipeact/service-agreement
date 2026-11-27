@@ -19,14 +19,10 @@ export const MAIN_NAV: NavItem[] = [
 
 export const REPORTS_NAV: NavItem = { label: "Reports", href: "/reports", icon: "trend" };
 
-/** The API and MCP portal is its own site (`api-portal/`): this link leaves the app for it. Shown to owners and admins whose plan includes the API or MCP. */
-export const developerNav = (href: string): NavItem => ({ label: "API & MCP", href, icon: "code" });
-
 /** The main nav with the Sites link named after the org's item ("Sites & stations"). Reports follows Imports for a member who may read them (reporting). */
-export const mainNav = (words: ItemWords, reports = false, developerHref?: string): NavItem[] => [
+export const mainNav = (words: ItemWords, reports = false): NavItem[] => [
   ...MAIN_NAV.map((item) => (item.href === "/sites" ? { ...item, label: `Sites & ${words.plural}` } : item)),
   ...(reports ? [REPORTS_NAV] : []),
-  ...(developerHref ? [developerNav(developerHref)] : []),
 ];
 
 export const FOOTER_NAV: NavItem[] = [

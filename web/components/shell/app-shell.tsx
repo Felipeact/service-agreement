@@ -72,7 +72,7 @@ function SidebarFooter({ plan, email, role, signOut, full = false }: { plan?: Pl
 }
 
 /** A white sidebar floating on the pale ground, a soft top bar with search, the New agreement button and the account menu; below 1024px a frosted bar and a menu. */
-export function AppShell({ children, orgName, email, signOut, followUps = 0, newAgreement, askAi, words, frozen, reports, developerHref, role, plan, counts }: AppShellProps) {
+export function AppShell({ children, orgName, email, signOut, followUps = 0, newAgreement, askAi, words, frozen, reports, role, plan, counts }: AppShellProps) {
   const topSearchRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   // Desktop only: the sidebar slides away to give the work the full width. The choice is remembered per browser.
@@ -135,7 +135,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, new
           <form method="get" action="/search" role="search">
             <SearchInput ref={searchRef} label="Search" name="q" placeholder="Search" maxLength={SEARCH_MAX} />
           </form>
-          <SidebarNav words={words} reports={reports} developerHref={developerHref} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} />} />
+          <SidebarNav words={words} reports={reports} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} />} />
         </div>
         </div>
       </aside>
@@ -180,7 +180,7 @@ export function AppShell({ children, orgName, email, signOut, followUps = 0, new
             </span>
             <MobileMenu>
               <div className="menu-pop absolute right-0 z-40 mt-2 flex max-h-[calc(100dvh-5rem)] w-72 flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-panel border border-hairline bg-surface p-2 shadow-float">
-                <SidebarNav words={words} reports={reports} developerHref={developerHref} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} full />} />
+                <SidebarNav words={words} reports={reports} counts={counts} footer={<SidebarFooter plan={plan} email={email} role={role} signOut={signOut} full />} />
               </div>
             </MobileMenu>
           </div>

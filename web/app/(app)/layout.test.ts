@@ -12,9 +12,8 @@ const redirect = vi.fn((path: string) => {
 const pipelineBoard = vi.fn(async () => [] as unknown[]);
 const workspaceState = vi.fn<() => Promise<"none" | "pending" | "refused">>();
 const getItemWords = vi.fn(async () => ({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" }));
-const memberPlan = vi.fn(async () => "team" as string | null);
 const loadBillingUsage = vi.fn(async (_member: { orgId: string; role: string }) => null as unknown);
-vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, workspaceState, signOut, pipelineBoard, getItemWords, loadBillingUsage, memberPlan, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
+vi.mock("@/composition", () => ({ getContainer: async () => ({ currentMember, workspaceState, signOut, pipelineBoard, getItemWords, loadBillingUsage, clock: { now: () => new Date("2027-12-01T17:00:00Z") } }) }));
 vi.mock("next/navigation", () => ({ redirect, usePathname: () => "/pipeline", useRouter: () => ({ push: () => {}, refresh: () => {} }) }));
 
 const { MemberGate } = await import("./member-gate");
@@ -30,7 +29,6 @@ beforeEach(() => {
   getItemWords.mockResolvedValue({ singular: "equipment", plural: "equipment", Singular: "Equipment", Plural: "Equipment" });
   workspaceState.mockResolvedValue("none");
   loadBillingUsage.mockResolvedValue(null);
-  memberPlan.mockResolvedValue("team");
 });
 
 describe("(app) layout", () => {
@@ -199,25 +197,11 @@ describe("(app) layout, Ask AI", () => {
   });
 });
 
-describe("the API & MCP link in the shell", () => {
-  const shellFor = async (role: "owner" | "admin" | "estimator" | "viewer") => {
-    currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "o@example.com", orgId: "org-1", orgName: "Org", role });
-    return ((await MemberGate({ children: null })) as { props: { developerHref?: string } }).props.developerHref !== undefined;
-  };
-  test("an owner or admin on Team sees it", async () => {
-    expect(await shellFor("owner")).toBe(true);
-    expect(await shellFor("admin")).toBe(true);
-  });
-  test("an estimator or viewer does not", async () => {
-    expect(await shellFor("estimator")).toBe(false);
-    expect(await shellFor("viewer")).toBe(false);
-  });
-  test("a Starter company or one with no plan, or a failed read, does not", async () => {
-    memberPlan.mockResolvedValue("starter");
-    expect(await shellFor("owner")).toBe(false);
-    memberPlan.mockResolvedValue(null);
-    expect(await shellFor("owner")).toBe(false);
-    memberPlan.mockRejectedValue(new Error("down"));
-    expect(await shellFor("owner")).toBe(false);
+describe("the API & MCP portal", () => {
+  test("is not in the app's navigation for any role: it lives on its own site", async () => {
+    for (const role of ["owner", "admin", "estimator", "viewer"] as const) {
+      currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "o@example.com", orgId: "org-1", orgName: "Org", role });
+      expect(await renderLayout()).not.toContain("API &amp; MCP");
+    }
   });
 });

@@ -437,7 +437,7 @@ One secure backend, three doors: the in-app assistant, the public site agent and
 - [ ] Owner: apply migration `20261127120000_assistant_month_usage.sql`
 - [x] API & MCP portal as a separate site (`api-portal/`): overview, API reference, MCP connection guide and activity log, gated by plan and role, sharing the app's sign-in (2026-11-27)
 - [ ] Owner: apply migration `20261127130000_ai_tool_calls_managers.sql` (the activity log shows the company's calls to owners and admins)
-- [ ] Deploy the portal: a Railway service from `api-portal/Dockerfile` (build from the repo root), `API_PORTAL_URL` and `AUTH_COOKIE_DOMAIN` on the app, `NEXT_PUBLIC_APP_URL` and `AUTH_COOKIE_DOMAIN` on the portal, and a Supabase redirect entry for the portal's domain if sign-in is ever added there
+- [x] Portal deployed: Railway service `api-portal` from `api-portal/Dockerfile`, `developers.servicepacts.com`, `API_PORTAL_URL` on web and `AUTH_COOKIE_DOMAIN=.servicepacts.com` on both (2026-11-27)
 - [ ] Long-lived API keys (needs a signing-secret decision) and webhooks (signed, retried, per-plan)
 - [ ] Show the AI and API access in the pricing cards and the site agent's knowledge once the plan prices are confirmed
 - [ ] Prompt-injection and cross-org test pass against a staging project with two orgs
