@@ -30,6 +30,8 @@ export const MAX_RESULTS = 25;
 export const DEFAULT_RESULTS = 10;
 export const MAX_QUERY_LENGTH = 100;
 export const EXPIRY_WINDOWS = [30, 60, 90] as const;
+/** The most units one add_equipment call takes; a longer list is sent in several calls. */
+export const MAX_UNITS_PER_CALL = 60;
 export type ExpiryWindow = (typeof EXPIRY_WINDOWS)[number];
 
 const limitProperty = { type: "integer", minimum: 1, maximum: MAX_RESULTS, description: `How many results, at most ${MAX_RESULTS}. Default ${DEFAULT_RESULTS}.` };
@@ -37,12 +39,12 @@ const queryProperty = (what: string) => ({ type: "string", maxLength: MAX_QUERY_
 const idProperty = (what: string) => ({ type: "string", format: "uuid", description: what });
 const none: ToolInputSchema = { type: "object", properties: {}, additionalProperties: false };
 
-/** The catalogue, in the order a client lists it. Reads first; the two writes only start or fill a draft, never send or cancel. */
+/** The catalogue, in the order a client lists it. Reads first; the writes only add records (customers, sites, equipment) and start or fill a draft, never send or cancel. */
 export const AI_TOOLS: readonly ToolDefinition[] = [
   {
     name: "who_am_i",
     title: "Who am I",
-    description: "The signed-in member's email, role and company, and whether they may create drafts. Call this first to see what you may do.",
+    description: "The signed-in member's email, role and company, and whether they may add records and create drafts. Call this first to see what you may do.",
     access: "read",
     inputSchema: none,
   },
@@ -110,6 +112,74 @@ export const AI_TOOLS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: "create_customer",
+    title: "Create customer",
+    description:
+      "Add a new customer: the company that owns the equipment. Call search_customers FIRST; if the customer already exists, use it and do not call this. If the user has not told you the company's name, ASK them before calling. A contact (name, email, phone) is optional: ask if the user wants one added. Owners, admins and estimators only.",
+    access: "write",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", maxLength: 120, description: "The customer's company name, as the user gave it." },
+        contact_name: { type: "string", maxLength: 120, description: "The main contact's name." },
+        contact_email: { type: "string", maxLength: 254, description: "The contact's email." },
+        contact_phone: { type: "string", maxLength: 40, description: "The contact's phone." },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_site",
+    title: "Create site",
+    description:
+      "Add a site (a physical address where equipment is installed) to a customer. The user must tell you what to call the site (the business name, or a short label such as 'Chinatown BBQ, 130 E Pender') and should give the street address: if either is missing, ASK the user and wait; never guess, and never reuse another customer's site. Call search_sites_and_equipment first so the site is not created twice (an existing site of that name on the customer is returned instead). Owners, admins and estimators only.",
+    access: "write",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customer_id: idProperty("The customer's id from search_customers or create_customer."),
+        name: { type: "string", maxLength: 120, description: "What to call the site. Ask the user if they have not said." },
+        address: { type: "string", maxLength: 300, description: "The street address, city and province. Ask the user if they have not said." },
+      },
+      required: ["customer_id", "name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "add_equipment",
+    title: "Add equipment to a site",
+    description:
+      "Add equipment units to a site, for example from a list or CSV the user gave you. Give each unit's type wording as the list writes it ('Carrier rooftop unit', 'Make-up air unit', 'Kitchen exhaust fan'): the app matches it to the company's equipment types and CREATES a new type when none fits, so a list never stops for a missing type. Put the make and model in make_model, the serial number in serial_number, a tag or unit number in unit_no and where it is in location (for example 'Roof'). Pass only what the list says: leave a field out when it is '?' or blank, and never invent values. Up to 60 units per call; call again for the rest. Safe to repeat: a unit with the same type and unit_no already on the site is skipped. Afterwards call create_agreement_draft and then generate_service_lines. Owners, admins and estimators only.",
+    access: "write",
+    inputSchema: {
+      type: "object",
+      properties: {
+        site_id: idProperty("The site's id from create_site or search_sites_and_equipment."),
+        units: {
+          type: "array",
+          minItems: 1,
+          maxItems: MAX_UNITS_PER_CALL,
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", maxLength: 100, description: "The equipment type as the list writes it." },
+              unit_no: { type: "string", maxLength: 40, description: "The tag, unit number or mark." },
+              make_model: { type: "string", maxLength: 120, description: "Make and model, for example 'Carrier 48TCEA07C2A5A0F0A1'." },
+              serial_number: { type: "string", maxLength: 60, description: "The serial number, if the list has one." },
+              location: { type: "string", maxLength: 300, description: "Where it is, for example 'Roof' or 'Mechanical room'." },
+            },
+            required: ["type"],
+            additionalProperties: false,
+          },
+          description: `1 to ${MAX_UNITS_PER_CALL} units.`,
+        },
+      },
+      required: ["site_id", "units"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "create_agreement_draft",
     title: "Create agreement draft",
     description: "Start a draft agreement on an active site that has no live agreement. It is only a draft: nothing is sent to the customer. Owners, admins and estimators only; the plan's live agreement limit applies.",
@@ -137,8 +207,24 @@ export type ToolCall =
   | { tool: "get_agreement"; agreementId: string }
   | { tool: "get_expiring_agreements"; withinDays: ExpiryWindow }
   | { tool: "get_revenue_summary"; from?: string; to?: string }
+  | { tool: "create_customer"; name: string; contactName: string | null; contactEmail: string | null; contactPhone: string | null }
+  | { tool: "create_site"; customerId: string; name: string; address: string | null }
+  | { tool: "add_equipment"; siteId: string; units: EquipmentUnit[] }
   | { tool: "create_agreement_draft"; siteId: string }
   | { tool: "generate_service_lines"; agreementId: string };
+
+/** One unit as add_equipment validated it: the type wording, and the fields the asset form keeps (make, model and serial are folded into type/model). */
+export type EquipmentUnit = { type: string; unitNo: string | null; typeModel: string | null; location: string | null };
+
+/** What a list writes for "no value": the field is left empty instead of storing the placeholder. */
+const NO_VALUE = new Set(["", "?", "??", "-", "--", "n/a", "na", "none", "unknown", "tbd"]);
+const clean = (value: unknown, max: number): { ok: true; value: string | null } | { ok: false } => {
+  if (value === undefined || value === null) return { ok: true, value: null };
+  if (typeof value !== "string") return { ok: false };
+  const text = value.trim().replace(/\s+/g, " ");
+  if (NO_VALUE.has(text.toLowerCase())) return { ok: true, value: null };
+  return text.length > max ? { ok: false } : { ok: true, value: text };
+};
 
 export type ParsedCall = { ok: true; call: ToolCall } | { ok: false; error: string };
 
@@ -228,6 +314,49 @@ export function parseToolCall(name: string, args: unknown): ParsedCall {
       if (typeof from === "string" && typeof to === "string" && from > to) return fail("from must not be after to.");
       return { ok: true, call: { tool: "get_revenue_summary", from: from as string | undefined, to: to as string | undefined } };
     }
+    case "create_customer": {
+      const name = clean(input.name, 120);
+      if (!name.ok || name.value === null) return fail("name is required (at most 120 characters). Ask the user for the customer's company name before trying again.");
+      const contactName = clean(input.contact_name, 120);
+      const contactEmail = clean(input.contact_email, 254);
+      const contactPhone = clean(input.contact_phone, 40);
+      if (!contactName.ok || !contactEmail.ok || !contactPhone.ok) return fail("contact_name, contact_email and contact_phone must be short text.");
+      if (contactEmail.value !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.value)) return fail("contact_email must look like name@company.com; ask the user for the right address.");
+      return { ok: true, call: { tool: "create_customer", name: name.value, contactName: contactName.value, contactEmail: contactEmail.value, contactPhone: contactPhone.value } };
+    }
+    case "create_site": {
+      const customerId = id("customer_id");
+      if (!customerId) return fail("customer_id must be a customer id from search_customers or create_customer.");
+      const name = clean(input.name, 120);
+      if (!name.ok || name.value === null) return fail("name is required (at most 120 characters). Ask the user what to call this site (for example the business name) before trying again.");
+      const address = clean(input.address, 300);
+      if (!address.ok) return fail("address must be text of at most 300 characters.");
+      return { ok: true, call: { tool: "create_site", customerId, name: name.value, address: address.value } };
+    }
+    case "add_equipment": {
+      const siteId = id("site_id");
+      if (!siteId) return fail("site_id must be a site id from create_site or search_sites_and_equipment.");
+      if (!Array.isArray(input.units) || input.units.length < 1) return fail(`units must be a list of 1 to ${MAX_UNITS_PER_CALL} units, each with at least a type.`);
+      if (input.units.length > MAX_UNITS_PER_CALL) return fail(`Send at most ${MAX_UNITS_PER_CALL} units per call; call again for the rest.`);
+      const units: EquipmentUnit[] = [];
+      for (const [index, raw] of input.units.entries()) {
+        const where = `units[${index}]`;
+        if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return fail(`${where} must be an object.`);
+        const unit = raw as Record<string, unknown>;
+        const extra = Object.keys(unit).find((key) => !["type", "unit_no", "make_model", "serial_number", "location"].includes(key));
+        if (extra !== undefined) return fail(`${where}: "${extra.slice(0, 40)}" is not a field of a unit. Use type, unit_no, make_model, serial_number and location.`);
+        const type = clean(unit.type, 100);
+        if (!type.ok || type.value === null) return fail(`${where}.type is required (at most 100 characters): the equipment type as the list writes it.`);
+        const unitNo = clean(unit.unit_no, 40);
+        const makeModel = clean(unit.make_model, 120);
+        const serial = clean(unit.serial_number, 60);
+        const location = clean(unit.location, 300);
+        if (!unitNo.ok || !makeModel.ok || !serial.ok || !location.ok) return fail(`${where}: unit_no (40), make_model (120), serial_number (60) and location (300) must be short text.`);
+        const typeModel = [makeModel.value, serial.value ? `S/N ${serial.value}` : null].filter((part) => part !== null).join(" ").slice(0, 120).trim() || null;
+        units.push({ type: type.value, unitNo: unitNo.value, typeModel, location: location.value });
+      }
+      return { ok: true, call: { tool: "add_equipment", siteId, units } };
+    }
     case "create_agreement_draft": {
       const siteId = id("site_id");
       return siteId ? { ok: true, call: { tool: "create_agreement_draft", siteId } } : fail("site_id must be a site id.");
@@ -241,7 +370,7 @@ export function parseToolCall(name: string, args: unknown): ParsedCall {
   }
 }
 
-/** Whether a member's role may run a tool. Reads are open to every role; the two writes follow the records rule (owner, admin, estimator). */
+/** Whether a member's role may run a tool. Reads are open to every role; the writes follow the records rule (owner, admin, estimator). */
 export function mayRunTool(access: ToolAccess, canWrite: boolean, writesEnabled: boolean): boolean {
   return access === "read" || (canWrite && writesEnabled);
 }

@@ -552,7 +552,8 @@ export type ImportAllowanceResult =
   | { ok: false; code: WriteFailure };
 
 /** One spelling's suggested type: the catalog code it means (`null` when none fits) and how sure the model is. */
-export type TypeSuggestion = { spelling: string; typeCode: string | null; confidence: "low" | "medium" | "high" };
+/** `newType` is the model's proposal when no catalog type fits: a short generic name and the months a visit usually falls in. */
+export type TypeSuggestion = { spelling: string; typeCode: string | null; confidence: "low" | "medium" | "high"; newType?: { name: string; months: number[] } | null };
 export type TypeSuggestResult = { ok: true; suggestions: TypeSuggestion[] } | { ok: false; code: "unavailable" };
 
 /** Matches the spellings a list used that the org's types did not recognise to the org's types. */
@@ -730,6 +731,14 @@ export interface ContractSplitter {
 }
 
 export type AddDraftResult = { ok: true; added: number } | { ok: false; code: "forbidden" | "not_empty" | "invalid" | "unavailable" };
+
+/** An equipment type the org now has: `created` is false when a type of that name already existed and was reused. */
+export type EquipmentTypeRef = { id: string; code: string; name: string; created: boolean };
+
+/** Adds one equipment type to the org's catalog, or returns the one of that name (`add_equipment_type`). Owners, admins and estimators. */
+export interface EquipmentTypeCreator {
+  create(orgId: string, name: string, months?: number[]): Promise<{ ok: true; type: EquipmentTypeRef } | { ok: false; code: WriteFailure }>;
+}
 
 /** Writes an accepted draft in one transaction (`add_catalog_draft`, door 2). */
 export interface CatalogWriter {

@@ -57,6 +57,9 @@ import { claudeAssetExtractor } from "@/infrastructure/claude";
 import { claudeCatalogDrafter } from "@/infrastructure/claude/catalog-drafter";
 import { claudeContractSplitter } from "@/infrastructure/claude/contract-splitter";
 import { claudeTypeSuggester } from "@/infrastructure/claude/type-suggester";
+import { supabaseEquipmentTypeCreator } from "@/infrastructure/supabase/equipment-types";
+import { makeResolveEquipmentTypes } from "@/application/use-cases/resolve-equipment-types";
+import { makeFixImportRows } from "@/application/use-cases/fix-import-rows";
 import { claudeAgreementReviewer } from "@/infrastructure/claude/agreement-reviewer";
 import { claudeAssistant } from "@/infrastructure/claude/assistant";
 import { createRateLimiter } from "@/infrastructure/rate-limit/limiter";
@@ -208,6 +211,7 @@ export async function getContainer() {
   const assetStore = supabaseAssetStore(supabase);
   const importJobs = supabaseImportJobStore(supabase, systemClock);
   const importRows = supabaseImportRowStore(supabase);
+  const equipmentTypes = makeResolveEquipmentTypes({ catalog: supabaseAssetTypeCatalog(supabase), suggester: claudeTypeSuggester({ apiKey: process.env.ANTHROPIC_API_KEY }), creator: supabaseEquipmentTypeCreator(supabase) });
   const agreementRepository = supabaseAgreementRepository(supabase);
   const portalReader = supabasePortalReader(supabase);
   // Sealing needs PORTAL_LINK_KEY: without it a send or a new link throws and answers unavailable (outbox-dispatch door 5).
@@ -308,6 +312,21 @@ export async function getContainer() {
     },
     extractImport: makeExtractImport(importJobs, importParser, claudeAssetExtractor({ apiKey: process.env.ANTHROPIC_API_KEY }), supabaseAssetTypeCatalog(supabase), supabaseImportAllowance(supabase)),
     reviewImport: supabaseImportReviewReader(supabase).forJob,
+    /** Gives every equipment wording a type of the org's, making a new type when none fits (shared with the equipment tools). */
+    resolveEquipmentTypes: equipmentTypes,
+    fixImportRows: makeFixImportRows({
+      review: supabaseImportReviewReader(supabase),
+      rows: importRows,
+      resolveTypes: equipmentTypes,
+      siteAssets: async (siteId) => {
+        const [site, catalog] = await Promise.all([sites.get(siteId), supabaseAssetTypeCatalog(supabase).list()]);
+        const idOf = new Map(catalog.map((type) => [type.code, type.id]));
+        return (site?.assets ?? []).flatMap((asset) => {
+          const assetTypeId = idOf.get(asset.typeCode);
+          return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo, typeModel: asset.typeModel, location: asset.location }] : [];
+        });
+      },
+    }),
     updateImportRow: importRows.update,
     skipImportRow: importRows.setSkipped,
     mapImportType: importRows.mapType,
@@ -509,6 +528,12 @@ async function getToolContainer(accessToken: string, source: "mcp" | "api") {
     agreements: supabaseAgreementLister(supabase),
     agreementReader,
     agreementStore: supabaseAgreementStore(supabase),
+    customerStore: supabaseCustomerStore(supabase),
+    contactStore: supabaseContactStore(supabase),
+    siteStore: supabaseSiteStore(supabase),
+    assetStore: supabaseAssetStore(supabase),
+    sites: supabaseSiteRegister(supabase),
+    resolveTypes: makeResolveEquipmentTypes({ catalog: supabaseAssetTypeCatalog(supabase), suggester: claudeTypeSuggester({ apiKey: process.env.ANTHROPIC_API_KEY }), creator: supabaseEquipmentTypeCreator(supabase) }),
     customers: supabaseCustomerDirectory(supabase),
     records: supabaseRecordSearch(supabase),
     reports: supabaseReportReader(supabase),
@@ -519,7 +544,7 @@ async function getToolContainer(accessToken: string, source: "mcp" | "api") {
     source,
   });
   const plan = await readMemberPlan(supabase);
-  const caller = { userId: member.userId, email: member.email, orgName: member.orgName, role: member.role, canWrite: member.role === "owner" || member.role === "admin" || member.role === "estimator", plan };
+  const caller = { userId: member.userId, orgId: member.orgId, email: member.email, orgName: member.orgName, role: member.role, canWrite: member.role === "owner" || member.role === "admin" || member.role === "estimator", plan };
   return { caller, ...tools };
 }
 /** The MCP door: tools run as the member who holds the bearer token, gated by their company's plan. */

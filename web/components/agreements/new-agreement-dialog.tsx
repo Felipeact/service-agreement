@@ -22,6 +22,7 @@ import {
   FILE_HINT,
   firstCustomerChoice,
   LIST_FAILED,
+  LIST_NOT_ADDED,
   NEW_CHOICE,
   STANDARD_CHOICE,
   STANDARD_NAME,
@@ -43,7 +44,8 @@ export type NewAgreementActions = {
   readImport: (jobId: string) => Promise<ReadState>;
   extractImport: (jobId: string) => Promise<ExtractState>;
   /** Adds a clean list to the site without a review; `needs_review` when something in it needs a person. */
-  commitCleanImport?: (jobId: string) => Promise<{ status: string }>;
+  /** Fixes the extracted list (types, lengths, repeats) and adds it to the site, so no review screen is needed. */
+  fixAndCommitImport?: (jobId: string) => Promise<{ status: string }>;
   /** Adds equipment picked by hand to the site; with `assetTypes`, it turns on the Pick by hand tab. */
   addEquipment?: (siteId: string, items: { assetTypeId: string; quantity: number }[]) => Promise<AddEquipmentState>;
   /** Builds the new agreement's service lines from the equipment now on its site. A failure is not fatal: the agreement page offers the same button. */
@@ -271,19 +273,21 @@ export function NewAgreementDialog({ customers, sites, actions, templates, initi
 
       setPhase("extracting");
       const extracted = await runExtraction(jobId, { extract: actions.extractImport, onProgress: setProgress });
-      // A list with nothing wrong goes straight to the agreement; the review opens only when something needs a person.
-      if (extracted.status === "extracted" && actions.commitCleanImport) {
-        const committed = await actions.commitCleanImport(jobId).catch(() => ({ status: "needs_review" }));
+      // The list is fixed here, never in a review screen: rows with no type are given one (a new type is made when none fits), long
+      // fields are cut and repeats skipped, then the rows are added and the service lines built. If that cannot finish, the agreement
+      // is still there: the person is told and offered the agreement, not an import page.
+      if (extracted.status === "extracted" && actions.fixAndCommitImport) {
+        setPhase("fixing");
+        const committed = await actions.fixAndCommitImport(jobId).catch(() => ({ status: "failed" }));
         if (committed.status === "committed") {
           setPhase("building");
           await actions.generateLines?.(started.agreementId).catch(() => null);
           return go(agreementHref);
         }
       }
-      // Rows found go to the review grid; a list that could not be read through is finished from the site's import page.
-      go(
-        extracted.status === "extracted" ? `/imports/${jobId}?agreement=${started.agreementId}` : `/sites/${started.siteId}/import?agreement=${started.agreementId}`,
-      );
+      setNotice({ text: extracted.status === "extracted" ? LIST_NOT_ADDED : LIST_FAILED, href: agreementHref, linkText: "Open the agreement" });
+      setPhase("idle");
+      setCreated({ customerId: started.customerId, siteId: started.siteId });
     });
   }
 

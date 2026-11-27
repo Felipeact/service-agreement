@@ -12,7 +12,7 @@ const container = {
   listAssetTypes: async () => [],
 };
 vi.mock("@/composition", () => ({ getContainer: async () => container }));
-vi.mock("./import-actions", () => ({ commitCleanImportAction: vi.fn(), confirmImportAction: vi.fn(), extractImportAction: vi.fn(), readImportAction: vi.fn(), startImportAction: vi.fn() }));
+vi.mock("./import-actions", () => ({ fixAndCommitImportAction: vi.fn(), confirmImportAction: vi.fn(), extractImportAction: vi.fn(), readImportAction: vi.fn(), startImportAction: vi.fn() }));
 vi.mock("./new-agreement-actions", () => ({ startAgreementAction: vi.fn(), addEquipmentAction: vi.fn() }));
 
 const { Banner, Dialog, dialogProps } = await import("./new-agreement-launcher");

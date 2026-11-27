@@ -3,14 +3,14 @@ import { PLANS, type PlanKey } from ".";
 /** The two ways another program reaches a company's data: an AI client over MCP, or code over the REST API. */
 export type AccessDoor = "mcp" | "api";
 
-/** What a plan lets a door do: nothing, read, or read plus the draft writes. */
+/** What a plan lets a door do: nothing, read, or read plus the writes (add customers, sites and equipment, start drafts). */
 export type AccessLevel = "none" | "read" | "write";
 
 export type PlanAccess = { mcp: AccessLevel; api: AccessLevel; callsPerMinute: number; /** Ask AI questions the whole company may ask in a calendar month. */ assistantQuestionsPerMonth: number };
 
 /**
  * What each plan includes beyond agreements and imports (decision of 2026-11-27, prices still the owner's call): Starter has the
- * in-app assistant only; Team adds read access over MCP and the API; Business adds the draft writes and the highest rate.
+ * in-app assistant only; Team adds read access over MCP and the API; Business adds the writes and the highest rate.
  * Reads cost us no model fees (the caller's own client pays), so they are the cheap way to make Team worth its price.
  */
 export const PLAN_ACCESS: Readonly<Record<PlanKey, PlanAccess>> = {
@@ -43,7 +43,7 @@ const DOOR_NAME: Record<AccessDoor, string> = { mcp: "The AI (MCP) connection", 
 
 /** The sentence a refused member or client reads. */
 export function planAccessMessage(door: AccessDoor, access: "read" | "write", plan: string | null | undefined): string {
-  const what = access === "write" ? `${DOOR_NAME[door]} can only read on your plan; creating drafts` : DOOR_NAME[door];
+  const what = access === "write" ? `${DOOR_NAME[door]} can only read on your plan; adding customers, sites, equipment and drafts` : DOOR_NAME[door];
   return `${what} is available on the ${cheapestPlanFor(door, access)} plan and above${plan ? `; your company is on ${PLANS.find((p) => p.key === plan)?.name ?? plan}` : ""}. An owner can change the plan in Settings → Billing.`;
 }
 

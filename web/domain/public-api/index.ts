@@ -25,6 +25,9 @@ export const API_ROUTES: readonly ApiRoute[] = [
   { method: "GET", path: "/agreements/expiring", tool: "get_expiring_agreements", summary: "Agreements ending within 30, 60 or 90 days" },
   { method: "GET", path: "/agreements/{agreement_id}", tool: "get_agreement", summary: "One agreement with lines and history" },
   { method: "GET", path: "/reports/revenue", tool: "get_revenue_summary", summary: "Revenue and pipeline summary" },
+  { method: "POST", path: "/customers", tool: "create_customer", summary: "Add a customer" },
+  { method: "POST", path: "/customers/{customer_id}/sites", tool: "create_site", summary: "Add a site to a customer" },
+  { method: "POST", path: "/sites/{site_id}/equipment", tool: "add_equipment", summary: "Add equipment units to a site, creating equipment types that are missing" },
   { method: "POST", path: "/agreements", tool: "create_agreement_draft", summary: "Start a draft agreement on a site" },
   { method: "POST", path: "/agreements/{agreement_id}/service-lines", tool: "generate_service_lines", summary: "Fill a draft's service lines from site equipment" },
 ];
@@ -135,7 +138,7 @@ export function openApiDocument(baseUrl: string): Schema {
     info: {
       title: "Service Pacts API",
       version: API_VERSION,
-      description: "Read your company's customers, sites, agreements and reports, and start draft agreements. Every call acts as the member who signed in: your company and role come from the credential, never from a parameter, and money is in dollars (CAD). Available on the Team plan (reads) and Business plan (draft writes).",
+      description: "Read your company's customers, sites, agreements and reports, add customers, sites and equipment, and start draft agreements. Every call acts as the member who signed in: your company and role come from the credential, never from a parameter, and money is in dollars (CAD). Available on the Team plan (reads) and Business plan (draft writes).",
     },
     servers: [{ url: `${baseUrl.replace(/\/$/, "")}${API_BASE_PATH}` }],
     tags: [{ name: "Reads" }, { name: "Drafts" }],

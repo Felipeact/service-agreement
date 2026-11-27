@@ -5,7 +5,7 @@ import { API_BASE_PATH } from "@/domain/public-api";
 import type { ActivitySummary } from "@/lib/developer";
 import { CopyField } from "@/components/copy-field";
 
-const LEVEL: Record<AccessLevel, string> = { none: "Not included", read: "Read only", write: "Read and create drafts" };
+const LEVEL: Record<AccessLevel, string> = { none: "Not included", read: "Read only", write: "Read, add records and create drafts" };
 const when = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Vancouver" });
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -39,7 +39,7 @@ export function Overview({ plan, origin, activity }: { plan: string; origin: str
             <Row label="AI connection (MCP)" value={LEVEL[access.mcp]} />
             <Row label="Calls a minute" value={access.callsPerMinute} />
           </dl>
-          <p className="text-[13px] text-ink-nav">Draft writes need the Business plan. Every call acts as the member who signed in, so it sees only what that member sees.</p>
+          <p className="text-[13px] text-ink-nav">Adding customers, sites, equipment and drafts needs the Business plan. Every call acts as the member who signed in, so it sees only what that member sees.</p>
         </Card>
         <Card title="Last 30 days">
           {activity === null ? (

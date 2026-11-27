@@ -88,7 +88,7 @@ describe("/api/v1", () => {
 
   test("an unknown path is 404, a wrong method 405, bad JSON 400", async () => {
     expect((await call("GET", "nope")).status).toBe(404);
-    expect((await call("POST", "customers", { body: "{}" })).status).toBe(405);
+    expect((await call("POST", "me", { body: "{}" })).status).toBe(405);
     expect((await call("POST", "agreements", { body: "{not json" })).status).toBe(400);
   });
 

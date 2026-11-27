@@ -9,8 +9,8 @@ describe("tool catalogue", () => {
     for (const tool of AI_TOOLS) expect(tool.inputSchema.additionalProperties).toBe(false);
   });
 
-  test("only the two draft tools write; nothing sends or cancels", () => {
-    expect(AI_TOOLS.filter((tool) => tool.access === "write").map((tool) => tool.name)).toEqual(["create_agreement_draft", "generate_service_lines"]);
+  test("the writes only add records and start drafts; nothing sends or cancels", () => {
+    expect(AI_TOOLS.filter((tool) => tool.access === "write").map((tool) => tool.name)).toEqual(["create_customer", "create_site", "add_equipment", "create_agreement_draft", "generate_service_lines"]);
     expect(AI_TOOLS.some((tool) => /send|cancel|price/.test(tool.name))).toBe(false);
   });
 });
@@ -55,5 +55,61 @@ describe("mayRunTool", () => {
     expect(mayRunTool("write", false, true)).toBe(false);
     expect(mayRunTool("write", true, false)).toBe(false);
     expect(mayRunTool("write", true, true)).toBe(true);
+  });
+});
+
+describe("customer, site and equipment tools", () => {
+  const SITE = "3f2b8a52-6c1e-4d52-9a1c-0b7d6e4f1a10";
+  test("create_customer needs a name and tells the model to ask the user for it", () => {
+    expect(parseToolCall("create_customer", {})).toMatchObject({ ok: false, error: expect.stringContaining("Ask the user") });
+    expect(parseToolCall("create_customer", { name: "Chinatown BBQ", contact_email: "nope" })).toMatchObject({ ok: false });
+    expect(parseToolCall("create_customer", { name: " Chinatown BBQ ", contact_name: "Lee", contact_email: "lee@bbq.ca" })).toEqual({
+      ok: true,
+      call: { tool: "create_customer", name: "Chinatown BBQ", contactName: "Lee", contactEmail: "lee@bbq.ca", contactPhone: null },
+    });
+  });
+
+  test("create_site needs a customer id and a name, and says to ask the user for the name", () => {
+    expect(parseToolCall("create_site", { customer_id: SITE })).toMatchObject({ ok: false, error: expect.stringContaining("Ask the user what to call this site") });
+    expect(parseToolCall("create_site", { name: "Pender" })).toMatchObject({ ok: false });
+    expect(parseToolCall("create_site", { customer_id: SITE, name: "Pender", address: "130 E Pender St", org_id: "x" })).toMatchObject({ ok: false });
+    expect(parseToolCall("create_site", { customer_id: SITE, name: "Pender", address: "130 E Pender St" })).toEqual({ ok: true, call: { tool: "create_site", customerId: SITE, name: "Pender", address: "130 E Pender St" } });
+  });
+
+  test("add_equipment folds make, model and serial into type/model and leaves placeholders empty", () => {
+    const parsed = parseToolCall("add_equipment", {
+      site_id: SITE,
+      units: [
+        { type: "Carrier rooftop unit", make_model: "Carrier 48TCEA07C2A5A0F0A1", serial_number: "1514C89048", location: "Roof" },
+        { type: "Make-up air unit", make_model: "Captive Aire A2-D.500-G15", serial_number: "?", unit_no: "N/A" },
+      ],
+    });
+    expect(parsed).toEqual({
+      ok: true,
+      call: {
+        tool: "add_equipment",
+        siteId: SITE,
+        units: [
+          { type: "Carrier rooftop unit", unitNo: null, typeModel: "Carrier 48TCEA07C2A5A0F0A1 S/N 1514C89048", location: "Roof" },
+          { type: "Make-up air unit", unitNo: null, typeModel: "Captive Aire A2-D.500-G15", location: null },
+        ],
+      },
+    });
+  });
+
+  test("add_equipment refuses no units, too many, a unit without a type, and a stray or org field inside a unit", () => {
+    expect(parseToolCall("add_equipment", { site_id: SITE, units: [] }).ok).toBe(false);
+    expect(parseToolCall("add_equipment", { site_id: SITE, units: Array.from({ length: 61 }, () => ({ type: "Fan" })) })).toMatchObject({ ok: false, error: expect.stringContaining("at most 60") });
+    expect(parseToolCall("add_equipment", { site_id: SITE, units: [{ unit_no: "1" }] })).toMatchObject({ ok: false, error: expect.stringContaining("type is required") });
+    expect(parseToolCall("add_equipment", { site_id: SITE, units: [{ type: "Fan", org_id: "other" }] })).toMatchObject({ ok: false });
+    expect(parseToolCall("add_equipment", { site_id: "nope", units: [{ type: "Fan" }] }).ok).toBe(false);
+  });
+
+  test("the write tools tell the model to ask the user and name the next step", () => {
+    const text = (name: string) => AI_TOOLS.find((tool) => tool.name === name)?.description ?? "";
+    expect(text("create_site")).toMatch(/ASK the user/);
+    expect(text("create_customer")).toMatch(/ASK/);
+    expect(text("add_equipment")).toMatch(/CREATES a new type/);
+    expect(text("add_equipment")).toMatch(/generate_service_lines/);
   });
 });

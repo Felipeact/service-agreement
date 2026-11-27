@@ -39,6 +39,18 @@ describe("claudeTypeSuggester", () => {
     expect(result).toEqual({ ok: true, suggestions: [{ spelling: "Sump pump", typeCode: null, confidence: "low" }] });
   });
 
+  test("a spelling with no fit can carry the type the model proposes, tidied", async () => {
+    const fake = fakeClient(say({ suggestions: [{ spelling: "Captive Aire MUA", type_code: null, confidence: "medium", new_type_name: "  Make-up air unit ", new_type_months: [12, 6, 6, 3, 9, 99] }] }));
+    const result = await claudeTypeSuggester({ apiKey: "k", client: fake.client as never }).suggest(["Captive Aire MUA"], TYPES, null);
+    expect(result).toEqual({ ok: true, suggestions: [{ spelling: "Captive Aire MUA", typeCode: null, confidence: "medium", newType: { name: "Make-up air unit", months: [3, 6, 9, 12] } }] });
+  });
+
+  test("a matched spelling never carries a new type", async () => {
+    const fake = fakeClient(say({ suggestions: [{ spelling: "FCU", type_code: "FAN_COIL", confidence: "high", new_type_name: "Fan coil unit", new_type_months: [3] }] }));
+    const result = await claudeTypeSuggester({ apiKey: "k", client: fake.client as never }).suggest(["FCU"], TYPES, null);
+    expect(result).toEqual({ ok: true, suggestions: [{ spelling: "FCU", typeCode: "FAN_COIL", confidence: "high" }] });
+  });
+
   test("no spellings asks nothing; no key, a refusal, an outage and a bad answer are unavailable", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const idle = fakeClient(say({ suggestions: [] }));

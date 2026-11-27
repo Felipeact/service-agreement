@@ -16,6 +16,8 @@ const container = {
   extractImport: vi.fn(),
   importProgress: vi.fn(),
   reviewImport: vi.fn(),
+  fixImportRows: vi.fn(),
+  commitImport: vi.fn(),
   sendEmail: vi.fn(),
   loadBillingUsage: vi.fn(async () => null),
 };
@@ -290,5 +292,40 @@ describe("extractImportAction", () => {
     expect(await actions.extractImportAction(JOB)).toEqual(state);
     expect(container.extractImport).toHaveBeenCalledWith(JOB);
     expect(refresh).toHaveBeenCalledTimes(refreshes);
+  });
+});
+
+describe("fixAndCommitImportAction", () => {
+  const extractedReview = { job: { id: JOB, siteId: SITE, siteName: "Tower A", originalName: "x.csv", status: "extracted", committed: null }, rows: [{ id: "r1", position: 1, assetTypeRaw: "MUA", assetTypeId: "t1", unitNo: null, typeModel: null, location: null, confidence: "high", sourceRef: null, skipped: false, assetId: null }] };
+
+  test("fixes the list with the member's org and then adds it, so no review screen is involved", async () => {
+    container.fixImportRows.mockResolvedValue({ ok: true, typed: 4, newTypes: ["Make-up air unit"], shortened: 0, skippedRepeats: 0, unresolved: 0 });
+    container.reviewImport.mockResolvedValue(extractedReview);
+    container.commitImport.mockResolvedValue({ ok: true, added: 4, skipped: 0 });
+    expect(await actions.fixAndCommitImportAction(JOB)).toEqual({ status: "committed", added: 4, skipped: 0 });
+    expect(container.fixImportRows).toHaveBeenCalledWith(ORG, JOB);
+    expect(container.commitImport).toHaveBeenCalledWith(JOB);
+  });
+
+  test("when a row still has no type nothing is committed and the answer is failed, never a redirect to the review", async () => {
+    container.fixImportRows.mockResolvedValue({ ok: true, typed: 0, newTypes: [], shortened: 0, skippedRepeats: 0, unresolved: 2 });
+    expect(await actions.fixAndCommitImportAction(JOB)).toEqual({ status: "failed" });
+    expect(container.commitImport).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  test("a job that cannot be fixed, a commit that is refused, a bad id and a viewer are all answered without a redirect", async () => {
+    container.fixImportRows.mockResolvedValue({ ok: false, code: "not_ready" });
+    expect(await actions.fixAndCommitImportAction(JOB)).toEqual({ status: "failed" });
+    container.fixImportRows.mockResolvedValue({ ok: false, code: "not_found" });
+    expect(await actions.fixAndCommitImportAction(JOB)).toEqual({ status: "not_found" });
+    container.fixImportRows.mockResolvedValue({ ok: true, typed: 1, newTypes: [], shortened: 0, skippedRepeats: 0, unresolved: 0 });
+    container.reviewImport.mockResolvedValue(extractedReview);
+    container.commitImport.mockResolvedValue({ ok: false, code: "unavailable" });
+    expect(await actions.fixAndCommitImportAction(JOB)).toEqual({ status: "failed" });
+    expect(await actions.fixAndCommitImportAction("nope")).toEqual({ status: "not_found" });
+    currentMember.mockResolvedValue(member("viewer"));
+    expect(await actions.fixAndCommitImportAction(JOB)).toEqual({ status: "forbidden" });
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

@@ -17,7 +17,7 @@ export function Content({ authorizationId, clientName, email, companyName }: Pro
         </div>
         <ul className="flex flex-col gap-2 rounded-card bg-board p-4 text-[13px] text-ink-nav">
           <li>It will see your company&apos;s customers, sites, agreements and reports, the same as you do.</li>
-          <li>It can start a draft agreement and fill its service lines, only if your role may.</li>
+          <li>It can add customers, sites and the units on them, and start a draft agreement with its service lines, only if your role may.</li>
           <li>It can never send, sign or cancel anything, and never sees another company&apos;s data.</li>
         </ul>
         <ConsentButtons authorizationId={authorizationId} clientName={clientName} />
