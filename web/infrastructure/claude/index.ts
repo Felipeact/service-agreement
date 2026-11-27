@@ -54,7 +54,7 @@ export const ROWS_SCHEMA = {
 /** What the extractor needs of the SDK, so a test can stand in for it. */
 export type ClaudeMessage = {
   stop_reason: string | null;
-  content: { type: string; text?: string }[];
+  content: { type: string; text?: string; id?: string; name?: string; input?: unknown }[];
   usage?: { input_tokens?: number; output_tokens?: number; cache_creation_input_tokens?: number | null; cache_read_input_tokens?: number | null };
 };
 

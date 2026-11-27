@@ -7,7 +7,7 @@ export function ReferenceView({ spec, plan }: { spec: Record<string, unknown>; p
   const access = accessOf(plan);
   return (
     <div className="flex flex-col gap-5">
-      <p className="max-w-[70ch] text-[14px] text-ink-nav">{`Your ${planDisplayName(plan)} plan allows ${access.api === "write" ? "reads and draft writes" : "reads"} at ${access.callsPerMinute} calls a minute. Every call acts as the member whose token you send.`}</p>
+      <p className="max-w-[70ch] text-[14px] text-ink-nav">{`Your ${planDisplayName(plan)} plan allows ${access.api === "write" ? "reads and writes" : "reads"} at ${access.callsPerMinute} calls a minute. Every call acts as the member whose token you send.`}</p>
       <ol className="grid gap-3 text-[13px] text-ink-nav md:grid-cols-3">
         <li className="rounded-card border border-hairline bg-surface p-4">
           <strong className="block text-ink">1. Get a token</strong>

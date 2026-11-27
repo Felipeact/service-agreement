@@ -5,7 +5,7 @@ import type { DialogTemplate } from "@/components/agreements/new-agreement-state
 import { ImportBanner } from "@/components/imports/import-banner";
 import { Button } from "@/components/ui/button";
 import { getContainer } from "@/composition";
-import { commitCleanImportAction, confirmImportAction, extractImportAction, readImportAction, startImportAction } from "./import-actions";
+import { fixAndCommitImportAction, confirmImportAction, extractImportAction, readImportAction, startImportAction } from "./import-actions";
 import { generateServiceLinesAction } from "./agreement-actions";
 import { addEquipmentAction, startAgreementAction } from "./new-agreement-actions";
 
@@ -41,7 +41,7 @@ export async function dialogProps(known?: TemplateListResult) {
       confirmImport: confirmImportAction,
       readImport: readImportAction,
       extractImport: extractImportAction,
-      commitCleanImport: commitCleanImportAction,
+      fixAndCommitImport: fixAndCommitImportAction,
       addEquipment: addEquipmentAction,
       generateLines: generateServiceLinesAction,
     },

@@ -5,7 +5,7 @@ import type { ToolResult } from "@/application/use-cases";
 export const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"] as const;
 export const SERVER_INFO = { name: "service-pacts", title: "Service Pacts", version: "1.0.0" } as const;
 const INSTRUCTIONS =
-  "Service Pacts tools for the signed-in member's own company. Call who_am_i first. Reads cover customers, sites, equipment, agreements, expiring agreements and revenue. The two write tools only start or fill a draft agreement: nothing is ever sent to a customer from here.";
+  "Service Pacts tools for the signed-in member's own company. Call who_am_i first. Reads cover customers, sites, equipment, agreements, expiring agreements and revenue. The write tools add records and start drafts only: nothing is ever sent to a customer from here. To make an agreement from an equipment list: (1) search_customers and search_sites_and_equipment to see what already exists; (2) if the customer or the site is new, ASK the user for anything you do not have (the customer's company name, what to call the site, its street address) and wait for the answer before creating; (3) create_customer, then create_site, then add_equipment with the units from the list (a new equipment type is created automatically when none fits, so never stop for a missing type); (4) create_agreement_draft, then generate_service_lines. Never put equipment on a different customer's site to get around a missing one.";
 
 /** What the protocol needs of the tool layer, so it knows nothing of the database. */
 export type McpTools = {

@@ -232,25 +232,17 @@ export async function commitImportAction(jobId: string): Promise<CommitState> {
 }
 
 /**
- * After a list is read: adds it to the site at once when nothing in it needs a person (no row without a type, too long, low
- * confidence, repeated or already on the site). Otherwise nothing is added and the answer is `needs_review`, so the estimator
- * is sent to the review only when the file has something wrong.
+ * After a list is read for a new agreement: makes it ready and adds it to the site in one go, so the estimator is never sent to the
+ * review screen. `fixImportRows` gives every untyped row a type (a catalog type, or a new one when none fits), cuts over-long fields
+ * and skips repeats; then the commit adds the rows. `failed` means the agreement is kept and the list can be added from the site.
  */
-export async function commitCleanImportAction(jobId: string): Promise<CommitState | { status: "needs_review" }> {
+export async function fixAndCommitImportAction(jobId: string): Promise<CommitState | { status: "failed" }> {
   const ctx = await writer();
   if (!ctx) return FORBIDDEN;
   if (!isUuid(jobId)) return { status: "not_found" };
-  const review = await ctx.container.reviewImport(jobId);
-  if (!review) return { status: "not_found" };
-  if (review.job.status !== "extracted" || !review.rows.some((row) => !row.skipped)) return { status: "needs_review" };
-  const [types, site] = await Promise.all([ctx.container.listAssetTypes(), ctx.container.siteRegister(review.job.siteId)]);
-  const idOf = new Map(types.map((type) => [type.code, type.id]));
-  const siteAssets = (site?.assets ?? []).flatMap((asset) => {
-    const assetTypeId = idOf.get(asset.typeCode);
-    return assetTypeId ? [{ assetTypeId, unitNo: asset.unitNo, typeModel: asset.typeModel, location: asset.location }] : [];
-  });
-  const flags = flagRows(review.rows, siteAssets);
-  if ([...flags.values()].some((found) => found.length > 0)) return { status: "needs_review" };
+  const fixed = await ctx.container.fixImportRows(ctx.orgId, jobId);
+  if (!fixed.ok) return fixed.code === "not_found" ? { status: "not_found" } : { status: "failed" };
+  if (fixed.unresolved > 0) return { status: "failed" };
   const committed = await commitImportAction(jobId);
-  return committed.status === "committed" ? committed : { status: "needs_review" };
+  return committed.status === "committed" ? committed : { status: "failed" };
 }

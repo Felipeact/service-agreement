@@ -499,3 +499,18 @@ export function parseImportFilter(params: ImportParams): ImportFilter {
     ...(site && isUuid(site) && { siteId: site }),
   };
 }
+
+/**
+ * A type name for a spelling no catalog type fits and the model gave no name for: the spelling tidied (brackets and their contents
+ * dropped, spaces collapsed, capitalised, at most 60 characters). `null` when nothing usable is left. A last resort; the model's own
+ * proposal, a short generic name, is preferred.
+ */
+export function proposedTypeName(raw: string | null): string | null {
+  const text = (raw ?? "").replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  if (!/[\p{L}\p{N}]/u.test(text)) return null;
+  const capped = text.slice(0, 60).trim();
+  return capped.charAt(0).toUpperCase() + capped.slice(1);
+}
+
+/** The type a row with no equipment wording at all is given, so even a bare row can be added. */
+export const FALLBACK_TYPE_NAME = "Other equipment";

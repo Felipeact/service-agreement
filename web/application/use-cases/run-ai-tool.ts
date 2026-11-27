@@ -1,11 +1,14 @@
-import type { AgreementLister, AgreementReader, AgreementStore, CustomerDirectory, RecordSearch, ReportReader, ToolAudit } from "@/application/ports";
+import type { AgreementLister, AgreementReader, AgreementStore, AssetStore, ContactStore, CustomerDirectory, CustomerStore, RecordSearch, ReportReader, SiteRegister, SiteStore, ToolAudit } from "@/application/ports";
+import { normalized } from "@/domain/imports";
+import { validateAsset, validateContact, validateCustomer, validateSite } from "@/domain/records";
+import type { ResolveEquipmentTypes } from "./resolve-equipment-types";
 import { planAccessMessage, planAllows } from "@/domain/billing/plan-access";
 import { AI_TOOLS, mayRunTool, parseToolCall, toolByName, type ToolCall, type ToolDefinition } from "@/domain/ai-tools";
 import type { ReportRange } from "@/domain/reports";
 import type { GenerateServiceLinesResult } from "./generate-service-lines";
 
 /** Who is calling. Always built from the verified session, never from anything the model sent. */
-export type ToolCaller = { userId: string; email: string; orgName: string; role: string; canWrite: boolean; plan: string | null };
+export type ToolCaller = { userId: string; orgId: string; email: string; orgName: string; role: string; canWrite: boolean; plan: string | null };
 
 export type ToolResult = { ok: true; data: unknown } | { ok: false; error: string };
 
@@ -13,6 +16,14 @@ type Deps = {
   agreements: AgreementLister;
   agreementReader: AgreementReader;
   agreementStore: AgreementStore;
+  /** The writers the customer, site and equipment tools use: the same stores the forms use, so the same rules and RLS apply. */
+  customerStore: CustomerStore;
+  contactStore: ContactStore;
+  siteStore: SiteStore;
+  assetStore: AssetStore;
+  sites: SiteRegister;
+  /** Gives each equipment wording a type of the org's, making a new type when none fits. */
+  resolveTypes: ResolveEquipmentTypes;
   customers: CustomerDirectory;
   records: RecordSearch;
   reports: ReportReader;
@@ -22,8 +33,8 @@ type Deps = {
   today: () => string;
   /** Switch for the write tools (`MCP_WRITE_TOOLS=off` turns them off). */
   writesEnabled: boolean;
-  /** Which door the call came through, written to the audit row. */
-  source: "mcp" | "api";
+  /** Which door the call came through, written to the audit row. The in-app door (`app`) is every plan's: only MCP and the API are gated by plan. */
+  source: "mcp" | "api" | "app";
 };
 
 const dollars = (cents: number | null | undefined): number | null => (typeof cents === "number" ? Math.round(cents) / 100 : null);
@@ -42,16 +53,19 @@ const UNAVAILABLE = { ok: false, error: "That could not be read right now. Try a
 export function makeRunAiTool(deps: Deps) {
   const { agreements, agreementReader, agreementStore, customers, records, reports, audit } = deps;
 
+  /** Whether the caller's plan lets this door run a tool of this kind: always, for the app's own assistant. */
+  const planOpen = (caller: ToolCaller, access: "read" | "write") => deps.source === "app" || planAllows(caller.plan, deps.source, access);
+
   /** The tools this caller may see: every read, and the writes only when their role and the switch allow. */
   function toolsFor(caller: ToolCaller): ToolDefinition[] {
-    return AI_TOOLS.filter((tool) => mayRunTool(tool.access, caller.canWrite, deps.writesEnabled) && planAllows(caller.plan, deps.source, tool.access));
+    return AI_TOOLS.filter((tool) => mayRunTool(tool.access, caller.canWrite, deps.writesEnabled) && planOpen(caller, tool.access));
   }
 
   async function execute(call: ToolCall, caller: ToolCaller): Promise<ToolResult> {
     const day = deps.today();
     switch (call.tool) {
       case "who_am_i":
-        return { ok: true, data: { email: caller.email, company: caller.orgName, role: caller.role, canCreateDrafts: caller.canWrite && deps.writesEnabled && planAllows(caller.plan, deps.source, "write") } };
+        return { ok: true, data: { email: caller.email, company: caller.orgName, role: caller.role, canCreateDrafts: caller.canWrite && deps.writesEnabled && planOpen(caller, "write") } };
       case "search_customers": {
         const rows = await customers.list();
         const found = rows.filter((row) => row.active && matches(call.query, row.name, row.primaryContact, ...row.agreementNumbers)).slice(0, call.limit);
@@ -123,6 +137,86 @@ export function makeRunAiTool(deps: Deps) {
         const value = headline.value;
         return { ok: true, data: { range, recurringYearlyCad: dollars(value.recurringCents), pipelineCad: dollars(value.pipelineCents), signed: value.signed, accepted: value.accepted, refused: value.refused, expired: value.expired, averageDaysToSign: value.avgDaysToSign, topCustomers: top } };
       }
+      case "create_customer": {
+        const checked = validateCustomer({ name: call.name });
+        if (!checked.ok) return { ok: false, error: checked.errors.name ?? "The customer could not be created." };
+        const same = (await customers.list()).find((row) => row.active && row.name.trim().toLowerCase() === call.name.toLowerCase());
+        if (same) return { ok: true, data: { customerId: same.id, name: same.name, created: false, note: "A customer with this name already exists, so it was used. Do not create it again." } };
+        const made = await deps.customerStore.create(caller.orgId, checked.value);
+        if (!made.ok) return { ok: false, error: made.code === "forbidden" ? "Your role may not add customers." : UNAVAILABLE.error };
+        let contact: { added: boolean; note?: string } = { added: false };
+        if (call.contactName) {
+          const contactChecked = validateContact({ name: call.contactName, email: call.contactEmail ?? "", phone: call.contactPhone ?? "" });
+          const stored = contactChecked.ok ? await deps.contactStore.create(caller.orgId, made.id, contactChecked.value) : null;
+          contact = stored?.ok ? { added: true } : { added: false, note: "The customer was created, but the contact could not be added; add it from the customer's page." };
+        } else if (call.contactEmail || call.contactPhone) contact = { added: false, note: "A contact needs a name; ask the user for it if they want one added." };
+        return { ok: true, data: { customerId: made.id, name: checked.value.name, created: true, contact, next: "Ask the user for the site's name and address, then call create_site." } };
+      }
+      case "create_site": {
+        const detail = await customers.detail(call.customerId);
+        if (!detail) return { ok: false, error: "No customer with that id." };
+        if (!detail.active) return { ok: false, error: "That customer is inactive, so a site cannot be added to it." };
+        const same = detail.sites.find((site) => site.active && site.name.trim().toLowerCase() === call.name.toLowerCase());
+        if (same) return { ok: true, data: { siteId: same.id, name: same.name, address: same.address, created: false, note: "This customer already has a site of that name, so it was used." } };
+        const checked = validateSite({ name: call.name, address: call.address ?? "", siteContactId: "" }, []);
+        if (!checked.ok) return { ok: false, error: checked.errors.name ?? checked.errors.address ?? "The site could not be created." };
+        const made = await deps.siteStore.create(caller.orgId, call.customerId, checked.value);
+        if (!made.ok) return { ok: false, error: made.code === "forbidden" ? "Your role may not add sites." : made.code === "not_found" ? "No active customer with that id." : UNAVAILABLE.error };
+        return { ok: true, data: { siteId: made.id, name: checked.value.name, address: checked.value.address, created: true, next: "Call add_equipment with the equipment list, then create_agreement_draft and generate_service_lines." } };
+      }
+      case "add_equipment": {
+        const site = await deps.sites.get(call.siteId);
+        if (!site) return { ok: false, error: "No site with that id." };
+        if (!site.active || !site.customerActive) return { ok: false, error: "That site is inactive, so equipment cannot be added to it." };
+        const resolved = await deps.resolveTypes(caller.orgId, call.units.map((unit) => unit.type));
+        const already = new Set(site.assets.filter((asset) => asset.active && normalized(asset.unitNo ?? "") !== "").map((asset) => `${asset.typeCode}|${normalized(asset.unitNo ?? "")}`));
+        const counts = new Map<string, number>();
+        const newTypes = new Set<string>();
+        const unresolved: string[] = [];
+        let added = 0;
+        let skipped = 0;
+        for (const unit of call.units) {
+          const type = resolved.byKey.get(normalized(unit.type));
+          if (!type) {
+            unresolved.push(unit.type);
+            continue;
+          }
+          const unitKey = normalized(unit.unitNo ?? "");
+          const key = `${type.code}|${unitKey}`;
+          if (unitKey !== "" && already.has(key)) {
+            skipped += 1;
+            continue;
+          }
+          const checked = validateAsset({ assetTypeId: type.typeId, unitNo: unit.unitNo ?? "", typeModel: unit.typeModel ?? "", location: unit.location ?? "" }, [type.typeId]);
+          if (!checked.ok) {
+            unresolved.push(unit.type);
+            continue;
+          }
+          const made = await deps.assetStore.create(caller.orgId, call.siteId, checked.value);
+          if (!made.ok) {
+            if (made.code === "forbidden") return { ok: false, error: "Your role may not add equipment." };
+            unresolved.push(unit.type);
+            continue;
+          }
+          if (unitKey !== "") already.add(key);
+          added += 1;
+          counts.set(type.name, (counts.get(type.name) ?? 0) + 1);
+          if (type.created) newTypes.add(type.name);
+        }
+        if (added === 0 && skipped === 0) return { ok: false, error: "No equipment could be added right now. Try again in a moment." };
+        return {
+          ok: true,
+          data: {
+            siteId: call.siteId,
+            added,
+            skippedAlreadyOnSite: skipped,
+            notAdded: unresolved,
+            byType: [...counts].map(([type, units]) => ({ type, units })),
+            newEquipmentTypesCreated: [...newTypes],
+            next: "Call create_agreement_draft for this site, then generate_service_lines.",
+          },
+        };
+      }
       case "create_agreement_draft": {
         const created = await agreementStore.create(call.siteId);
         if (created.ok) return { ok: true, data: { agreementId: created.id, status: "draft", openAt: `/agreements/${created.id}`, note: "A draft only; nothing was sent to the customer." } };
@@ -145,7 +239,7 @@ export function makeRunAiTool(deps: Deps) {
     const outcome = await (async (): Promise<ToolResult> => {
       if (!definition || !parsed.ok) return { ok: false, error: parsed.ok ? "Unknown tool." : parsed.error };
       if (!mayRunTool(definition.access, caller.canWrite, deps.writesEnabled)) return { ok: false, error: "Your role, or this server, does not allow that tool." };
-      if (!planAllows(caller.plan, deps.source, definition.access)) return { ok: false, error: planAccessMessage(deps.source, definition.access, caller.plan) };
+      if (!planOpen(caller, definition.access)) return { ok: false, error: planAccessMessage(deps.source === "app" ? "api" : deps.source, definition.access, caller.plan) };
       try {
         return await execute(parsed.call, caller);
       } catch (cause) {

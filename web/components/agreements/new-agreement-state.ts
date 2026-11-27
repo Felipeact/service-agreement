@@ -46,6 +46,9 @@ export function startNotice(state: Extract<StartAgreementState, { status: "plan_
 /** What the dialog says after the agreement exists but the equipment list could not be sent. */
 export const LIST_FAILED = "The agreement was created, but we couldn't read the equipment list. You can add it from the agreement's site.";
 
+/** The list was read but could not be added on its own (a type could not be made, or the database refused). The person is never sent to an import screen. */
+export const LIST_NOT_ADDED = "The agreement was created, but the equipment from the list could not be added automatically. Add it from the agreement's site.";
+
 export const FILE_HINT = "Excel, CSV, Word or PDF, up to 20 MB";
 
 /** The dialog's start choice for a customer: the only customer when there is just one, otherwise none yet. */
@@ -53,13 +56,14 @@ export function firstCustomerChoice(customers: readonly { id: string }[]): strin
   return customers.length === 0 ? NEW_CHOICE : "";
 }
 
-export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting" | "building";
+export type Phase = "idle" | "creating" | "uploading" | "reading" | "extracting" | "fixing" | "building";
 
 const PHASE_TEXT: Record<Exclude<Phase, "idle">, string> = {
   creating: "Creating the agreement…",
   uploading: "Sending the equipment list…",
   reading: "Reading the file…",
   extracting: "Finding the equipment…",
+  fixing: "Fixing the list and adding the equipment…",
   building: "Building the service lines…",
 };
 
@@ -69,6 +73,7 @@ export const PHASE_DONE_TEXT: Record<Exclude<Phase, "idle">, string> = {
   uploading: "Sent the equipment list",
   reading: "Read the file",
   extracting: "Found the equipment",
+  fixing: "Fixed the list and added the equipment",
   building: "Built the service lines",
 };
 

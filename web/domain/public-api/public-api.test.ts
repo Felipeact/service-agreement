@@ -25,7 +25,7 @@ describe("public API routes", () => {
   });
   it("answers 404 for an unknown path, 405 for a wrong method, 400 for a non-object body", () => {
     expect(resolveRoute("GET", "/nope", {}, undefined)).toMatchObject({ ok: false, status: 404 });
-    expect(resolveRoute("POST", "/customers", {}, {})).toMatchObject({ ok: false, status: 405 });
+    expect(resolveRoute("POST", "/me", {}, {})).toMatchObject({ ok: false, status: 405 });
     expect(resolveRoute("POST", "/agreements", {}, [1])).toMatchObject({ ok: false, status: 400 });
   });
   it("marks write routes as writes", () => {

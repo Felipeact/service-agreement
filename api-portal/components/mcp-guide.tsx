@@ -31,7 +31,7 @@ export function McpGuide({ plan, origin }: { plan: string; origin: string }) {
           <h2 className="text-[18px] font-semibold tracking-tight text-ink">Connect an AI client in four steps</h2>
           <p className="max-w-[70ch] text-[14px] text-ink-nav">
             MCP (Model Context Protocol) lets an AI client such as Claude read your customers, sites, agreements and reports, and ask questions in plain words. It signs in as you, so it sees only what you see. Your {planDisplayName(plan)} plan{" "}
-            {canWrite ? "also lets it start a draft agreement and fill its service lines" : "lets it read; creating drafts is on the Business plan"}.
+            {canWrite ? "also lets it add customers, sites and equipment and start a draft agreement" : "lets it read; adding records and drafts is on the Business plan"}.
           </p>
         </div>
         <ol className="flex flex-col gap-6">
@@ -103,7 +103,7 @@ export function McpGuide({ plan, origin }: { plan: string; origin: string }) {
             </div>
             <div>
               <dt className="font-semibold text-ink">It says a plan is required</dt>
-              <dd className="text-ink-nav">The connection is on the Team plan and above, and creating drafts on Business. An owner can change the plan in Settings, Billing.</dd>
+              <dd className="text-ink-nav">The connection is on the Team plan and above, and adding records and drafts on Business. An owner can change the plan in Settings, Billing.</dd>
             </div>
             <div>
               <dt className="font-semibold text-ink">It says too many requests</dt>

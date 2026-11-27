@@ -424,7 +424,7 @@ One secure backend, three doors: the in-app assistant, the public site agent and
 - [ ] Owner: (migration `20261127100000_ai_tool_calls.sql` applied by the owner) switch on Authentication > OAuth Server in the Supabase dashboard (dynamic client registration on, authorization path `/oauth/consent`), then connect one MCP client end to end
 - [x] Public site agent: floating launcher with Home, Messages and Help tabs on the public pages, answers only from the site's own text, per-address limits (2026-11-27). The model call was not verified live: the local `ANTHROPIC_API_KEY` is rejected
 - [x] In-app Ask AI restyled as a docked side panel with suggested questions, Stop, New chat and a chat kept in the tab (2026-11-27)
-- [ ] Move the in-app assistant onto the shared tool layer (tool-use loop) instead of the 80-row facts prompt
+- [x] Move the in-app assistant onto the shared tool layer (tool-use loop): it creates customers, sites, equipment and drafts itself and takes an attached list (2026-11-27)
 - [ ] Saved conversations per member and usage metering in the database
 - [ ] Approval flow (one-time, expiring, payload-bound) before any MCP write that is customer-visible: send, cancel, reprice
 - [ ] Lead capture in the site agent with consent, once the owner chooses where leads go
@@ -441,6 +441,9 @@ One secure backend, three doors: the in-app assistant, the public site agent and
 - [x] Sign-in email templates redesigned in `supabase/templates/` (2026-11-27)
 - [ ] Owner: paste the Magic link and Confirm sign up templates (and subjects) into the Supabase dashboard, check the Site URL, test on a phone
 - [ ] Pass the company name and inviter into the invitation email so it can say who invited the person
+- [x] Equipment types made by AI and no review stop when an agreement is made from a list; MCP and API tools to create a customer, a site and equipment (2026-11-27)
+- [ ] Owner: apply migration `20261127140000_add_equipment_type.sql`, reconnect the AI client so it sees the new tools, and check the upload on a real list with a working Anthropic key
+- [ ] Check Ask AI end to end with a working Anthropic key: a real list, a new customer, a new site, the draft and its lines
 - [ ] Long-lived API keys (needs a signing-secret decision) and webhooks (signed, retried, per-plan)
 - [ ] Show the AI and API access in the pricing cards and the site agent's knowledge once the plan prices are confirmed
 - [ ] Prompt-injection and cross-org test pass against a staging project with two orgs

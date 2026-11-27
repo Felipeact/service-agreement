@@ -9,7 +9,7 @@ import { SITE } from "@/components/site/content";
 const ORIGIN = "https://servicepacts.com";
 const PORTAL_URL = "https://developers.servicepacts.com";
 
-const LEVEL_TEXT: Record<AccessLevel, string> = { none: "Not included", read: "Read", write: "Read and create drafts" };
+const LEVEL_TEXT: Record<AccessLevel, string> = { none: "Not included", read: "Read", write: "Read, add records and create drafts" };
 
 const CURL = `curl ${ORIGIN}${API_BASE_PATH}/agreements/expiring?within_days=30 \\
   -H "Authorization: Bearer $ACCESS_TOKEN"`;
@@ -136,7 +136,7 @@ export function Content() {
             <strong className="text-ink">429</strong> over the plan&apos;s calls a minute; wait for <code className="font-mono text-[13px]">Retry-After</code> seconds.
           </li>
         </ul>
-        <p className="max-w-[70ch] text-[14px] text-ink-2">The two write calls only start a draft and fill its service lines. Nothing is sent to a customer, signed, cancelled or repriced through the API.</p>
+        <p className="max-w-[70ch] text-[14px] text-ink-2">The write calls add customers, sites and the units on them (making a new unit type when none fits) and start a draft agreement with its service lines. Nothing is sent to a customer, signed, cancelled or repriced through the API.</p>
       </Section>
 
       <Section id="ai" title="Connect an AI client (MCP)">
