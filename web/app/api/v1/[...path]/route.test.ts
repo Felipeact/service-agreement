@@ -22,7 +22,7 @@ vi.mock("@/composition", async () => {
   };
 });
 
-const { GET, POST } = await import("./route");
+const { GET, POST, OPTIONS } = await import("./route");
 
 const call = (method: "GET" | "POST", path: string, init: { token?: string | null; body?: string } = {}) => {
   const request = new NextRequest(`https://app.test/api/v1/${path}`, {
@@ -97,5 +97,22 @@ describe("/api/v1", () => {
     const res = await call("GET", "me");
     expect(res.status).toBe(429);
     expect(res.headers.get("retry-after")).toBe("7");
+  });
+});
+
+describe("/api/v1 and the API portal", () => {
+  test("a call from the portal origin gets CORS headers, another origin does not", async () => {
+    runTool.mockResolvedValue({ ok: true, data: {} });
+    const from = (origin: string) => GET(new NextRequest("https://app.test/api/v1/me", { headers: { authorization: `Bearer ${TOKEN}`, origin } }), { params: Promise.resolve({ path: ["me"] }) } as never);
+    expect((await from("http://localhost:3001")).headers.get("access-control-allow-origin")).toBe("http://localhost:3001");
+    expect((await from("https://evil.example")).headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test("the preflight answers 204 with the headers only for the portal", () => {
+    const preflight = (origin: string) => OPTIONS(new NextRequest("https://app.test/api/v1/me", { method: "OPTIONS", headers: { origin } }));
+    const ok = preflight("http://localhost:3001");
+    expect(ok.status).toBe(204);
+    expect(ok.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(preflight("https://evil.example").headers.get("access-control-allow-origin")).toBeNull();
   });
 });

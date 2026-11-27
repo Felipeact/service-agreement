@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import { authCookieOptions } from "@/infrastructure/supabase/cookie-domain";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
@@ -145,6 +146,7 @@ export async function getContainer() {
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(url, key, {
+    ...authCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -546,7 +548,7 @@ export function checkApiRate(userId: string, callsPerMinute: number) {
   }
   return limiter(userId);
 }
-export { accessOf, planAllows, planAccessMessage } from "@/domain/billing/plan-access";
-export { resolveRoute, statusForFailure, openApiDocument } from "@/domain/public-api";
+export { accessOf, hasDeveloperAccess, planAllows, planAccessMessage } from "@/domain/billing/plan-access";
+export { resolveRoute, statusForFailure } from "@/domain/public-api";
 
 export type McpContainer = NonNullable<Awaited<ReturnType<typeof getMcpContainer>>>;
