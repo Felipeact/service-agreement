@@ -10,13 +10,13 @@ const INSTRUCTIONS =
 /** An icon a client may show beside the server (MCP `Icon`): an absolute address, its type and its sizes. */
 export type McpIcon = { src: string; mimeType: string; sizes: string[] };
 
-/** The Service Pacts mark as the icons a client can choose from, on the given origin (`/brand/mcp-icon-*.png` and `/brand/mark.svg` in `web/public`). */
+/** The Service Pacts mark as the icons a client can choose from, on the given origin (`/brand/mcp-blue-*.png` and `/brand/mcp-blue.svg` in `web/public`: the blue mark filling the whole square, so no corner is transparent). */
 export function serverIcons(origin: string): McpIcon[] {
   const base = origin.replace(/\/$/, "");
   return [
-    { src: `${base}/brand/mcp-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
-    { src: `${base}/brand/mcp-icon-192.png`, mimeType: "image/png", sizes: ["192x192"] },
-    { src: `${base}/brand/mark.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
+    { src: `${base}/brand/mcp-blue-512.png`, mimeType: "image/png", sizes: ["512x512"] },
+    { src: `${base}/brand/mcp-blue-192.png`, mimeType: "image/png", sizes: ["192x192"] },
+    { src: `${base}/brand/mcp-blue.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
   ];
 }
 

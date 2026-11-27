@@ -43,9 +43,9 @@ describe("the server's icon", () => {
     const answer = (await handleMcpMessage({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }, { ...tools, icons: serverIcons("https://servicepacts.com/"), websiteUrl: "https://servicepacts.com" })) as { result: { serverInfo: Record<string, unknown> } };
     expect(answer.result.serverInfo).toMatchObject({ name: "service-pacts", title: "Service Pacts", websiteUrl: "https://servicepacts.com" });
     expect(answer.result.serverInfo.icons).toEqual([
-      { src: "https://servicepacts.com/brand/mcp-icon-512.png", mimeType: "image/png", sizes: ["512x512"] },
-      { src: "https://servicepacts.com/brand/mcp-icon-192.png", mimeType: "image/png", sizes: ["192x192"] },
-      { src: "https://servicepacts.com/brand/mark.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+      { src: "https://servicepacts.com/brand/mcp-blue-512.png", mimeType: "image/png", sizes: ["512x512"] },
+      { src: "https://servicepacts.com/brand/mcp-blue-192.png", mimeType: "image/png", sizes: ["192x192"] },
+      { src: "https://servicepacts.com/brand/mcp-blue.svg", mimeType: "image/svg+xml", sizes: ["any"] },
     ]);
   });
 
