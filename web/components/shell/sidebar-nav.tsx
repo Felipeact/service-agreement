@@ -56,15 +56,15 @@ export function SidebarNav({
   footer,
   words = DEFAULT_ITEM_WORDS,
   reports = false,
-  api = false,
+  developerHref,
   counts = {},
 }: {
   onNavigate?: () => void;
   footer?: ReactNode;
   words?: ItemWords;
   reports?: boolean;
-  /** Show the API link (the plan includes the API and the member is an owner or admin). */
-  api?: boolean;
+  /** The address of the API & MCP portal; absent hides the link (the plan does not include the API or MCP, or the member is not an owner or admin). */
+  developerHref?: string;
   /** A count per item `href` (e.g. `{ "/pipeline": 4 }`); items without one show none. */
   counts?: Record<string, number>;
 }) {
@@ -73,7 +73,7 @@ export function SidebarNav({
   return (
     <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col gap-0.5">
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {mainNav(words, reports, api).map((item) => (
+      {mainNav(words, reports, developerHref).map((item) => (
         <NavEntry key={item.label} item={item} pathname={pathname} onNavigate={onNavigate} pillId={pillId} count={item.href ? counts[item.href] : undefined} />
       ))}
       </div>

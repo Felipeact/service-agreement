@@ -46,3 +46,6 @@ export function planAccessMessage(door: AccessDoor, access: "read" | "write", pl
   const what = access === "write" ? `${DOOR_NAME[door]} can only read on your plan; creating drafts` : DOOR_NAME[door];
   return `${what} is available on the ${cheapestPlanFor(door, access)} plan and above${plan ? `; your company is on ${PLANS.find((p) => p.key === plan)?.name ?? plan}` : ""}. An owner can change the plan in Settings → Billing.`;
 }
+
+/** Whether a plan includes the developer area (API reference, MCP guide, activity log): any plan that reaches either door. */
+export const hasDeveloperAccess = (plan: string | null | undefined): boolean => planAllows(plan, "api", "read") || planAllows(plan, "mcp", "read");

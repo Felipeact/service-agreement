@@ -199,10 +199,10 @@ describe("(app) layout, Ask AI", () => {
   });
 });
 
-describe("the API link in the shell", () => {
+describe("the API & MCP link in the shell", () => {
   const shellFor = async (role: "owner" | "admin" | "estimator" | "viewer") => {
     currentMember.mockResolvedValue({ status: "member", userId: "u1", email: "o@example.com", orgId: "org-1", orgName: "Org", role });
-    return ((await MemberGate({ children: null })) as { props: { api: boolean } }).props.api;
+    return ((await MemberGate({ children: null })) as { props: { developerHref?: string } }).props.developerHref !== undefined;
   };
   test("an owner or admin on Team sees it", async () => {
     expect(await shellFor("owner")).toBe(true);

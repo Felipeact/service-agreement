@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions } from "./cookie-domain";
 import type { Database } from "./database.types";
 
 /**
@@ -41,6 +42,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   let cacheHeaders: Record<string, string> = {};
 
   const supabase = createServerClient<Database>(url, key, {
+    ...authCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

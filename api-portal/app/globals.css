@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* Design tokens: the only colour, radius and shadow values in the app (docs/DESIGN.md, "Field Protocol"): navy shell, light canvas, blue action.
+   Tailwind's default palette stays: DESIGN.md's slate and blue values are those defaults, and the owner's mockup pages use them directly.
+   The first group keeps the app's own role names;
+   the "shadcn roles" group at the end aliases them for the shadcn/ui components. */
+@theme {
+  /* Canvas, surfaces and lines (DESIGN.md "Core Canvas & Structure"). */
+  --color-ground: #f6f8fe;
+  --color-surface: #ffffff;
+  --color-board: #f1f5f9;
+  --color-hairline: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+  /* A form field's own border: 3.6:1 on white, 3.3:1 on the ground (WCAG 1.4.11). Dividers and panels stay Hairline. */
+  --color-field: #7d8798;
+
+  /* Text. Muted is 4.8:1 on the ground. */
+  --color-ink: #0f172a;
+  --color-ink-nav: #334155;
+  --color-ink-2: #64748b;
+
+  /* Brand and interactive states. */
+  --color-action: #2563eb;
+  --color-action-hover: #1d4ed8;
+  --color-action-press: #1e40af;
+  --color-action-tint: #eff6ff;
+  /* The action blue lifted for use on the Night shell (9:1 on Night): headline accents on dark panels. */
+  --color-action-glow: #8fb0ff;
+
+  /* The shell: sidebar, mobile top bar, drawer and the sign-in panel. Night Ink is its resting text (9.3:1 on Night). */
+  --color-night: #0b1424;
+  --color-night-raised: #131f33;
+  --color-night-line: #22314a;
+  --color-night-ink: #b4c0d0;
+
+  --color-stage-in-progress: #3b82f6;
+  --color-stage-sent: #f59e0b;
+  --color-stage-accepted: #8b5cf6;
+  --color-stage-completed: #10b981;
+  --color-stage-refused: #ef4444;
+
+  /* The wells of the three open stages: each stage's hue at about 8%, so the work in play reads by colour at a glance. */
+  --color-tint-in-progress: #eff6ff;
+  --color-tint-sent: #fffbeb;
+  --color-tint-accepted: #f5f3ff;
+  --color-tint-completed: #effcf6;
+  --color-tint-refused: #fef5f5;
+  /* Expiring soon is not a stage: an orange well, apart from Sent's amber. */
+  --color-tint-expiring: #fff6ec;
+
+  /* The pill that names a stage: DESIGN.md's fill and border, with a darker ink than the spec's brand hue so 11px text keeps 6:1. */
+  --color-pill-in-progress: #eff6ff;
+  --color-pill-in-progress-border: #bfdbfe;
+  --color-pill-in-progress-ink: #1e40af;
+  --color-pill-sent: #fffbeb;
+  --color-pill-sent-border: #fde68a;
+  --color-pill-sent-ink: #7a4d00;
+  --color-pill-accepted: #f5f3ff;
+  --color-pill-accepted-border: #ddd6fe;
+  --color-pill-accepted-ink: #50339a;
+  --color-pill-completed: #ecfdf5;
+  --color-pill-completed-border: #a7f3d0;
+  --color-pill-completed-ink: #0f5c3f;
+  --color-pill-refused: #fef2f2;
+  --color-pill-refused-border: #fecaca;
+  --color-pill-refused-ink: #9a2f24;
+
+  --color-attention-bg: #fef3c7;
+  --color-attention-fg: #92400e;
+
+  --color-danger: #b91c1c;
+  --color-danger-tint: #fef2f2;
+  --color-danger-border: #fca5a5;
+
+  /* shadcn roles: aliases only, never new colours. */
+  --color-background: var(--color-ground);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-ink);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-action);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-board);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted: var(--color-board);
+  --color-muted-foreground: var(--color-ink-2);
+  --color-accent: var(--color-action-tint);
+  --color-accent-foreground: var(--color-action-press);
+  --color-destructive: var(--color-danger);
+  --color-border: var(--color-hairline);
+  --color-input: var(--color-field);
+  --color-ring: var(--color-action);
+
+  /* The public site's softer geometry (DESIGN.md "Shapes"): buttons, inputs and menus 8px, cards 12px, panels, columns and modals 16px. */
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+
+  /* Layer 1 cards, Layer 2 menus and popovers, Layer 3 modals and drawers (DESIGN.md "Elevation & Depth"). */
+  --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  /* The public hero's framed panel: the floating sidebar and the menus. */
+  --shadow-float: 0 20px 40px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  --shadow-lift: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-panel: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Inter only (docs/DESIGN.md "Typography"). `font-display` stays as a name so existing headings keep working. */
+  --font-display: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--color-ground);
+    /* Reserve the scrollbar's width on every page, so moving between a long page and a short one never shifts the layout. */
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--color-field) transparent;
+  }
+
+  /* The staff app hides the page's scrollbar (the page still scrolls); the public site keeps its own. */
+  html:has([data-app-shell]) {
+    scrollbar-width: none;
+    scrollbar-gutter: auto;
+  }
+  html:has([data-app-shell])::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-ink);
+    background: var(--color-ground);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" on, "cv05" on;
+    -webkit-font-smoothing: antialiased;
+    caret-color: var(--color-action);
+  }
+
+  ::selection {
+    background: var(--color-action);
+    color: var(--color-surface);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-action);
+    outline-offset: 2px;
+  }
+}
+
+/* The portal's own touches: a scrollbar-free shell is not needed; keep the page tidy. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}

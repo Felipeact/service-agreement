@@ -50,5 +50,34 @@ async function handle(request: NextRequest, context: RouteContext<"/api/v1/[...p
   }
 }
 
-export const GET = handle;
-export const POST = handle;
+/**
+ * The API portal (`api-portal/`) runs "Try it out" from its own origin, so it may call this API from the browser: only that one
+ * origin (`API_PORTAL_URL`, `http://localhost:3001` in development) gets CORS headers, and the call still needs a bearer token.
+ */
+function withCors(request: NextRequest, response: Response): Response {
+  const allowed = new URL(process.env.API_PORTAL_URL?.trim() || "http://localhost:3001").origin;
+  if (request.headers.get("origin") !== allowed) return response;
+  response.headers.set("Access-Control-Allow-Origin", allowed);
+  response.headers.set("Access-Control-Expose-Headers", "Retry-After");
+  response.headers.append("Vary", "Origin");
+  return response;
+}
+
+export async function GET(request: NextRequest, context: RouteContext<"/api/v1/[...path]">) {
+  return withCors(request, await handle(request, context));
+}
+
+export async function POST(request: NextRequest, context: RouteContext<"/api/v1/[...path]">) {
+  return withCors(request, await handle(request, context));
+}
+
+/** The browser's preflight for a call with an Authorization header. */
+export function OPTIONS(request: NextRequest) {
+  const response = withCors(request, new Response(null, { status: 204 }));
+  if (response.headers.has("Access-Control-Allow-Origin")) {
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    response.headers.set("Access-Control-Max-Age", "600");
+  }
+  return response;
+}
