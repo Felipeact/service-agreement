@@ -438,6 +438,9 @@ One secure backend, three doors: the in-app assistant, the public site agent and
 - [x] API & MCP portal as a separate site (`api-portal/`): overview, API reference, MCP connection guide and activity log, gated by plan and role, sharing the app's sign-in (2026-11-27)
 - [ ] Owner: apply migration `20261127130000_ai_tool_calls_managers.sql` (the activity log shows the company's calls to owners and admins)
 - [x] Portal deployed: Railway service `api-portal` from `api-portal/Dockerfile`, `developers.servicepacts.com`, `API_PORTAL_URL` on web and `AUTH_COOKIE_DOMAIN=.servicepacts.com` on both (2026-11-27)
+- [x] Sign-in email templates redesigned in `supabase/templates/` (2026-11-27)
+- [ ] Owner: paste the Magic link and Confirm sign up templates (and subjects) into the Supabase dashboard, check the Site URL, test on a phone
+- [ ] Pass the company name and inviter into the invitation email so it can say who invited the person
 - [ ] Long-lived API keys (needs a signing-secret decision) and webhooks (signed, retried, per-plan)
 - [ ] Show the AI and API access in the pricing cards and the site agent's knowledge once the plan prices are confirmed
 - [ ] Prompt-injection and cross-org test pass against a staging project with two orgs
