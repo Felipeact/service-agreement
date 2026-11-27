@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { authCookieOptions } from "./cookie-domain";
+import { authCookieOptions, migrateSessionCookies } from "./cookie-domain";
 import type { Database } from "./database.types";
 
 /**
@@ -60,11 +60,13 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // Nothing between createServerClient and getClaims: getClaims is what refreshes the token (door 5).
   const { data } = await supabase.auth.getClaims();
 
+  const expiredHostCookies = data?.claims ? migrateSessionCookies(request, response) : [];
   const target = redirectTarget(request.nextUrl.pathname, Boolean(data?.claims));
   if (!target) return response;
 
   const redirect = NextResponse.redirect(new URL(target, request.url));
   response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  expiredHostCookies.forEach((line) => redirect.headers.append("set-cookie", line));
   Object.entries(cacheHeaders).forEach(([header, value]) => redirect.headers.set(header, value));
   return redirect;
 }

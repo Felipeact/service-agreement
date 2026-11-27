@@ -221,8 +221,6 @@ export async function getContainer() {
     verifyEmailLink: auth.verifyEmailLink,
     signOut: auth.signOut,
     currentMember: members.currentMember,
-    /** The plan key of the signed-in member's company, or null. */
-    memberPlan: () => readMemberPlan(supabase),
     // Consent for an AI client that asks to use the MCP endpoint as this member (Supabase Auth's OAuth server).
     oauthConsent: supabaseOAuthConsent(supabase),
     // What a signed-in person with no membership is told about their own paid checkout (workspace-pending-state door 3).

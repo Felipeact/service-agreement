@@ -6,7 +6,6 @@ import { getContainer } from "@/composition";
 import { isClosedStage, needsFollowUp } from "@/domain/pipeline";
 import { planDisplayName } from "@/domain/billing/plan-limits";
 import { reportAccess } from "@/domain/reports";
-import { hasDeveloperAccess } from "@/domain/billing/plan-access";
 import { canWriteRecords } from "@/components/records/state";
 import { signOutAction } from "./actions";
 import { NewAgreementLauncher } from "./new-agreement-launcher";
@@ -16,7 +15,7 @@ import { createAgreementAction, generateServiceLinesAction } from "./agreement-a
 
 /** Checks the session again behind the proxy, which a matcher change could bypass. Render it inside Suspense (door 6). */
 export async function MemberGate({ children }: { children: ReactNode }) {
-  const { currentMember, pipelineBoard, getItemWords, workspaceState, loadBillingUsage, memberPlan } = await getContainer();
+  const { currentMember, pipelineBoard, getItemWords, workspaceState, loadBillingUsage } = await getContainer();
   const member = await currentMember();
 
   if (member.status === "signed_out") redirect("/login");
@@ -43,12 +42,8 @@ export async function MemberGate({ children }: { children: ReactNode }) {
       ? { planName: planDisplayName(usage.plan), used: usage.totalAgreements ?? usage.liveAgreements.used, limit: usage.liveAgreements.limit, canManage: true }
       : null;
 
-  // The API and MCP area is for owners and admins on a plan that includes the API or MCP; a failed read hides the link.
-  const role = member.billingRole ?? member.role;
-  const hasDeveloper = (role === "owner" || role === "admin") && hasDeveloperAccess(await memberPlan().catch(() => null));
-
   return (
-    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} askAi={<AskAi canAct={canWriteRecords(member.role)} actions={{ ask: askAiAction, createAgreement: createAgreementAction, generateLines: generateServiceLinesAction }} />} newAgreement={canWriteRecords(member.role) ? <NewAgreementLauncher /> : undefined} words={words} role={member.billingRole ?? member.role} plan={plan} counts={{ "/pipeline": openCount }} reports={reportAccess(member.billingRole ?? member.role) !== "none"} developerHref={hasDeveloper ? process.env.API_PORTAL_URL?.trim() || "http://localhost:3001" : undefined} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
+    <AppShell orgName={member.orgName} email={member.email} signOut={signOutAction} followUps={followUps} askAi={<AskAi canAct={canWriteRecords(member.role)} actions={{ ask: askAiAction, createAgreement: createAgreementAction, generateLines: generateServiceLinesAction }} />} newAgreement={canWriteRecords(member.role) ? <NewAgreementLauncher /> : undefined} words={words} role={member.billingRole ?? member.role} plan={plan} counts={{ "/pipeline": openCount }} reports={reportAccess(member.billingRole ?? member.role) !== "none"} frozen={member.frozen ? { canRenew: member.billingRole === "owner" || member.billingRole === "admin" } : undefined}>
       {children}
     </AppShell>
   );
